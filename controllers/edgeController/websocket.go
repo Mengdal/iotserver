@@ -51,6 +51,7 @@ func ReadWsMsg(ws *websocket.Conn) {
 			mx.Unlock()
 			break
 		}
+		fmt.Println(string(message))
 		var o operate
 		err = json.Unmarshal(message, &o)
 		if err != nil {
@@ -158,6 +159,7 @@ func getRealData(ids []string, ws *websocket.Conn) {
 	for {
 		mx.Lock()
 		if _, ok := Clients[ws]; !ok {
+			mx.Unlock()
 			return
 		}
 		mx.Unlock()
