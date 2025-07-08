@@ -1,3 +1,5 @@
 /iotserver.exe
 /service.log
-!/swagger/
+/swagger/
+/swagger.zip
+.idea
