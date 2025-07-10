@@ -55,6 +55,16 @@ func init() {
 				&edgeController.LabelController{},
 			),
 		),
+		beego.NSNamespace("/alert",
+			beego.NSInclude(
+				&controllers.AlertController{},
+			),
+		),
+		beego.NSNamespace("/",
+			beego.NSInclude(
+				&edgeController.MainController{},
+			),
+		),
 	)
 	beego.AddNamespace(ns)
 }

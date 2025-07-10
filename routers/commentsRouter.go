@@ -115,6 +115,42 @@ func init() {
 			Filters:          nil,
 			Params:           nil})
 
+	beego.GlobalControllerRouter["iotServer/controllers:AlertController"] = append(beego.GlobalControllerRouter["iotServer/controllers:AlertController"],
+		beego.ControllerComments{
+			Method:           "Delete",
+			Router:           `/delete`,
+			AllowHTTPMethods: []string{"post"},
+			MethodParams:     param.Make(),
+			Filters:          nil,
+			Params:           nil})
+
+	beego.GlobalControllerRouter["iotServer/controllers:AlertController"] = append(beego.GlobalControllerRouter["iotServer/controllers:AlertController"],
+		beego.ControllerComments{
+			Method:           "Detail",
+			Router:           `/detail`,
+			AllowHTTPMethods: []string{"post"},
+			MethodParams:     param.Make(),
+			Filters:          nil,
+			Params:           nil})
+
+	beego.GlobalControllerRouter["iotServer/controllers:AlertController"] = append(beego.GlobalControllerRouter["iotServer/controllers:AlertController"],
+		beego.ControllerComments{
+			Method:           "GetAlarmRecord",
+			Router:           `/getAlarmRecord`,
+			AllowHTTPMethods: []string{"post"},
+			MethodParams:     param.Make(),
+			Filters:          nil,
+			Params:           nil})
+
+	beego.GlobalControllerRouter["iotServer/controllers:AlertController"] = append(beego.GlobalControllerRouter["iotServer/controllers:AlertController"],
+		beego.ControllerComments{
+			Method:           "UpdateStatus",
+			Router:           `/updateStatus`,
+			AllowHTTPMethods: []string{"post"},
+			MethodParams:     param.Make(),
+			Filters:          nil,
+			Params:           nil})
+
 	beego.GlobalControllerRouter["iotServer/controllers:MenuController"] = append(beego.GlobalControllerRouter["iotServer/controllers:MenuController"],
 		beego.ControllerComments{
 			Method:           "Create",
