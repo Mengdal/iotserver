@@ -9,7 +9,7 @@ import (
 
 // MqttConnector 接口定义
 type MqttConnector interface {
-	Connect(clientID string) error
+	Connect() error
 	Disconnect()
 	Publish(topic string, qos byte, payload []byte) error
 	Subscribe(topic string, qos byte, callback mqtt.MessageHandler) error
@@ -23,6 +23,7 @@ type MqttConnectorImpl struct {
 	port          string
 	user          string
 	password      string
+	clientId      string
 	timeout       time.Duration
 	keepAlive     int
 	cleanSession  bool
@@ -34,13 +35,14 @@ type MqttConnectorImpl struct {
 
 // NewMqttConnector 创建新的MQTT连接器
 func NewMqttConnector(url string, port string, timeoutSec int,
-	user, password string, keepAlive int, cleanSession bool, retryIntervalSec int) *MqttConnectorImpl {
+	user, password string, clientId string, keepAlive int, cleanSession bool, retryIntervalSec int) *MqttConnectorImpl {
 
 	return &MqttConnectorImpl{
 		url:           url,
 		port:          port,
 		user:          user,
 		password:      password,
+		clientId:      clientId,
 		timeout:       time.Duration(timeoutSec) * time.Second,
 		keepAlive:     keepAlive,
 		cleanSession:  cleanSession,
@@ -49,15 +51,12 @@ func NewMqttConnector(url string, port string, timeoutSec int,
 }
 
 // Connect 连接到MQTT代理
-func (m *MqttConnectorImpl) Connect(clientID string) error {
-	if clientID == "" {
-		clientID = fmt.Sprintf("MqttClient_%d", time.Now().UnixNano())
-	}
+func (m *MqttConnectorImpl) Connect() error {
 
 	opts := mqtt.NewClientOptions()
 	broker := fmt.Sprintf("tcp://%s:%s", m.url, m.port)
 	opts.AddBroker(broker)
-	opts.SetClientID(clientID)
+	opts.SetClientID(m.clientId)
 	opts.SetUsername(m.user)
 	opts.SetPassword(m.password)
 	opts.SetCleanSession(m.cleanSession)
@@ -72,12 +71,15 @@ func (m *MqttConnectorImpl) Connect(clientID string) error {
 
 		// 订阅主题
 		for topic, handler := range m.getSavedSubscriptions() {
-			if token := client.Subscribe(topic, 0, handler); token.Wait() && token.Error() != nil {
-				log.Printf("订阅失败 topic=%s: %v", topic, token.Error())
+			token := client.Subscribe(topic, 0, handler)
+			token.Wait()
+			if err := token.Error(); err != nil {
+				log.Printf("订阅失败 topic=%s: %v", topic, err)
 			} else {
-				log.Printf("订阅成功 topic=%s", topic)
+				log.Printf("成功订阅: %s", topic)
 			}
 		}
+
 	}
 
 	opts.OnConnectionLost = func(client mqtt.Client, err error) {

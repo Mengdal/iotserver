@@ -38,6 +38,10 @@ type WriteController struct {
 }
 
 var mqttURL, _ = beego.AppConfig.String("mqttServer")
+var mqttClientId, _ = beego.AppConfig.String("mqttClientId")
+var mqttUsername, _ = beego.AppConfig.String("mqttUsername")
+var mqttPassword, _ = beego.AppConfig.String("mqttPassword")
+
 var Connector common.MqttConnector
 var Processor *PropertySetProcessor
 
@@ -48,20 +52,12 @@ func InitMQTT() {
 	}
 
 	Connector = common.NewMqttConnector(
-		host, port, 5, "", "", 60, false, 10,
+		host, port, 5, mqttUsername, mqttPassword, mqttClientId, 60, false, 10,
 	)
 
-	if err := Connector.Connect(""); err != nil {
+	if err := Connector.Connect(); err != nil {
 		log.Printf("[WARN] MQTT连接失败: %v（将继续启动 Web 项目）", err)
 	}
-
-	//messageHandler := func(client mqtt.Client, msg mqtt.Message) {
-	//	log.Printf("收到消息: [%s] %s", msg.Topic(), msg.Payload())
-	//}
-
-	//if err := Connector.Subscribe("#", 0, messageHandler); err != nil {
-	//	log.Printf("订阅失败: %v", err)
-	//}
 
 	switchService := NewSwitchService()
 	Processor = NewPropertySetProcessor(Connector, switchService)
@@ -69,12 +65,6 @@ func InitMQTT() {
 		log.Printf("订阅控制响应失败: %v", err)
 	}
 
-	//sigChan := make(chan os.Signal, 1)
-	//signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
-	//<-sigChan
-	//
-	//Connector.Disconnect()
-	//log.Println("MQTT服务已停止")
 }
 
 func NewSwitchService() *SwitchService {
@@ -135,8 +125,16 @@ func (p *PropertySetProcessor) Init() error {
 	// 订阅控制响应主题
 	if err := p.mqttClient.Subscribe("lm/gw/ctrlResponse/+", 0, p.handleMessage); err != nil {
 		return fmt.Errorf("订阅失败: %v", err)
+	} else {
+		log.Println("已订阅控制命令响应主题: lm/gw/ctrlResponse/+")
 	}
-	log.Println("已订阅控制命令响应主题: lm/gw/ctrlResponse/+")
+	//订阅报警响应主题
+	if err := p.mqttClient.Subscribe("/edge/event/+/post", 0, p.handleMessage); err != nil {
+		return fmt.Errorf("订阅失败: %v", err)
+	} else {
+		log.Println("已订阅报警事件响应主题: /edge/event/+/post")
+	}
+
 	return nil
 }
 
@@ -161,13 +159,25 @@ func (p *PropertySetProcessor) handleMessage(client mqtt.Client, msg mqtt.Messag
 	}()
 }
 
-// 消息处理逻辑
 func (p *PropertySetProcessor) process(topic, payload string) error {
+	// 判断是控制响应主题还是报警主题
+	if strings.HasPrefix(topic, "lm/gw/ctrlResponse/") {
+		// 处理控制响应
+		return p.processControlResponse(topic, payload)
+	} else if strings.HasPrefix(topic, "/edge/event/") && strings.HasSuffix(topic, "/post") {
+		// 处理报警主题
+		return p.processAlertEvent(topic, payload)
+	}
+	return fmt.Errorf("未知的主题类型: %s", topic)
+}
+
+// 处理控制响应
+func (p *PropertySetProcessor) processControlResponse(topic, payload string) error {
 	// 正则匹配设备ID
 	regex := regexp.MustCompile(`(?i)lm/gw/ctrlResponse/(.+)`)
 	matches := regex.FindStringSubmatch(topic)
 	if len(matches) < 2 {
-		return fmt.Errorf("主题格式不匹配: %s", topic)
+		return fmt.Errorf("控制响应主题格式不匹配: %s", topic)
 	}
 
 	clientID := matches[1]
@@ -181,6 +191,45 @@ func (p *PropertySetProcessor) process(topic, payload string) error {
 
 	// 调用业务服务
 	return p.switchService.WriteBack(clientID, object)
+}
+
+// 处理报警事件
+func (p *PropertySetProcessor) processAlertEvent(topic, payload string) error {
+	// 从主题中提取设备ID
+	parts := strings.Split(topic, "/")
+	if len(parts) < 3 {
+		return fmt.Errorf("报警主题格式错误: %s", topic)
+	}
+	//deviceID := parts[2]
+
+	log.Printf("收到报警事件: %s %s", topic, payload)
+
+	// 解析JSON
+	var alertData map[string]interface{}
+	if err := json.Unmarshal([]byte(payload), &alertData); err != nil {
+		return fmt.Errorf("报警JSON解析失败: %v", err)
+	}
+
+	// 创建报警记录
+	alertList := models.AlertList{
+		TriggerTime: time.Now().UnixNano() / 1e6, // 转换为毫秒
+		Status:      "未处理",
+		AlertResult: payload,
+	}
+
+	// 如果有规则ID，可以设置关联
+	if ruleID, ok := alertData["rule_id"].(float64); ok {
+		alertList.AlertRule = &models.AlertRule{Id: int64(ruleID)}
+	}
+
+	// 保存到数据库
+	o := orm.NewOrm()
+	if _, err := o.Insert(&alertList); err != nil {
+		return fmt.Errorf("保存报警记录失败: %v", err)
+	}
+
+	log.Printf("报警记录已保存: %v", alertList.Id)
+	return nil
 }
 
 // Deal 发布控制命令

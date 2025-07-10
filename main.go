@@ -22,10 +22,11 @@ import (
 // 启动swagger bee run -gendoc=true -downdoc=true
 // 手动执行 bee generate docs以及bee generate routers重新生成commentsRouter_controllers.go，新版本删除了自动生成功能
 func initSwagger() {
-	if beego.BConfig.RunMode == "dev" {
-		beego.BConfig.WebConfig.DirectoryIndex = true
-		beego.BConfig.WebConfig.StaticDir["/swagger"] = "swagger"
-	}
+	//if beego.BConfig.RunMode == "dev" {
+	//
+	//}
+	beego.BConfig.WebConfig.DirectoryIndex = true
+	beego.BConfig.WebConfig.StaticDir["/swagger"] = "swagger"
 	beego.BConfig.WebConfig.Session.SessionOn = true
 	beego.BConfig.MaxMemory = 1048576 // 文件上传默认内存缓存大小
 	// 允许跨域
@@ -46,6 +47,19 @@ func initSwagger() {
 		}
 	})
 }
+
+// 初始化日志文件
+func initLogger() {
+	logFile, err := os.OpenFile(`service.log`, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	if err != nil {
+		log.Fatal("无法打开日志文件:", err)
+	}
+
+	// 设置全局日志输出
+	log.SetOutput(logFile)
+	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
+}
+
 func validateToken(ctx *context.Context) bool {
 	// 跳过 Swagger、静态文件等路径
 	skipPaths := []string{
@@ -93,9 +107,12 @@ func validateToken(ctx *context.Context) bool {
 }
 
 func main() {
+	beego.SetStaticPath("/", "static/dist") //前端资源
+
 	if beego.BConfig.RunMode == "dev" {
 		runDev()
 	} else {
+		initLogger()             //日志记录
 		common.SetCommandParam() //接收命令行参数
 		ServiceOperate(common.Service())
 	}
@@ -127,7 +144,7 @@ func (p *program) run() {
 		fmt.Println("无法打开日志文件:", err)
 	} else {
 		log.SetOutput(logFile)
-		defer logFile.Close()
+		//defer logFile.Close()
 	}
 	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
 	log.Println("【Service】服务启动中")
@@ -143,6 +160,9 @@ func (p *program) run() {
 
 	log.Println("【Service】启动 Web 服务...")
 	beego.Run()
+
+	log.Println("【Service】启动 MQTT 服务...")
+	go controllers.InitMQTT()
 
 	log.Println("【Service】服务已启动...")
 
