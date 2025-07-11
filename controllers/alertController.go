@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"github.com/beego/beego/v2/client/orm"
 	"iotServer/models"
+	"iotServer/models/dtos"
 	"iotServer/utils"
 	"time"
 )
@@ -14,32 +15,36 @@ type AlertController struct {
 
 // GetAlarmRecord @Title 获取Scada告警记录
 // @Description 适用于网关返回的告警记录
-// @Param page query int false "页码，1"
-// @Param size query int false "每页数量，10"
-// @Param status query string false "状态筛选 (未处理/已处理/忽略)"
-// @Param startTime query string false "开始时间(格式: 2006-01-02 15:04:05)"
-// @Param endTime query string false "结束时间(格式: 2006-01-02 15:04:05)"
+// @Param body body dtos.AlarmRecordReq true "请求参数"
 // @Success 200 {object} controllers.SimpleResult
 // @Failure 400 "查询出错"
 // @router /getAlarmRecord [post]
 func (c *AlertController) GetAlarmRecord() {
-	page, _ := c.GetInt("page", 1)
-	size, _ := c.GetInt("size", 10)
-	status := c.GetString("status")
-	startTimeStr := c.GetString("startTime")
-	endTimeStr := c.GetString("endTime")
+
+	var req dtos.AlarmRecordReq
+	if err := c.BindJSON(&req); err != nil {
+		c.Error(400, "请求参数解析失败")
+	}
+
+	// 参数处理
+	if req.Page == 0 {
+		req.Page = 1
+	}
+	if req.Size == 0 {
+		req.Size = 10
+	}
 
 	o := orm.NewOrm()
 	qs := o.QueryTable(new(models.AlertList)).OrderBy("-TriggerTime")
 
 	// 构建查询条件
-	if status != "" {
-		qs = qs.Filter("Status", status)
+	if req.Status != "" {
+		qs = qs.Filter("Status", req.Status)
 	}
 
 	loc, _ := time.LoadLocation("Asia/Shanghai")
-	if startTimeStr != "" {
-		startTime, err := time.ParseInLocation("2006-01-02 15:04:05", startTimeStr, loc)
+	if req.StartTime != "" {
+		startTime, err := time.ParseInLocation("2006-01-02 15:04:05", req.StartTime, loc)
 		if err != nil {
 			c.Error(400, "开始时间格式错误，请使用: 2000-01-29 15:04:05")
 			return
@@ -47,18 +52,17 @@ func (c *AlertController) GetAlarmRecord() {
 		qs = qs.Filter("TriggerTime__gte", startTime.Unix()*1000)
 	}
 
-	if endTimeStr != "" {
-		endTime, err := time.ParseInLocation("2006-01-02 15:04:05", endTimeStr, loc)
+	if req.EndTime != "" {
+		endTime, err := time.ParseInLocation("2006-01-02 15:04:05", req.EndTime, loc)
 		if err != nil {
 			c.Error(400, "结束时间格式错误，请使用: 2000-01-29 15:04:05")
-			return
 		}
 		qs = qs.Filter("TriggerTime__lte", endTime.Unix()*1000)
 	}
 
 	// 使用Paginate方法
 	var alerts []*models.AlertList
-	pageResult, err := utils.Paginate(qs, page, size, &alerts)
+	pageResult, err := utils.Paginate(qs, req.Page, req.Size, &alerts)
 	if err != nil {
 		c.Error(400, "查询失败")
 	}
