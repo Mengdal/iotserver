@@ -28,6 +28,7 @@ func init() {
 				&edgeController.HistoryController{},
 				&edgeController.RealController{},
 				&edgeController.TagController{},
+				&controllers.AlertController{},
 			),
 		),
 		beego.NSNamespace("/ws",
@@ -53,11 +54,6 @@ func init() {
 		beego.NSNamespace("/label",
 			beego.NSInclude(
 				&edgeController.LabelController{},
-			),
-		),
-		beego.NSNamespace("/alert",
-			beego.NSInclude(
-				&controllers.AlertController{},
 			),
 		),
 		beego.NSNamespace("/",

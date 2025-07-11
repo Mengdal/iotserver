@@ -76,6 +76,10 @@ func validateToken(ctx *context.Context) bool {
 		"/api/scada/getTagsTree",
 		"/api/scada/queryHistory",
 		"/api/scada/queryReal",
+		"/api/scada/detail",
+		"/api/scada/updateStatus",
+		"/api/scada/delete",
+		"/api/scada/getAlarmRecord",
 		"/api/ws",
 	}
 	for _, path := range skipPaths {
@@ -87,6 +91,7 @@ func validateToken(ctx *context.Context) bool {
 	token := ctx.Request.Header.Get("Authorization")
 	if token == "" {
 		ctx.Output.SetStatus(401)
+
 		ctx.Output.JSON(map[string]string{"error": "Unauthorized: missing token"}, false, false)
 		return false
 	}
