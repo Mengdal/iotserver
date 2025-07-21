@@ -14,7 +14,7 @@ var jwtSecret = []byte("LMGateway")
 // GenerateToken 生成 JWT Token
 func GenerateToken(userId int64) (string, error) {
 	nowTime := time.Now()
-	expireTime := nowTime.Add(24 * time.Hour)
+	expireTime := nowTime.Add(24 * time.Hour * 7)
 
 	claims := jwt.MapClaims{
 		"user_id": userId,                         // 自定义字段：用户ID
