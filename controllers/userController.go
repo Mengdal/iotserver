@@ -32,12 +32,12 @@ func (c *UserController) GetAll() {
 
 // Put @Title UpdateUser
 // @Description 更新用户信息
-// @Param   body  body  dtos.UserDto  true  "请求体"
+// @Param   body  body  dtos.UpdateUserRequest  true  "请求体"
 // @Success 200 {object} controllers.SimpleResult "请求成功,返回通用结果"
 // @router /updateUser [post]
 func (c *UserController) Put() {
 	//必须使用结构体swagger才能识别
-	var req dtos.UserDto
+	var req dtos.UpdateUserRequest
 
 	//获取request的pwd
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil || req.Id == 0 || req.Password == "" {
@@ -52,7 +52,19 @@ func (c *UserController) Put() {
 	}
 
 	//更新密码
-	user.Password = req.Password
+	if req.Password != "" {
+		user.Password = req.Password
+	}
+	if req.RoleId != nil {
+		user.RoleId = req.RoleId
+	}
+	if req.Username != "" {
+		user.Username = req.Username
+	}
+	if req.Email != "" {
+		user.Email = req.Email
+	}
+
 	if _, err := newOrm.Update(&user); err != nil {
 		c.Error(400, "更新失败")
 	} else {
@@ -127,14 +139,19 @@ func (c *UserController) Login() {
 	if err != nil {
 		c.Error(400, "更新用户token失败")
 	}
+	role := models.Role{Id: *user.RoleId}
+	if err = o.Read(&role, "Id"); err != nil {
+		c.Error(400, "获取角色出错")
+	}
 
 	menuController := &MenuController{}
 	menuController.Ctx = c.Ctx
 	menuTree := menuController.tree()
 	result := map[string]interface{}{
-		"token":  token,
-		"menu":   menuTree,
-		"roleId": user.RoleId,
+		"token":      token,
+		"menu":       menuTree,
+		"roleId":     user.RoleId,
+		"permission": role.Permission,
 	}
 	c.Success(result)
 }
