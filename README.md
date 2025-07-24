@@ -47,6 +47,7 @@ bee run -gendoc=true -downdoc=true
 <pre>
 bee generate docs     # 生成 Swagger 文档
 bee generate routers  # 生成路由文件
+go build -o iotserver.exe # 生成可执行文件
 </pre>
 
 ## 📚 API 文档
