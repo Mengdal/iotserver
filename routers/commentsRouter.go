@@ -151,10 +151,55 @@ func init() {
 			Filters:          nil,
 			Params:           nil})
 
+	beego.GlobalControllerRouter["iotServer/controllers:DeviceController"] = append(beego.GlobalControllerRouter["iotServer/controllers:DeviceController"],
+		beego.ControllerComments{
+			Method:           "GetAllDevices",
+			Router:           `/all`,
+			AllowHTTPMethods: []string{"post"},
+			MethodParams:     param.Make(),
+			Filters:          nil,
+			Params:           nil})
+
+	beego.GlobalControllerRouter["iotServer/controllers:DeviceController"] = append(beego.GlobalControllerRouter["iotServer/controllers:DeviceController"],
+		beego.ControllerComments{
+			Method:           "Bind",
+			Router:           `/bind`,
+			AllowHTTPMethods: []string{"post"},
+			MethodParams:     param.Make(),
+			Filters:          nil,
+			Params:           nil})
+
+	beego.GlobalControllerRouter["iotServer/controllers:DeviceController"] = append(beego.GlobalControllerRouter["iotServer/controllers:DeviceController"],
+		beego.ControllerComments{
+			Method:           "Delete",
+			Router:           `/delete`,
+			AllowHTTPMethods: []string{"post"},
+			MethodParams:     param.Make(),
+			Filters:          nil,
+			Params:           nil})
+
+	beego.GlobalControllerRouter["iotServer/controllers:DeviceController"] = append(beego.GlobalControllerRouter["iotServer/controllers:DeviceController"],
+		beego.ControllerComments{
+			Method:           "GetDevice",
+			Router:           `/get`,
+			AllowHTTPMethods: []string{"post"},
+			MethodParams:     param.Make(),
+			Filters:          nil,
+			Params:           nil})
+
+	beego.GlobalControllerRouter["iotServer/controllers:DeviceController"] = append(beego.GlobalControllerRouter["iotServer/controllers:DeviceController"],
+		beego.ControllerComments{
+			Method:           "Update",
+			Router:           `/update`,
+			AllowHTTPMethods: []string{"post"},
+			MethodParams:     param.Make(),
+			Filters:          nil,
+			Params:           nil})
+
 	beego.GlobalControllerRouter["iotServer/controllers:EkuiperController"] = append(beego.GlobalControllerRouter["iotServer/controllers:EkuiperController"],
 		beego.ControllerComments{
 			Method:           "AlertCallback",
-			Router:           `/ekuiper/alert/callback`,
+			Router:           `/callback`,
 			AllowHTTPMethods: []string{"post"},
 			MethodParams:     param.Make(),
 			Filters:          nil,
@@ -163,7 +208,7 @@ func init() {
 	beego.GlobalControllerRouter["iotServer/controllers:EkuiperController"] = append(beego.GlobalControllerRouter["iotServer/controllers:EkuiperController"],
 		beego.ControllerComments{
 			Method:           "CreateRule",
-			Router:           `/ekuiper/rule`,
+			Router:           `/create`,
 			AllowHTTPMethods: []string{"post"},
 			MethodParams:     param.Make(),
 			Filters:          nil,
@@ -171,26 +216,8 @@ func init() {
 
 	beego.GlobalControllerRouter["iotServer/controllers:EkuiperController"] = append(beego.GlobalControllerRouter["iotServer/controllers:EkuiperController"],
 		beego.ControllerComments{
-			Method:           "DeleteRule",
-			Router:           `/ekuiper/rule/:ruleId`,
-			AllowHTTPMethods: []string{"delete"},
-			MethodParams:     param.Make(),
-			Filters:          nil,
-			Params:           nil})
-
-	beego.GlobalControllerRouter["iotServer/controllers:EkuiperController"] = append(beego.GlobalControllerRouter["iotServer/controllers:EkuiperController"],
-		beego.ControllerComments{
-			Method:           "StartRule",
-			Router:           `/ekuiper/rule/:ruleId/start`,
-			AllowHTTPMethods: []string{"post"},
-			MethodParams:     param.Make(),
-			Filters:          nil,
-			Params:           nil})
-
-	beego.GlobalControllerRouter["iotServer/controllers:EkuiperController"] = append(beego.GlobalControllerRouter["iotServer/controllers:EkuiperController"],
-		beego.ControllerComments{
-			Method:           "GetRuleStatus",
-			Router:           `/ekuiper/rule/:ruleId/status`,
+			Method:           "GetRule",
+			Router:           `/rule`,
 			AllowHTTPMethods: []string{"get"},
 			MethodParams:     param.Make(),
 			Filters:          nil,
@@ -198,27 +225,9 @@ func init() {
 
 	beego.GlobalControllerRouter["iotServer/controllers:EkuiperController"] = append(beego.GlobalControllerRouter["iotServer/controllers:EkuiperController"],
 		beego.ControllerComments{
-			Method:           "StopRule",
-			Router:           `/ekuiper/rule/:ruleId/stop`,
+			Method:           "UpdateRule",
+			Router:           `/update`,
 			AllowHTTPMethods: []string{"post"},
-			MethodParams:     param.Make(),
-			Filters:          nil,
-			Params:           nil})
-
-	beego.GlobalControllerRouter["iotServer/controllers:EkuiperController"] = append(beego.GlobalControllerRouter["iotServer/controllers:EkuiperController"],
-		beego.ControllerComments{
-			Method:           "SimulateDataStream",
-			Router:           `/ekuiper/stream/simulate`,
-			AllowHTTPMethods: []string{"post"},
-			MethodParams:     param.Make(),
-			Filters:          nil,
-			Params:           nil})
-
-	beego.GlobalControllerRouter["iotServer/controllers:EkuiperController"] = append(beego.GlobalControllerRouter["iotServer/controllers:EkuiperController"],
-		beego.ControllerComments{
-			Method:           "GetRuleTemplates",
-			Router:           `/ekuiper/templates`,
-			AllowHTTPMethods: []string{"get"},
 			MethodParams:     param.Make(),
 			Filters:          nil,
 			Params:           nil})
@@ -371,6 +380,42 @@ func init() {
 		beego.ControllerComments{
 			Method:           "Template",
 			Router:           `/template`,
+			AllowHTTPMethods: []string{"post"},
+			MethodParams:     param.Make(),
+			Filters:          nil,
+			Params:           nil})
+
+	beego.GlobalControllerRouter["iotServer/controllers:RuleController"] = append(beego.GlobalControllerRouter["iotServer/controllers:RuleController"],
+		beego.ControllerComments{
+			Method:           "Edit",
+			Router:           `/edit`,
+			AllowHTTPMethods: []string{"post"},
+			MethodParams:     param.Make(),
+			Filters:          nil,
+			Params:           nil})
+
+	beego.GlobalControllerRouter["iotServer/controllers:RuleController"] = append(beego.GlobalControllerRouter["iotServer/controllers:RuleController"],
+		beego.ControllerComments{
+			Method:           "OperateRule",
+			Router:           `/operate`,
+			AllowHTTPMethods: []string{"post"},
+			MethodParams:     param.Make(),
+			Filters:          nil,
+			Params:           nil})
+
+	beego.GlobalControllerRouter["iotServer/controllers:RuleController"] = append(beego.GlobalControllerRouter["iotServer/controllers:RuleController"],
+		beego.ControllerComments{
+			Method:           "GetRuleStatus",
+			Router:           `/status`,
+			AllowHTTPMethods: []string{"get"},
+			MethodParams:     param.Make(),
+			Filters:          nil,
+			Params:           nil})
+
+	beego.GlobalControllerRouter["iotServer/controllers:RuleController"] = append(beego.GlobalControllerRouter["iotServer/controllers:RuleController"],
+		beego.ControllerComments{
+			Method:           "Update",
+			Router:           `/update`,
 			AllowHTTPMethods: []string{"post"},
 			MethodParams:     param.Make(),
 			Filters:          nil,

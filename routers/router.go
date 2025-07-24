@@ -61,6 +61,21 @@ func init() {
 				&edgeController.MainController{},
 			),
 		),
+		beego.NSNamespace("/ekuiper",
+			beego.NSInclude(
+				&controllers.EkuiperController{},
+			),
+		),
+		beego.NSNamespace("/rule",
+			beego.NSInclude(
+				&controllers.RuleController{},
+			),
+		),
+		beego.NSNamespace("/device",
+			beego.NSInclude(
+				&controllers.DeviceController{},
+			),
+		),
 	)
 	beego.AddNamespace(ns)
 }
