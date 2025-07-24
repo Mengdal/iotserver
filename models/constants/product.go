@@ -1,18 +1,5 @@
 package constants
 
-type DataType string
-
-const (
-	SpecsTypeInt    DataType = "int"
-	SpecsTypeFloat  DataType = "float"
-	SpecsTypeText   DataType = "text"
-	SpecsTypeDate   DataType = "date"
-	SpecsTypeBool   DataType = "bool"
-	SpecsTypeEnum   DataType = "enum"
-	SpecsTypeStruct DataType = "struct"
-	SpecsTypeArray  DataType = "array"
-)
-
 type ThingModelType string
 
 const (

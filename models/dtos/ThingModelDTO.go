@@ -20,7 +20,7 @@ type ThingModelDTO struct {
 type ThingModelProperties struct {
 	AccessModel constants.AccessModel `json:"access_model" example:"R" description:"访问模式：R/RW"`
 	Require     bool                  `json:"require" example:"true" description:"是否必填"`
-	DataType    constants.DataType    `json:"type" example:"int" description:"数据类型：int/float/string/bool..."`
+	DataType    constants.SpecsType   `json:"type" example:"int" description:"数据类型：int/float/string/bool..."`
 	TypeSpec    interface{}           `json:"specs" description:"{\"min\":\"-40\",\"max\":\"120\",\"step\":\"0.01\",\"unit\":\"℃\",\"unitName\":\"摄氏度\"}" description:"字段规格(JSON字符串)"`
 }
 
@@ -36,8 +36,8 @@ type ThingModelActions struct {
 }
 
 type ThingModelEventAction struct {
-	Code     string             `json:"code" example:"offline_event" description:"参数编码"`
-	Name     string             `json:"name" example:"设备掉线告警事件" description:"参数名称"`
-	DataType constants.DataType `json:"type" example:"int" description:"数据类型"`
-	TypeSpec interface{}        `json:"specs" description:"规格对象" example:"[{\"code\":\"204751\",\"name\":\"user\",\"type_spec\":{\"type\":\"int\",\"specs\":\"{\"max\":\"255\",\"min\":\"0\",\"step\":\"1\"}\"}}]" `
+	Code     string              `json:"code" example:"offline_event" description:"参数编码"`
+	Name     string              `json:"name" example:"设备掉线告警事件" description:"参数名称"`
+	DataType constants.SpecsType `json:"type" example:"int" description:"数据类型"`
+	TypeSpec interface{}         `json:"specs" description:"规格对象" example:"[{\"code\":\"204751\",\"name\":\"user\",\"type_spec\":{\"type\":\"int\",\"specs\":\"{\"max\":\"255\",\"min\":\"0\",\"step\":\"1\"}\"}}]" `
 }

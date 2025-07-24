@@ -24,6 +24,12 @@ type TagAddRequest struct {
 	TagValue   string `json:"tagValue"`
 }
 
+// ProductAddRequest 产品标签添加请求
+type ProductAddRequest struct {
+	ProductID  int64    `json:"productId"`  // 新增产品ID字段
+	DeviceName []string `json:"deviceName"` // 将设备ID改为数组
+}
+
 // TagRemoveRequest 标签删除请求
 type TagRemoveRequest struct {
 	DeviceName string `json:"deviceName"`

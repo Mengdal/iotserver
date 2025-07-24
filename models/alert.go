@@ -10,7 +10,7 @@ type AlertRule struct {
 	Id          int64  `orm:"auto;pk" json:"id"`
 	Created     int64  `orm:"column(created);null" json:"created"`
 	Modified    int64  `orm:"column(modified);null" json:"modified"`
-	Name        string `orm:"size(255);null" json:"name"`
+	Name        string `orm:"size(255);null;unique" json:"name"`
 	DeviceId    string `orm:"size(255);null;index" json:"device_id"`
 	AlertType   string `orm:"size(64);null" json:"alert_type"`               // 告警类型
 	AlertLevel  string `orm:"size(64);null" json:"alert_level"`              // 告警级别
@@ -40,15 +40,20 @@ type AlertList struct {
 	AlertRule *AlertRule `orm:"rel(fk);column(alert_rule_id);on_delete(do_nothing);on_update(do_nothing);null" json:"alert_rule,omitempty"`
 }
 
-// SubRule 子规则
-type SubRule []Rule
+// SubRule 规则
+type SubRule struct {
+	Trigger   string            `json:"trigger"   example:"设备数据触发"`                                                                                                                    //触发方式：设备数据触发/设备事件触发/设备状态触发
+	ProductId int64             `json:"productId" example:"83026097"`                                                                                                                  //产品ID
+	DeviceId  []string          `json:"deviceId"  example:"YT_test"`                                                                                                                   //edgeDB中的deviceName
+	Option    map[string]string `json:"option"    example:"{\"code\": \"CurrentHumidity\", \"value_type\": \"original\",\"value_cycle\": \"60分钟周期\", \"decide_condition\": \"> 39\"}"` //code属性KEY，value_type枚举Trigger，decide_condition枚举ValueTypes
+}
 
-// Rule 规则
-type Rule struct {
-	Trigger   string            `json:"trigger"` // 触发方式：设备数据触发/设备事件触发/设备状态触发
-	ProductId int64             `json:"productId"`
-	DeviceId  string            `json:"deviceId"`
-	Option    map[string]string `json:"option"` // 规则选项
+// Notify 通知
+type Notify struct {
+	Name            string            `json:"name" example:"企业微信机器人"`                                                  // 通知方式
+	Option          map[string]string `json:"option" example:"{\"webhook\": \"https://big-exabyte-28.webhook.cool\"}"` // 通知参数
+	StartEffectTime string            `json:"start_effect_time" example:"00:00:00"`                                    // 生效开始时间
+	EndEffectTime   string            `json:"end_effect_time" example:"23:59:59"`                                      // 生效结束时间
 }
 
 // BeforeInsert 插入前钩子
