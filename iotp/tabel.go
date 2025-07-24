@@ -3,6 +3,7 @@ package iotp
 import (
 	"encoding/json"
 	"fmt"
+	"iotServer/utils"
 	"log"
 	"strings"
 )
@@ -11,6 +12,70 @@ type TagService struct{}
 
 func NewTagService() *TagService {
 	return &TagService{}
+}
+
+// GetAllDevices 获取所有设备列表
+func (s *TagService) GetAllDevices(page, size int) (*utils.PageResult, error) {
+	// 参数校验
+	if page < 1 {
+		page = 1
+	}
+	if size < 1 {
+		size = 10
+	}
+
+	// 调用原始接口获取数据
+	url := fmt.Sprintf("http://%s/tag/listDevicesByName/GWSN/%d/%d",
+		IoTPServer, size, (page-1)*size)
+
+	data, err := HttpGet(url)
+	if err != nil {
+		log.Printf("获取设备列表失败: %v", err)
+		return nil, fmt.Errorf("API请求失败: %v", err)
+	}
+
+	// 解析响应
+	var response struct {
+		Devices []string `json:"devices"`
+		Total   int64    `json:"total"`
+	}
+	if err := json.Unmarshal([]byte(data), &response); err != nil {
+		return nil, fmt.Errorf("解析响应失败: %v", err)
+	}
+
+	// 手动计算分页参数
+	totalPage := int((response.Total + int64(size) - 1) / int64(size))
+	isFirstPage := page == 1
+	isLastPage := page >= totalPage
+
+	// 直接返回分页结果
+	return &utils.PageResult{
+		List:       response.Devices,
+		PageNumber: page,
+		PageSize:   size,
+		TotalPage:  totalPage,
+		TotalRow:   response.Total,
+		FirstPage:  isFirstPage,
+		LastPage:   isLastPage,
+	}, nil
+}
+
+// DeleteDevices 删除指定设备
+func (s *TagService) DeleteDevices(deviceNames ...string) error {
+	if len(deviceNames) == 0 {
+		return fmt.Errorf("未指定要删除的设备")
+	}
+
+	url := fmt.Sprintf("http://%s/TSDELDEVICE/%s",
+		IoTPServer, deviceNames)
+
+	_, err := HttpGet(url)
+	if err != nil {
+		log.Printf("删除设备失败: %v", err)
+		return fmt.Errorf("删除设备失败: %v", err)
+	}
+
+	return nil
 }
 
 // 获取拥有指定标签值的所有设备
@@ -58,6 +123,9 @@ func (s *TagService) ListTagsByDevice(deviceName string) (map[string]string, err
 	tags := make(map[string]string)
 	if err := json.Unmarshal([]byte(data), &tags); err != nil {
 		return nil, fmt.Errorf("解析响应失败: %v", err)
+	}
+	if tags["info"] != "" {
+		return nil, fmt.Errorf("未查询到该设备")
 	}
 
 	return tags, nil

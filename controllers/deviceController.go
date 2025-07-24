@@ -1,0 +1,158 @@
+package controllers
+
+import (
+	"encoding/json"
+	"github.com/beego/beego/v2/client/orm"
+	"iotServer/iotp"
+	"iotServer/models"
+	"iotServer/models/dtos"
+	"strconv"
+)
+
+// DeviceController 设备管理控制器
+type DeviceController struct {
+	BaseController
+}
+
+var tagService = iotp.TagService{}
+
+// GetDevice @Title 获取设备详情
+// @Description 根据设备ID获取设备详细信息,即查询设备所有属性点
+// @Param   Authorization  header  string  true  "Bearer YourToken"
+// @Param   deviceName     query   string  true  "设备ID"
+// @Success 200 {object} controllers.SimpleResult
+// @Failure 400 "请求出错"
+// @router /get [post]
+func (c *DeviceController) GetDevice() {
+	deviceID := c.GetString("deviceName")
+	if deviceID == "" {
+		c.Error(400, "设备ID不能为空")
+	}
+
+	device, err := tagService.ListTagsByDevice(deviceID)
+	if err != nil {
+		c.Error(400, "获取设备失败: "+err.Error())
+	}
+
+	c.Success(device)
+}
+
+// GetAllDevices @Title 获取所有设备
+// @Description 获取系统中所有设备的简要信息
+// @Param   Authorization  header  string  true  "Bearer YourToken"
+// @Param   page           query   int     false "当前页码，默认1"
+// @Param   size           query   int     false "每页数量，默认10"
+// @Success 200 {object} controllers.SimpleResult
+// @Failure 400 "请求错误"
+// @router /all [post]
+func (c *DeviceController) GetAllDevices() {
+
+	page, _ := c.GetInt("page", 1)
+	size, _ := c.GetInt("size", 10)
+
+	devices, err := tagService.GetAllDevices(page, size)
+	if err != nil {
+		c.Error(400, "获取设备列表失败: "+err.Error())
+	}
+
+	c.Success(devices)
+}
+
+// Update @Title 设备标签
+// @Description 给指定设备打上标签信息，如果key值相同则为更新操作
+// @Param   Authorization  header  string  true  "Bearer YourToken"
+// @Param   body    	   body    dtos.TagAddRequest  true  "更新内容"
+// @Success 200 {object} controllers.Result
+// @Failure 400 "请求出错"
+// @router /update [post]
+func (c *DeviceController) Update() {
+	var req dtos.TagAddRequest
+	if err := json.NewDecoder(c.Ctx.Request.Body).Decode(&req); err != nil {
+		c.Error(400, "参数解析失败: "+err.Error())
+	}
+
+	if req.DeviceName == "" {
+		c.Error(400, "设备ID不能为空")
+	}
+
+	if req.TagName == "productId" || req.TagName == "productName" {
+		c.Error(400, "内置标签无法使用")
+	}
+
+	err := tagService.AddTag(req.DeviceName, req.TagName, req.TagValue)
+	if err != nil {
+		c.Error(400, "更新设备失败: "+err.Error())
+	}
+
+	c.SuccessMsg()
+}
+
+// Bind @Title 设备绑定产品
+// @Description 给指定设备打上产品信息，如果key值相同则为更新操作
+// @Param   Authorization  header  string  true  "Bearer YourToken"
+// @Param   body  body  dtos.ProductAddRequest  true  "请求体: {productId: 123, devicesName: [...]}"
+// @Success 200 {object} controllers.Result
+// @Failure 400 "请求出错"
+// @router /bind [post]
+func (c *DeviceController) Bind() {
+	var req dtos.ProductAddRequest
+	if err := json.NewDecoder(c.Ctx.Request.Body).Decode(&req); err != nil {
+		c.Error(400, "参数解析失败: "+err.Error())
+	}
+
+	// 参数校验
+	if req.ProductID <= 0 {
+		c.Error(400, "产品ID必须大于0")
+	}
+	if len(req.DeviceName) == 0 {
+		c.Error(400, "设备ID列表不能为空")
+	}
+	o := orm.NewOrm()
+	var product models.Product
+	product.Id = req.ProductID
+	err := o.Read(&product)
+	if err != nil {
+		c.Error(400, "产品ID无效")
+	}
+
+	// 循环绑定产品ID标签
+	productIDStr := strconv.FormatInt(req.ProductID, 10)
+	productName := product.Name
+	for _, deviceName := range req.DeviceName {
+		if deviceName == "" {
+			continue // 跳过空设备ID
+		}
+		if err := tagService.AddTag(deviceName, "productName", productName); err != nil {
+			c.Error(400, "设备 "+deviceName+" 绑定失败: "+err.Error())
+			break
+		}
+		// 假设标签键固定为 "productId"，值为产品ID字符串
+		if err := tagService.AddTag(deviceName, "productId", productIDStr); err != nil {
+			c.Error(400, "设备 "+deviceName+" 绑定失败: "+err.Error())
+			break
+		}
+	}
+
+	c.Success("批量绑定成功")
+}
+
+// Delete @Title 删除设备
+// @Description 根据设备ID删除设备
+// @Param   Authorization  header  string  true  "Bearer YourToken"
+// @Param   deviceName     query    string  true  "设备ID"
+// @Success 200 {object} controllers.Result
+// @Failure 400 "请求出错"
+// @router /delete [post]
+func (c *DeviceController) Delete() {
+	deviceID := c.GetString("deviceName")
+	if deviceID == "" {
+		c.Error(400, "设备ID不能为空")
+	}
+
+	err := tagService.DeleteDevices(deviceID)
+	if err != nil {
+		c.Error(400, "删除设备失败: "+err.Error())
+	}
+
+	c.SuccessMsg()
+}
