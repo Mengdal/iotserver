@@ -134,7 +134,12 @@ func (p *PropertySetProcessor) Init() error {
 	} else {
 		log.Println("已订阅报警事件响应主题: /edge/event/+/post")
 	}
-
+	//平台预处理实时数据主题供流数据处理
+	if err := p.mqttClient.Subscribe("/edge/property/+/post", 0, p.handleMessage); err != nil {
+		return fmt.Errorf("订阅失败: %v", err)
+	} else {
+		log.Println("已订阅实时数据主题: /edge/property/+/post")
+	}
 	return nil
 }
 
@@ -167,6 +172,12 @@ func (p *PropertySetProcessor) process(topic, payload string) error {
 	} else if strings.HasPrefix(topic, "/edge/event/") && strings.HasSuffix(topic, "/post") {
 		// 处理报警主题
 		return p.processAlertEvent(topic, payload)
+	} else if strings.HasPrefix(topic, "/edge/property/") && strings.HasSuffix(topic, "/post") {
+		// 处理实时数据
+		return p.handlePropertyMessage(topic, payload)
+	} else if strings.HasPrefix(topic, "/edge/stream/") && strings.HasSuffix(topic, "/post") {
+		// 跳过转发数据
+		return nil
 	}
 	return fmt.Errorf("未知的主题类型: %s", topic)
 }
@@ -229,6 +240,55 @@ func (p *PropertySetProcessor) processAlertEvent(topic, payload string) error {
 	}
 
 	log.Printf("报警记录已保存: %v", alertList.Id)
+	return nil
+}
+
+// 转发实时数据主题
+func (p *PropertySetProcessor) handlePropertyMessage(topic, payload string) error {
+	// 提取SN
+	parts := strings.Split(topic, "/")
+	if len(parts) < 5 {
+		return fmt.Errorf("主题格式错误:%v", topic)
+	}
+	sn := parts[3]
+	// 解析原始数组数据
+	var arr []struct {
+		Dn         string                 `json:"dn"`
+		Properties map[string]interface{} `json:"properties"`
+		Time       int64                  `json:"time"`
+	}
+	if err := json.Unmarshal([]byte(payload), &arr); err != nil {
+		return fmt.Errorf("JSON解析失败:%v", err)
+	}
+
+	for _, item := range arr {
+		// 转换为 eKuiper 友好格式
+		data := make(map[string]map[string]interface{})
+		for k, v := range item.Properties {
+			data[k] = map[string]interface{}{
+				"value": v,
+				"time":  item.Time,
+			}
+		}
+		out := map[string]interface{}{
+			"dn":          item.Dn,
+			"messageType": "PROPERTY_REPORT",
+			"data":        data,
+		}
+		newPayload, err := json.Marshal(out)
+		if err != nil {
+			log.Println("JSON序列化失败:", err)
+			continue
+		}
+
+		// 转发到新主题（每个设备一个主题）
+		newTopic := fmt.Sprintf("/edge/stream/%s/post", sn)
+		if err := p.mqttClient.Publish(newTopic, 0, newPayload); err != nil {
+			log.Println("转发失败:", err.Error())
+		} else {
+			log.Printf("已转发到 %s: %s\n", newTopic, string(newPayload))
+		}
+	}
 	return nil
 }
 

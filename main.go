@@ -22,9 +22,6 @@ import (
 // 启动swagger bee run -gendoc=true -downdoc=true
 // 手动执行 bee generate docs以及bee generate routers重新生成commentsRouter_controllers.go，新版本删除了自动生成功能
 func initSwagger() {
-	//if beego.BConfig.RunMode == "dev" {
-	//
-	//}
 	beego.BConfig.WebConfig.DirectoryIndex = true
 	beego.BConfig.WebConfig.StaticDir["/swagger"] = "swagger"
 	beego.BConfig.WebConfig.Session.SessionOn = true
@@ -63,6 +60,7 @@ func initLogger() {
 func validateToken(ctx *context.Context) bool {
 	// 跳过 Swagger、静态文件等路径
 	skipPaths := []string{
+		"/",
 		"/swagger",
 		"/static",
 		"/favicon.ico",
@@ -81,6 +79,7 @@ func validateToken(ctx *context.Context) bool {
 		"/api/scada/delete",
 		"/api/scada/getAlarmRecord",
 		"/api/ws",
+		"/api/ekuiper/callback",
 	}
 	for _, path := range skipPaths {
 		if strings.HasPrefix(ctx.Request.URL.Path, path) {
@@ -128,6 +127,7 @@ func runDev() {
 	common.InitDB()
 	go controllers.InitMQTT()
 	initSwagger()
+	common.InitEuiper()
 	beego.Run()
 }
 
@@ -168,6 +168,9 @@ func (p *program) run() {
 
 	log.Println("【Service】启动 MQTT 服务...")
 	go controllers.InitMQTT()
+
+	log.Println("【Service】启动 流数据 服务...")
+	common.InitEuiper()
 
 	log.Println("【Service】服务已启动...")
 
