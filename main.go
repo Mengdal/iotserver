@@ -60,7 +60,6 @@ func initLogger() {
 func validateToken(ctx *context.Context) bool {
 	// 跳过 Swagger、静态文件等路径
 	skipPaths := []string{
-		"/",
 		"/swagger",
 		"/static",
 		"/favicon.ico",
