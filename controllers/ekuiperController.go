@@ -6,6 +6,7 @@ import (
 	beego "github.com/beego/beego/v2/server/web"
 	"iotServer/common"
 	"iotServer/models/dtos"
+	"iotServer/services"
 	"log"
 	"time"
 )
@@ -154,12 +155,15 @@ func (c *EkuiperController) AlertCallback() {
 		c.Error(400, "参数解析失败: "+err.Error())
 	}
 	log.Printf("收到告警回调: %+v", req)
-	// 你可以通过 req["rule_id"], req["deviceId"] 等方式获取字段
-
-	// 这里可以添加告警处理逻辑，比如：
 	// 1. 保存到数据库
 	// 2. 发送通知
 	// 3. 触发其他业务逻辑
+	service := services.AlertService{}
+	err := service.AddAlert(req)
+	if err != nil {
+		c.Error(400, "告警回调处理失败"+err.Error())
+	}
+
 	c.Success(map[string]interface{}{
 		"received":  true,
 		"timestamp": time.Now().Unix(),

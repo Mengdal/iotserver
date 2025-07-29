@@ -96,6 +96,24 @@ func IsValidValueType(value string) bool {
 	}
 }
 
+// GetValueTypeLabel 根据 valueType 返回对应的中文标签
+func GetValueTypeLabel(valueTypeStr string) string {
+	switch valueTypeStr {
+	case string(Original):
+		return "原始值"
+	case string(Avg):
+		return "平均值"
+	case string(Max):
+		return "最大值"
+	case string(Min):
+		return "最小值"
+	case string(Sum):
+		return "总和"
+	default:
+		return "未知"
+	}
+}
+
 // 取值周期 IsAggregationType 判断是否是聚合类型
 type valueCycle string
 
@@ -160,4 +178,16 @@ const (
 
 func IsSpecsType(value string) bool {
 	return value == string(SpecsTypeInt) || value == string(SpecsTypeFloat) || value == string(SpecsTypeText) || value == string(SpecsTypeDate) || value == string(SpecsTypeBool) || value == string(SpecsTypeEnum) || value == string(SpecsTypeStruct) || value == string(SpecsTypeArray)
+}
+
+// 执行条件
+type ConditionType string
+
+const (
+	ConditionTypeTimer  ConditionType = "timer"
+	ConditionTypeNotify ConditionType = "notify"
+)
+
+func isValidConditionType(value string) bool {
+	return value == string(ConditionTypeTimer) || value == string(ConditionTypeNotify)
 }

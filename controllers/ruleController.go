@@ -116,6 +116,11 @@ func (c *RuleController) Update() {
 	actions := common.GetRuleAlertEkuiperActions(CallBackUrl + "/api/ekuiper/callback")
 
 	// 6. 检查规则是否已存在,存在则更新，不存在则新建
+	var alertRule models.AlertRule
+	if err = o.QueryTable(new(models.AlertRule)).Filter("name", req.Name).One(&alertRule); err != nil {
+		c.Error(400, "规则不存在，请创建后配置")
+	}
+
 	if err := ekuiperClient.RuleExist(ctx, req.Name); err == nil {
 		err = ekuiperClient.UpdateRule(ctx, actions, req.Name, sql)
 		if err != nil {
@@ -126,13 +131,11 @@ func (c *RuleController) Update() {
 		if err != nil {
 			c.Error(400, "更新规则失败: "+err.Error())
 		}
+		alertRule.Condition = string(constants.WorkerConditionAnyone)
+		alertRule.Status = string(constants.RuleStart)
 	}
 
 	// 7 . 全部操作完成写盘保存
-	var alertRule models.AlertRule
-	if err = o.QueryTable(new(models.AlertRule)).Filter("name", req.Name).One(&alertRule); err != nil {
-		c.Error(400, "查询出错")
-	}
 	alertRule.SilenceTime = req.SilenceTime
 	idsJson, _ := json.Marshal(ids)
 	subRuleJson, _ := json.Marshal(req.SubRule)
@@ -198,7 +201,7 @@ func (c *RuleController) GetRuleStatus() {
 }
 
 // OperateRule @Title 启动/停止/重启/删除规则
-// @Description 启动或停止指定的Ekuiper规则
+// @Description 操作指定的Ekuiper规则
 // @Param   Authorization  header  string  true  "Bearer YourToken"
 // @Param   body     body  dtos.OperateRuleReq true  "操作内容（start、stop、restart、delete）, 例如 {\"action\":\"start\"}"
 // @Success 200 {object} controllers.Result

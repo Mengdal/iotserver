@@ -94,32 +94,32 @@ func (req *RuleUpdateRequest) buildMultiDeviceNumericSql(deviceCondition, code, 
 	switch valueType {
 	case "original":
 		return fmt.Sprintf(
-			`SELECT rule_id(), json_path_query(data, "$.%s.time") AS report_time, dn AS deviceId FROM stream WHERE %s AND %s`,
-			code, baseWhere, decideExpr,
+			`SELECT rule_id(), json_path_query(data, "$.%s.time") AS report_time, json_path_query(data, "$.%s.value") as alert_value, dn AS deviceId FROM stream WHERE %s AND %s`,
+			code, code, baseWhere, decideExpr,
 		)
 
 	case "avg":
 		return fmt.Sprintf(
-			`SELECT window_start(), window_end(), rule_id(), dn AS deviceId, avg(CAST(json_path_query(data, "$.%s.value"), "float")) AS avg_%s FROM stream WHERE %s GROUP BY TUMBLINGWINDOW(ss, %d), dn HAVING avg_%s %s`,
-			code, code, baseWhere, windowSize, code, decideCondition,
+			`SELECT window_start(), window_end(), rule_id(), dn AS deviceId, avg(CAST(json_path_query(data, "$.%s.value"), "float")) AS alert_value FROM stream WHERE %s GROUP BY TUMBLINGWINDOW(ss, %d), dn HAVING alert_value %s`,
+			code, baseWhere, windowSize, decideCondition,
 		)
 
 	case "max":
 		return fmt.Sprintf(
-			`SELECT window_start(), window_end(), rule_id(), dn AS deviceId, max(CAST(json_path_query(data, "$.%s.value"), "float")) AS max_%s FROM stream WHERE %s GROUP BY TUMBLINGWINDOW(ss, %d), dn HAVING max_%s %s`,
-			code, code, baseWhere, windowSize, code, decideCondition,
+			`SELECT window_start(), window_end(), rule_id(), dn AS deviceId, max(CAST(json_path_query(data, "$.%s.value"), "float")) AS alert_value FROM stream WHERE %s GROUP BY TUMBLINGWINDOW(ss, %d), dn HAVING alert_value %s`,
+			code, baseWhere, windowSize, decideCondition,
 		)
 
 	case "min":
 		return fmt.Sprintf(
-			`SELECT window_start(), window_end(), rule_id(), dn AS deviceId, min(CAST(json_path_query(data, "$.%s.value"), "float")) AS min_%s FROM stream WHERE %s GROUP BY TUMBLINGWINDOW(ss, %d), dn HAVING min_%s %s`,
-			code, code, baseWhere, windowSize, code, decideCondition,
+			`SELECT window_start(), window_end(), rule_id(), dn AS deviceId, min(CAST(json_path_query(data, "$.%s.value"), "float")) AS alert_value FROM stream WHERE %s GROUP BY TUMBLINGWINDOW(ss, %d), dn HAVING alert_value %s`,
+			code, baseWhere, windowSize, decideCondition,
 		)
 
 	case "sum":
 		return fmt.Sprintf(
-			`SELECT window_start(), window_end(), rule_id(), dn AS deviceId, sum(CAST(json_path_query(data, "$.%s.value"), "float")) AS sum_%s FROM stream WHERE %s GROUP BY TUMBLINGWINDOW(ss, %d), dn HAVING sum_%s %s`,
-			code, code, baseWhere, windowSize, code, decideCondition,
+			`SELECT window_start(), window_end(), rule_id(), dn AS deviceId, sum(CAST(json_path_query(data, "$.%s.value"), "float")) AS alert_value FROM stream WHERE %s GROUP BY TUMBLINGWINDOW(ss, %d), dn HAVING alert_value %s`,
+			code, baseWhere, windowSize, decideCondition,
 		)
 
 	default:
@@ -127,13 +127,7 @@ func (req *RuleUpdateRequest) buildMultiDeviceNumericSql(deviceCondition, code, 
 	}
 }
 
-//	func (req *RuleUpdateRequest) buildMultiDeviceTextSql(deviceCond string, code, decideCondition string) string {
-//		sql := fmt.Sprintf(
-//			`SELECT rule_id(),json_path_query(data, "$.%s.time") as report_time,deviceId FROM stream WHERE %s AND messageType = "PROPERTY_REPORT" AND json_path_exists(data, "$.%s") = true AND json_path_query(data, "$.%s.value") %s`,
-//			code, deviceCond, code, code, decideCondition,
-//		)
-//		return sql
-//	}
+// TODO 非数值类型SQL查询修改
 func (req *RuleUpdateRequest) buildMultiDeviceTextSql(deviceCondition, code, decideCondition string) string {
 	// WHERE 条件部分：设备判断 + 报文类型 + 属性存在判断
 	baseWhere := fmt.Sprintf(`(%s) AND messageType = "PROPERTY_REPORT" AND json_path_exists(data, "$.%s") = true`, deviceCondition, code)
@@ -236,6 +230,10 @@ func ValidateRuleUpdateRequest(req *RuleUpdateRequest, typeStyle string) error {
 
 		code, ok := subRule.Option["code"]
 		if !ok || code == "" {
+			return errors.New("属性点 code 不能为空")
+		}
+		name, ok := subRule.Option["name"]
+		if !ok || name == "" {
 			return errors.New("属性点 code 不能为空")
 		}
 
