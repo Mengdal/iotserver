@@ -8,6 +8,7 @@ import (
 	"iotServer/controllers"
 	"iotServer/iotp"
 	"iotServer/models"
+	"iotServer/services"
 	"iotServer/utils"
 	"log"
 	"net/http"
@@ -114,7 +115,7 @@ func writeData(id string, ws *websocket.Conn, token string, val string) error {
 
 	var tagID = deviceCode + "." + tagCode
 	// 发送控制命令
-	seq, err := controllers.Processor.Deal(deviceCode, tagCode, val, "组态下发", int64(userId))
+	seq, err := services.Processor.Deal(deviceCode, tagCode, val, "组态下发", int64(userId))
 	if err != nil {
 		fail.Data = tagID
 		ws.WriteJSON(fail)
