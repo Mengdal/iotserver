@@ -76,6 +76,11 @@ func init() {
 				&controllers.DeviceController{},
 			),
 		),
+		beego.NSNamespace("/scene",
+			beego.NSInclude(
+				&controllers.SceneController{},
+			),
+		),
 	)
 	beego.AddNamespace(ns)
 }

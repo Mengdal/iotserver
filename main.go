@@ -7,8 +7,8 @@ import (
 	"github.com/beego/beego/v2/server/web/filter/cors"
 	"github.com/kardianos/service"
 	"iotServer/common"
-	"iotServer/controllers"
 	_ "iotServer/routers"
+	"iotServer/services"
 	"iotServer/utils"
 	"log"
 	"os"
@@ -124,7 +124,7 @@ func main() {
 // 开发模式
 func runDev() {
 	common.InitDB()
-	go controllers.InitMQTT()
+	go services.InitMQTT()
 	initSwagger()
 	common.InitEuiper()
 	beego.Run()
@@ -166,7 +166,7 @@ func (p *program) run() {
 	beego.Run()
 
 	log.Println("【Service】启动 MQTT 服务...")
-	go controllers.InitMQTT()
+	go services.InitMQTT()
 
 	log.Println("【Service】启动 流数据 服务...")
 	common.InitEuiper()

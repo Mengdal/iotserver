@@ -421,6 +421,42 @@ func init() {
 			Filters:          nil,
 			Params:           nil})
 
+	beego.GlobalControllerRouter["iotServer/controllers:SceneController"] = append(beego.GlobalControllerRouter["iotServer/controllers:SceneController"],
+		beego.ControllerComments{
+			Method:           "Edit",
+			Router:           `/edit`,
+			AllowHTTPMethods: []string{"post"},
+			MethodParams:     param.Make(),
+			Filters:          nil,
+			Params:           nil})
+
+	beego.GlobalControllerRouter["iotServer/controllers:SceneController"] = append(beego.GlobalControllerRouter["iotServer/controllers:SceneController"],
+		beego.ControllerComments{
+			Method:           "OperateScene",
+			Router:           `/operate`,
+			AllowHTTPMethods: []string{"post"},
+			MethodParams:     param.Make(),
+			Filters:          nil,
+			Params:           nil})
+
+	beego.GlobalControllerRouter["iotServer/controllers:SceneController"] = append(beego.GlobalControllerRouter["iotServer/controllers:SceneController"],
+		beego.ControllerComments{
+			Method:           "GetSceneStatus",
+			Router:           `/status`,
+			AllowHTTPMethods: []string{"get"},
+			MethodParams:     param.Make(),
+			Filters:          nil,
+			Params:           nil})
+
+	beego.GlobalControllerRouter["iotServer/controllers:SceneController"] = append(beego.GlobalControllerRouter["iotServer/controllers:SceneController"],
+		beego.ControllerComments{
+			Method:           "Update",
+			Router:           `/update`,
+			AllowHTTPMethods: []string{"post"},
+			MethodParams:     param.Make(),
+			Filters:          nil,
+			Params:           nil})
+
 	beego.GlobalControllerRouter["iotServer/controllers:UserController"] = append(beego.GlobalControllerRouter["iotServer/controllers:UserController"],
 		beego.ControllerComments{
 			Method:           "GetAll",
