@@ -41,3 +41,13 @@ type ThingModelEventAction struct {
 	DataType constants.SpecsType `json:"type" example:"int" description:"数据类型"`
 	TypeSpec interface{}         `json:"specs" description:"规格对象" example:"[{\"code\":\"204751\",\"name\":\"user\",\"type_spec\":{\"type\":\"int\",\"specs\":\"{\"max\":\"255\",\"min\":\"0\",\"step\":\"1\"}\"}}]" `
 }
+
+type ThingModelTemplateResponse struct {
+	Id             string      `json:"id"`
+	CategoryName   string      `json:"category_name"` // 品类名称
+	CategoryKey    string      `json:"category_key"`
+	ThingModelJSON string      `json:"thing_model_json"`
+	Properties     interface{} `json:"properties"`
+	Events         interface{} `json:"events"`
+	Actions        interface{} `json:"actions"`
+}

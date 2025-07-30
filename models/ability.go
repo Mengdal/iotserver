@@ -17,7 +17,7 @@ type Properties struct {
 	Id          int64  `orm:"auto;pk;size(255)" json:"id"`
 	AccessMode  string `orm:"size(50);null" json:"access_mode"`
 	Name        string `orm:"size(255);null" json:"name"`
-	Code        string `orm:"size(255);null;unique" json:"code"`
+	Code        string `orm:"size(255);null" json:"code"`
 	Description string `orm:"type(text);null" json:"description"`
 	Require     bool   `orm:"default(false);null" json:"require"`
 	TypeSpec    string `orm:"column(type_spec);type(text);null" json:"type_spec"`

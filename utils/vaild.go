@@ -1,10 +1,12 @@
 package utils
 
 import (
+	"crypto/rand"
 	"encoding/json"
 	"github.com/bwmarrin/snowflake"
 	"github.com/golang-jwt/jwt/v5"
 	"log"
+	"math/big"
 	"sync"
 	"time"
 )
@@ -72,4 +74,19 @@ func GenerateID() int64 {
 		}
 	})
 	return node.Generate().Int64()
+}
+
+func GenerateDeviceSecret(n int) string {
+	if n <= 0 {
+		return ""
+	}
+	b := make([]byte, n)
+	charset := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	// 使用crypto/rand确保安全性
+	for i := range b {
+		// 生成0-51的随机数
+		idx, _ := rand.Int(rand.Reader, big.NewInt(int64(len(charset))))
+		b[i] = charset[idx.Uint64()]
+	}
+	return string(b)
 }
