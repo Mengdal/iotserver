@@ -7,6 +7,7 @@ import (
 	"iotServer/models/constants"
 	"iotServer/models/dtos"
 	"iotServer/utils"
+	"strconv"
 )
 
 type ModelController struct {
@@ -263,5 +264,72 @@ func (c *ModelController) Create() {
 
 	default:
 		c.Error(400, "无效的物模型类型")
+	}
+}
+
+// Template @Title 获取模型模板列表
+// @Description 查询内置模型，支持详细查询
+// @Param   Authorization  header  string  true  "Bearer YourToken"
+// @Param   id             query   int64   false  "非必填，模型产品ID用于查看功能定义"
+// @Param   name           query   string  false  "支持模糊搜索"
+// @Param   page           query   int     false "当前页码，默认1"
+// @Param   size           query   int     false "每页数量，默认10"
+// @Success 200 {object} controllers.SimpleResult "请求成功"
+// @Failure 400 用户ID不存在 或 查询失败
+// @router /template [post]
+func (c *ModelController) Template() {
+	page, _ := c.GetInt("page", 1)
+	size, _ := c.GetInt("size", 10)
+	id, _ := c.GetInt64("id")
+
+	o := orm.NewOrm()
+	qs := o.QueryTable(new(models.Category))
+	// 查询产品
+	if id == 0 {
+		var category []*models.Category
+		paginate, err := utils.Paginate(qs, page, size, &category)
+		if err != nil {
+			c.Error(400, "查询失败")
+		}
+		c.Success(paginate)
+	} else {
+		var category models.Category
+		if err := qs.Filter("id", id).One(&category); err != nil {
+			c.Error(400, "查询失败")
+		}
+		var thingModel models.ThingModel
+		thingModel.CategoryKey = category.CategoryKey
+		if err := o.Read(&thingModel, "CategoryKey"); err != nil {
+			c.Error(400, "查询失败,"+err.Error())
+		}
+
+		// 解析ThingModelJSON，提取properties、events、actions
+		var thingModelData map[string]interface{}
+		var properties, events, actions interface{}
+
+		if thingModel.ThingModelJson != "" {
+			if err := json.Unmarshal([]byte(thingModel.ThingModelJson), &thingModelData); err == nil {
+				if props, exists := thingModelData["properties"]; exists {
+					properties = props
+				}
+				if evts, exists := thingModelData["events"]; exists {
+					events = evts
+				}
+				if acts, exists := thingModelData["services"]; exists {
+					actions = acts
+				}
+			}
+		}
+		// 构建响应数据，格式与hummingbird保持一致
+		response := dtos.ThingModelTemplateResponse{
+			Id:             strconv.FormatInt(thingModel.Id, 10),
+			CategoryName:   thingModel.CategoryName,
+			CategoryKey:    thingModel.CategoryKey,
+			ThingModelJSON: "",
+			Properties:     properties,
+			Events:         events,
+			Actions:        actions,
+		}
+		c.Success(response)
 	}
 }

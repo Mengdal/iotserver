@@ -35,6 +35,10 @@ const (
 	Standard DataFormat = "标准物模型" //同步
 )
 
+func IsValidDataFormat(value string) bool {
+	return value == string(Standard)
+}
+
 type EventType string
 
 const (
@@ -48,4 +52,26 @@ type ProductStatus int
 const (
 	ProductRelease   ProductStatus = 1
 	ProductUnRelease ProductStatus = 0
+)
+
+type ProductNodeType string
+
+const (
+	ProductNodeTypeUnKnow    ProductNodeType = "其他"
+	ProductNodeTypeGateway   ProductNodeType = "网关"
+	ProductNodeTypeSubDevice ProductNodeType = "网关子设备"
+	ProductNodeTypeDevice    ProductNodeType = "直连设备"
+)
+
+type PlanformType string
+
+const (
+	PlanformLocal PlanformType = "本地"
+	PlanformCloud PlanformType = "云平台"
+)
+
+type Protocol string
+
+const (
+	MQTT Protocol = "MQTT"
 )

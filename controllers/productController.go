@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"github.com/beego/beego/v2/client/orm"
 	"iotServer/models"
+	"iotServer/models/constants"
+	"iotServer/services"
 	"iotServer/utils"
 	"strconv"
 )
@@ -82,23 +84,27 @@ func GetAllSubUserIds(userId int64) ([]int64, error) {
 // @Description 创建新产品，仅支持部分字段，自动绑定当前用户
 // @Param   Authorization  header  string  true  "Bearer YourToken"
 // @Param   name         query   string  true  "产品名称"
-// @Param	dataFormat	query	string	false	"数据格式，可选值：标准物模型"
 // @Param   status       query    bool   true  "是否启用"
 // @Param   description  query   string  false "描述"
+// @Param   nodeType     query   string  false "类型(默认：网关子设备)"
+// @Param   factory      query   string  false "工厂名称"
+// @Param   categoryId   query   string  false "内置标准物模型品类"
 // @Success 200 {object} controllers.SimpleResult "返回产品ID"
 // @Failure 400 参数错误 / 权限不足
 // @router /create [post]
 func (c *ProductController) Create() {
 
 	id := utils.GenerateID()
+	secret := utils.GenerateDeviceSecret(15)
 
 	name := c.GetString("name")
-	dataFormat := c.GetString("dataFormat")
 	status, _ := c.GetBool("status")
 	description := c.GetString("description")
+	nodeType := c.GetString("nodeType", "网关子设备") // 控制器代码
+	categoryId, _ := c.GetInt64("categoryId")
 
 	if name == "" {
-		c.Error(400, "id 和 name 是必填项")
+		c.Error(400, "参数有误")
 	}
 
 	userId, ok := c.Ctx.Input.GetData("user_id").(int64)
@@ -109,11 +115,16 @@ func (c *ProductController) Create() {
 	o := orm.NewOrm()
 
 	product := models.Product{
-		Id:          id,
-		Name:        name,
-		DataFormat:  dataFormat,
-		Status:      convertStatus(status),
-		Description: description,
+		Id:             id,
+		Name:           name,
+		DataFormat:     string(constants.Standard),
+		Status:         convertStatus(status),
+		Description:    description,
+		Key:            secret,
+		CloudProductId: secret,
+		Platform:       string(constants.PlanformLocal),
+		Protocol:       string(constants.MQTT),
+		NodeType:       nodeType,
 	}
 
 	// 获取用户对象
@@ -126,6 +137,44 @@ func (c *ProductController) Create() {
 	_, err := o.Insert(&product)
 	if err != nil {
 		c.Error(400, "创建失败: "+err.Error())
+	}
+
+	//用户选择了标准品类
+	if categoryId != 0 {
+		// 初始化物模型数据
+		var properties []*models.Properties
+		var events []*models.Events
+		var actions []*models.Actions
+		//TODO 初步处理标准模型的生成 event及actions未处理
+		err := services.ParseThingModelToEntities(categoryId, o, &properties, &events, &actions)
+		if err != nil {
+			c.Error(400, err.Error())
+		}
+
+		// 保存物模型数据
+		for _, property := range properties {
+			property.Product = &product
+			property.BeforeInsert()
+			if _, err := o.Insert(property); err != nil {
+				c.Error(500, "保存属性失败: "+err.Error())
+			}
+		}
+
+		for _, event := range events {
+			event.Product = &product
+			event.BeforeInsert()
+			if _, err := o.Insert(event); err != nil {
+				c.Error(500, "保存事件失败: "+err.Error())
+			}
+		}
+
+		for _, action := range actions {
+			action.Product = &product
+			action.BeforeInsert()
+			if _, err := o.Insert(action); err != nil {
+				c.Error(500, "保存服务失败: "+err.Error())
+			}
+		}
 	}
 
 	c.Success(product.Id)
