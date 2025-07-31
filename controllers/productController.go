@@ -19,12 +19,14 @@ type ProductController struct {
 // @Param   Authorization  header  string  true  "Bearer YourToken"
 // @Param   page           query   int     false "当前页码，默认1"
 // @Param   size           query   int     false "每页数量，默认10"
+// @Param   name           query   string  false "模糊搜索"
 // @Success 200 {object} controllers.SimpleResult "请求成功"
 // @Failure 400 用户ID不存在 或 查询失败
 // @router /get [post]
 func (c *ProductController) Get() {
 	page, _ := c.GetInt("page", 1)
 	size, _ := c.GetInt("size", 10)
+	name := c.GetString("name")
 
 	userId, ok := c.Ctx.Input.GetData("user_id").(int64)
 	if !ok {
@@ -54,6 +56,10 @@ func (c *ProductController) Get() {
 	var products []*models.Product
 	qs := o.QueryTable(new(models.Product)).
 		Filter("user_id__in", userIds)
+	// 如果提供了名称参数，则添加模糊搜索条件
+	if name != "" {
+		qs = qs.Filter("name__icontains", name)
+	}
 	paginate, err := utils.Paginate(qs, page, size, &products)
 	if err != nil {
 		c.Error(400, "查询失败")

@@ -271,7 +271,7 @@ func (c *ModelController) Create() {
 // @Description 查询内置模型，支持详细查询
 // @Param   Authorization  header  string  true  "Bearer YourToken"
 // @Param   id             query   int64   false  "非必填，模型产品ID用于查看功能定义"
-// @Param   name           query   string  false  "支持模糊搜索"
+// @Param   name           query   string  false  "支持模糊搜索，仅支持全部查询时"
 // @Param   page           query   int     false "当前页码，默认1"
 // @Param   size           query   int     false "每页数量，默认10"
 // @Success 200 {object} controllers.SimpleResult "请求成功"
@@ -281,12 +281,16 @@ func (c *ModelController) Template() {
 	page, _ := c.GetInt("page", 1)
 	size, _ := c.GetInt("size", 10)
 	id, _ := c.GetInt64("id")
+	name := c.GetString("name")
 
 	o := orm.NewOrm()
 	qs := o.QueryTable(new(models.Category))
 	// 查询产品
 	if id == 0 {
 		var category []*models.Category
+		if name != "" {
+			qs = qs.Filter("categoryName__icontains", name)
+		}
 		paginate, err := utils.Paginate(qs, page, size, &category)
 		if err != nil {
 			c.Error(400, "查询失败")
