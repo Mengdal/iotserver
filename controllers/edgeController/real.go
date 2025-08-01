@@ -46,7 +46,7 @@ func (c *RealController) QueryReal() {
 	}
 	trueData := make([]iotp.Record, 0)
 	for _, tag := range data {
-		if tag.Val == true {
+		if tag.Val != "" {
 			trueData = append(trueData, tag)
 		}
 	}
