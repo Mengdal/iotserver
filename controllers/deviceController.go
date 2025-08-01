@@ -6,7 +6,7 @@ import (
 	"iotServer/iotp"
 	"iotServer/models"
 	"iotServer/models/dtos"
-	"strconv"
+	"iotServer/services"
 )
 
 // DeviceController 设备管理控制器
@@ -16,29 +16,8 @@ type DeviceController struct {
 
 var tagService = iotp.TagService{}
 
-// GetDevice @Title 获取设备详情
-// @Description 根据设备ID获取设备详细信息,即查询设备所有属性点
-// @Param   Authorization  header  string  true  "Bearer YourToken"
-// @Param   deviceName     query   string  true  "设备ID"
-// @Success 200 {object} controllers.SimpleResult
-// @Failure 400 "请求出错"
-// @router /get [post]
-func (c *DeviceController) GetDevice() {
-	deviceID := c.GetString("deviceName")
-	if deviceID == "" {
-		c.Error(400, "设备ID不能为空")
-	}
-
-	device, err := tagService.ListTagsByDevice(deviceID)
-	if err != nil {
-		c.Error(400, "获取设备失败: "+err.Error())
-	}
-
-	c.Success(device)
-}
-
 // GetAllDevices @Title 获取所有设备
-// @Description 获取系统中所有设备的简要信息
+// @Description 获取系统中所有绑定设备的信息
 // @Param   Authorization  header  string  true  "Bearer YourToken"
 // @Param   page           query   int     false "当前页码，默认1"
 // @Param   size           query   int     false "每页数量，默认10"
@@ -51,6 +30,22 @@ func (c *DeviceController) GetAllDevices() {
 	size, _ := c.GetInt("size", 10)
 
 	devices, err := tagService.GetAllDevices(page, size)
+	if err != nil {
+		c.Error(400, "获取设备列表失败: "+err.Error())
+	}
+
+	c.Success(devices)
+}
+
+// GetNoBindDevices @Title 查询未绑定设备
+// @Description 添加设备时查询未绑定产品的设备
+// @Param   Authorization  header  string  true  "Bearer YourToken"
+// @Success 200 {object} controllers.SimpleResult
+// @Failure 400 "请求错误"
+// @router /devices [post]
+func (c *DeviceController) GetNoBindDevices() {
+
+	devices, err := tagService.GetNoBindDevices()
 	if err != nil {
 		c.Error(400, "获取设备列表失败: "+err.Error())
 	}
@@ -116,28 +111,15 @@ func (c *DeviceController) Bind() {
 	}
 
 	// 循环绑定产品ID标签
-	productIDStr := strconv.FormatInt(req.ProductID, 10)
-	productName := product.Name
-	for _, deviceName := range req.DeviceName {
-		if deviceName == "" {
-			continue // 跳过空设备ID
-		}
-		if err := tagService.AddTag(deviceName, "productName", productName); err != nil {
-			c.Error(400, "设备 "+deviceName+" 绑定失败: "+err.Error())
-			break
-		}
-		// 假设标签键固定为 "productId"，值为产品ID字符串
-		if err := tagService.AddTag(deviceName, "productId", productIDStr); err != nil {
-			c.Error(400, "设备 "+deviceName+" 绑定失败: "+err.Error())
-			break
-		}
+	err = services.BindDeviceTags(tagService, req.DeviceName, req.ProductID, product.Name)
+	if err != nil {
+		c.Error(400, "绑定失败: "+err.Error())
 	}
-
 	c.Success("批量绑定成功")
 }
 
 // Delete @Title 删除设备
-// @Description 根据设备ID删除设备
+// @Description 根据设备ID删除设备，仅支持停止上传数据后删除
 // @Param   Authorization  header  string  true  "Bearer YourToken"
 // @Param   deviceName     query    string  true  "设备ID"
 // @Success 200 {object} controllers.Result

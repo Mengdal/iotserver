@@ -25,7 +25,7 @@ func (s *TagService) GetAllDevices(page, size int) (*utils.PageResult, error) {
 	}
 
 	// 调用原始接口获取数据
-	url := fmt.Sprintf("http://%s/tag/listDevicesByName/GWSN/%d/%d",
+	url := fmt.Sprintf("http://%s/tag/listDevicesByName/productId/%d/%d",
 		IoTPServer, size, (page-1)*size)
 
 	data, err := HttpGet(url)
@@ -48,9 +48,22 @@ func (s *TagService) GetAllDevices(page, size int) (*utils.PageResult, error) {
 	isFirstPage := page == 1
 	isLastPage := page >= totalPage
 
+	//返回设备所有标签
+	var deviceInfoList []map[string]string
+	for _, device := range response.Devices {
+		// 获取设备详情
+		deviceInfo, err := s.ListTagsByDevice(device)
+		deviceInfo["dn"] = device
+		if err != nil {
+			log.Printf("获取设备 %s 详情失败: %v", device, err)
+			continue
+		}
+		deviceInfoList = append(deviceInfoList, deviceInfo)
+	}
+
 	// 直接返回分页结果
 	return &utils.PageResult{
-		List:       response.Devices,
+		List:       deviceInfoList,
 		PageNumber: page,
 		PageSize:   size,
 		TotalPage:  totalPage,
@@ -58,6 +71,48 @@ func (s *TagService) GetAllDevices(page, size int) (*utils.PageResult, error) {
 		FirstPage:  isFirstPage,
 		LastPage:   isLastPage,
 	}, nil
+}
+
+// GetNoBindDevices 查询未绑定的设备
+func (s *TagService) GetNoBindDevices() ([]map[string]string, error) {
+
+	// 调用原始接口获取数据
+	url := fmt.Sprintf("http://%s/tag/listDevicesByName/GWSN",
+		IoTPServer)
+
+	data, err := HttpGet(url)
+	if err != nil {
+		log.Printf("获取设备列表失败: %v", err)
+		return nil, fmt.Errorf("API请求失败: %v", err)
+	}
+
+	// 解析响应
+	var response struct {
+		Devices []string `json:"devices"`
+		Total   int64    `json:"total"`
+	}
+	if err := json.Unmarshal([]byte(data), &response); err != nil {
+		return nil, fmt.Errorf("解析响应失败: %v", err)
+	}
+
+	var deviceInfoList []map[string]string
+	for _, device := range response.Devices {
+		// 过滤 system 开头设备
+		//if strings.HasPrefix(device, "system") {
+		//	continue // 如果你想过滤掉这些设备
+		//}
+		// 获取设备详情
+		deviceInfo, err := s.ListTagsByDevice(device)
+		deviceInfo["dn"] = device
+		if err != nil {
+			log.Printf("获取设备 %s 详情失败: %v", device, err)
+			continue
+		}
+		if deviceInfo["productId"] == "" {
+			deviceInfoList = append(deviceInfoList, deviceInfo)
+		}
+	}
+	return deviceInfoList, nil
 }
 
 // DeleteDevices 删除指定设备
