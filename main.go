@@ -7,6 +7,7 @@ import (
 	"github.com/beego/beego/v2/server/web/filter/cors"
 	"github.com/kardianos/service"
 	"iotServer/common"
+	"iotServer/controllers"
 	_ "iotServer/routers"
 	"iotServer/services"
 	"iotServer/utils"
@@ -127,6 +128,7 @@ func runDev() {
 	go services.InitMQTT()
 	initSwagger()
 	common.InitEuiper()
+	controllers.GlobalSceneService.LoadScenesFromDatabase() // 加载场景数据
 	beego.Run()
 }
 
@@ -159,17 +161,19 @@ func (p *program) run() {
 	log.Println("【Service】初始化数据库...")
 	common.InitDB()
 
-	log.Println("【Service】初始化Web服务...")
-	initSwagger()
-
-	log.Println("【Service】启动 Web 服务...")
-	beego.Run()
-
 	log.Println("【Service】启动 MQTT 服务...")
 	go services.InitMQTT()
 
+	initSwagger()
+
 	log.Println("【Service】启动 流数据 服务...")
 	common.InitEuiper()
+
+	log.Println("【Service】启动 CRON 服务...")
+	controllers.GlobalSceneService.LoadScenesFromDatabase() // 加载场景数据
+
+	log.Println("【Service】启动 Web 服务...")
+	beego.Run()
 
 	log.Println("【Service】服务已启动...")
 

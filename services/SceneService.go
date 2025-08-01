@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/beego/beego/v2/client/orm"
-	"github.com/beego/beego/v2/core/logs"
 	"github.com/robfig/cron/v3"
 	"iotServer/models"
 	"iotServer/models/constants"
@@ -105,35 +104,13 @@ func (s *SceneService) StartScene(id int64) error {
 	}
 
 	// 解析条件，查找定时条件
-	var conditions []dtos.Condition
-	err := json.Unmarshal([]byte(scene.Condition), &conditions)
-	if err != nil {
-		return fmt.Errorf("解析条件失败: %v", err)
+	if err := s.loadSceneToCron(scene); err != nil {
+		return fmt.Errorf("添加场景失败：" + err.Error())
 	}
-
-	for _, condition := range conditions {
-		// 定时触发
-		if condition.ConditionType == "timer" {
-			if cronExpr, ok := condition.Option["cron_expression"]; ok {
-				// 添加定时任务
-				entryID, err := s.cron.AddFunc(cronExpr, func() {
-					logs.Info("定时任务触发: 场景ID=%d", id)
-					s.executeScene(id)
-				})
-				if err != nil {
-					return fmt.Errorf("添加定时任务失败: %v", err)
-				}
-				s.jobs[id] = entryID
-				break
-			}
-		}
-		// TODO 设备触发
-	}
-
 	// 更新状态
 	scene.Status = "running"
 	scene.BeforeUpdate()
-	_, err = o.Update(&scene)
+	_, err := o.Update(&scene)
 	return err
 }
 
@@ -171,7 +148,7 @@ func (s *SceneService) DeleteScene(id int64) error {
 }
 
 // executeScene 执行场景动作
-func (s *SceneService) executeScene(id int64) error {
+func executeScene(id int64) error {
 	o := orm.NewOrm()
 	scene := models.Scene{Id: id}
 
@@ -201,7 +178,7 @@ func (s *SceneService) executeScene(id int64) error {
 
 // RestartScene 手动执行场景
 func (s *SceneService) RestartScene(id int64) error {
-	err := s.executeScene(id)
+	err := executeScene(id)
 	if err != nil {
 		return fmt.Errorf("执行失败：%v" + err.Error())
 	}
@@ -220,4 +197,65 @@ func (s *SceneService) Jobs() map[string]cron.EntryID {
 
 func (s *SceneService) CronEntries() []cron.Entry {
 	return s.cron.Entries()
+}
+
+// LoadScenesFromDatabase 项目启动时将robfig_cron加载至内存
+func (s *SceneService) LoadScenesFromDatabase() error {
+	o := orm.NewOrm()
+	var scenes []models.Scene
+
+	// 查询所有状态为运行中的场景
+	_, err := o.QueryTable(new(models.Scene)).Filter("status", string(constants.RuleStart)).All(&scenes)
+	if err != nil {
+		return fmt.Errorf("查询运行中的场景失败: %v", err)
+	}
+
+	log.Printf("发现 %d 个运行中的场景，开始加载定时任务...", len(scenes))
+
+	loadedCount := 0
+	for _, scene := range scenes {
+		if err := s.loadSceneToCron(scene); err != nil {
+			log.Printf("加载场景 %d 失败: %v", scene.Id, err)
+			continue
+		}
+		loadedCount++
+	}
+
+	log.Printf("定时任务加载完成，共加载 %d 个场景", loadedCount)
+	return nil
+}
+
+// loadSceneToCron 将单个场景加载到cron中
+func (s *SceneService) loadSceneToCron(scene models.Scene) error {
+	// 解析条件，查找定时条件
+	var conditions []dtos.Condition
+	err := json.Unmarshal([]byte(scene.Condition), &conditions)
+	if err != nil {
+		return fmt.Errorf("解析条件失败: %v", err)
+	}
+
+	// 查找定时条件
+	for _, condition := range conditions {
+		if condition.ConditionType == "timer" {
+			if cronExpr, ok := condition.Option["cron_expression"]; ok {
+				// 添加定时任务
+				entryID, err := s.cron.AddFunc(cronExpr, func() {
+					log.Printf("定时任务触发: 场景ID=%d, 名称=%s", scene.Id, scene.Name)
+					executeScene(scene.Id)
+				})
+				if err != nil {
+					return fmt.Errorf("添加定时任务失败: %v", err)
+				}
+
+				s.mu.Lock()
+				s.jobs[scene.Id] = entryID
+				s.mu.Unlock()
+
+				return nil
+			}
+		}
+		// TODO 设备触发
+	}
+
+	return fmt.Errorf("场景 %d 没有找到有效的定时条件", scene.Id)
 }
