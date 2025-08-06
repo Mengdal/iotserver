@@ -191,3 +191,24 @@ const (
 func isValidConditionType(value string) bool {
 	return value == string(ConditionTypeTimer) || value == string(ConditionTypeNotify)
 }
+
+type DeviceStatus string
+
+const (
+	DeviceOnline  Trigger = "online"
+	DeviceOffline Trigger = "offline"
+)
+
+func IsValidDeviceStatus(value string) bool {
+	return value == string(DeviceOnline) || value == string(DeviceOffline)
+}
+func GetDeviceStatusLabel(deviceStatus string) string {
+	switch deviceStatus {
+	case string(DeviceOnline):
+		return "上线"
+	case string(DeviceOffline):
+		return "离线"
+	default:
+		return "未知"
+	}
+}

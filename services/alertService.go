@@ -15,15 +15,16 @@ type AlertService struct{}
 
 // AddAlert 告警处理方法
 func (s *AlertService) AddAlert(req map[string]interface{}) error {
-
+	now := time.Now().UnixMilli()
 	alertResult := make(map[string]interface{}) //告警对象
 	var subRuleData []map[string]interface{}    //规则内容
 	var notifyData []map[string]interface{}     //通知内容
 	var content string
 
+	message := req["messageType"]
 	ruleId := req["rule_id"].(string)
 	deviceId := req["deviceId"].(string)
-	value := req["alert_value"].(float64)
+	alertResult["dn"] = deviceId
 
 	o := orm.NewOrm()
 	var rule models.AlertRule
@@ -31,7 +32,8 @@ func (s *AlertService) AddAlert(req map[string]interface{}) error {
 	if err := o.Read(&rule, "Name"); err != nil {
 		return fmt.Errorf("查询失败: %v", err)
 	}
-	now := time.Now().UnixMilli()
+
+	// 任意告警若未达到沉默时间跳过
 	if rule.SilenceTime > 0 {
 		// 查询该规则最新的告警记录
 		var latestAlert models.AlertList
@@ -58,35 +60,55 @@ func (s *AlertService) AddAlert(req map[string]interface{}) error {
 	if err := json.Unmarshal([]byte(rule.Notify), &notifyData); err != nil {
 		return fmt.Errorf("查询失败: %v", err)
 	}
-
-	// 正确地提取嵌套的 option.code
-	if option, ok := subRuleData[0]["option"].(map[string]interface{}); ok {
-		code, codeOk := option["code"].(string)
-		name, nameOk := option["name"].(string)
-		cycle, cycleOk := option["value_cycle"].(string)
-		typeR, typeROk := option["value_type"].(string)
-
-		if !codeOk || !nameOk || !cycleOk || !typeROk {
-			return fmt.Errorf("无法提取必要字段: code存在=%t, name存在=%t, cycle存在=%t, type存在=%t", codeOk, nameOk, cycleOk, typeROk)
-		}
-		alertResult["code"] = code
-		alertResult["name"] = name
-		alertResult["cycle"] = cycle
-		alertResult["type"] = constants.GetValueTypeLabel(typeR)
-	}
-	alertResult["dn"] = deviceId
 	alertResult["trigger"] = subRuleData[0]["trigger"]
-	if req["window_start"] != nil && req["window_end"] != nil {
-		alertResult["start_at"] = req["window_start"]
-		alertResult["end_at"] = req["window_end"]
-		content = fmt.Sprintf("【告警通知】设备：%s，属性：%s，触发类型：%s，告警时间：%s ~ %s，%s%s：%f,请及时处理！",
-			alertResult["dn"], alertResult["name"], alertResult["trigger"], utils.FormatTimestamp(alertResult["start_at"].(float64)), utils.FormatTimestamp(alertResult["end_at"].(float64)), alertResult["cycle"], alertResult["type"], value)
-	} else if req["report_time"] != nil {
-		reportTime := req["report_time"]
-		alertResult["start_at"] = reportTime
-		alertResult["end_at"] = reportTime
-		content = fmt.Sprintf("【告警通知】设备：%s，属性：%s，触发类型：%s，告警时间：%s，当前值：%f,请及时处理！",
-			alertResult["dn"], alertResult["name"], alertResult["trigger"], utils.FormatTimestamp(alertResult["start_at"].(float64)), value)
+
+	//处理不同告警类型的返回格式
+	if message == "PROPERTY_REPORT" {
+		value := req["alert_value"].(float64)
+
+		// 正确地提取嵌套的 option.code
+		if option, ok := subRuleData[0]["option"].(map[string]interface{}); ok {
+			code, codeOk := option["code"].(string)
+			name, nameOk := option["name"].(string)
+			cycle, cycleOk := option["value_cycle"].(string)
+			typeR, typeROk := option["value_type"].(string)
+
+			if !codeOk || !nameOk || !cycleOk || !typeROk {
+				return fmt.Errorf("无法提取必要字段: code存在=%t, name存在=%t, cycle存在=%t, type存在=%t", codeOk, nameOk, cycleOk, typeROk)
+			}
+			alertResult["code"] = code
+			alertResult["name"] = name
+			alertResult["cycle"] = cycle
+			alertResult["type"] = constants.GetValueTypeLabel(typeR)
+		}
+
+		if req["window_start"] != nil && req["window_end"] != nil {
+			alertResult["start_at"] = req["window_start"]
+			alertResult["end_at"] = req["window_end"]
+			content = fmt.Sprintf("【告警通知】设备：%s，属性：%s，触发类型：%s，告警时间：%s ~ %s，%s%s：%f,请及时处理！",
+				alertResult["dn"], alertResult["name"], alertResult["trigger"], utils.FormatTimestamp(alertResult["start_at"]), utils.FormatTimestamp(alertResult["end_at"].(float64)), alertResult["cycle"], alertResult["type"], value)
+		} else if req["report_time"] != nil {
+			reportTime := req["report_time"]
+			alertResult["start_at"] = reportTime
+			alertResult["end_at"] = reportTime
+			content = fmt.Sprintf("【告警通知】设备：%s，属性：%s，触发类型：%s，告警时间：%s，当前值：%f,请及时处理！",
+				alertResult["dn"], alertResult["name"], alertResult["trigger"], utils.FormatTimestamp(alertResult["start_at"]), value)
+		}
+
+	} else if message == "DEVICE_STATUS" {
+		if option, ok := subRuleData[0]["option"].(map[string]interface{}); ok {
+			status, statusOk := option["status"].(string)
+			if !statusOk {
+				return fmt.Errorf("无法提取必要字段: code存在=%t", statusOk)
+			}
+			alertResult["status"] = constants.GetDeviceStatusLabel(status)
+			reportTime := req["report_time"]
+			alertResult["start_at"] = reportTime
+			content = fmt.Sprintf("【告警通知】设备：%s，触发类型：%s，告警时间：%s，当前状态：%s,请及时处理！",
+				alertResult["dn"], alertResult["trigger"], utils.FormatTimestamp(alertResult["start_at"]), alertResult["status"])
+		}
+	} else {
+		return nil
 	}
 
 	alertMarshal, err := json.Marshal(alertResult)

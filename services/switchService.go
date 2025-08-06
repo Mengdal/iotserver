@@ -292,6 +292,37 @@ func (p *PropertySetProcessor) Deal(dn, tag, val, channel string, userId int64) 
 	log.Printf("已发布控制命令: %s", topic)
 	return seq, nil
 }
+
+func (p *PropertySetProcessor) SendOffline(dn string) error {
+	//优先掏出SN
+	var sn string
+	device, err := iotp.NewTagService().ListTagsByDevice(dn)
+	sn = device["GWSN"]
+	if err != nil || sn == "" {
+		return fmt.Errorf("设备未包含网关信息")
+	}
+
+	topic := fmt.Sprintf("/edge/stream/%s/post", sn)
+
+	out := map[string]interface{}{
+		"dn":          dn,
+		"messageType": "DEVICE_STATUS",
+		"status":      "offline",
+		"time":        time.Now(),
+	}
+
+	newPayload, err := json.Marshal(out)
+	if err != nil {
+		return fmt.Errorf("JSON序列化失败:%v", err)
+	}
+
+	if err := p.mqttClient.Publish(topic, 0, newPayload); err != nil {
+		return fmt.Errorf("发布离线命令失败: %v", err)
+	}
+	log.Printf("已发布离线命令: %s", topic)
+	return nil
+}
+
 func writeLog(seq, status, sn, dn, tag, val, channel string, userId int64) {
 	o := orm.NewOrm()
 	if status == "WAIT" {

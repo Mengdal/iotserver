@@ -70,6 +70,7 @@ func (c *RuleController) Edit() {
 func (c *RuleController) Update() {
 	// 1. 初步解析请求参数
 	var req dtos.RuleUpdateRequest
+	var typeStyle string
 	if err := json.NewDecoder(c.Ctx.Request.Body).Decode(&req); err != nil {
 		c.Error(400, "参数解析失败: "+err.Error())
 	}
@@ -77,23 +78,26 @@ func (c *RuleController) Update() {
 	// 2. 取出设备及属性类型
 	o := orm.NewOrm()
 	ids := req.SubRule[0].DeviceId
-	code := req.SubRule[0].Option["code"]
-	var property models.Properties
-	err := o.QueryTable(new(models.Properties)).Filter("code", code).One(&property)
-	if err != nil {
-		c.Error(400, "属性类型不存在")
-	}
 
-	var specs map[string]string
-	err = json.Unmarshal([]byte(property.TypeSpec), &specs)
-	if err != nil {
-		c.Error(400, "属性类型有误")
-	}
+	if req.SubRule[0].Trigger == string(constants.DeviceDataTrigger) {
+		code := req.SubRule[0].Option["code"]
+		productId := req.SubRule[0].ProductId
+		var property models.Properties
+		err := o.QueryTable(new(models.Properties)).Filter("code", code).Filter("product_id", productId).One(&property)
+		if err != nil {
+			c.Error(400, "属性类型不存在")
+		}
 
-	typeStyle := specs["type"] // int float text ..
+		var specs map[string]string
+		err = json.Unmarshal([]byte(property.TypeSpec), &specs)
+		if err != nil {
+			c.Error(400, "属性类型有误")
+		}
+		typeStyle = specs["type"] // int float text ..
+	}
 
 	// 3. 校验参数结构
-	err = dtos.ValidateRuleUpdateRequest(&req, typeStyle)
+	err := dtos.ValidateRuleUpdateRequest(&req, typeStyle)
 	if err != nil {
 		c.Error(400, "参数有误："+err.Error())
 	}

@@ -62,7 +62,7 @@ func (req *RuleUpdateRequest) BuildEkuiperSql(deviceIDs []string, dataType strin
 	return sql
 }
 
-// 创建设备数据触发
+// 1. 创建设备数据触发
 func (req *RuleUpdateRequest) buildMultiDeviceDataSql(deviceIDs []string, dataType string) string {
 	code := req.SubRule[0].Option["code"]
 	decideCondition := req.SubRule[0].Option["decide_condition"] //判断条件
@@ -82,6 +82,7 @@ func (req *RuleUpdateRequest) buildMultiDeviceDataSql(deviceIDs []string, dataTy
 	return ""
 }
 
+// 1.1 设备数据数字类型触发SQL查询修改
 func (req *RuleUpdateRequest) buildMultiDeviceNumericSql(deviceCondition, code, decideCondition, valueType string) string {
 	windowSize := req.getWindowSize()
 
@@ -94,31 +95,31 @@ func (req *RuleUpdateRequest) buildMultiDeviceNumericSql(deviceCondition, code, 
 	switch valueType {
 	case "original":
 		return fmt.Sprintf(
-			`SELECT rule_id(), json_path_query(data, "$.%s.time") AS report_time, json_path_query(data, "$.%s.value") as alert_value, dn AS deviceId FROM stream WHERE %s AND %s`,
+			`SELECT rule_id(), json_path_query(data, "$.%s.time") AS report_time, json_path_query(data, "$.%s.value") as alert_value, dn AS deviceId,messageType FROM stream WHERE %s AND %s`,
 			code, code, baseWhere, decideExpr,
 		)
 
 	case "avg":
 		return fmt.Sprintf(
-			`SELECT window_start(), window_end(), rule_id(), dn AS deviceId, avg(CAST(json_path_query(data, "$.%s.value"), "float")) AS alert_value FROM stream WHERE %s GROUP BY TUMBLINGWINDOW(ss, %d), dn HAVING alert_value %s`,
+			`SELECT window_start(), window_end(), rule_id(), dn AS deviceId, avg(CAST(json_path_query(data, "$.%s.value"), "float")) AS alert_value,messageType FROM stream WHERE %s GROUP BY TUMBLINGWINDOW(ss, %d), dn HAVING alert_value %s`,
 			code, baseWhere, windowSize, decideCondition,
 		)
 
 	case "max":
 		return fmt.Sprintf(
-			`SELECT window_start(), window_end(), rule_id(), dn AS deviceId, max(CAST(json_path_query(data, "$.%s.value"), "float")) AS alert_value FROM stream WHERE %s GROUP BY TUMBLINGWINDOW(ss, %d), dn HAVING alert_value %s`,
+			`SELECT window_start(), window_end(), rule_id(), dn AS deviceId, max(CAST(json_path_query(data, "$.%s.value"), "float")) AS alert_value,messageType FROM stream WHERE %s GROUP BY TUMBLINGWINDOW(ss, %d), dn HAVING alert_value %s`,
 			code, baseWhere, windowSize, decideCondition,
 		)
 
 	case "min":
 		return fmt.Sprintf(
-			`SELECT window_start(), window_end(), rule_id(), dn AS deviceId, min(CAST(json_path_query(data, "$.%s.value"), "float")) AS alert_value FROM stream WHERE %s GROUP BY TUMBLINGWINDOW(ss, %d), dn HAVING alert_value %s`,
+			`SELECT window_start(), window_end(), rule_id(), dn AS deviceId, min(CAST(json_path_query(data, "$.%s.value"), "float")) AS alert_value,messageType FROM stream WHERE %s GROUP BY TUMBLINGWINDOW(ss, %d), dn HAVING alert_value %s`,
 			code, baseWhere, windowSize, decideCondition,
 		)
 
 	case "sum":
 		return fmt.Sprintf(
-			`SELECT window_start(), window_end(), rule_id(), dn AS deviceId, sum(CAST(json_path_query(data, "$.%s.value"), "float")) AS alert_value FROM stream WHERE %s GROUP BY TUMBLINGWINDOW(ss, %d), dn HAVING alert_value %s`,
+			`SELECT window_start(), window_end(), rule_id(), dn AS deviceId, sum(CAST(json_path_query(data, "$.%s.value"), "float")) AS alert_value,messageType FROM stream WHERE %s GROUP BY TUMBLINGWINDOW(ss, %d), dn HAVING alert_value %s`,
 			code, baseWhere, windowSize, decideCondition,
 		)
 
@@ -127,7 +128,7 @@ func (req *RuleUpdateRequest) buildMultiDeviceNumericSql(deviceCondition, code, 
 	}
 }
 
-// TODO 非数值类型SQL查询修改
+// TODO 1.2 设备数据字符类型触发SQL查询修改
 func (req *RuleUpdateRequest) buildMultiDeviceTextSql(deviceCondition, code, decideCondition string) string {
 	// WHERE 条件部分：设备判断 + 报文类型 + 属性存在判断
 	baseWhere := fmt.Sprintf(`(%s) AND messageType = "PROPERTY_REPORT" AND json_path_exists(data, "$.%s") = true`, deviceCondition, code)
@@ -136,12 +137,12 @@ func (req *RuleUpdateRequest) buildMultiDeviceTextSql(deviceCondition, code, dec
 	decideExpr := fmt.Sprintf(`json_path_query(data, "$.%s.value") %s`, code, decideCondition)
 
 	return fmt.Sprintf(
-		`SELECT rule_id(), json_path_query(data, "$.%s.time") AS report_time, dn AS deviceId FROM stream WHERE %s AND %s`,
+		`SELECT rule_id(), json_path_query(data, "$.%s.time") AS report_time,json_path_query(data, "$.%s.value") as alert_value, dn AS deviceId,messageType FROM stream WHERE %s AND %s`,
 		code, baseWhere, decideExpr,
 	)
 }
 
-// 创建
+// 1.3 设备数据布尔类型触发SQL查询修改
 func (req *RuleUpdateRequest) buildMultiDeviceBoolSql(deviceCond string, code, decideCondition string) string {
 	// decideCondition 形如 = true/false
 	value := "0"
@@ -160,24 +161,17 @@ func (req *RuleUpdateRequest) buildMultiDeviceEventSql(deviceIDs []string) strin
 	code := req.SubRule[0].Option["code"]
 	deviceCondition := buildDeviceCondition(deviceIDs)
 
-	return fmt.Sprintf(`SELECT rule_id(),json_path_query(data, "$.eventTime") as report_time,deviceId FROM stream WHERE (%s) AND messageType = "EVENT_REPORT" AND json_path_exists(data, "$.eventCode") = true AND json_path_query(data, "$.eventCode") = "%s"`,
+	return fmt.Sprintf(`SELECT rule_id(),json_path_query(data, "$.eventTime") as report_time,dn AS deviceId FROM stream WHERE (%s) AND messageType = "EVENT_REPORT" AND json_path_exists(data, "$.eventCode") = true AND json_path_query(data, "$.eventCode") = "%s"`,
 		deviceCondition, code)
 }
 
 // 创建设备离线SQL
 func (req *RuleUpdateRequest) buildMultiDeviceStatusSql(deviceIDs []string) string {
 	status := req.SubRule[0].Option["status"]
-	var statusValue string
-	if status == "在线" {
-		statusValue = "online"
-	} else {
-		statusValue = "offline"
-	}
-
 	deviceCondition := buildDeviceCondition(deviceIDs)
 
-	return fmt.Sprintf(`SELECT rule_id(),json_path_query(data, "$.time") as report_time,deviceId FROM mqtt_stream WHERE (%s) AND messageType = "DEVICE_STATUS" AND json_path_exists(data, "$.status") = true AND json_path_query(data, "$.status") = "%s"`,
-		deviceCondition, statusValue)
+	return fmt.Sprintf(`SELECT rule_id(),time as report_time,dn AS deviceId,messageType FROM stream WHERE (%s) AND messageType = "DEVICE_STATUS"  AND status = "%s"`,
+		deviceCondition, status)
 }
 
 // 拼接多设备语句
@@ -228,34 +222,45 @@ func ValidateRuleUpdateRequest(req *RuleUpdateRequest, typeStyle string) error {
 			return errors.New("规则选项不能为空")
 		}
 
-		code, ok := subRule.Option["code"]
-		if !ok || code == "" {
-			return errors.New("属性点 code 不能为空")
-		}
-		name, ok := subRule.Option["name"]
-		if !ok || name == "" {
-			return errors.New("属性点 code 不能为空")
-		}
+		// 3.4 设备数据触发校验
+		if subRule.Trigger == string(constants.DeviceDataTrigger) {
+			code, ok := subRule.Option["code"]
+			if !ok || code == "" {
+				return errors.New("属性点 code 不能为空")
+			}
+			name, ok := subRule.Option["name"]
+			if !ok || name == "" {
+				return errors.New("属性点 name 不能为空")
+			}
 
-		valueType, ok := subRule.Option["value_type"]
-		if !ok || !constants.IsValidValueType(valueType) {
-			return errors.New("value_type 必须为 original/avg/max/min/sum")
+			valueType, ok := subRule.Option["value_type"]
+			if !ok || !constants.IsValidValueType(valueType) {
+				return errors.New("value_type 必须为 original/avg/max/min/sum")
+			}
+			// 如果是聚合类型（avg/max/min/sum），必须有 value_cycle
+			if valueType != string(constants.Original) {
+				valueCycle, ok := subRule.Option["value_cycle"]
+				if !ok || !constants.IsAggregationType(valueCycle) {
+					return errors.New("聚合类型必须指定合法的 value_cycle（如 '1分钟周期'）")
+				}
+			}
+			decideCondition, ok := subRule.Option["decide_condition"]
+			if !ok || decideCondition == "" {
+				return errors.New("decide_condition 不能为空")
+			}
+			if !constants.IsValidCondition(typeStyle, decideCondition) {
+				return errors.New("判断条件不合法")
+			}
 		}
-
-		decideCondition, ok := subRule.Option["decide_condition"]
-		if !ok || decideCondition == "" {
-			return errors.New("decide_condition 不能为空")
-		}
-
-		// 3.4 如果是聚合类型（avg/max/min/sum），必须有 value_cycle
-
-		valueCycle, ok := subRule.Option["value_cycle"]
-		if !ok || !constants.IsAggregationType(valueCycle) {
-			return errors.New("聚合类型必须指定合法的 value_cycle（如 '1分钟周期'）")
-		}
-
-		if !constants.IsValidCondition(typeStyle, decideCondition) {
-			return errors.New("判断条件不合法")
+		// 3.5 设备状态触发校验
+		if subRule.Trigger == string(constants.DeviceStatusTrigger) {
+			status, ok := subRule.Option["status"]
+			if !ok || status == "" {
+				return errors.New("属性点 status 不能为空")
+			}
+			if !constants.IsValidDeviceStatus(status) {
+				return errors.New("判断条件不合法 online/offline 上线通知/离线报警")
+			}
 		}
 
 	}

@@ -5,12 +5,14 @@ import (
 	"fmt"
 	"github.com/beego/beego/v2/client/orm"
 	"github.com/robfig/cron/v3"
+	"iotServer/iotp"
 	"iotServer/models"
 	"iotServer/models/constants"
 	"iotServer/models/dtos"
 	"log"
 	"strconv"
 	"sync"
+	"time"
 )
 
 // SceneService 场景服务
@@ -222,6 +224,14 @@ func (s *SceneService) LoadScenesFromDatabase() error {
 	}
 
 	log.Printf("定时任务加载完成，共加载 %d 个场景", loadedCount)
+
+	//启动设备离线检测
+	_, err = s.cron.AddFunc("@every 10m", func() {
+		err = s.DeviceStatusCron()
+	})
+	if err != nil {
+		return fmt.Errorf("设备离线检测启动失败: %v", err)
+	}
 	return nil
 }
 
@@ -258,4 +268,76 @@ func (s *SceneService) loadSceneToCron(scene models.Scene) error {
 	}
 
 	return fmt.Errorf("场景 %d 没有找到有效的定时条件", scene.Id)
+}
+
+func (s *SceneService) DeviceStatusCron() error {
+	// 查询所有正在运行的规则
+	o := orm.NewOrm()
+	var rules []models.AlertRule
+
+	_, err := o.QueryTable(new(models.AlertRule)).Filter("status", string(constants.RuleStart)).All(&rules)
+	if err != nil {
+		return fmt.Errorf("查询运行中的规则失败: %v", err)
+	}
+
+	deviceMap := make(map[string]struct{})
+	// 查找定时条件
+	for _, rule := range rules {
+		var subRule []models.SubRule
+		if err := json.Unmarshal([]byte(rule.SubRule), &subRule); err != nil {
+			continue
+		}
+		if subRule[0].Trigger != string(constants.DeviceStatusTrigger) {
+			continue
+		}
+		var deviceIds []string
+		if err := json.Unmarshal([]byte(rule.DeviceId), &deviceIds); err != nil {
+			continue
+		}
+
+		// 遍历 deviceId 数组，将每个 ID 添加到 map 中去重
+		for _, deviceId := range deviceIds {
+			deviceMap[deviceId] = struct{}{}
+		}
+	}
+	// 当前时间戳
+	currentTime := time.Now().Unix()
+
+	// 遍历 deviceMap 查询最新数据
+	for deviceId, _ := range deviceMap {
+		fmt.Printf("处理设备: %s\n", deviceId)
+		startTime := time.Unix(currentTime-10*60, 0).Format("2006-01-02 15:04:05")
+		endTime := time.Unix(currentTime, 0).Format("2006-01-02 15:04:05")
+
+		tags, err := iotp.GetDeviceTags(deviceId)
+		if err != nil {
+			log.Printf("查询设备 %s 失败: %v", deviceId, err)
+			continue
+		}
+
+		query := models.HistoryObject{
+			Count:     1,
+			EndTime:   endTime,
+			StartTime: startTime,
+			IDs:       tags,
+		}
+
+		// 查询最近数据
+		data, err := iotp.HistoryQuery(query)
+		if err != nil {
+			log.Printf("查询设备 %s 失败: %v", deviceId, err)
+			continue
+		}
+
+		if len(data) == 0 {
+			log.Printf("设备 %s 在过去 %d 分钟无数据，触发告警", deviceId, 10)
+			// 发送流数据告警
+			err := Processor.SendOffline(deviceId)
+			if err != nil {
+				log.Printf("发送设备 %s 失败: %v", deviceId, err)
+			}
+		}
+	}
+	log.Printf("设备离线检测执行完成，共检测 %d 个规则\n", len(deviceMap))
+	return nil
 }

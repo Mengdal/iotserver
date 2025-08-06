@@ -42,10 +42,10 @@ type AlertList struct {
 
 // SubRule 规则
 type SubRule struct {
-	Trigger   string            `json:"trigger"   example:"设备数据触发"`                                                                                                                    //触发方式：设备数据触发/设备事件触发/设备状态触发
-	ProductId int64             `json:"productId" example:"83026097"`                                                                                                                  //产品ID
-	DeviceId  []string          `json:"deviceId"  example:"YT_test"`                                                                                                                   //edgeDB中的deviceName
-	Option    map[string]string `json:"option"    example:"{\"code\": \"CurrentHumidity\", \"value_type\": \"original\",\"value_cycle\": \"60分钟周期\", \"decide_condition\": \"> 39\"}"` //code属性KEY，value_type枚举Trigger，decide_condition枚举ValueTypes
+	Trigger   string            `json:"trigger"   example:"设备数据触发"`                                                                                                                                     //触发方式：设备数据触发/设备事件触发/设备状态触发
+	ProductId int64             `json:"productId" example:"83026097"`                                                                                                                                   //产品ID
+	DeviceId  []string          `json:"deviceId"  example:"YT_test"`                                                                                                                                    //edgeDB中的deviceName
+	Option    map[string]string `json:"option"    example:"{\"code\": \"CurrentHumidity\", \"name\": \"温度\",\"value_type\": \"original\",\"value_cycle\": \"60分钟周期\", \"decide_condition\": \"> 39\"}"` //code属性KEY，value_type枚举Trigger，decide_condition枚举ValueTypes,status用于设备状态触发
 }
 
 // Notify 通知

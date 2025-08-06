@@ -180,8 +180,8 @@ func init() {
 
 	beego.GlobalControllerRouter["iotServer/controllers:DeviceController"] = append(beego.GlobalControllerRouter["iotServer/controllers:DeviceController"],
 		beego.ControllerComments{
-			Method:           "GetDevice",
-			Router:           `/get`,
+			Method:           "GetNoBindDevices",
+			Router:           `/devices`,
 			AllowHTTPMethods: []string{"post"},
 			MethodParams:     param.Make(),
 			Filters:          nil,
