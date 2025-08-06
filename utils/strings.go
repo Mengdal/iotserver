@@ -3,6 +3,7 @@ package utils
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"github.com/beego/beego/v2/core/logs"
 	"io"
 	"net/http"
@@ -84,30 +85,80 @@ func IsInEffectiveTime(notifyConfig map[string]interface{}, currentTime string) 
 	return currentTime >= startTime && currentTime <= endTime
 }
 
-// FormatTimestamp 将 float64 时间戳格式化为本地时间字符串
-func FormatTimestamp(timestamp float64) string {
-	// 防止负数或非时间值
-	if timestamp <= 0 {
-		return "Invalid timestamp"
-	}
-
-	// 自动识别毫秒级别
-	if timestamp > 1e12 {
-		timestamp = timestamp / 1000
-	}
-
-	// 将 float64 转为 int64 秒部分，保留小数部分作为纳秒
-	sec := int64(timestamp)
-	nsec := int64((timestamp - float64(sec)) * 1e9)
-
+// FormatTimestamp 将 float64 时间戳或时间字符串格式化为本地时间字符串
+func FormatTimestamp(timestamp interface{}) string {
 	// 设置时区为上海
 	loc, err := time.LoadLocation("Asia/Shanghai")
 	if err != nil {
 		loc = time.Local // 兜底使用本地默认时区
 	}
 
-	t := time.Unix(sec, nsec).In(loc)
-	return t.Format("2006-01-02 15:04:05")
+	// 处理不同的输入类型
+	switch v := timestamp.(type) {
+	case float64:
+		// 防止负数或非时间值
+		if v <= 0 {
+			return "Invalid timestamp"
+		}
+
+		// 自动识别毫秒级别
+		if v > 1e12 {
+			v = v / 1000
+		}
+
+		// 将 float64 转为 int64 秒部分，保留小数部分作为纳秒
+		sec := int64(v)
+		nsec := int64((v - float64(sec)) * 1e9)
+		t := time.Unix(sec, nsec).In(loc)
+		return t.Format("2006-01-02 15:04:05")
+
+	case int64:
+		if v <= 0 {
+			return "Invalid timestamp"
+		}
+
+		// 自动识别毫秒级别
+		if v > 1e12 {
+			v = v / 1000
+		}
+
+		t := time.Unix(v, 0).In(loc)
+		return t.Format("2006-01-02 15:04:05")
+
+	case string:
+		if v == "" {
+			return "Invalid timestamp"
+		}
+
+		// 尝试解析多种时间格式
+		formats := []string{
+			"2006-01-02T15:04:05.9999999-07:00",
+			"2006-01-02T15:04:05.999999-07:00",
+			"2006-01-02T15:04:05.999-07:00",
+			"2006-01-02T15:04:05-07:00",
+			"2006-01-02 15:04:05",
+			"2006-01-02T15:04:05Z",
+			"2006-01-02T15:04:05.000Z",
+			time.RFC3339,
+			time.RFC3339Nano,
+		}
+
+		for _, format := range formats {
+			if t, err := time.Parse(format, v); err == nil {
+				return t.In(loc).Format("2006-01-02 15:04:05")
+			}
+		}
+
+		// 如果标准格式都无法解析，尝试直接解析
+		if t, err := time.ParseInLocation("2006-01-02 15:04:05", v, loc); err == nil {
+			return t.Format("2006-01-02 15:04:05")
+		}
+
+		return "Invalid timestamp format"
+
+	default:
+		return "Unsupported timestamp type"
+	}
 }
 
 // SendHttpPost 发送HTTP POST请求的通用方法
@@ -138,7 +189,7 @@ func SendHttpPost(url string, data interface{}) error {
 	if resp.StatusCode == 200 {
 		logs.Info("HTTP POST请求发送成功: %s", string(body))
 	} else {
-		logs.Error("HTTP POST请求发送失败，状态码: %d, 响应: %s", resp.StatusCode, string(body))
+		return fmt.Errorf("HTTP POST请求发送失败，状态码: %d, 响应: %s", resp.StatusCode, string(body))
 	}
 
 	return nil
