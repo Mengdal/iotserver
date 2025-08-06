@@ -73,7 +73,7 @@ func GenerateID() int64 {
 			log.Fatalf("初始化 Snowflake 节点失败: %v", err)
 		}
 	})
-	return node.Generate().Int64()
+	return node.Generate().Int64() % 1e12 // 保留后 12 位数字
 }
 
 func GenerateDeviceSecret(n int) string {
