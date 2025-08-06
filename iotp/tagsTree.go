@@ -50,7 +50,7 @@ func GetTagsTree() ([]DeviceMsg, error) {
 	}
 
 	deviceCodes := make([]string, 0)
-	for deviceCode, _ := range device2tag {
+	for deviceCode := range device2tag {
 		deviceCodes = append(deviceCodes, deviceCode)
 	}
 	sort.Strings(deviceCodes)
@@ -68,4 +68,31 @@ func GetTagsTree() ([]DeviceMsg, error) {
 		devices = append(devices, deviceMsg)
 	}
 	return devices, nil
+}
+
+func GetDeviceTags(dn string) ([]string, error) {
+	url := "http://" + IoTPServer + "/ALLFIELDS/" + dn
+	fmt.Println("请求URL:", url)
+
+	data, err := HttpGet(url)
+	if err != nil {
+		return nil, err
+	}
+
+	// 定义结构用于解析JSON
+	var tags []struct {
+		Name string `json:"name"`
+		Type string `json:"type"`
+	}
+
+	if err := json.Unmarshal([]byte(data), &tags); err != nil {
+		return nil, fmt.Errorf("解析设备标签失败: %v", err)
+	}
+
+	var result []string
+	for _, tag := range tags {
+		result = append(result, dn+"."+tag.Name)
+	}
+
+	return result, nil
 }
