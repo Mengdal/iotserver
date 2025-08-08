@@ -98,7 +98,7 @@ func validateToken(ctx *context.Context) bool {
 	claims, ok := utils.ParseToken(token)
 	if !ok {
 		ctx.Output.SetStatus(403)
-		ctx.Output.JSON(map[string]string{"Forbidden": "invalid token"}, false, false)
+		ctx.Output.JSON(map[string]string{"Forbidden": "invalid token , 请重新登录"}, false, false)
 		return false
 	}
 

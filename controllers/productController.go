@@ -140,10 +140,6 @@ func (c *ProductController) Create() {
 
 	// Created / Modified
 	_ = product.BeforeInsert()
-	_, err := o.Insert(&product)
-	if err != nil {
-		c.Error(400, "创建失败: "+err.Error())
-	}
 
 	//用户选择了标准品类
 	if categoryId != 0 {
@@ -181,6 +177,11 @@ func (c *ProductController) Create() {
 				c.Error(500, "保存服务失败: "+err.Error())
 			}
 		}
+	}
+
+	_, err := o.Insert(&product)
+	if err != nil {
+		c.Error(400, "创建失败: "+err.Error())
 	}
 
 	c.Success(product.Id)
