@@ -128,7 +128,7 @@ func (req *RuleUpdateRequest) buildMultiDeviceNumericSql(deviceCondition, code, 
 	}
 }
 
-// TODO 1.2 设备数据字符类型触发SQL查询修改
+// 1.2 设备数据字符类型触发SQL查询修改
 func (req *RuleUpdateRequest) buildMultiDeviceTextSql(deviceCondition, code, decideCondition string) string {
 	// WHERE 条件部分：设备判断 + 报文类型 + 属性存在判断
 	baseWhere := fmt.Sprintf(`(%s) AND messageType = "PROPERTY_REPORT" AND json_path_exists(data, "$.%s") = true`, deviceCondition, code)
@@ -138,7 +138,7 @@ func (req *RuleUpdateRequest) buildMultiDeviceTextSql(deviceCondition, code, dec
 
 	return fmt.Sprintf(
 		`SELECT rule_id(), json_path_query(data, "$.%s.time") AS report_time,json_path_query(data, "$.%s.value") as alert_value, dn AS deviceId,messageType FROM stream WHERE %s AND %s`,
-		code, baseWhere, decideExpr,
+		code, code, baseWhere, decideExpr,
 	)
 }
 
@@ -146,12 +146,12 @@ func (req *RuleUpdateRequest) buildMultiDeviceTextSql(deviceCondition, code, dec
 func (req *RuleUpdateRequest) buildMultiDeviceBoolSql(deviceCond string, code, decideCondition string) string {
 	// decideCondition 形如 = true/false
 	value := "0"
-	if decideCondition == "true" {
+	if decideCondition == "= 1" {
 		value = "1"
 	}
 	sql := fmt.Sprintf(
-		`SELECT rule_id(),json_path_query(data, "$.%s.time") as report_time,deviceId FROM stream WHERE %s AND messageType = "PROPERTY_REPORT" AND json_path_exists(data, "$.%s") = true AND json_path_query(data, "$.%s.value") = %s`,
-		code, deviceCond, code, code, value,
+		`SELECT rule_id(),json_path_query(data, "$.%s.time") AS report_time,json_path_query(data, "$.%s.value") as alert_value, dn AS deviceId,messageType FROM stream WHERE %s AND json_path_exists(data, "$.%s") = true AND json_path_query(data, "$.%s.value") = %s`,
+		code, code, deviceCond, code, code, value,
 	)
 	return sql
 }

@@ -64,7 +64,7 @@ func (s *AlertService) AddAlert(req map[string]interface{}) error {
 
 	//处理不同告警类型的返回格式
 	if message == "PROPERTY_REPORT" {
-		value := req["alert_value"].(float64)
+		value := InterfaceToString(req["alert_value"])
 
 		// 正确地提取嵌套的 option.code
 		if option, ok := subRuleData[0]["option"].(map[string]interface{}); ok {
@@ -85,13 +85,13 @@ func (s *AlertService) AddAlert(req map[string]interface{}) error {
 		if req["window_start"] != nil && req["window_end"] != nil {
 			alertResult["start_at"] = req["window_start"]
 			alertResult["end_at"] = req["window_end"]
-			content = fmt.Sprintf("【告警通知】设备：%s，属性：%s，触发类型：%s，告警时间：%s ~ %s，%s%s：%f,请及时处理！",
+			content = fmt.Sprintf("【告警通知】设备：%s，属性：%s，触发类型：%s，告警时间：%s ~ %s，%s%s：%s，请及时处理！",
 				alertResult["dn"], alertResult["name"], alertResult["trigger"], utils.FormatTimestamp(alertResult["start_at"]), utils.FormatTimestamp(alertResult["end_at"].(float64)), alertResult["cycle"], alertResult["type"], value)
 		} else if req["report_time"] != nil {
 			reportTime := req["report_time"]
 			alertResult["start_at"] = reportTime
 			alertResult["end_at"] = reportTime
-			content = fmt.Sprintf("【告警通知】设备：%s，属性：%s，触发类型：%s，告警时间：%s，当前值：%f,请及时处理！",
+			content = fmt.Sprintf("【告警通知】设备：%s，属性：%s，触发类型：%s，告警时间：%s，当前值：%s，请及时处理！",
 				alertResult["dn"], alertResult["name"], alertResult["trigger"], utils.FormatTimestamp(alertResult["start_at"]), value)
 		}
 
