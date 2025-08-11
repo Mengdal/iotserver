@@ -1,10 +1,12 @@
 package services
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/beego/beego/v2/client/orm"
 	"github.com/robfig/cron/v3"
+	"iotServer/common"
 	"iotServer/iotp"
 	"iotServer/models"
 	"iotServer/models/constants"
@@ -143,14 +145,21 @@ func (s *SceneService) DeleteScene(id int64) error {
 	// 先停止场景
 	s.StopScene(id)
 
-	o := orm.NewOrm()
 	scene := models.Scene{Id: id}
+	o := orm.NewOrm()
+	o.Read(&scene)
+
+	// 删除ekuiper中的同名场景规则
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	common.Ekuiper.DeleteRule(ctx, scene.Name)
+
 	_, err := o.Delete(&scene)
 	return err
 }
 
-// executeScene 执行场景动作
-func executeScene(id int64) error {
+// ExecuteScene 执行场景动作
+func ExecuteScene(id int64) error {
 	o := orm.NewOrm()
 	scene := models.Scene{Id: id}
 
@@ -167,9 +176,17 @@ func executeScene(id int64) error {
 
 	// 执行动作
 	var results []string
+	var writeLog models.WriteLog
 	for _, action := range actions {
 		// 调用设备控制接口
-		seq, _ := Processor.Deal(action.DeviceName, action.Code, action.Value, "定时任务", 0)
+		seq, err := Processor.Deal(action.DeviceName, action.Code, action.Value, "场景控制", 0)
+		if err != nil {
+			//更新SEQ失败状态
+			writeLog.Seq = seq
+			writeLog.Status = "FAIL"
+			o.Update(&writeLog, "Status")
+			return fmt.Errorf("设备控制失败: %v", err)
+		}
 		result := fmt.Sprintf("SEQ:[%s] ; 执行动作: 设备[%s] 属性[%s] 值[%s]", seq,
 			action.DeviceName, action.Code, action.Value)
 		results = append(results, result)
@@ -180,7 +197,7 @@ func executeScene(id int64) error {
 
 // RestartScene 手动执行场景
 func (s *SceneService) RestartScene(id int64) error {
-	err := executeScene(id)
+	err := ExecuteScene(id)
 	if err != nil {
 		return fmt.Errorf("执行失败：%v" + err.Error())
 	}
@@ -251,7 +268,7 @@ func (s *SceneService) loadSceneToCron(scene models.Scene) error {
 				// 添加定时任务
 				entryID, err := s.cron.AddFunc(cronExpr, func() {
 					log.Printf("定时任务触发: 场景ID=%d, 名称=%s", scene.Id, scene.Name)
-					executeScene(scene.Id)
+					ExecuteScene(scene.Id)
 				})
 				if err != nil {
 					return fmt.Errorf("添加定时任务失败: %v", err)
@@ -270,6 +287,65 @@ func (s *SceneService) loadSceneToCron(scene models.Scene) error {
 	return fmt.Errorf("场景 %d 没有找到有效的定时条件", scene.Id)
 }
 
+func BuildEkuiperRule(ctx context.Context, params dtos.SceneUpdateRequest, sceneName string) error {
+	var req dtos.RuleUpdateRequest
+	var deviceArray []string
+
+	req.Name = sceneName
+	deviceIDs := append(deviceArray, params.Condition[0].Option["device_id"])
+	productId, _ := strconv.ParseInt(params.Condition[0].Option["product_id"], 10, 64)
+	req.SubRule = make([]models.SubRule, 1)
+	req.SubRule[0].ProductId = productId
+	req.SubRule[0].DeviceId = deviceIDs
+	req.SubRule[0].Trigger = params.Condition[0].Option["trigger"]
+	req.SubRule[0].Option = make(map[string]string)
+	req.SubRule[0].Option["code"] = params.Condition[0].Option["code"]
+	req.SubRule[0].Option["name"] = params.Condition[0].Option["name"]
+	req.SubRule[0].Option["value_type"] = params.Condition[0].Option["value_type"]
+	req.SubRule[0].Option["value_cycle"] = params.Condition[0].Option["value_cycle"]
+	req.SubRule[0].Option["decide_condition"] = params.Condition[0].Option["decide_condition"]
+
+	var sql string
+
+	o := orm.NewOrm()
+	switch req.SubRule[0].Trigger {
+	case "设备数据触发":
+		code := req.SubRule[0].Option["code"]
+		productId := req.SubRule[0].ProductId
+		var property models.Properties
+		err := o.QueryTable(new(models.Properties)).Filter("code", code).Filter("product_id", productId).One(&property)
+		if err != nil {
+			return fmt.Errorf(err.Error())
+		}
+		var specs map[string]string
+		err = json.Unmarshal([]byte(property.TypeSpec), &specs)
+		if err != nil {
+			return fmt.Errorf(err.Error())
+		}
+		typeStyle := specs["type"] // int float text ..
+		sql = req.BuildMultiDeviceDataSql(deviceIDs, typeStyle)
+	case "设备事件触发":
+		sql = req.BuildMultiDeviceEventSql(deviceIDs)
+	case "设备状态触发":
+		sql = req.BuildMultiDeviceStatusSql(deviceIDs)
+	}
+
+	actions := common.GetRuleAlertEkuiperActions(common.CallBackUrl + "/api/ekuiper/callback2")
+
+	if err := common.Ekuiper.RuleExist(ctx, req.Name); err == nil {
+		err = common.Ekuiper.UpdateRule(ctx, actions, req.Name, sql)
+		if err != nil {
+			return fmt.Errorf(err.Error())
+		}
+	} else {
+		err = common.Ekuiper.CreateRule(ctx, actions, req.Name, sql)
+		if err != nil {
+			return fmt.Errorf(err.Error())
+		}
+	}
+
+	return nil
+}
 func (s *SceneService) DeviceStatusCron() error {
 	// 查询所有正在运行的规则
 	o := orm.NewOrm()
@@ -339,5 +415,20 @@ func (s *SceneService) DeviceStatusCron() error {
 		}
 	}
 	log.Printf("设备离线检测执行完成，共检测 %d 个规则\n", len(deviceMap))
+	return nil
+}
+
+func ExecCallBack(req map[string]interface{}) error {
+	o := orm.NewOrm()
+
+	var scene models.Scene
+	sceneName := req["rule_id"].(string)
+	scene.Name = sceneName
+	if err := o.Read(&scene, "Name"); err != nil {
+		return fmt.Errorf(err.Error())
+	}
+	if err := ExecuteScene(scene.Id); err != nil {
+		return fmt.Errorf(err.Error())
+	}
 	return nil
 }

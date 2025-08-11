@@ -3,7 +3,6 @@ package controllers
 import (
 	"context"
 	"encoding/json"
-	beego "github.com/beego/beego/v2/server/web"
 	"iotServer/common"
 	"iotServer/models/dtos"
 	"iotServer/services"
@@ -15,9 +14,6 @@ import (
 type EkuiperController struct {
 	BaseController
 }
-
-var EkuiperServer, _ = beego.AppConfig.String("ekuiperServer")
-var ekuiperClient = common.NewEkuiperClient(EkuiperServer)
 
 // CreateRule @Title 创建规则
 // @Description 创建一个新的Ekuiper规则
@@ -41,7 +37,7 @@ func (c *EkuiperController) CreateRule() {
 	defer cancel()
 
 	// 检查规则是否已存在
-	if err := ekuiperClient.RuleExist(ctx, req.RuleID); err == nil {
+	if err := common.Ekuiper.RuleExist(ctx, req.RuleID); err == nil {
 		c.Error(400, "规则已存在")
 	}
 
@@ -49,13 +45,13 @@ func (c *EkuiperController) CreateRule() {
 	actions := common.GetRuleAlertEkuiperActions(req.ActionURL)
 
 	// 创建规则
-	err := ekuiperClient.CreateRule(ctx, actions, req.RuleID, req.SQL)
+	err := common.Ekuiper.CreateRule(ctx, actions, req.RuleID, req.SQL)
 	if err != nil {
 		c.Error(500, "创建规则失败: "+err.Error())
 	}
 
 	// 启动规则
-	err = ekuiperClient.StartRule(ctx, req.RuleID)
+	err = common.Ekuiper.StartRule(ctx, req.RuleID)
 	if err != nil {
 		c.Error(500, "启动规则失败: "+err.Error())
 	}
@@ -86,7 +82,7 @@ func (c *EkuiperController) UpdateRule() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	if err := ekuiperClient.RuleExist(ctx, req.RuleID); err != nil {
+	if err := common.Ekuiper.RuleExist(ctx, req.RuleID); err != nil {
 		c.Error(400, "规则不存在")
 	}
 
@@ -94,19 +90,19 @@ func (c *EkuiperController) UpdateRule() {
 	actions := common.GetRuleAlertEkuiperActions(req.ActionURL)
 
 	// 先尝试停止规则
-	err := ekuiperClient.StopRule(ctx, req.RuleID)
+	err := common.Ekuiper.StopRule(ctx, req.RuleID)
 	if err != nil {
 		c.Error(400, "停止规则失败: "+err.Error())
 	}
 
 	// 更新规则
-	err = ekuiperClient.UpdateRule(ctx, actions, req.RuleID, req.SQL)
+	err = common.Ekuiper.UpdateRule(ctx, actions, req.RuleID, req.SQL)
 	if err != nil {
 		c.Error(400, "更新规则失败: "+err.Error())
 	}
 
 	// 重新启动规则
-	err = ekuiperClient.StartRule(ctx, req.RuleID)
+	err = common.Ekuiper.StartRule(ctx, req.RuleID)
 	if err != nil {
 		c.Error(400, "启动规则失败: "+err.Error())
 	}
@@ -128,13 +124,13 @@ func (c *EkuiperController) GetRule() {
 	ruleID := c.GetString("ruleId")
 
 	if ruleID == "" {
-		rules, err := ekuiperClient.GetAllRules(context.Background())
+		rules, err := common.Ekuiper.GetAllRules(context.Background())
 		if err != nil {
 			c.Error(400, "查询规则失败: "+err.Error())
 		}
 		c.Success(rules)
 	} else {
-		detail, err := ekuiperClient.GetRule(context.Background(), ruleID)
+		detail, err := common.Ekuiper.GetRule(context.Background(), ruleID)
 		if err != nil {
 			c.Error(400, "查询规则失败: "+err.Error())
 		}
@@ -162,6 +158,29 @@ func (c *EkuiperController) AlertCallback() {
 	err := service.AddAlert(req)
 	if err != nil {
 		c.Error(400, "告警回调处理失败"+err.Error())
+	}
+
+	c.Success(map[string]interface{}{
+		"received":  true,
+		"timestamp": time.Now().Unix(),
+	})
+}
+
+// SceneCallback
+// @Title 场景回调接口
+// @Description 接收Ekuiper规则触发的场景回调，参数为动态JSON
+// @Param   body  body  object  true  "动态参数，内容为eKuiper规则SQL select出的所有字段"
+// @Success 200 {object} controllers.SimpleResult
+// @router /callback2 [post]
+func (c *EkuiperController) SceneCallback() {
+	var req map[string]interface{}
+	if err := json.NewDecoder(c.Ctx.Request.Body).Decode(&req); err != nil {
+		c.Error(400, "参数解析失败: "+err.Error())
+	}
+	log.Printf("收到场景回调: %+v", req)
+	err := services.ExecCallBack(req)
+	if err != nil {
+		c.Error(400, "场景回调处理失败"+err.Error())
 	}
 
 	c.Success(map[string]interface{}{

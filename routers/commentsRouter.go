@@ -207,6 +207,15 @@ func init() {
 
 	beego.GlobalControllerRouter["iotServer/controllers:EkuiperController"] = append(beego.GlobalControllerRouter["iotServer/controllers:EkuiperController"],
 		beego.ControllerComments{
+			Method:           "SceneCallback",
+			Router:           `/callback2`,
+			AllowHTTPMethods: []string{"post"},
+			MethodParams:     param.Make(),
+			Filters:          nil,
+			Params:           nil})
+
+	beego.GlobalControllerRouter["iotServer/controllers:EkuiperController"] = append(beego.GlobalControllerRouter["iotServer/controllers:EkuiperController"],
+		beego.ControllerComments{
 			Method:           "CreateRule",
 			Router:           `/create`,
 			AllowHTTPMethods: []string{"post"},

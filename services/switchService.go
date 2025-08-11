@@ -277,15 +277,18 @@ func (p *PropertySetProcessor) Deal(dn, tag, val, channel string, userId int64) 
 	var sn string
 	device, err := iotp.NewTagService().ListTagsByDevice(dn)
 	sn = device["GWSN"]
+
+	//控制命令保存
+	seq := fmt.Sprintf("seq-%d", time.Now().UnixNano())
+	writeLog(seq, "WAIT", sn, dn, tag, val, channel, userId)
+
 	if err != nil || sn == "" {
-		return "", fmt.Errorf("设备未包含网关信息")
+		return seq, fmt.Errorf("设备未包含网关信息")
 	}
 
-	seq := fmt.Sprintf("seq-%d", time.Now().UnixNano())
 	topic := fmt.Sprintf("lm/iot/ctrlRequest/%s", sn)
 	body := fmt.Sprintf("[{\"seq\":\"%s\",\"deviceCode\":\"%s\", \"tagCode\": \"%s\", \"val\": \"%s\"}]", seq, dn, tag, val)
-	//控制命令保存
-	writeLog(seq, "WAIT", sn, dn, tag, val, channel, userId)
+
 	if err := p.mqttClient.Publish(topic, 0, []byte(body)); err != nil {
 		return seq, fmt.Errorf("写入控制命令失败: %v", err)
 	}

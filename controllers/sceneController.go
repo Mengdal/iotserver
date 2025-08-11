@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/beego/beego/v2/client/orm"
@@ -8,6 +9,7 @@ import (
 	"iotServer/models/constants"
 	"iotServer/models/dtos"
 	"iotServer/services"
+	"time"
 )
 
 var GlobalSceneService = services.NewSceneService()
@@ -81,6 +83,13 @@ func (c *SceneController) Update() {
 	scene.Action = string(ActionMarshal)
 	scene.Condition = string(ConditionMarshal)
 
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	//生成场景联动
+	if req.Condition[0].ConditionType == "notify" && req.Id != 0 {
+		services.BuildEkuiperRule(ctx, req, scene.Name)
+	}
 	if _, err := o.Update(&scene); err != nil {
 		c.Error(400, "更新场景出错"+err.Error())
 	}
