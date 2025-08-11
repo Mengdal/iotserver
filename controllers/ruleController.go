@@ -5,15 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/beego/beego/v2/client/orm"
-	beego "github.com/beego/beego/v2/server/web"
 	"iotServer/common"
 	"iotServer/models"
 	"iotServer/models/constants"
 	"iotServer/models/dtos"
 	"log"
-	"net"
-	"os"
-	"strings"
 	"time"
 )
 
@@ -111,13 +107,13 @@ func (c *RuleController) Update() {
 	// 5. 构建上下文
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	if CallBackUrl == "" && LocalHost == "" {
+	if common.CallBackUrl == "" && common.LocalHost == "" {
 		c.Error(400, "无法获取本机IP,请手动配置")
 	}
-	if LocalHost != "" {
-		CallBackUrl = "http://" + LocalHost + ":" + Port
+	if common.LocalHost != "" {
+		common.CallBackUrl = "http://" + common.LocalHost + ":" + common.Port
 	}
-	actions := common.GetRuleAlertEkuiperActions(CallBackUrl + "/api/ekuiper/callback")
+	actions := common.GetRuleAlertEkuiperActions(common.CallBackUrl + "/api/ekuiper/callback")
 
 	// 6. 检查规则是否已存在,存在则更新，不存在则新建
 	var alertRule models.AlertRule
@@ -125,13 +121,13 @@ func (c *RuleController) Update() {
 		c.Error(400, "规则不存在，请创建后配置")
 	}
 
-	if err := ekuiperClient.RuleExist(ctx, req.Name); err == nil {
-		err = ekuiperClient.UpdateRule(ctx, actions, req.Name, sql)
+	if err := common.Ekuiper.RuleExist(ctx, req.Name); err == nil {
+		err = common.Ekuiper.UpdateRule(ctx, actions, req.Name, sql)
 		if err != nil {
 			c.Error(400, "更新规则失败: "+err.Error())
 		}
 	} else {
-		err = ekuiperClient.CreateRule(ctx, actions, req.Name, sql)
+		err = common.Ekuiper.CreateRule(ctx, actions, req.Name, sql)
 		if err != nil {
 			c.Error(400, "更新规则失败: "+err.Error())
 		}
@@ -149,7 +145,7 @@ func (c *RuleController) Update() {
 	alertRule.Notify = string(subNotifyJson)
 
 	if alertRule.Status == string(constants.RuleStart) {
-		err = ekuiperClient.StartRule(ctx, req.Name)
+		err = common.Ekuiper.StartRule(ctx, req.Name)
 		if err != nil {
 			log.Println(400, "规则启动失败")
 			alertRule.Status = string(constants.RuleStop)
@@ -183,20 +179,20 @@ func (c *RuleController) GetRuleStatus() {
 	defer cancel()
 
 	if ruleID == "" || ruleID == "undefined" || ruleID == " " {
-		stats, err = ekuiperClient.GetAllRuleStats(ctx)
+		stats, err = common.Ekuiper.GetAllRuleStats(ctx)
 		if err != nil {
 			c.Error(400, "查询所有规则失败: "+err.Error())
 		}
 
 	} else {
 		// 检查规则是否存在
-		err = ekuiperClient.RuleExist(ctx, ruleID)
+		err = common.Ekuiper.RuleExist(ctx, ruleID)
 		if err != nil {
 			c.Error(400, "检查规则存在性失败: "+err.Error())
 		}
 
 		// 获取规则状态
-		stats, err = ekuiperClient.GetRuleStats(ctx, ruleID)
+		stats, err = common.Ekuiper.GetRuleStats(ctx, ruleID)
 		if err != nil {
 			c.Error(400, "获取规则状态失败: "+err.Error())
 		}
@@ -237,19 +233,19 @@ func (c *RuleController) OperateRule() {
 
 	switch req.Action {
 	case "start":
-		err = ekuiperClient.StartRule(ctx, req.RuleID)
+		err = common.Ekuiper.StartRule(ctx, req.RuleID)
 		message = "规则已启动"
 		rule.Status = string(constants.RuleStart)
 	case "stop":
-		err = ekuiperClient.StopRule(ctx, req.RuleID)
+		err = common.Ekuiper.StopRule(ctx, req.RuleID)
 		message = "规则已停止"
 		rule.Status = string(constants.RuleStop)
 	case "delete":
-		err = ekuiperClient.DeleteRule(ctx, req.RuleID)
+		err = common.Ekuiper.DeleteRule(ctx, req.RuleID)
 		message = "规则已删除"
 		flag = true
 	case "restart":
-		err = ekuiperClient.RestartRule(ctx, req.RuleID)
+		err = common.Ekuiper.RestartRule(ctx, req.RuleID)
 		message = "规则已重启"
 		rule.Status = string(constants.RuleStart)
 	default:
@@ -276,31 +272,4 @@ func (c *RuleController) OperateRule() {
 		"ruleId":  req.RuleID,
 		"message": message,
 	})
-}
-
-var LocalHost, _ = beego.AppConfig.String("localhost")
-var Port, _ = beego.AppConfig.String("httpport")
-var CallBackUrl = "http://" + GetIPByHostname() + ":" + Port
-
-func GetIPByHostname() string {
-	hostname, err := os.Hostname()
-	if err != nil {
-		fmt.Println("获取主机名失败:", err)
-		return ""
-	}
-	ips, err := net.LookupHost(hostname)
-	if err != nil {
-		fmt.Println("主机名解析失败:", err)
-		return ""
-	}
-	for _, ip := range ips {
-		// 过滤回环地址和IPv6
-		if strings.HasPrefix(ip, "127.") || strings.Contains(ip, ":") {
-			continue
-		}
-		fmt.Println("主机名对应IP:", ip)
-		return ip
-	}
-	fmt.Println("未找到可用的IPv4地址")
-	return ""
 }

@@ -52,18 +52,18 @@ func (req *RuleUpdateRequest) BuildEkuiperSql(deviceIDs []string, dataType strin
 
 	switch req.SubRule[0].Trigger {
 	case "设备数据触发":
-		sql = req.buildMultiDeviceDataSql(deviceIDs, dataType)
+		sql = req.BuildMultiDeviceDataSql(deviceIDs, dataType)
 	case "设备事件触发":
-		sql = req.buildMultiDeviceEventSql(deviceIDs)
+		sql = req.BuildMultiDeviceEventSql(deviceIDs)
 	case "设备状态触发":
-		sql = req.buildMultiDeviceStatusSql(deviceIDs)
+		sql = req.BuildMultiDeviceStatusSql(deviceIDs)
 	}
 
 	return sql
 }
 
 // 1. 创建设备数据触发
-func (req *RuleUpdateRequest) buildMultiDeviceDataSql(deviceIDs []string, dataType string) string {
+func (req *RuleUpdateRequest) BuildMultiDeviceDataSql(deviceIDs []string, dataType string) string {
 	code := req.SubRule[0].Option["code"]
 	decideCondition := req.SubRule[0].Option["decide_condition"] //判断条件
 	valueType := req.SubRule[0].Option["value_type"]
@@ -73,17 +73,17 @@ func (req *RuleUpdateRequest) buildMultiDeviceDataSql(deviceIDs []string, dataTy
 
 	switch dataType {
 	case "int", "float":
-		return req.buildMultiDeviceNumericSql(deviceCondition, code, decideCondition, valueType)
+		return req.BuildMultiDeviceNumericSql(deviceCondition, code, decideCondition, valueType)
 	case "text":
-		return req.buildMultiDeviceTextSql(deviceCondition, code, decideCondition)
+		return req.BuildMultiDeviceTextSql(deviceCondition, code, decideCondition)
 	case "bool":
-		return req.buildMultiDeviceBoolSql(deviceCondition, code, decideCondition)
+		return req.BuildMultiDeviceBoolSql(deviceCondition, code, decideCondition)
 	}
 	return ""
 }
 
 // 1.1 设备数据数字类型触发SQL查询修改
-func (req *RuleUpdateRequest) buildMultiDeviceNumericSql(deviceCondition, code, decideCondition, valueType string) string {
+func (req *RuleUpdateRequest) BuildMultiDeviceNumericSql(deviceCondition, code, decideCondition, valueType string) string {
 	windowSize := req.getWindowSize()
 
 	// WHERE 条件部分：设备判断 + 报文类型 + 属性存在判断
@@ -129,7 +129,7 @@ func (req *RuleUpdateRequest) buildMultiDeviceNumericSql(deviceCondition, code, 
 }
 
 // 1.2 设备数据字符类型触发SQL查询修改
-func (req *RuleUpdateRequest) buildMultiDeviceTextSql(deviceCondition, code, decideCondition string) string {
+func (req *RuleUpdateRequest) BuildMultiDeviceTextSql(deviceCondition, code, decideCondition string) string {
 	// WHERE 条件部分：设备判断 + 报文类型 + 属性存在判断
 	baseWhere := fmt.Sprintf(`(%s) AND messageType = "PROPERTY_REPORT" AND json_path_exists(data, "$.%s") = true`, deviceCondition, code)
 
@@ -143,7 +143,7 @@ func (req *RuleUpdateRequest) buildMultiDeviceTextSql(deviceCondition, code, dec
 }
 
 // 1.3 设备数据布尔类型触发SQL查询修改
-func (req *RuleUpdateRequest) buildMultiDeviceBoolSql(deviceCond string, code, decideCondition string) string {
+func (req *RuleUpdateRequest) BuildMultiDeviceBoolSql(deviceCond string, code, decideCondition string) string {
 	// decideCondition 形如 = true/false
 	value := "0"
 	if decideCondition == "= 1" {
@@ -157,7 +157,7 @@ func (req *RuleUpdateRequest) buildMultiDeviceBoolSql(deviceCond string, code, d
 }
 
 // 创建设备事件SQL
-func (req *RuleUpdateRequest) buildMultiDeviceEventSql(deviceIDs []string) string {
+func (req *RuleUpdateRequest) BuildMultiDeviceEventSql(deviceIDs []string) string {
 	code := req.SubRule[0].Option["code"]
 	deviceCondition := buildDeviceCondition(deviceIDs)
 
@@ -166,7 +166,7 @@ func (req *RuleUpdateRequest) buildMultiDeviceEventSql(deviceIDs []string) strin
 }
 
 // 创建设备离线SQL
-func (req *RuleUpdateRequest) buildMultiDeviceStatusSql(deviceIDs []string) string {
+func (req *RuleUpdateRequest) BuildMultiDeviceStatusSql(deviceIDs []string) string {
 	status := req.SubRule[0].Option["status"]
 	deviceCondition := buildDeviceCondition(deviceIDs)
 

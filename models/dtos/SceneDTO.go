@@ -16,7 +16,7 @@ type SceneUpdateRequest struct {
 
 // Condition 场景触发条件
 type Condition struct {
-	ConditionType string            ` json:"condition_type" example:"timer"`
+	ConditionType string            ` json:"condition_type" example:"timer / notify"`
 	Option        map[string]string `json:"option" example:"{\"cron_expression\":\"00 00 * * 0,1,2,3,4\",\"decide_condition\":\"= undefined\"}"` // 存储为JSON字符串
 }
 
