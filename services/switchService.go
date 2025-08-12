@@ -9,6 +9,7 @@ import (
 	"iotServer/common"
 	"iotServer/iotp"
 	"iotServer/models"
+	"iotServer/utils"
 	"log"
 	"net"
 	"regexp"
@@ -119,6 +120,12 @@ func (p *PropertySetProcessor) Init() error {
 	} else {
 		log.Println("已订阅实时数据主题: /edge/property/+/post")
 	}
+	//订阅流处理消息供设备状态处理
+	if err := p.mqttClient.Subscribe("/edge/stream/+/post", 0, p.handleMessage); err != nil {
+		return fmt.Errorf("订阅失败: %v", err)
+	} else {
+		log.Println("已订阅实时数据主题: /edge/stream/+/post")
+	}
 	return nil
 }
 
@@ -155,8 +162,8 @@ func (p *PropertySetProcessor) process(topic, payload string) error {
 		// 处理实时数据
 		return p.handlePropertyMessage(topic, payload)
 	} else if strings.HasPrefix(topic, "/edge/stream/") && strings.HasSuffix(topic, "/post") {
-		// 跳过转发数据
-		return nil
+		// 处理设备状态
+		return p.handleStreamMessage(topic, payload)
 	}
 	return fmt.Errorf("未知的主题类型: %s", topic)
 }
@@ -268,6 +275,26 @@ func (p *PropertySetProcessor) handlePropertyMessage(topic, payload string) erro
 			log.Printf("已转发到 %s: %s\n", newTopic, string(newPayload))
 		}
 	}
+	return nil
+}
+
+var tagService = iotp.TagService{}
+
+// 处理流数据为更新设备状态
+func (p *PropertySetProcessor) handleStreamMessage(topic, payload string) error {
+	// 解析传入的 payload 数据
+	var message struct {
+		Data        map[string]map[string]interface{} `json:"data"`
+		Dn          string                            `json:"dn"`
+		MessageType string                            `json:"messageType"`
+	}
+	if err := json.Unmarshal([]byte(payload), &message); err != nil {
+		return fmt.Errorf("JSON解析失败:%v", err)
+	}
+	// - 数据持久化
+	tagService.AddTag(message.Dn, "status", "1")
+	tagService.AddTag(message.Dn, "lastOnline", utils.InterfaceToString(time.Now().Unix()))
+
 	return nil
 }
 

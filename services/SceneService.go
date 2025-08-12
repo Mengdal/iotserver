@@ -107,13 +107,14 @@ func (s *SceneService) StartScene(id int64) error {
 		return fmt.Errorf("场景已在运行中")
 	}
 
-	// 解析条件，查找定时条件
+	// 解析条件，加载定时场景
 	if err := s.loadSceneToCron(scene); err != nil {
 		return fmt.Errorf("添加场景失败：" + err.Error())
 	}
 	// 更新状态
 	scene.Status = "running"
 	scene.BeforeUpdate()
+
 	_, err := o.Update(&scene)
 	return err
 }
@@ -132,6 +133,11 @@ func (s *SceneService) StopScene(id int64) error {
 		s.cron.Remove(entryID)
 		delete(s.jobs, id) // 清理映射，确保场景不再关联任务
 	}
+
+	// 停止ekuiper规则
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	common.Ekuiper.StopRule(ctx, scene.Name)
 
 	// 更新状态
 	scene.Status = "stopped"
@@ -247,12 +253,18 @@ func (s *SceneService) LoadScenesFromDatabase() error {
 		err = s.DeviceStatusCron()
 	})
 	if err != nil {
-		return fmt.Errorf("设备离线检测启动失败: %v", err)
+		return fmt.Errorf("规则设备离线检测启动失败: %v", err)
+	}
+	_, err = s.cron.AddFunc("@every 1h", func() {
+		err = s.AllDeviceStatusCron()
+	})
+	if err != nil {
+		return fmt.Errorf("全局设备离线检测启动失败: %v", err)
 	}
 	return nil
 }
 
-// loadSceneToCron 将单个场景加载到cron中
+// loadSceneToCron 将定时场景加载到cron中，触发场景加载ekuiper
 func (s *SceneService) loadSceneToCron(scene models.Scene) error {
 	// 解析条件，查找定时条件
 	var conditions []dtos.Condition
@@ -280,8 +292,13 @@ func (s *SceneService) loadSceneToCron(scene models.Scene) error {
 
 				return nil
 			}
+		} else if condition.ConditionType == "notify" {
+			// 设备触发 启动ekuiper规则
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			common.Ekuiper.StartRule(ctx, scene.Name)
+			return nil
 		}
-		// TODO 设备触发
 	}
 
 	return fmt.Errorf("场景 %d 没有找到有效的定时条件", scene.Id)
@@ -415,6 +432,40 @@ func (s *SceneService) DeviceStatusCron() error {
 		}
 	}
 	log.Printf("设备离线检测执行完成，共检测 %d 个规则\n", len(deviceMap))
+	return nil
+}
+
+// 全局设备离线检测
+func (s *SceneService) AllDeviceStatusCron() error {
+	// 查询所有在线设备
+	devices, err := tagService.ListDevicesByTag("status", "1")
+	if err != nil {
+		return fmt.Errorf(err.Error())
+	}
+
+	// 当前时间戳
+	currentTime := time.Now().Unix()
+
+	// 查询设备上次在线时间
+	for _, device := range devices {
+		key, err := tagService.GetTagValue(device, "lastOnline")
+		if err != nil {
+			return fmt.Errorf(err.Error())
+		}
+		lastOnline, err := strconv.ParseInt(key, 10, 64)
+		if err != nil {
+			return fmt.Errorf(err.Error())
+		}
+		// 如果最后在线时间距离现在超过1小时，则标记为离线
+		if currentTime-lastOnline > 3600 { // 3600秒 = 1小时
+			// 更新设备状态为离线(假设"0"表示离线，"1"表示在线)
+			if err := tagService.AddTag(device, "status", "0"); err != nil {
+				log.Printf("更新设备 %s 状态失败: %v", device, err)
+			} else {
+				log.Printf("设备 %s 已标记为离线", device)
+			}
+		}
+	}
 	return nil
 }
 
