@@ -175,6 +175,7 @@ func getRealData(ids []string, ws *websocket.Conn) {
 			}
 			res := response{Code: 200, Data: data}
 			records, _ := json.Marshal(res)
+			ws.SetWriteDeadline(time.Now().Add(5 * time.Second))
 			ws.WriteMessage(websocket.TextMessage, records)
 		}
 		time.Sleep(time.Second)
