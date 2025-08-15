@@ -104,9 +104,22 @@ func (s *AlertService) AddAlert(req map[string]interface{}) error {
 			alertResult["status"] = constants.GetDeviceStatusLabel(status)
 			reportTime := req["report_time"]
 			alertResult["start_at"] = reportTime
-			content = fmt.Sprintf("【告警通知】设备：%s，触发类型：%s，告警时间：%s，当前状态：%s,请及时处理！",
+			content = fmt.Sprintf("【告警通知】设备：%s，触发类型：%s，告警时间：%s，当前状态：%s",
 				alertResult["dn"], alertResult["trigger"], utils.FormatTimestamp(alertResult["start_at"]), alertResult["status"])
 		}
+	} else if message == "EVENT_REPORT" {
+		alertResult["event"] = req["alert_event"]
+		if req["alert_type"] == "AlarmTrigger" {
+			alertResult["type"] = "已触发"
+		} else if req["alert_type"] == "AlarmRecover" {
+			alertResult["type"] = "已解除"
+		}
+
+		reportTime := req["report_time"]
+		alertResult["start_at"] = reportTime
+		content = fmt.Sprintf("【告警通知】设备：%s，触发类型：%s，触发事件：%s，告警时间：%s，当前状态：%s",
+			alertResult["dn"], alertResult["trigger"], alertResult["event"], utils.FormatTimestamp(alertResult["start_at"]), alertResult["type"])
+
 	} else {
 		return nil
 	}

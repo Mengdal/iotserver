@@ -161,8 +161,9 @@ func (req *RuleUpdateRequest) BuildMultiDeviceEventSql(deviceIDs []string) strin
 	code := req.SubRule[0].Option["code"]
 	deviceCondition := buildDeviceCondition(deviceIDs)
 
-	return fmt.Sprintf(`SELECT rule_id(),json_path_query(data, "$.eventTime") as report_time,dn AS deviceId FROM stream WHERE (%s) AND messageType = "EVENT_REPORT" AND json_path_exists(data, "$.eventCode") = true AND json_path_query(data, "$.eventCode") = "%s"`,
-		deviceCondition, code)
+	return fmt.Sprintf(
+		`SELECT rule_id(),json_path_query(data, "$.%s.time") AS report_time,json_path_query(data, "$.%s.event") as alert_event,json_path_query(data, "$.%s.type") as alert_type,dn AS deviceId ,messageType FROM stream WHERE (%s) AND json_path_exists(data, "$.%s") = true`,
+		code, code, code, deviceCondition, code)
 }
 
 // 创建设备离线SQL

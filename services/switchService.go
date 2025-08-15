@@ -156,7 +156,7 @@ func (p *PropertySetProcessor) process(topic, payload string) error {
 		// 处理控制响应
 		return p.processControlResponse(topic, payload)
 	} else if strings.HasPrefix(topic, "/edge/event/") && strings.HasSuffix(topic, "/post") {
-		// 处理报警主题
+		// 处理报警事件
 		return p.processAlertEvent(topic, payload)
 	} else if strings.HasPrefix(topic, "/edge/property/") && strings.HasSuffix(topic, "/post") {
 		// 处理实时数据
@@ -197,7 +197,7 @@ func (p *PropertySetProcessor) processAlertEvent(topic, payload string) error {
 	if len(parts) < 3 {
 		return fmt.Errorf("报警主题格式错误: %s", topic)
 	}
-	//deviceID := parts[2]
+	sn := parts[3]
 
 	log.Printf("收到报警事件: %s %s", topic, payload)
 
@@ -207,25 +207,41 @@ func (p *PropertySetProcessor) processAlertEvent(topic, payload string) error {
 		return fmt.Errorf("报警JSON解析失败: %v", err)
 	}
 
-	// 创建报警记录
-	alertList := models.AlertList{
-		TriggerTime: time.Now().UnixNano() / 1e6, // 转换为毫秒
-		Status:      "未处理",
-		AlertResult: payload,
+	point := alertData["tag"]
+	split := strings.Split(point.(string), ".")
+	dn := split[0]
+	tag := split[1]
+	eventTime := alertData["timestamp"]
+	event := alertData["event"]
+	value := alertData["value"]
+	typeName := alertData["type"]
+
+	data := make(map[string]map[string]interface{})
+	data[tag] = map[string]interface{}{
+		"time":  eventTime,
+		"value": value,
+		"type":  typeName,
+		"event": event,
+	}
+	out := map[string]interface{}{
+		"dn":          dn,
+		"messageType": "EVENT_REPORT",
+		"data":        data,
+	}
+	newPayload, err := json.Marshal(out)
+	if err != nil {
+		return fmt.Errorf("JSON序列化失败: %v", err)
 	}
 
-	// 如果有规则ID，可以设置关联
-	if ruleID, ok := alertData["rule_id"].(float64); ok {
-		alertList.AlertRule = &models.AlertRule{Id: int64(ruleID)}
+	// 转发到新主题（每个设备一个主题）
+	newTopic := fmt.Sprintf("/edge/stream/%s/post", sn)
+
+	if err := p.mqttClient.Publish(newTopic, 0, newPayload); err != nil {
+		log.Println("转发失败:", err.Error())
+	} else {
+		log.Printf("已转发到 %s: %s\n", newTopic, newPayload)
 	}
 
-	// 保存到数据库
-	o := orm.NewOrm()
-	if _, err := o.Insert(&alertList); err != nil {
-		return fmt.Errorf("保存报警记录失败: %v", err)
-	}
-
-	log.Printf("报警记录已保存: %v", alertList.Id)
 	return nil
 }
 
@@ -290,6 +306,10 @@ func (p *PropertySetProcessor) handleStreamMessage(topic, payload string) error 
 	}
 	if err := json.Unmarshal([]byte(payload), &message); err != nil {
 		return fmt.Errorf("JSON解析失败:%v", err)
+	}
+	// 属性上报更新设备状态
+	if message.MessageType != "PROPERTY_REPORT" {
+		return nil
 	}
 	// - 数据持久化
 	tagService.AddTag(message.Dn, "status", "1")
