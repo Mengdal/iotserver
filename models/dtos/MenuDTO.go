@@ -11,5 +11,6 @@ type MenuDTO struct {
 	Meta           map[string]interface{} `json:"meta"`
 	PermissionList map[string]interface{} `json:"permissionList"`
 	Redirect       string                 `json:"redirect"`
+	Priority       int                    `json:"priority"`
 	Children       []MenuDTO              `json:"children,omitempty"`
 }

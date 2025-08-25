@@ -13,6 +13,7 @@ type Menu struct {
 	Redirect       string `orm:"null;size(255)"`
 	Type           int    `orm:"null"`
 	PermissionList string `orm:"null;type(text)"`
+	Priority       int    `orm:"default(0)"`
 }
 
 func init() {

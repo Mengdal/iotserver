@@ -5,6 +5,7 @@ import (
 	"iotServer/models"
 	"iotServer/models/dtos"
 	"iotServer/utils"
+	"sort"
 )
 
 type MenuController struct {
@@ -28,7 +29,7 @@ func (c *MenuController) List() {
 // @Param   component        query    string  true        "组件"
 // @Param   name             query    string  true        "名称"
 // @Param   redirect         query    string  false       "重定向"
-// @Param   status           query    bool    true        "是否启用"
+// @Param   status           query    int    true        "是否启用"
 // @Param   type             query    int     true        "类型"
 // @Param   parentId         query    int     false       "父级菜单ID"
 // @Param   permissionList   query    string  false       "按钮权限列表"
@@ -41,7 +42,7 @@ func (c *MenuController) Create() {
 	component := c.GetString("component")
 	name := c.GetString("name")
 	redirect := c.GetString("redirect")
-	status, _ := c.GetBool("status")
+	status, _ := c.GetInt("status")
 	typ, _ := c.GetInt("type")
 	parentId, _ := c.GetInt("parentId")
 	var parentIdPtr *int64
@@ -65,7 +66,7 @@ func (c *MenuController) Create() {
 		Path:           path,
 		Component:      component,
 		Redirect:       redirect,
-		Status:         convertStatus(status),
+		Status:         status,
 		Type:           typ,
 		ParentId:       parentIdPtr,
 		PermissionList: permissionList,
@@ -105,6 +106,7 @@ func (c *MenuController) Edit() {
 	parentId, _ := c.GetInt("parentId")
 	permissionList := c.GetString("permissionList")
 	meta := c.GetString("meta")
+	priority, _ := c.GetInt("priority")
 
 	if id <= 0 || component == "" || name == "" || meta == "" {
 		c.Error(400, "参数错误")
@@ -152,6 +154,9 @@ func (c *MenuController) Edit() {
 	}
 	if parentIdPtr != menu.ParentId {
 		menu.ParentId = parentIdPtr
+	}
+	if priority != 0 {
+		menu.Priority = priority
 	}
 
 	if _, err := o.Update(&menu); err != nil {
@@ -206,9 +211,14 @@ func (c *MenuController) getObjects(menus []models.Menu) []dtos.MenuDTO {
 			PermissionList: utils.ParseJson(menu.PermissionList),
 			Meta:           utils.ParseJson(menu.Meta),
 			Children:       c.children(&menu.Id),
+			Priority:       menu.Priority,
 		}
 		DTO = append(DTO, dto)
 	}
+	// 按 Priority 升序排序（小的排前面）
+	sort.Slice(DTO, func(i, j int) bool {
+		return DTO[i].Priority < DTO[j].Priority
+	})
 	return DTO
 }
 
@@ -258,7 +268,6 @@ func (c *MenuController) listByParentId(parentId *int64) ([]models.Menu, error) 
 	} else {
 		qs = qs.Filter("ParentId", *parentId)
 	}
-	qs = qs.Filter("Status", 1)
 
 	var menus []models.Menu
 	_, err := qs.All(&menus)
