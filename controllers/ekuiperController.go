@@ -188,3 +188,26 @@ func (c *EkuiperController) SceneCallback() {
 		"timestamp": time.Now().Unix(),
 	})
 }
+
+// EngineCallback
+// @Title 规则引擎回调接口
+// @Description 接收Ekuiper规则触发的规则引擎回调，参数为动态JSON
+// @Param   body  body  object  true  "动态参数，内容为eKuiper规则SQL select出的所有字段"
+// @Success 200 {object} controllers.SimpleResult
+// @router /callback3 [post]
+func (c *EkuiperController) EngineCallback() {
+	var req map[string]interface{}
+	if err := json.NewDecoder(c.Ctx.Request.Body).Decode(&req); err != nil {
+		c.Error(400, "参数解析失败: "+err.Error())
+	}
+	log.Printf("收到规则引擎回调: %+v", req)
+	err := services.EngineCallBack(req)
+	if err != nil {
+		c.Error(400, "场景回调处理失败"+err.Error())
+	}
+
+	c.Success(map[string]interface{}{
+		"received":  true,
+		"timestamp": time.Now().Unix(),
+	})
+}
