@@ -5,7 +5,7 @@ import (
 )
 
 type ThingModelDTO struct {
-	Id             string                   `json:"id" description:"物模型ID"`
+	Id             int64                    `json:"id" description:"物模型ID"`
 	ProductId      int64                    `json:"product_id" example:"1939557978394857472" description:"产品ID"`
 	ThingModelType constants.ThingModelType `json:"thing_model_type" example:"property" description:"物模型类型：property/event/action"`
 	Name           string                   `json:"name" example:"温度" description:"名称"`

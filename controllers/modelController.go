@@ -123,7 +123,6 @@ func (c *ModelController) Create() {
 		}
 		var property models.Properties
 
-		property.Id = 0
 		property.Product = &product
 		property.Name = req.Name
 		property.Code = req.Code
@@ -144,10 +143,20 @@ func (c *ModelController) Create() {
 		}
 		property.TypeSpec = string(marshal)
 
-		_ = property.BeforeInsert()
-		if _, err := o.Insert(&property); err != nil {
-			c.Error(500, "保存属性失败: "+err.Error())
+		if req.Id == 0 {
+			property.Id = 0
+			_ = property.BeforeInsert()
+			if _, err := o.Insert(&property); err != nil {
+				c.Error(500, "保存属性失败: "+err.Error())
+			}
+		} else {
+			property.Id = req.Id
+			_ = property.BeforeUpdate()
+			if _, err := o.Update(&property); err != nil {
+				c.Error(500, "保存属性失败: "+err.Error())
+			}
 		}
+
 		c.Success(property.Id)
 
 	case constants.ModelTypeEvent:
@@ -156,7 +165,6 @@ func (c *ModelController) Create() {
 		}
 		var event models.Events
 
-		event.Id = 0
 		event.Product = &product
 		event.Name = req.Name
 		event.Code = req.Code
@@ -190,10 +198,20 @@ func (c *ModelController) Create() {
 		}
 		event.OutputParams = string(marshal)
 
-		_ = event.BeforeInsert()
-		if _, err := o.Insert(&event); err != nil {
-			c.Error(500, "保存事件失败: "+err.Error())
+		if req.Id == 0 {
+			event.Id = 0
+			_ = event.BeforeInsert()
+			if _, err := o.Insert(&event); err != nil {
+				c.Error(500, "保存事件失败: "+err.Error())
+			}
+		} else {
+			event.Id = req.Id
+			_ = event.BeforeUpdate()
+			if _, err := o.Update(&event); err != nil {
+				c.Error(500, "保存事件失败: "+err.Error())
+			}
 		}
+
 		c.Success(event)
 
 	case constants.ModelTypeAction:
@@ -256,9 +274,18 @@ func (c *ModelController) Create() {
 		}
 		action.OutputParams = string(output)
 
-		_ = action.BeforeInsert()
-		if _, err := o.Insert(&action); err != nil {
-			c.Error(500, "保存服务失败: "+err.Error())
+		if req.Id == 0 {
+			action.Id = 0
+			_ = action.BeforeInsert()
+			if _, err := o.Insert(&action); err != nil {
+				c.Error(500, "保存服务失败: "+err.Error())
+			}
+		} else {
+			action.Id = req.Id
+			_ = action.BeforeUpdate()
+			if _, err := o.Update(&action); err != nil {
+				c.Error(500, "保存服务失败: "+err.Error())
+			}
 		}
 		c.Success(action)
 

@@ -86,6 +86,37 @@ func GetAllSubUserIds(userId int64) ([]int64, error) {
 	return ids, nil
 }
 
+// Detail @Title 获取产品详情
+// @Description 产品物模型
+// @Param   Authorization  header  string  true  "Bearer YourToken"
+// @Param   productId      query   int     false "产品Id"
+// @Success 200 {object} controllers.SimpleResult "请求成功"
+// @Failure 400 用户ID不存在 或 查询失败
+// @router /detail [post]
+func (c *ProductController) Detail() {
+	productId, _ := c.GetInt64("productId")
+
+	o := orm.NewOrm()
+
+	// 查询产品
+	var product models.Product
+	product.Id = productId
+	err := o.QueryTable(new(models.Product)).Filter("id", productId).One(&product)
+
+	if err != nil {
+		c.Error(400, "查询失败")
+	}
+
+	// 查询属性
+	o.LoadRelated(&product, "Properties")
+	// 查询事件
+	o.LoadRelated(&product, "Events")
+	// 查询动作
+	o.LoadRelated(&product, "Actions")
+
+	c.Success(product)
+}
+
 // Create @Title 创建产品
 // @Description 创建新产品，仅支持部分字段，自动绑定当前用户
 // @Param   Authorization  header  string  true  "Bearer YourToken"
