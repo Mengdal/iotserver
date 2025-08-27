@@ -121,8 +121,8 @@ func (s *TagService) DeleteDevices(deviceNames ...string) error {
 		return fmt.Errorf("未指定要删除的设备")
 	}
 
-	url := fmt.Sprintf("http://%s/TSDELDEVICE/%s",
-		IoTPServer, deviceNames)
+	url := fmt.Sprintf("http://%s/DELDEVICE/%s",
+		IoTPServer, strings.Join(deviceNames, ","))
 
 	_, err := HttpGet(url)
 	if err != nil {
