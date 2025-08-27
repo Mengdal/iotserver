@@ -8,7 +8,7 @@ type UserDto struct {
 	Password   string    `json:"-"`
 	Username   string    `json:"username"`
 	ParentId   *int64    `json:"parent_id"`
-	RoleId     *int64    `json:"role_id"`
+	RoleId     int64     `json:"role_id"`
 	WebToken   string    `json:"web_token"`
 	CreateTime time.Time `json:"create_time"`
 }
@@ -16,12 +16,13 @@ type UserDto struct {
 type UpdateUserRequest struct {
 	Id       int64  `json:"id"`
 	Email    string `json:"email"`
-	Password string `json:"-"`
+	Password string `json:"password"`
 	Username string `json:"username"`
-	RoleId   *int64 `json:"role_id"`
+	RoleId   int64  `json:"role_id"`
 }
 
 type RegisterDto struct {
 	UserName string `json:"username"`
 	Password string `json:"password"`
+	RoleId   int64  `json:"role_id"`
 }

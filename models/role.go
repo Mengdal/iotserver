@@ -6,7 +6,7 @@ import (
 
 type Role struct {
 	Id          int64  `orm:"auto;pk" json:"id"`
-	UserId      *int64 `orm:"null" json:"user_id"`
+	UserId      int64  `orm:"null" json:"user_id"`
 	Name        string `orm:"size(255);unique" json:"name"`
 	Description string `orm:"null;size(255)" json:"description"`
 	Permission  string `orm:"null;type(text)" json:"permission"`

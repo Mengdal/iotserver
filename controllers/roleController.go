@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/beego/beego/v2/client/orm"
 	"iotServer/models"
+	"iotServer/utils"
 )
 
 type RoleController struct {
@@ -32,16 +33,18 @@ func (c *RoleController) GetRoleList() {
 	page, _ := c.GetInt("page", 1)
 	size, _ := c.GetInt("size", 10)
 
-	userId := c.Ctx.Input.GetData("user_id")
+	//userId := c.Ctx.Input.GetData("user_id")
 
 	o := orm.NewOrm()
 	var roles []models.Role
-	qs := o.QueryTable(new(models.Role)).Filter("UserId", userId)
-	if _, err := qs.Limit(size, (page-1)*size).All(&roles); err != nil {
-		c.Error(400, "查询失败")
+	qs := o.QueryTable(new(models.Role))
+	pageResult, err := utils.Paginate(qs, page, size, &roles)
+	if err != nil {
+		c.Error(400, "查询失败: "+err.Error())
+		return
 	}
 
-	c.Success(roles)
+	c.Success(pageResult)
 }
 
 // GetRole @Title 获取角色详情
@@ -96,7 +99,7 @@ func (c *RoleController) Create() {
 		Name:        name,
 		Description: description,
 		Permission:  permission,
-		UserId:      &userId,
+		UserId:      userId,
 	}
 
 	id, err := o.Insert(&role)
@@ -139,7 +142,7 @@ func (c *RoleController) Edit() {
 	userId, ok := c.Ctx.Input.GetData("user_id").(int64)
 	currentUser.Id = userId
 	err := o.Read(&currentUser)
-	if !ok || err != nil || currentUser.ParentId != nil || currentUser.Id != *role.UserId {
+	if !ok || err != nil || currentUser.ParentId != nil || currentUser.Id != role.UserId {
 		c.Error(400, "用户无权限")
 	}
 
@@ -173,6 +176,14 @@ func (c *RoleController) Delete() {
 
 	if !CheckModelOwnership(o, "role", int64(id), userId, "") {
 		c.Error(400, "用户无权限或已删除")
+	}
+	// 先检查是否有用户引用这个角色
+	cnt, err := o.QueryTable(new(models.User)).Filter("Role__Id", id).Count()
+	if err != nil {
+		c.Error(500, "数据库查询失败: "+err.Error())
+	}
+	if cnt > 0 {
+		c.Error(400, "该角色已被用户使用，无法删除")
 	}
 	if _, err := o.Delete(&role); err != nil {
 		c.Error(400, "删除失败")
@@ -210,11 +221,11 @@ func CheckModelOwnership(o orm.Ormer, model string, resourceID int64, userID int
 
 	case "role":
 		var r models.Role
-		if err := o.QueryTable("role").Filter("id", resourceID).One(&r, "UserID"); err != nil {
+		if err := o.QueryTable("role").Filter("id", resourceID).One(&r); err != nil {
 			fmt.Println("CheckModelOwnership: 查询 role 失败:", err)
 			return false
 		}
-		resourceUserID = *r.UserId
+		resourceUserID = r.UserId
 
 	case "user":
 		var u models.User

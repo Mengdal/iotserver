@@ -16,22 +16,49 @@ type UserController struct {
 // GetAll @Title 获取用户列表
 // @Description 主账户获取所有子用户
 // @Param   Authorization  header  string  true  "Bearer YourToken"
+// @Param   page     query   int     false   "当前页码，默认1"
+// @Param   size     query   int     false   "每页数量，默认10"
 // @Success 200 {object} controllers.SimpleResult "请求成功,返回通用结果"
 // @router /get [post]
 func (c *UserController) GetAll() {
+	page, _ := c.GetInt("page", 1)  // 当前页，默认 1
+	size, _ := c.GetInt("size", 10) // 每页条数，默认 10
+
 	userId := c.Ctx.Input.GetData("user_id")
+
 	o := orm.NewOrm()
-	var users []dtos.UserDto
-	_, err := o.QueryTable(new(models.User)).Filter("ParentId", userId).All(&users)
+	qs := o.QueryTable(new(models.User)).Filter("ParentId", userId)
+
+	var users []models.User
+	result, err := utils.Paginate(qs, page, size, &users)
 	if err != nil {
 		c.Error(400, "查询失败")
-	} else {
-		c.Success(users)
 	}
+
+	// 转换成 DTO
+	var userDtos []dtos.UserDto
+	for _, u := range users {
+		var roleId int64
+		if u.Role != nil {
+			roleId = u.Role.Id
+		}
+		userDtos = append(userDtos, dtos.UserDto{
+			Id:         u.Id,
+			Email:      u.Email,
+			Username:   u.Username,
+			ParentId:   u.ParentId,
+			WebToken:   u.WebToken,
+			CreateTime: u.CreateTime,
+			RoleId:     roleId, // 如果只要 roleId
+		})
+	}
+	result.List = userDtos
+	c.Success(result) // 返回分页结果，而不是只返回数据数组
 }
 
 // Put @Title UpdateUser
 // @Description 更新用户信息
+// @Param   Authorization  header  string  true  "Bearer YourToken"
 // @Param   body  body  dtos.UpdateUserRequest  true  "请求体"
 // @Success 200 {object} controllers.SimpleResult "请求成功,返回通用结果"
 // @router /updateUser [post]
@@ -55,8 +82,8 @@ func (c *UserController) Put() {
 	if req.Password != "" {
 		user.Password = req.Password
 	}
-	if req.RoleId != nil {
-		user.RoleId = req.RoleId
+	if req.RoleId != 0 {
+		user.Role.Id = req.RoleId
 	}
 	if req.Username != "" {
 		user.Username = req.Username
@@ -139,7 +166,7 @@ func (c *UserController) Login() {
 	if err != nil {
 		c.Error(400, "更新用户token失败")
 	}
-	role := models.Role{Id: *user.RoleId}
+	role := models.Role{Id: user.Role.Id}
 	if err = o.Read(&role, "Id"); err != nil {
 		c.Error(400, "获取角色出错")
 	}
@@ -150,7 +177,7 @@ func (c *UserController) Login() {
 	result := map[string]interface{}{
 		"token":      token,
 		"menu":       menuTree,
-		"roleId":     user.RoleId,
+		"roleId":     user.Role.Id,
 		"permission": role.Permission,
 	}
 	c.Success(result)
@@ -166,11 +193,16 @@ func (c *UserController) Login() {
 func (c *UserController) Register() {
 	token := c.GetString("Authorization")
 
-	var this models.User
-	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &this); err != nil {
+	var req dtos.RegisterDto
+
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
 		c.Error(400, "参数解析失败")
 	}
 
+	var this models.User
+	this.Role = &models.Role{Id: req.RoleId}
+	this.Username = req.UserName
+	this.Password = req.Password
 	//orm验证器
 	valid := validation.Validation{}
 	ok, _ := valid.Valid(&this)
@@ -205,13 +237,9 @@ func (c *UserController) Register() {
 		}
 
 		this.ParentId = &currentUser.Id
-		var role int64 = 2
-		this.RoleId = &role
 	} else {
 		//无token则创建父账户
 		this.ParentId = nil
-		var role int64 = 1
-		this.RoleId = &role
 	}
 
 	if _, err := newOrm.Insert(&this); err != nil {
