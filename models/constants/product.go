@@ -75,3 +75,17 @@ type Protocol string
 const (
 	MQTT Protocol = "MQTT"
 )
+
+type SourceType string
+
+const (
+	http     SourceType = "HTTP推送"    //同步
+	mqtt     SourceType = "消息对队列MQTT" //异步
+	kafka    SourceType = "消息队列Kafka"
+	influxdb SourceType = "InfluxDB"
+	TDengine SourceType = "TDengine"
+)
+
+func IsSourceType(value string) bool {
+	return value == string(http) || value == string(mqtt) || value == string(kafka) || value == string(influxdb) || value == string(TDengine)
+}

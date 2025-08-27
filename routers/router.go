@@ -81,6 +81,11 @@ func init() {
 				&controllers.SceneController{},
 			),
 		),
+		beego.NSNamespace("/engine",
+			beego.NSInclude(
+				&controllers.EngineController{},
+			),
+		),
 	)
 	beego.AddNamespace(ns)
 }

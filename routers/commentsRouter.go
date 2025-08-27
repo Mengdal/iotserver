@@ -216,6 +216,15 @@ func init() {
 
 	beego.GlobalControllerRouter["iotServer/controllers:EkuiperController"] = append(beego.GlobalControllerRouter["iotServer/controllers:EkuiperController"],
 		beego.ControllerComments{
+			Method:           "EngineCallback",
+			Router:           `/callback3`,
+			AllowHTTPMethods: []string{"post"},
+			MethodParams:     param.Make(),
+			Filters:          nil,
+			Params:           nil})
+
+	beego.GlobalControllerRouter["iotServer/controllers:EkuiperController"] = append(beego.GlobalControllerRouter["iotServer/controllers:EkuiperController"],
+		beego.ControllerComments{
 			Method:           "CreateRule",
 			Router:           `/create`,
 			AllowHTTPMethods: []string{"post"},
@@ -236,6 +245,51 @@ func init() {
 		beego.ControllerComments{
 			Method:           "UpdateRule",
 			Router:           `/update`,
+			AllowHTTPMethods: []string{"post"},
+			MethodParams:     param.Make(),
+			Filters:          nil,
+			Params:           nil})
+
+	beego.GlobalControllerRouter["iotServer/controllers:EngineController"] = append(beego.GlobalControllerRouter["iotServer/controllers:EngineController"],
+		beego.ControllerComments{
+			Method:           "EditEngine",
+			Router:           `/editEngine`,
+			AllowHTTPMethods: []string{"post"},
+			MethodParams:     param.Make(),
+			Filters:          nil,
+			Params:           nil})
+
+	beego.GlobalControllerRouter["iotServer/controllers:EngineController"] = append(beego.GlobalControllerRouter["iotServer/controllers:EngineController"],
+		beego.ControllerComments{
+			Method:           "EditSource",
+			Router:           `/editSource`,
+			AllowHTTPMethods: []string{"post"},
+			MethodParams:     param.Make(),
+			Filters:          nil,
+			Params:           nil})
+
+	beego.GlobalControllerRouter["iotServer/controllers:EngineController"] = append(beego.GlobalControllerRouter["iotServer/controllers:EngineController"],
+		beego.ControllerComments{
+			Method:           "EngineConfig",
+			Router:           `/engineConfig`,
+			AllowHTTPMethods: []string{"post"},
+			MethodParams:     param.Make(),
+			Filters:          nil,
+			Params:           nil})
+
+	beego.GlobalControllerRouter["iotServer/controllers:EngineController"] = append(beego.GlobalControllerRouter["iotServer/controllers:EngineController"],
+		beego.ControllerComments{
+			Method:           "Engines",
+			Router:           `/engines`,
+			AllowHTTPMethods: []string{"post"},
+			MethodParams:     param.Make(),
+			Filters:          nil,
+			Params:           nil})
+
+	beego.GlobalControllerRouter["iotServer/controllers:EngineController"] = append(beego.GlobalControllerRouter["iotServer/controllers:EngineController"],
+		beego.ControllerComments{
+			Method:           "Sources",
+			Router:           `/sources`,
 			AllowHTTPMethods: []string{"post"},
 			MethodParams:     param.Make(),
 			Filters:          nil,
@@ -326,6 +380,15 @@ func init() {
 		beego.ControllerComments{
 			Method:           "Delete",
 			Router:           `/delete`,
+			AllowHTTPMethods: []string{"post"},
+			MethodParams:     param.Make(),
+			Filters:          nil,
+			Params:           nil})
+
+	beego.GlobalControllerRouter["iotServer/controllers:ProductController"] = append(beego.GlobalControllerRouter["iotServer/controllers:ProductController"],
+		beego.ControllerComments{
+			Method:           "Detail",
+			Router:           `/detail`,
 			AllowHTTPMethods: []string{"post"},
 			MethodParams:     param.Make(),
 			Filters:          nil,

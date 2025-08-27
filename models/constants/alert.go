@@ -24,6 +24,11 @@ const (
 	RuleStop  RuleStatus = "stopped"
 )
 
+// IsStatusValid 判断是否是合法的 status 枚举值
+func IsStatusValid(value string) bool {
+	return value == string(RuleStart) || value == string(RuleStop)
+}
+
 // 告警类型
 type AlertType string
 
