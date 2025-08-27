@@ -155,9 +155,7 @@ func (c *MenuController) Edit() {
 	if parentIdPtr != menu.ParentId {
 		menu.ParentId = parentIdPtr
 	}
-	if priority != 0 {
-		menu.Priority = priority
-	}
+	menu.Priority = priority
 
 	if _, err := o.Update(&menu); err != nil {
 		c.Error(400, "更新失败")
