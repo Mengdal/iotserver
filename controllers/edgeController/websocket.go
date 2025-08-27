@@ -156,6 +156,9 @@ func getRealData(ids []string, ws *websocket.Conn) {
 			device2tag[deviceCode] = append(device2tag[deviceCode], tagCode)
 		}
 	}
+	if len(device2tag) == 0 {
+		return
+	}
 
 	for {
 		mx.Lock()
@@ -173,10 +176,12 @@ func getRealData(ids []string, ws *websocket.Conn) {
 				Data    interface{} `json:"data"`
 				Message string      `json:"message"`
 			}
-			res := response{Code: 200, Data: data}
-			records, _ := json.Marshal(res)
-			ws.SetWriteDeadline(time.Now().Add(5 * time.Second))
-			ws.WriteMessage(websocket.TextMessage, records)
+			if data != nil {
+				res := response{Code: 200, Data: data}
+				records, _ := json.Marshal(res)
+				ws.SetWriteDeadline(time.Now().Add(5 * time.Second))
+				ws.WriteMessage(websocket.TextMessage, records)
+			}
 		}
 		time.Sleep(time.Second)
 	}
