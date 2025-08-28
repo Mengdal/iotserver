@@ -9,6 +9,7 @@ type UserDto struct {
 	Username   string    `json:"username"`
 	ParentId   *int64    `json:"parent_id"`
 	RoleId     int64     `json:"role_id"`
+	RoleName   string    `json:"role_name"`
 	WebToken   string    `json:"web_token"`
 	CreateTime time.Time `json:"create_time"`
 }
@@ -25,4 +26,5 @@ type RegisterDto struct {
 	UserName string `json:"username"`
 	Password string `json:"password"`
 	RoleId   int64  `json:"role_id"`
+	UserId   int64  `json:"user_id"`
 }

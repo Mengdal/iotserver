@@ -38,9 +38,12 @@ func (c *UserController) GetAll() {
 	// 转换成 DTO
 	var userDtos []dtos.UserDto
 	for _, u := range users {
+		o.LoadRelated(&u, "Role")
 		var roleId int64
+		var roleName string
 		if u.Role != nil {
 			roleId = u.Role.Id
+			roleName = u.Role.Name
 		}
 		userDtos = append(userDtos, dtos.UserDto{
 			Id:         u.Id,
@@ -50,6 +53,7 @@ func (c *UserController) GetAll() {
 			WebToken:   u.WebToken,
 			CreateTime: u.CreateTime,
 			RoleId:     roleId, // 如果只要 roleId
+			RoleName:   roleName,
 		})
 	}
 	result.List = userDtos
@@ -67,7 +71,7 @@ func (c *UserController) Put() {
 	var req dtos.UpdateUserRequest
 
 	//获取request的pwd
-	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil || req.Id == 0 || req.Password == "" {
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil || req.Id == 0 {
 		c.Error(400, "参数错误")
 	}
 
@@ -167,7 +171,7 @@ func (c *UserController) Login() {
 		c.Error(400, "更新用户token失败")
 	}
 	role := models.Role{Id: user.Role.Id}
-	if err = o.Read(&role, "Id"); err != nil {
+	if err = o.Read(&role); err != nil {
 		c.Error(400, "获取角色出错")
 	}
 
@@ -177,7 +181,9 @@ func (c *UserController) Login() {
 	result := map[string]interface{}{
 		"token":      token,
 		"menu":       menuTree,
-		"roleId":     user.Role.Id,
+		"roleId":     role.Id,
+		"roleName":   role.Name,
+		"userId":     user.Id,
 		"permission": role.Permission,
 	}
 	c.Success(result)
@@ -185,14 +191,11 @@ func (c *UserController) Login() {
 
 // Register @Title 用户注册
 // @Description 基于当前用户创建，token不填时创建父账户，有token则基于当前用户创建
-// @Param Authorization query string false "token检验"
 // @Param body body dtos.RegisterDto true "用户信息（email选填）"
 // @Success 200 {object} controllers.SimpleResult "请求成功,返回通用结果"
 // @Failure 400 参数解析失败
 // @router /register [post]
 func (c *UserController) Register() {
-	token := c.GetString("Authorization")
-
 	var req dtos.RegisterDto
 
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
@@ -220,18 +223,9 @@ func (c *UserController) Register() {
 	this.WebToken = ""
 
 	//说明有token基于当前用户注册
-	if token != "" {
-		//token取出当前用户
-		claims, ok := utils.ParseToken(token)
-		if !ok {
-			c.Error(403, "Forbidden: invalid token")
-		}
-		currentUserId, ok := claims["user_id"].(float64)
-		if !ok {
-			c.Error(400, "身份验证失败")
-		}
+	if req.UserId != 0 {
 		var currentUser models.User
-		currentUser.Id = int64(currentUserId)
+		currentUser.Id = req.UserId
 		if err := newOrm.Read(&currentUser); err != nil || currentUser.ParentId != nil {
 			c.Error(400, "用户不存在或无权限")
 		}
@@ -245,5 +239,30 @@ func (c *UserController) Register() {
 	if _, err := newOrm.Insert(&this); err != nil {
 		c.Error(400, "注册失败")
 	}
+	c.SuccessMsg()
+}
+
+// Delete @Title 删除用户
+// @Description 删除指定用户
+// @Param   Authorization  header  string  true  "Bearer YourToken"
+// @Param   id       query   int     true  "用户ID"
+// @Success 200 {object} controllers.SimpleResult "删除成功，返回1"
+// @Failure 400 "系统角色不能删除 或 删除失败"
+// @router /del [post]
+func (c *UserController) Delete() {
+	id, _ := c.GetInt("id")
+	userId, _ := c.Ctx.Input.GetData("user_id").(int64)
+
+	o := orm.NewOrm()
+	user := models.User{Id: int64(id)}
+
+	if !CheckModelOwnership(o, "user", int64(id), userId, "") {
+		c.Error(400, "用户无权限或已删除")
+	}
+
+	if _, err := o.Delete(&user); err != nil {
+		c.Error(400, "删除失败")
+	}
+
 	c.SuccessMsg()
 }
