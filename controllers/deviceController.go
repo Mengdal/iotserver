@@ -37,6 +37,22 @@ func (c *DeviceController) GetAllDevices() {
 	c.Success(devices)
 }
 
+// GetDevicesTree @Title 获取设备树
+// @Description 根据传入产品获取点树
+// @Param   Authorization  header  string  true  "Bearer YourToken"
+// @Param   productId      query   string  true  "产品ID"
+// @Success 200 {object} controllers.SimpleResult "返回结果树"
+// @Failure 400 "错误信息"
+// @router /getTagsTree [post]
+func (c *DeviceController) GetDevicesTree() {
+	productId := c.GetString("productId")
+	data, err := tagService.DevicesTagsTree("productId", productId)
+	if err != nil {
+		c.Error(400, err.Error())
+	}
+	c.Success(data)
+}
+
 // GetNoBindDevices @Title 查询未绑定设备
 // @Description 添加设备时查询未绑定产品的设备
 // @Param   Authorization  header  string  true  "Bearer YourToken"

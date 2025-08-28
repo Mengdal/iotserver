@@ -163,6 +163,48 @@ func (s *TagService) ListDevicesByTag(tagName, tagValue string) ([]string, error
 	return response.Devices, nil
 }
 
+// DevicesTagsTree 获取拥有指定标签值的设备树
+func (s *TagService) DevicesTagsTree(tagName, tagValue string) ([]map[string]interface{}, error) {
+	// 根据标签筛选设备
+	devices, err := s.ListDevicesByTag(tagName, tagValue)
+	if err != nil {
+		return nil, err
+	}
+
+	// 返回设备详细信息（带标签，树形结构）
+	var deviceTree []map[string]interface{}
+
+	for _, device := range devices {
+		// 查询设备的所有标签
+		tags, err := GetRawDeviceTags(device)
+		if err != nil {
+			log.Printf("获取设备 %s 标签失败: %v", device, err)
+			continue
+		}
+
+		// 子节点（tags）
+		var children []map[string]interface{}
+		for _, v := range tags {
+			children = append(children, map[string]interface{}{
+				"name":  v["name"], // 标签名
+				"type":  v["type"], // 标签值
+				"isTag": true,
+			})
+		}
+
+		// 根节点（设备）
+		deviceNode := map[string]interface{}{
+			"name":     device,   // 设备名
+			"isDevice": true,     // 标识这是设备节点
+			"children": children, // 子节点为标签
+		}
+
+		deviceTree = append(deviceTree, deviceNode)
+	}
+
+	return deviceTree, nil
+}
+
 // 获取设备的所有标签
 func (s *TagService) ListTagsByDevice(deviceName string) (map[string]string, error) {
 	url := fmt.Sprintf("http://%s/tag/listTags/%s",

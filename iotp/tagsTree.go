@@ -96,3 +96,33 @@ func GetDeviceTags(dn string) ([]string, error) {
 
 	return result, nil
 }
+
+func GetRawDeviceTags(dn string) ([]map[string]string, error) {
+	url := "http://" + IoTPServer + "/ALLFIELDS/" + dn
+	fmt.Println("请求URL:", url)
+
+	data, err := HttpGet(url)
+	if err != nil {
+		return nil, err
+	}
+
+	// 定义结构用于解析JSON
+	var tags []struct {
+		Name string `json:"name"`
+		Type string `json:"type"`
+	}
+
+	if err := json.Unmarshal([]byte(data), &tags); err != nil {
+		return nil, fmt.Errorf("解析设备标签失败: %v", err)
+	}
+
+	var result []map[string]string
+	for _, t := range tags {
+		result = append(result, map[string]string{
+			"name": t.Name,
+			"type": t.Type,
+		})
+	}
+
+	return result, nil
+}
