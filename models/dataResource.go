@@ -9,6 +9,7 @@ type DataResource struct {
 	Id       int64  `orm:"auto;pk" json:"id"`
 	Created  int64  `orm:"null" json:"created"`
 	Modified int64  `orm:"null" json:"modified"`
+	Name     string `orm:"type(text)" json:"name"`
 	Type     string `orm:"null;type(text)" json:"type"`
 	Health   string `orm:"null;type(text)" json:"health"`
 	Option   string `orm:"null;type(text)" json:"option"`

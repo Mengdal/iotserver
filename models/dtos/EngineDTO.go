@@ -27,7 +27,8 @@ type Filters struct {
 }
 
 type EngineOption struct {
-	Id     int64       `json:"id"`     // 对应 DataResource.Id
+	Id     int64       `json:"id"` // 对应 DataResource.Id
+	Name   string      `json:"name"`
 	Type   string      `json:"type"`   // 不同 Type 对应不同的配置结构体
 	Option interface{} `json:"option"` // 转发类型，如 HTTP / MQTT / Kafka / InfluxDB / TDengine
 }

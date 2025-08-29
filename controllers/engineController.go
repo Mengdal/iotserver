@@ -49,6 +49,40 @@ func (c *EngineController) Sources() {
 	c.Success(paginate)
 }
 
+// Valid @Title 验证资源状态
+// @Description 资源ID查询
+// @Param   Authorization  header  string  true  "Bearer YourToken"
+// @Param   id           query     int64   false "资源ID"
+// @Success 200 {object} controllers.SimpleResult "请求成功"
+// @Failure 400 用户ID不存在 或 查询失败
+// @router /valid [post]
+func (c *EngineController) Valid() {
+	id, _ := c.GetInt64("id")
+
+	o := orm.NewOrm()
+	var dataSources models.DataResource
+	dataSources.Id = id
+	err := o.Read(&dataSources)
+	if err != nil {
+		c.Error(400, "查询状态失败")
+	}
+
+	var status = "验证失败"
+	option := services.ParseOption(dataSources.Type, dataSources.Option)
+	if err := services.ValidateConnection(dataSources.Type, option); err != nil {
+		dataSources.Health = string(constants.RuleStop)
+
+	} else {
+		status = "验证成功"
+		dataSources.Health = string(constants.RuleStart)
+	}
+	_, err = o.Update(&dataSources)
+	if err != nil {
+		c.Error(400, "更新状态失败")
+	}
+	c.Success(status)
+}
+
 // EditSource @Title 创建/更新资源列表
 // @Description Id存在/不存在 创建/更新资源实例
 // @Param   Authorization  header  string  true  "Bearer YourToken"
