@@ -187,7 +187,8 @@ func (s *TagService) DevicesTagsTree(tagName, tagValue string) ([]map[string]int
 		for _, v := range tags {
 			children = append(children, map[string]interface{}{
 				"name":  v["name"], // 标签名
-				"type":  v["type"], // 标签值
+				"type":  v["type"], // 标签类型
+				"tag":   device + "." + v["name"],
 				"isTag": true,
 			})
 		}
