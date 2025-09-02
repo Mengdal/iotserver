@@ -9,6 +9,7 @@ import (
 	"iotServer/models"
 	"iotServer/models/constants"
 	"iotServer/models/dtos"
+	"iotServer/utils"
 	"log"
 	"time"
 )
@@ -272,4 +273,38 @@ func (c *RuleController) OperateRule() {
 		"ruleId":  req.RuleID,
 		"message": message,
 	})
+}
+
+// List @Title 查询告警规则列表
+// @Description 分页告警规则
+// @Param   Authorization  header  string  true  "Bearer YourToken"
+// @Param	name		   query   string  false "单位名称"
+// @Param	status		   query   string  false "状态"
+// @Param   page           query   int     false "当前页码，默认1"
+// @Param   size           query   int     false "每页数量，默认10"
+// @Success 200 {object} controllers.Result
+// @Failure 400 "请求出错"
+// @router /list [post]
+func (c *RuleController) List() {
+	page, _ := c.GetInt("page", 1)
+	size, _ := c.GetInt("size", 10)
+	name := c.GetString("name")
+	status := c.GetString("status")
+
+	var engines []*models.AlertRule
+	o := orm.NewOrm()
+
+	qs := o.QueryTable(new(models.AlertRule))
+	if name != "" {
+		qs = qs.Filter("name__icontains", name)
+	}
+	if status != "" {
+		qs = qs.Filter("status", status)
+	}
+	paginate, err := utils.Paginate(qs, page, size, &engines)
+	if err != nil {
+		c.Error(400, "查询失败")
+	}
+
+	c.Success(paginate)
 }
