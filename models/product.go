@@ -25,9 +25,9 @@ type Product struct {
 	Extra           string `orm:"column(extra);null;size(255)" json:"extra,omitempty"`
 	User            *User  `orm:"rel(fk);on_delete(cascade)" json:"-"`
 
-	Properties []*Properties `orm:"reverse(many)" json:"properties,omitempty"` // 一对多关联
-	Events     []*Events     `orm:"reverse(many)" json:"events,omitempty"`
-	Actions    []*Actions    `orm:"reverse(many)" json:"actions,omitempty"`
+	Properties []*Properties `orm:"reverse(many)" json:"properties"` // 一对多关联
+	Events     []*Events     `orm:"reverse(many)" json:"events"`
+	Actions    []*Actions    `orm:"reverse(many)" json:"actions"`
 }
 
 func (p *Product) BeforeInsert() error {
