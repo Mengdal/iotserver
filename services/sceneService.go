@@ -109,7 +109,7 @@ func (s *SceneService) StartScene(id int64) error {
 
 	// 解析条件，加载定时场景
 	if err := s.loadSceneToCron(scene); err != nil {
-		return fmt.Errorf("添加场景失败：" + err.Error())
+		return fmt.Errorf("请重新配置该场景，Reason：" + err.Error())
 	}
 	// 更新状态
 	scene.Status = "running"
@@ -185,7 +185,7 @@ func ExecuteScene(id int64) error {
 	var writeLog models.WriteLog
 	for _, action := range actions {
 		// 调用设备控制接口
-		seq, err := Processor.Deal(action.DeviceName, action.Code, action.Value, "场景控制", 0)
+		seq, err := Processor.Deal(action.DeviceName, action.Code, action.Value, "场景控制", id)
 		if err != nil {
 			//更新SEQ失败状态
 			writeLog.Seq = seq
@@ -270,7 +270,7 @@ func (s *SceneService) loadSceneToCron(scene models.Scene) error {
 	var conditions []dtos.Condition
 	err := json.Unmarshal([]byte(scene.Condition), &conditions)
 	if err != nil {
-		return fmt.Errorf("解析条件失败: %v", err)
+		return fmt.Errorf("%v", err)
 	}
 
 	// 查找定时条件
