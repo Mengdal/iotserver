@@ -48,17 +48,33 @@ func (s *TagService) GetAllDevices(page, size int) (*utils.PageResult, error) {
 	isFirstPage := page == 1
 	isLastPage := page >= totalPage
 
-	//返回设备所有标签
+	// 返回设备所有标签
 	var deviceInfoList []map[string]string
-	for _, device := range response.Devices {
-		// 获取设备详情
-		deviceInfo, err := s.ListTagsByDevice(device)
-		deviceInfo["dn"] = device
+	if len(response.Devices) > 0 {
+		path := s.joinPathSegments(response.Devices)
+
+		// ListTagsByDevice 需返回 map[string]map[string]string
+		wrapper, err := s.ListTagsByDevice(path)
 		if err != nil {
-			log.Printf("获取设备 %s 详情失败: %v", device, err)
-			continue
+			log.Printf("批量查询设备标签失败: %v", err)
+			return nil, fmt.Errorf("API请求失败: %v", err)
+		} else {
+			// 按 devices 原顺序组织结果
+			for _, dn := range response.Devices {
+				if info, ok := wrapper[dn]; ok && info != nil {
+					// 复制一份，避免直接修改底层 map
+					m := make(map[string]string, len(info)+1)
+					for k, v := range info {
+						m[k] = v
+					}
+					m["dn"] = dn
+					deviceInfoList = append(deviceInfoList, m)
+				} else {
+					log.Printf("设备 %s 在返回结果中未找到或为空", dn)
+					return nil, fmt.Errorf("API请求失败: %v", err)
+				}
+			}
 		}
-		deviceInfoList = append(deviceInfoList, deviceInfo)
 	}
 
 	// 直接返回分页结果
@@ -71,6 +87,15 @@ func (s *TagService) GetAllDevices(page, size int) (*utils.PageResult, error) {
 		FirstPage:  isFirstPage,
 		LastPage:   isLastPage,
 	}, nil
+}
+
+// 路径拼接（逐段 escape 再用 / 连接）
+func (s *TagService) joinPathSegments(segments []string) string {
+	esc := make([]string, 0, len(segments))
+	for _, seg := range segments {
+		esc = append(esc, s.escapePathSegment(seg))
+	}
+	return strings.Join(esc, "/")
 }
 
 // GetNoBindDevices 查询未绑定的设备
@@ -96,20 +121,33 @@ func (s *TagService) GetNoBindDevices() ([]map[string]string, error) {
 	}
 
 	var deviceInfoList []map[string]string
-	for _, device := range response.Devices {
-		// 过滤 system 开头设备
-		//if strings.HasPrefix(device, "system") {
-		//	continue // 如果你想过滤掉这些设备
-		//}
-		// 获取设备详情
-		deviceInfo, err := s.ListTagsByDevice(device)
-		deviceInfo["dn"] = device
+	if len(response.Devices) > 0 {
+		// 拼接成批量 path
+		path := s.joinPathSegments(response.Devices)
+
+		// ListTagsByDevice 改成返回 map[string]map[string]string
+		wrapper, err := s.ListTagsByDevice(path)
 		if err != nil {
-			log.Printf("获取设备 %s 详情失败: %v", device, err)
-			continue
-		}
-		if deviceInfo["productId"] == "" {
-			deviceInfoList = append(deviceInfoList, deviceInfo)
+			log.Printf("批量查询设备标签失败: %v", err)
+		} else {
+			// 按 response.Devices 原始顺序遍历
+			for _, dn := range response.Devices {
+				if info, ok := wrapper[dn]; ok && info != nil {
+					// 复制一份 map，避免修改底层
+					m := make(map[string]string, len(info)+1)
+					for k, v := range info {
+						m[k] = v
+					}
+					m["dn"] = dn
+
+					// 按 productId 判定是否加入
+					if m["productId"] == "" {
+						deviceInfoList = append(deviceInfoList, m)
+					}
+				} else {
+					log.Printf("设备 %s 在返回结果中未找到或为空", dn)
+				}
+			}
 		}
 	}
 	return deviceInfoList, nil
@@ -207,10 +245,8 @@ func (s *TagService) DevicesTagsTree(tagName, tagValue string) ([]map[string]int
 }
 
 // 获取设备的所有标签
-func (s *TagService) ListTagsByDevice(deviceName string) (map[string]string, error) {
-	url := fmt.Sprintf("http://%s/tag/listTags/%s",
-		IoTPServer,
-		s.escapePathSegment(deviceName))
+func (s *TagService) ListTagsByDevice(path string) (map[string]map[string]string, error) {
+	url := fmt.Sprintf("http://%s/tag/listTags/%s", IoTPServer, path)
 
 	data, err := HttpGet(url)
 	if err != nil {
@@ -218,15 +254,17 @@ func (s *TagService) ListTagsByDevice(deviceName string) (map[string]string, err
 		return nil, fmt.Errorf("API请求失败: %v", err)
 	}
 
-	tags := make(map[string]string)
-	if err := json.Unmarshal([]byte(data), &tags); err != nil {
+	// 通用结构：map[设备名]map[string]string
+	var wrapper map[string]map[string]string
+	if err := json.Unmarshal([]byte(data), &wrapper); err != nil {
 		return nil, fmt.Errorf("解析响应失败: %v", err)
 	}
-	if tags["info"] != "" {
-		return nil, fmt.Errorf("未查询到该设备")
+
+	if len(wrapper) == 0 {
+		return nil, fmt.Errorf("未查询到设备标签")
 	}
 
-	return tags, nil
+	return wrapper, nil
 }
 
 // 获取设备指定标签的值

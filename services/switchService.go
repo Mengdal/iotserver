@@ -323,7 +323,7 @@ func (p *PropertySetProcessor) Deal(dn, tag, val, channel string, userId int64) 
 	//优先掏出SN
 	var sn string
 	device, err := iotp.NewTagService().ListTagsByDevice(dn)
-	sn = device["GWSN"]
+	sn = device[dn]["GWSN"]
 
 	//控制命令保存
 	seq := fmt.Sprintf("seq-%d", time.Now().UnixNano())
@@ -347,7 +347,7 @@ func (p *PropertySetProcessor) SendOffline(dn string) error {
 	//优先掏出SN
 	var sn string
 	device, err := iotp.NewTagService().ListTagsByDevice(dn)
-	sn = device["GWSN"]
+	sn = device[dn]["GWSN"]
 	if err != nil || sn == "" {
 		return fmt.Errorf("设备未包含网关信息")
 	}
