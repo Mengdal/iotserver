@@ -25,6 +25,8 @@ type Properties struct {
 	System      bool   `orm:"default(false);null" json:"system"`
 	Created     int64  `orm:"type(bigint);null" json:"created"` // 时间戳存储
 	Updated     int64  `orm:"type(bigint);null" json:"updated"` // 时间戳存储
+	Type        string `orm:"type(text);null" json:"type"`      // 标签
+	//TODO 新建Component 、 Component_和属性、事件、服务的映射表
 
 	Product *Product `orm:"rel(fk);column(product_id);on_delete(cascade)" json:"-"`
 }
@@ -42,6 +44,7 @@ type Events struct {
 	System       bool   `orm:"default(false);null" json:"system"`
 	Created      int64  `orm:"type(bigint);null" json:"created"` // 时间戳存储
 	Updated      int64  `orm:"type(bigint);null" json:"updated"` // 时间戳存储
+	Type         string `orm:"type(text);null" json:"type"`      // 标签
 
 	Product *Product `orm:"rel(fk);column(product_id);on_delete(cascade)" json:"-"`
 }
@@ -60,6 +63,7 @@ type Actions struct {
 	System       bool   `orm:"default(false);null" json:"system"`
 	Created      int64  `orm:"type(bigint);null" json:"created"` // 时间戳存储
 	Updated      int64  `orm:"type(bigint);null" json:"updated"` // 时间戳存储
+	Type         string `orm:"type(text);null" json:"type"`      // 标签
 
 	Product *Product `orm:"rel(fk);column(product_id);on_delete(cascade)" json:"-"`
 }

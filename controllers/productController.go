@@ -61,6 +61,7 @@ func (c *ProductController) Get() {
 	if name != "" {
 		qs = qs.Filter("name__icontains", name)
 	}
+	qs = qs.OrderBy("-created") // 降序排列，最新的在前
 	paginate, err := utils.Paginate(qs, page, size, &products)
 	if err != nil {
 		c.Error(400, "查询失败")
@@ -163,6 +164,7 @@ func (c *ProductController) Create() {
 		Platform:       string(constants.PlanformLocal),
 		Protocol:       string(constants.MQTT),
 		NodeType:       nodeType,
+		CategoryId:     categoryId,
 	}
 
 	// 获取用户对象
@@ -209,6 +211,8 @@ func (c *ProductController) Create() {
 				c.Error(500, "保存服务失败: "+err.Error())
 			}
 		}
+	} else {
+		product.DataFormat = string(constants.UserDefine)
 	}
 
 	_, err := o.Insert(&product)

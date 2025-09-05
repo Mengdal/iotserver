@@ -32,7 +32,8 @@ const (
 type DataFormat string
 
 const (
-	Standard DataFormat = "标准物模型" //同步
+	Standard   DataFormat = "标准物模型" //同步
+	UserDefine DataFormat = "自定义物模型"
 )
 
 func IsValidDataFormat(value string) bool {

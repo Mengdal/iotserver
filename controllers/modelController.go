@@ -128,6 +128,7 @@ func (c *ModelController) Create() {
 		property.Code = req.Code
 		property.Description = req.Description
 		property.Tag = string(req.Tag)
+		property.Type = req.Type
 
 		property.AccessMode = string(req.Property.AccessModel)
 		property.Require = req.Property.Require
@@ -171,6 +172,7 @@ func (c *ModelController) Create() {
 		event.Description = req.Description
 		event.Tag = string(req.Tag)
 		event.EventType = string(req.Event.EventType)
+		event.Type = req.Type
 
 		var outputParams []models.InputOutput
 		// 插入输出参数
@@ -227,6 +229,7 @@ func (c *ModelController) Create() {
 		action.Description = req.Description
 		action.Tag = string(req.Tag)
 		action.CallType = string(req.Action.CallType)
+		action.Type = req.Type
 
 		// --- 构建输入参数 ---
 		var inputParams []models.InputOutput

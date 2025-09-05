@@ -24,6 +24,7 @@ type Product struct {
 	Status          int    `orm:"column(status);null;default(0)" json:"status"`
 	Extra           string `orm:"column(extra);null;size(255)" json:"extra,omitempty"`
 	User            *User  `orm:"rel(fk);on_delete(cascade)" json:"-"`
+	CategoryId      int64  `orm:"default(0);" json:"categoryId"`
 
 	Properties []*Properties `orm:"reverse(many)" json:"properties"` // 一对多关联
 	Events     []*Events     `orm:"reverse(many)" json:"events"`
