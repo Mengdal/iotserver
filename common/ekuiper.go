@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	beego "github.com/beego/beego/v2/server/web"
 	"io"
 	"io/ioutil"
 	"iotServer/models/dtos"
@@ -45,11 +44,10 @@ func NewEkuiperClient(baseURL string) *EkuiperClient {
 }
 
 func InitEuiper() {
-	var ekuiperAddr, _ = beego.AppConfig.String("ekuiperServer")
 	// 1. 先GET判断流是否存在 默认创建全局stream流
 	stream := "stream"
 
-	url := fmt.Sprintf("%s/streams/%s", ekuiperAddr, stream)
+	url := fmt.Sprintf("%s/streams/%s", EkuiperServer, stream)
 	resp, err := http.Get(url)
 	if err != nil {
 		log.Fatalln("初始化ekuiper失败，查询服务是否启动")
@@ -66,7 +64,7 @@ func InitEuiper() {
 	}
 
 	// 2. 不存在则创建  实时数据主题 edge/property/{SN}/post
-	createUrl := fmt.Sprintf("%s/streams", ekuiperAddr)
+	createUrl := fmt.Sprintf("%s/streams", EkuiperServer)
 	sql := fmt.Sprintf("CREATE STREAM %s () WITH (DATASOURCE=\"/edge/stream/+/post\", FORMAT=\"JSON\", SHARED = \"true\")", stream)
 	reqBody := map[string]string{"sql": sql}
 	b, _ := json.Marshal(reqBody)
