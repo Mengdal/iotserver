@@ -86,6 +86,11 @@ func init() {
 				&controllers.EngineController{},
 			),
 		),
+		beego.NSNamespace("/udf",
+			beego.NSInclude(
+				&controllers.UdfController{},
+			),
+		),
 	)
 	beego.AddNamespace(ns)
 }
