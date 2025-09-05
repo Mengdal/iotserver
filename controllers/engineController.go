@@ -136,6 +136,25 @@ func (c *EngineController) EditSource() {
 	c.SuccessMsg()
 }
 
+// DelSource @Title 删除资源列表
+// @Description 删除资源实例
+// @Param   Authorization  header  string  true  "Bearer YourToken"
+// @Param   id           query     int64   false "资源ID"
+// @Success 200 {object} controllers.SimpleResult "请求成功"
+// @Failure 400 创建失败
+// @router /delSource [post]
+func (c *EngineController) DelSource() {
+	id, _ := c.GetInt64("id")
+
+	o := orm.NewOrm()
+	resource := models.DataResource{Id: id}
+	_, err := o.Delete(&resource)
+	if err != nil {
+		c.Error(400, "删除失败")
+	}
+	c.SuccessMsg()
+}
+
 // EditEngine @Title 创建/更新规则引擎
 // @Description 创建或更新基础的规则引擎
 // @Param   Authorization  header  string  true  "Bearer YourToken"
@@ -276,4 +295,64 @@ func (c *EngineController) EngineConfig() {
 	}
 
 	c.SuccessMsg()
+}
+
+// DelEngine @Title 删除规则引擎
+// @Description 删除规则转发引擎
+// @Param   Authorization  header  string  true  "Bearer YourToken"
+// @Param   id           query     int64   false "规则引擎ID"
+// @Success 200 {object} controllers.SimpleResult "请求成功"
+// @Failure 400 创建失败
+// @router /delEngine [post]
+func (c *EngineController) DelEngine() {
+	id, _ := c.GetInt64("id")
+
+	o := orm.NewOrm()
+	engine := models.RuleEngine{Id: id}
+	if err := o.Read(&engine); err != nil {
+		c.Error(400, "规则引擎未找到！")
+	}
+
+	_, err := o.Delete(&engine)
+	if err != nil {
+		c.Error(400, "删除失败")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	err = common.Ekuiper.DeleteRule(ctx, engine.Name+"__Engine")
+	if err != nil {
+		c.Error(400, "更新规则失败: "+err.Error())
+	}
+	c.SuccessMsg()
+}
+
+// GetRuleStatus @Title 获取规则引擎状态详情
+// @Description 获取指定规则状态信息
+// @Param   Authorization  header  string  true  "Bearer YourToken"
+// @Param   name       	   query   string  true  "规则引擎名称"
+// @Success 200 {object} controllers.SimpleResult
+// @Failure 400 "请求出错"
+// @router /status [get]
+func (c *EngineController) GetRuleStatus() {
+	var stats map[string]interface{}
+	var err error
+	id := c.GetString("name")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	err = common.Ekuiper.RuleExist(ctx, id+"__Engine")
+	if err != nil {
+		c.Error(400, "检查规则存在性失败: "+err.Error())
+	}
+
+	// 获取规则状态
+	stats, err = common.Ekuiper.GetRuleStats(ctx, id+"__Engine")
+	if err != nil {
+		c.Error(400, "获取规则状态失败: "+err.Error())
+	}
+
+	c.Success(stats)
 }
