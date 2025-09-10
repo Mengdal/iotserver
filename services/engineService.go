@@ -54,7 +54,7 @@ func ParseOption(resourceType string, optionStr interface{}) interface{} {
 		return opt
 	case "消息队列Kafka":
 		var opt dtos.KafkaOption
-		if err := json.Unmarshal(data, &opt); err != nil || opt.Broker == "" || opt.Topic == "" {
+		if err := json.Unmarshal(data, &opt); err != nil || opt.Brokers == "" || opt.Topic == "" {
 			return nil
 		}
 		return opt
@@ -178,7 +178,7 @@ func validateKafka(opt dtos.KafkaOption) error {
 	}
 
 	// 建立连接
-	conn, err := dialer.DialContext(context.Background(), "tcp", opt.Broker)
+	conn, err := dialer.DialContext(context.Background(), "tcp", opt.Brokers)
 	if err != nil {
 		return err
 	}
@@ -215,6 +215,7 @@ func EngineCallBack(req map[string]interface{}) error {
 	engineName := req["rule_id"].(string)
 	split := strings.Split(engineName, "__")
 	engine.Name = split[0]
+	req["engine_name"] = split[0]
 
 	if err := o.Read(&engine, "Name"); err != nil {
 		return fmt.Errorf(err.Error())
@@ -307,7 +308,7 @@ func sendMqtt(opt dtos.MqttOption, req map[string]interface{}) error {
 // TODO 以下未测试
 func sendKafka(opt dtos.KafkaOption, req map[string]interface{}) error {
 	writer := kafka.NewWriter(kafka.WriterConfig{
-		Brokers: strings.Split(opt.Broker, ","),
+		Brokers: strings.Split(opt.Brokers, ","),
 		Topic:   opt.Topic,
 	})
 	defer writer.Close()

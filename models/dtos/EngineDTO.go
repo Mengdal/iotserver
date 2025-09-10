@@ -53,7 +53,7 @@ type MqttOption struct {
 }
 
 type KafkaOption struct {
-	Broker       string `json:"broker"`
+	Brokers      string `json:"brokers"`
 	Topic        string `json:"topic"`
 	SalAuthType  string `json:"salAuthType"`
 	SaslUserName string `json:"saslUserName"`
