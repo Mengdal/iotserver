@@ -10,6 +10,7 @@ import (
 	"iotServer/models/dtos"
 	"iotServer/services"
 	"iotServer/utils"
+	"strings"
 	"time"
 )
 
@@ -108,6 +109,7 @@ func (c *EngineController) EditSource() {
 	// 查询资源
 	var dataSources models.DataResource
 	dataSources.Type = req.Type
+	dataSources.Name = req.Name
 	options, _ := json.Marshal(option)
 	dataSources.Option = string(options)
 
@@ -252,7 +254,7 @@ func (c *EngineController) EngineConfig() {
 	ruleEngine.Description = req.Description
 	filter := req.Filter
 	filter.SQL = "select rule_id()," + req.Filter.SelectName + " from stream "
-	if req.Filter.Condition != "" {
+	if strings.TrimSpace(req.Filter.Condition) != "" {
 		filter.SQL += " where " + req.Filter.Condition
 	}
 	filterMarshal, err := json.Marshal(filter)
