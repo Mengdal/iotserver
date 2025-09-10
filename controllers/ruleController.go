@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-// RuleController 规则管理
+// RuleController 告警规则管理
 type RuleController struct {
 	BaseController
 }
