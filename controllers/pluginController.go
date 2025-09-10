@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"archive/zip"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -8,6 +9,9 @@ import (
 	"iotServer/common"
 	"iotServer/models/dtos"
 	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
 )
 
 var UdfURL = common.EkuiperServer + "/udf/javascript"
@@ -113,4 +117,134 @@ func (c *UdfController) Update() {
 	defer resp.Body.Close()
 	respBody, _ := io.ReadAll(resp.Body)
 	c.Error(resp.StatusCode, string(respBody))
+}
+
+// EditService @Title 外部函数注册更新
+// @Description 简化创建/更新外部函数
+// @Param   Authorization  header    string          true  "Bearer YourToken"
+// @Param   body           body      dtos.ExService  true  "外部函数DTO"
+// @Success 200 {object}   controllers.SimpleResult
+// @Failure 400 "错误信息"
+// @router /editService [post]
+func (c *UdfController) EditService() {
+	var req dtos.ExService
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
+		c.Error(400, "Invalid JSON")
+	}
+
+	// 1. 构造 JSON 配置
+	serviceConfig := map[string]interface{}{
+		"about": map[string]interface{}{
+			"author": map[string]string{"name": "Beego Proxy"},
+			"description": map[string]string{
+				"zh_CN": req.Description,
+			},
+		},
+		"interfaces": map[string]interface{}{
+			req.Name: map[string]interface{}{
+				"address":  req.Address,
+				"protocol": "rest",
+				"options": map[string]interface{}{
+					"headers":            map[string]string{"Accept-Charset": "utf-8"},
+					"insecureSkipVerify": true,
+				},
+				"schemaless": true,
+			},
+		},
+	}
+	configData, _ := json.MarshalIndent(serviceConfig, "", "  ")
+
+	// 2. 写入 static/ 下的 JSON 文件
+	staticDir := "static"
+	os.MkdirAll(staticDir, 0755)
+	jsonPath := filepath.Join(staticDir, req.Name+".json")
+	if err := os.WriteFile(jsonPath, configData, 0644); err != nil {
+		c.Error(500, "Failed to write JSON: "+err.Error())
+	}
+
+	// 3. 打包成 ZIP 文件（static/xxx.zip）
+	zipPath := filepath.Join(staticDir, req.Name+".zip")
+	zipFile, err := os.Create(zipPath)
+	if err != nil {
+		c.Error(500, "Failed to create zip: "+err.Error())
+	}
+	defer zipFile.Close()
+
+	zipWriter := zip.NewWriter(zipFile)
+	f, _ := zipWriter.Create(req.Name + ".json")
+
+	jsonFile, _ := os.Open(jsonPath)
+	defer jsonFile.Close()
+	io.Copy(f, jsonFile)
+	zipWriter.Close()
+
+	// 4. 调用 eKuiper 注册服务
+	zipURL := fmt.Sprintf("http://%s/static/%s.zip", common.GetIPByHostname()+":"+common.Port, req.Name)
+	body := fmt.Sprintf(`{"name":"%s","file":"%s"}`, req.Name, zipURL)
+
+	var resp *http.Response
+
+	if req.Action == "create" {
+		// 创建服务
+		resp, err = http.Post(common.EkuiperServer+"/services", "application/json",
+			strings.NewReader(body))
+		if err != nil {
+			c.Error(500, "Failed to call eKuiper API: "+err.Error())
+		}
+	} else if req.Action == "update" {
+		// 更新服务（和创建一样的 JSON，只是调用 PUT 接口）
+		client := &http.Client{}
+		reqURL := fmt.Sprintf("%s/services/%s", common.EkuiperServer, req.Name)
+		request, _ := http.NewRequest(http.MethodPut, reqURL, strings.NewReader(body))
+		request.Header.Set("Content-Type", "application/json")
+		resp, err = client.Do(request)
+		if err != nil {
+			c.Error(500, "Failed to update service: "+err.Error())
+		}
+	} else {
+		c.Error(400, "未包含的操作")
+	}
+
+	defer resp.Body.Close()
+
+	respData, _ := io.ReadAll(resp.Body)
+	c.Ctx.Output.SetStatus(resp.StatusCode)
+	c.Ctx.Output.Body(respData)
+}
+
+// DeleteService @Title 删除外部函数
+// @Description 删除外部函数
+// @Param   Authorization  header    string     true  "Bearer YourToken"
+// @Param   name           query     string     true  "外部函数名称"
+// @Success 200 {object}   controllers.SimpleResult
+// @Failure 400 "错误信息"
+// @router /deleteService [post]
+func (c *UdfController) DeleteService() {
+	name := c.GetString("name")
+	reqURL := fmt.Sprintf("%s/services/%s", common.EkuiperServer, name)
+	client := &http.Client{}
+	request, _ := http.NewRequest(http.MethodDelete, reqURL, nil)
+	resp, err := client.Do(request)
+	if err != nil {
+		c.Error(500, "Failed to delete service: "+err.Error())
+	}
+	defer resp.Body.Close()
+	respData, _ := io.ReadAll(resp.Body)
+	c.ErrorDetail(resp.StatusCode, "", string(respData))
+}
+
+// ListServices @Title 查询所有外部函数
+// @Description 查询外部函数List
+// @Param   Authorization  header    string     true  "Bearer YourToken"
+// @Success 200 {object}   controllers.SimpleResult
+// @Failure 400 "错误信息"
+// @router /listServices [post]
+func (c *UdfController) ListServices() {
+	resp, err := http.Get(common.EkuiperServer + "/services/functions")
+	if err != nil {
+		c.Error(500, "Failed to list services: "+err.Error())
+	}
+	defer resp.Body.Close()
+	respData, _ := io.ReadAll(resp.Body)
+	c.ErrorDetail(resp.StatusCode, "", string(respData))
 }
