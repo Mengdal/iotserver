@@ -134,9 +134,10 @@ func (c *ModelController) Create() {
 		property.Require = req.Property.Require
 		datatype := req.Property.DataType
 		specs := req.Property.TypeSpec
+		specsBytes, _ := json.Marshal(specs)
 		typeSpec := map[string]interface{}{
 			"type":  datatype,
-			"specs": specs,
+			"specs": string(specsBytes),
 		}
 		marshal, err := json.Marshal(typeSpec)
 		if err != nil {
