@@ -68,11 +68,16 @@ func (c *UdfController) Get() {
 	}
 	defer resp.Body.Close()
 	respBody, _ := io.ReadAll(resp.Body)
-	c.Error(resp.StatusCode, string(respBody))
+
+	var data interface{}
+	if err := json.Unmarshal(respBody, &data); err != nil {
+		c.Error(500, "Failed to parse service data: "+err.Error())
+	}
+	c.ErrorDetail(resp.StatusCode, "", data)
 }
 
 // Delete @Title UDF删除
-// @Description 获取用户自定义函数详情或列表
+// @Description 用户自定义函数删除
 // @Param   Authorization  header    string    true  "Bearer YourToken"
 // @Param   name           query     string    true  "唯一函数名称"
 // @Success 200 {object}   controllers.SimpleResult
@@ -246,5 +251,9 @@ func (c *UdfController) ListServices() {
 	}
 	defer resp.Body.Close()
 	respData, _ := io.ReadAll(resp.Body)
-	c.ErrorDetail(resp.StatusCode, "", string(respData))
+	var data interface{}
+	if err := json.Unmarshal(respData, &data); err != nil {
+		c.Error(500, "Failed to parse functions data: "+err.Error())
+	}
+	c.ErrorDetail(resp.StatusCode, "", data)
 }
