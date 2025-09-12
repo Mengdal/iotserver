@@ -368,3 +368,50 @@ func (c *ModelController) Template() {
 		c.Success(response)
 	}
 }
+
+// TypeList @Title 查询模型标签列表
+// @Description 查询模型标签
+// @Param   Authorization  header  string  true  "Bearer YourToken"
+// @Param   productId      query   int64   true  "必填产品ID"
+// @Param   name           query   string  false "支持模糊搜索"
+// @Success 200 {object} controllers.SimpleResult "请求成功"
+// @Failure 400 查询失败
+// @router /typeList [post]
+func (c *ModelController) TypeList() {
+	productId, _ := c.GetInt64("productId")
+	name := c.GetString("name")
+	o := orm.NewOrm()
+
+	// 定义一个轻量 struct 仅映射 Type 字段
+	type OnlyType struct {
+		Type string `orm:"column(Type)"`
+	}
+
+	var results []OnlyType
+
+	// 构建查询条件
+	query := o.QueryTable(new(models.Properties)).
+		Filter("Product__Id", productId).
+		Filter("Type__isnull", false). // 筛选 Type 不为 null
+		Exclude("Type", "").           // 排除 Type 为空字符串
+		Distinct()
+
+	// 如果提供了 name 参数，则添加模糊搜索条件
+	if name != "" {
+		query = query.Filter("Name__icontains", name)
+	}
+
+	// 查询 Type 字段
+	_, err := query.All(&results, "Type")
+	if err != nil {
+		c.Error(400, "查询失败: "+err.Error())
+	}
+
+	// 提取结果为字符串切片
+	var types []string
+	for _, r := range results {
+		types = append(types, r.Type)
+	}
+
+	c.Success(types)
+}
