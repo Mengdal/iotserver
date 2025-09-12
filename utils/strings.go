@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -170,8 +171,21 @@ func SendHttpPost(url string, data interface{}) error {
 		return err
 	}
 
-	// 发送POST请求
-	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
+	// 创建一个带超时的客户端
+	client := &http.Client{
+		Timeout: 5 * time.Second, // 设置请求超时时间
+	}
+
+	// 构造请求
+	req, err := http.NewRequest("POST", strings.TrimSpace(url), bytes.NewBuffer(jsonData))
+	if err != nil {
+		logs.Error("构造请求失败: %v", err)
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	// 发送请求
+	resp, err := client.Do(req)
 	if err != nil {
 		logs.Error("发送HTTP POST请求失败: %v", err)
 		return err
@@ -186,7 +200,7 @@ func SendHttpPost(url string, data interface{}) error {
 	}
 
 	// 检查响应状态
-	if resp.StatusCode == 200 {
+	if resp.StatusCode == http.StatusOK {
 		logs.Info("HTTP POST请求发送成功: %s", string(body))
 	} else {
 		return fmt.Errorf("HTTP POST请求发送失败，状态码: %d, 响应: %s", resp.StatusCode, string(body))
