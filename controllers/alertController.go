@@ -41,13 +41,16 @@ func (c *AlertController) GetAlarmRecord() {
 	if req.Status != "" {
 		qs = qs.Filter("Status", req.Status)
 	}
-
-	loc, _ := time.LoadLocation("Asia/Shanghai")
+	qs = qs.Filter("AlertRule__isnull", req.IsSystem)
+	loc, err := time.LoadLocation("Asia/Shanghai")
+	if err != nil {
+		// 容错处理：时区文件缺失时 fallback
+		loc = time.FixedZone("CST", 8*3600)
+	}
 	if req.StartTime != "" {
 		startTime, err := time.ParseInLocation("2006-01-02 15:04:05", req.StartTime, loc)
 		if err != nil {
-			c.Error(400, "开始时间格式错误，请使用: 2000-01-29 15:04:05")
-			return
+			c.Error(400, "开始时间格式错误，请使用格式形如: 2000-01-29 15:04:05")
 		}
 		qs = qs.Filter("TriggerTime__gte", startTime.Unix()*1000)
 	}
@@ -55,7 +58,7 @@ func (c *AlertController) GetAlarmRecord() {
 	if req.EndTime != "" {
 		endTime, err := time.ParseInLocation("2006-01-02 15:04:05", req.EndTime, loc)
 		if err != nil {
-			c.Error(400, "结束时间格式错误，请使用: 2000-01-29 15:04:05")
+			c.Error(400, "结束时间格式错误，请使用格式形如: 2000-01-29 15:04:05")
 		}
 		qs = qs.Filter("TriggerTime__lte", endTime.Unix()*1000)
 	}
@@ -74,6 +77,7 @@ func (c *AlertController) GetAlarmRecord() {
 		if err := json.Unmarshal([]byte(alert.AlertResult), &alertContent); err == nil {
 			alertContent["id"] = alert.Id
 			alertContent["handler"] = alert.Status
+			alertContent["treated_time"] = alert.TreatedTime
 			resultList = append(resultList, alertContent)
 		}
 	}

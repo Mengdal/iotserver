@@ -6,4 +6,5 @@ type AlarmRecordReq struct {
 	Status    string `json:"status"`
 	StartTime string `json:"starttime"`
 	EndTime   string `json:"endtime"`
+	IsSystem  bool   `json:"isSystem"`
 }
