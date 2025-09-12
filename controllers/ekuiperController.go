@@ -102,7 +102,7 @@ func (c *EkuiperController) UpdateRule() {
 	}
 
 	// 重新启动规则
-	err = common.Ekuiper.StartRule(ctx, req.RuleID)
+	err = common.Ekuiper.RestartRule(ctx, req.RuleID)
 	if err != nil {
 		c.Error(400, "启动规则失败: "+err.Error())
 	}
