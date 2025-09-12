@@ -46,7 +46,7 @@ func (c *DeviceController) GetAllDevices() {
 // @router /getTagsTree [post]
 func (c *DeviceController) GetDevicesTree() {
 	productId := c.GetString("productId")
-	data, err := tagService.DevicesTagsTree("productId", productId)
+	data, err := tagService.DevicesTagsTree2("productId", productId)
 	if err != nil {
 		c.Error(400, err.Error())
 	}
