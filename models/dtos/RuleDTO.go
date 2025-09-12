@@ -42,7 +42,7 @@ type RuleUpdateRequest struct {
 	Condition   constants.WorkerCondition `json:"condition" example:"anyone"` // 执行条件
 	SubRule     []models.SubRule          `json:"sub_rule"`                   // 子规则列
 	Notify      []models.Notify           `json:"notify"`                     // 通知配置
-	SilenceTime int64                     `json:"silence_time" example:"0"`   // 静默时间
+	SilenceTime string                    `json:"silence_time" example:"0"`   // 静默时间
 }
 
 // 生成不同事件触发器
@@ -280,8 +280,8 @@ func ValidateRuleUpdateRequest(req *RuleUpdateRequest, typeStyle string) error {
 	}
 
 	// 5. 校验静默时间（可选）
-	if req.SilenceTime < 0 {
-		return errors.New("静默时间不能为负数")
+	if req.SilenceTime == "-1" {
+		return errors.New("静默时间配置有误")
 	}
 
 	return nil

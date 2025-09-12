@@ -20,7 +20,7 @@ func HttpGet(url string) (string, error) {
 	return string(body), nil
 }
 
-func getTimestamp(timeStr string) (int64, error) {
+func GetTimestamp(timeStr string) (int64, error) {
 	// 加载时区
 	loc, err := time.LoadLocation("Asia/Shanghai")
 	if err != nil {

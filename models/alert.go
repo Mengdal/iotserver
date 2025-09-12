@@ -18,7 +18,7 @@ type AlertRule struct {
 	Condition   string `orm:"type(text);null" json:"condition"`              // 执行条件：anyone/all
 	SubRule     string `orm:"type(text);null" json:"sub_rule"`               // 子规则配置(JSON字符串)
 	Notify      string `orm:"type(text);null" json:"notify"`                 // 通知配置(JSON字符串)
-	SilenceTime int64  `orm:"column(silence_time);null" json:"silence_time"` // 静默时间(毫秒)
+	SilenceTime string `orm:"column(silence_time);null" json:"silence_time"` // 静默时间
 	Description string `orm:"type(text);null" json:"description"`
 
 	// 反向关联 alert_list

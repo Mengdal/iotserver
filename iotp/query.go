@@ -16,8 +16,8 @@ func init() {
 }
 
 func HistoryQuery(o models.HistoryObject) (map[string][]interface{}, error) {
-	startTimestamp, err1 := getTimestamp(o.StartTime)
-	endTimestamp, err2 := getTimestamp(o.EndTime)
+	startTimestamp, err1 := GetTimestamp(o.StartTime)
+	endTimestamp, err2 := GetTimestamp(o.EndTime)
 	if err1 != nil || err2 != nil {
 		return nil, errors.New("传输的时间格式出错：yyyy-mm-dd HH:mm:ss")
 	}
@@ -91,8 +91,8 @@ func HistoryQuery(o models.HistoryObject) (map[string][]interface{}, error) {
 }
 
 func AggQuery(objects models.AggObject) (map[string][]interface{}, error) {
-	startTimestamp, err1 := getTimestamp(objects.StartTime)
-	endTimestamp, err2 := getTimestamp(objects.EndTime)
+	startTimestamp, err1 := GetTimestamp(objects.StartTime)
+	endTimestamp, err2 := GetTimestamp(objects.EndTime)
 	if err1 != nil || err2 != nil {
 		return nil, errors.New("传输的时间格式出错：yyyy-mm-dd HH:mm:ss")
 	}
@@ -193,8 +193,8 @@ func parseV2Data(queryData map[string][]HistoryV2QueryData, aggType string) (map
 }
 
 func DiffQuery(o models.DiffObject) (map[string][]interface{}, error) {
-	startTimestamp, err1 := getTimestamp(o.StartTime)
-	endTimestamp, err2 := getTimestamp(o.EndTime)
+	startTimestamp, err1 := GetTimestamp(o.StartTime)
+	endTimestamp, err2 := GetTimestamp(o.EndTime)
 	if err1 != nil || err2 != nil {
 		return nil, errors.New("传输的时间格式出错：yyyy-mm-dd HH:mm:ss")
 	}
@@ -274,8 +274,8 @@ func DiffQuery(o models.DiffObject) (map[string][]interface{}, error) {
 }
 
 func BoolQuery(o models.BoolObject) (map[string]interface{}, error) {
-	startTimestamp, err1 := getTimestamp(o.StartTime)
-	endTimestamp, err2 := getTimestamp(o.EndTime)
+	startTimestamp, err1 := GetTimestamp(o.StartTime)
+	endTimestamp, err2 := GetTimestamp(o.EndTime)
 	if err1 != nil || err2 != nil {
 		return nil, errors.New("传输的时间格式出错：yyyy-mm-dd HH:mm:ss")
 	}

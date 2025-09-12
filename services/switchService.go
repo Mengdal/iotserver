@@ -9,6 +9,7 @@ import (
 	"iotServer/common"
 	"iotServer/iotp"
 	"iotServer/models"
+	"iotServer/models/constants"
 	"iotServer/utils"
 	"log"
 	"net"
@@ -197,7 +198,7 @@ func (p *PropertySetProcessor) processAlertEvent(topic, payload string) error {
 	if len(parts) < 3 {
 		return fmt.Errorf("报警主题格式错误: %s", topic)
 	}
-	sn := parts[3]
+	//sn := parts[3]
 
 	log.Printf("收到报警事件: %s %s", topic, payload)
 
@@ -215,31 +216,52 @@ func (p *PropertySetProcessor) processAlertEvent(topic, payload string) error {
 	event := alertData["event"]
 	value := alertData["value"]
 	typeName := alertData["type"]
-
-	data := make(map[string]map[string]interface{})
-	data[tag] = map[string]interface{}{
-		"time":  eventTime,
-		"value": value,
-		"type":  typeName,
-		"event": event,
+	if typeName == "AlarmTrigger" {
+		typeName = "网关事件触发"
+	} else {
+		typeName = "网关事件解除"
 	}
+	typeR := alertData["status"]
+	if typeR == "Error" && value == "0" {
+		typeR = "质量不为Good"
+	} else {
+		typeR = "点值超出范围"
+	}
+
+	timestamp, _ := iotp.GetTimestamp(eventTime.(string))
 	out := map[string]interface{}{
+		"alert_level": "重要",
+		"code":        tag,
 		"dn":          dn,
-		"messageType": "EVENT_REPORT",
-		"data":        data,
+		"start_at":    timestamp,
+		"name":        tag,
+		"rule_name":   event,
+		"trigger":     typeName,
+		"type":        typeR,
+		"value":       value,
 	}
 	newPayload, err := json.Marshal(out)
 	if err != nil {
 		return fmt.Errorf("JSON序列化失败: %v", err)
 	}
 
-	// 转发到新主题（每个设备一个主题）
-	newTopic := fmt.Sprintf("/edge/stream/%s/post", sn)
+	// 网关事件直接存入Alert_List
+	o := orm.NewOrm()
+	// 构建告警记录
+	alert := &models.AlertList{
+		AlertRule:   nil,
+		TriggerTime: time.Now().UnixMilli(),
+		IsSend:      false,
+		Status:      string(constants.Untreated),
+		AlertResult: string(newPayload),
+	}
 
-	if err := p.mqttClient.Publish(newTopic, 0, newPayload); err != nil {
-		log.Println("转发失败:", err.Error())
-	} else {
-		log.Printf("已转发到 %s: %s\n", newTopic, newPayload)
+	// 保存到数据库
+	if err = alert.BeforeInsert(); err != nil {
+		return fmt.Errorf("插入失败: %v", err)
+	}
+	if _, err = o.Insert(alert); err != nil {
+		return fmt.Errorf("保存告警记录失败: %v", err)
 	}
 
 	return nil

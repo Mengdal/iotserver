@@ -41,7 +41,16 @@ func (c *AlertController) GetAlarmRecord() {
 	if req.Status != "" {
 		qs = qs.Filter("Status", req.Status)
 	}
-	qs = qs.Filter("AlertRule__isnull", req.IsSystem)
+	if req.IsSystem != "" {
+		var IsSystem bool
+		if req.IsSystem == "true" {
+			IsSystem = true
+		} else {
+			IsSystem = false
+		}
+		qs = qs.Filter("AlertRule__isnull", IsSystem)
+	}
+
 	loc, err := time.LoadLocation("Asia/Shanghai")
 	if err != nil {
 		// 容错处理：时区文件缺失时 fallback

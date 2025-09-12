@@ -35,7 +35,7 @@ func (s *AlertService) AddAlert(req map[string]interface{}) error {
 	}
 
 	// 任意告警若未达到沉默时间跳过
-	if rule.SilenceTime > 0 {
+	if constants.ReturnSilenceTimestamp(rule.SilenceTime) > 0 {
 		// 查询该规则最新的告警记录
 		var latestAlert models.AlertList
 		err := o.QueryTable(new(models.AlertList)).
@@ -48,7 +48,7 @@ func (s *AlertService) AddAlert(req map[string]interface{}) error {
 			return fmt.Errorf("查询最新告警记录失败: %v", err)
 		} else {
 			// 如果找到了记录且仍在静默期内，则跳过
-			if now-latestAlert.TriggerTime < rule.SilenceTime*60*1000 {
+			if now-latestAlert.TriggerTime < constants.ReturnSilenceTimestamp(rule.SilenceTime) {
 				logs.Info("告警规则 %s 处于静默期，跳过本次告警", ruleId)
 				return nil
 			}
@@ -96,6 +96,7 @@ func (s *AlertService) AddAlert(req map[string]interface{}) error {
 			content = fmt.Sprintf("【告警通知】设备：%s，属性：%s，告警等级：%s，触发类型：%s，告警时间：%s，当前值：%s，请及时处理！",
 				alertResult["dn"], alertResult["name"], alertResult["alert_level"], alertResult["trigger"], utils.FormatTimestamp(alertResult["start_at"]), value)
 		}
+		alertResult["value"] = value
 
 	} else if message == "DEVICE_STATUS" {
 		if option, ok := subRuleData[0]["option"].(map[string]interface{}); ok {
@@ -103,14 +104,15 @@ func (s *AlertService) AddAlert(req map[string]interface{}) error {
 			if !statusOk {
 				return fmt.Errorf("无法提取必要字段: code存在=%t", statusOk)
 			}
-			alertResult["status"] = constants.GetDeviceStatusLabel(status)
+			alertResult["value"] = constants.GetDeviceStatusLabel(status)
 			reportTime := req["report_time"]
 			alertResult["start_at"] = reportTime
 			content = fmt.Sprintf("【告警通知】设备：%s，告警等级：%s，触发类型：%s，告警时间：%s，当前状态：%s",
-				alertResult["dn"], alertResult["alert_level"], alertResult["trigger"], utils.FormatTimestamp(alertResult["start_at"]), alertResult["status"])
+				alertResult["dn"], alertResult["alert_level"], alertResult["trigger"], utils.FormatTimestamp(alertResult["start_at"]), alertResult["value"])
 		}
 	} else if message == "EVENT_REPORT" {
 		alertResult["event"] = req["alert_event"]
+		alertResult["value"] = InterfaceToString(req["alert_value"])
 		if req["alert_type"] == "AlarmTrigger" {
 			alertResult["type"] = "已触发"
 		} else if req["alert_type"] == "AlarmRecover" {

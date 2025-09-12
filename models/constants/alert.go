@@ -134,6 +134,31 @@ func IsAggregationType(value string) bool {
 	return value == string(One) || value == string(Five) || value == string(Fifteen) || value == string(Thirty) || value == string(Sixty)
 }
 
+// 沉默周期 ReturnSilenceTimestamp 返回int64时间
+
+func ReturnSilenceTimestamp(value string) int64 {
+	switch value {
+	case "无":
+		return 0
+	case "5分钟":
+		return 5 * 60 * 1000
+	case "10分钟":
+		return 10 * 60 * 1000
+	case "15分钟":
+		return 15 * 60 * 1000
+	case "30分钟":
+		return 30 * 60 * 1000
+	case "1小时":
+		return 60 * 60 * 1000
+	case "3小时":
+		return 3 * 60 * 60 * 1000
+	case "6小时":
+		return 6 * 60 * 60 * 1000
+	default:
+		return -1
+	}
+}
+
 // 判断条件
 var DecideConditions = []string{">", ">=", "<", "<=", "=", "!="}
 
