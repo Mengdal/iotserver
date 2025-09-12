@@ -3,8 +3,11 @@ package iotp
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/beego/beego/v2/client/orm"
+	"iotServer/models"
 	"iotServer/utils"
 	"log"
+	"strconv"
 	"strings"
 )
 
@@ -201,7 +204,7 @@ func (s *TagService) ListDevicesByTag(tagName, tagValue string) ([]string, error
 	return response.Devices, nil
 }
 
-// DevicesTagsTree 获取拥有指定标签值的设备树
+// DevicesTagsTree 获取拥有指定标签值的设备树 V1
 func (s *TagService) DevicesTagsTree(tagName, tagValue string) ([]map[string]interface{}, error) {
 	// 根据标签筛选设备
 	devices, err := s.ListDevicesByTag(tagName, tagValue)
@@ -227,6 +230,55 @@ func (s *TagService) DevicesTagsTree(tagName, tagValue string) ([]map[string]int
 				"name":  v["name"], // 标签名
 				"type":  v["type"], // 标签类型
 				"tag":   device + "." + v["name"],
+				"isTag": true,
+			})
+		}
+
+		// 根节点（设备）
+		deviceNode := map[string]interface{}{
+			"name":     device,   // 设备名
+			"isDevice": true,     // 标识这是设备节点
+			"children": children, // 子节点为标签
+		}
+
+		deviceTree = append(deviceTree, deviceNode)
+	}
+
+	return deviceTree, nil
+}
+
+// DevicesTagsTree2 获取拥有指定标签值的设备树 V2
+func (s *TagService) DevicesTagsTree2(tagName, tagValue string) ([]map[string]interface{}, error) {
+	// 根据标签筛选设备
+	devices, err := s.ListDevicesByTag(tagName, tagValue)
+	if err != nil {
+		return nil, err
+	}
+
+	// 返回设备详细信息（带标签，树形结构）
+	var deviceTree []map[string]interface{}
+
+	// 根据产品返回统一模型
+	o := orm.NewOrm()
+	var tags []*models.Properties
+	productIdInt, _ := strconv.ParseInt(tagValue, 10, 64)
+	_, err = o.QueryTable(new(models.Properties)).
+		Filter("Product__Id", productIdInt).
+		All(&tags)
+
+	for _, device := range devices {
+		// 子节点（tags）
+		var children []map[string]interface{}
+		for _, v := range tags {
+			var spec map[string]string
+			err = json.Unmarshal([]byte(v.TypeSpec), &spec)
+			if err != nil {
+				v.Type = ""
+			}
+			children = append(children, map[string]interface{}{
+				"name":  v.Name,       // 标签名
+				"type":  spec["type"], // 标签类型
+				"tag":   device + "." + v.Code,
 				"isTag": true,
 			})
 		}
