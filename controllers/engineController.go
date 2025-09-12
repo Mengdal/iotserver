@@ -225,7 +225,10 @@ func (c *EngineController) Engines() {
 	if err != nil {
 		c.Error(400, "查询失败")
 	}
-
+	// 加载关联的 DataSource 数据
+	for _, ruleEngine := range ruleEngines {
+		o.LoadRelated(ruleEngine, "DataResource")
+	}
 	c.Success(paginate)
 }
 
@@ -327,6 +330,48 @@ func (c *EngineController) DelEngine() {
 	if err != nil {
 		c.Error(400, "更新规则失败: "+err.Error())
 	}
+	c.SuccessMsg()
+}
+
+// ControllerEngine @Title 控制规则引擎
+// @Description 控制规则转发引擎
+// @Param   Authorization  header  string  true  "Bearer YourToken"
+// @Param   id           query     int64   false "规则引擎ID"
+// @Param   status       query     string  false "控制状态 running/stopped/restart"
+// @Success 200 {object} controllers.SimpleResult "请求成功"
+// @Failure 400 创建失败
+// @router /controllerEngine [post]
+func (c *EngineController) ControllerEngine() {
+	id, _ := c.GetInt64("id")
+	status := c.GetString("status")
+
+	o := orm.NewOrm()
+	engine := models.RuleEngine{Id: id}
+	if err := o.Read(&engine); err != nil {
+		c.Error(400, "规则引擎未找到！")
+	}
+	engine.Status = status
+	o.Update(&engine)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if status == string(constants.RuleStart) {
+		err := common.Ekuiper.StartRule(ctx, engine.Name+"__Engine")
+		if err != nil {
+			c.Error(400, "启动规则失败: "+err.Error())
+		}
+	} else if status == string(constants.RuleStop) {
+		err := common.Ekuiper.StopRule(ctx, engine.Name+"__Engine")
+		if err != nil {
+			c.Error(400, "停止规则失败: "+err.Error())
+		}
+	} else {
+		err := common.Ekuiper.RestartRule(ctx, engine.Name+"__Engine")
+		if err != nil {
+			c.Error(400, "重启规则失败: "+err.Error())
+		}
+	}
+
 	c.SuccessMsg()
 }
 

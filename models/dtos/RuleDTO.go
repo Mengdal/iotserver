@@ -188,7 +188,7 @@ func buildDeviceCondition(deviceIDs []string) string {
 	for _, id := range deviceIDs {
 		quotedIDs = append(quotedIDs, fmt.Sprintf(`"%s"`, id))
 	}
-	return fmt.Sprintf(`deviceId IN (%s)`, strings.Join(quotedIDs, ", "))
+	return fmt.Sprintf(`dn IN (%s)`, strings.Join(quotedIDs, ", "))
 }
 
 func ValidateRuleUpdateRequest(req *RuleUpdateRequest, typeStyle string) error {

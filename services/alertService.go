@@ -25,6 +25,7 @@ func (s *AlertService) AddAlert(req map[string]interface{}) error {
 	ruleId := req["rule_id"].(string)
 	deviceId := req["deviceId"].(string)
 	alertResult["dn"] = deviceId
+	alertResult["rule_name"] = ruleId
 
 	o := orm.NewOrm()
 	var rule models.AlertRule
@@ -60,6 +61,7 @@ func (s *AlertService) AddAlert(req map[string]interface{}) error {
 	if err := json.Unmarshal([]byte(rule.Notify), &notifyData); err != nil {
 		return fmt.Errorf("查询失败: %v", err)
 	}
+	alertResult["alert_level"] = rule.AlertLevel
 	alertResult["trigger"] = subRuleData[0]["trigger"]
 
 	//处理不同告警类型的返回格式
@@ -85,14 +87,14 @@ func (s *AlertService) AddAlert(req map[string]interface{}) error {
 		if req["window_start"] != nil && req["window_end"] != nil {
 			alertResult["start_at"] = req["window_start"]
 			alertResult["end_at"] = req["window_end"]
-			content = fmt.Sprintf("【告警通知】设备：%s，属性：%s，触发类型：%s，告警时间：%s ~ %s，%s%s：%s，请及时处理！",
-				alertResult["dn"], alertResult["name"], alertResult["trigger"], utils.FormatTimestamp(alertResult["start_at"]), utils.FormatTimestamp(alertResult["end_at"].(float64)), alertResult["cycle"], alertResult["type"], value)
+			content = fmt.Sprintf("【告警通知】设备：%s，属性：%s，告警等级：%s，触发类型：%s，告警时间：%s ~ %s，%s%s：%s，请及时处理！",
+				alertResult["dn"], alertResult["name"], alertResult["alert_level"], alertResult["trigger"], utils.FormatTimestamp(alertResult["start_at"]), utils.FormatTimestamp(alertResult["end_at"].(float64)), alertResult["cycle"], alertResult["type"], value)
 		} else if req["report_time"] != nil {
 			reportTime := req["report_time"]
 			alertResult["start_at"] = reportTime
 			alertResult["end_at"] = reportTime
-			content = fmt.Sprintf("【告警通知】设备：%s，属性：%s，触发类型：%s，告警时间：%s，当前值：%s，请及时处理！",
-				alertResult["dn"], alertResult["name"], alertResult["trigger"], utils.FormatTimestamp(alertResult["start_at"]), value)
+			content = fmt.Sprintf("【告警通知】设备：%s，属性：%s，告警等级：%s，触发类型：%s，告警时间：%s，当前值：%s，请及时处理！",
+				alertResult["dn"], alertResult["name"], alertResult["alert_level"], alertResult["trigger"], utils.FormatTimestamp(alertResult["start_at"]), value)
 		}
 
 	} else if message == "DEVICE_STATUS" {
@@ -104,8 +106,8 @@ func (s *AlertService) AddAlert(req map[string]interface{}) error {
 			alertResult["status"] = constants.GetDeviceStatusLabel(status)
 			reportTime := req["report_time"]
 			alertResult["start_at"] = reportTime
-			content = fmt.Sprintf("【告警通知】设备：%s，触发类型：%s，告警时间：%s，当前状态：%s",
-				alertResult["dn"], alertResult["trigger"], utils.FormatTimestamp(alertResult["start_at"]), alertResult["status"])
+			content = fmt.Sprintf("【告警通知】设备：%s，告警等级：%s，触发类型：%s，告警时间：%s，当前状态：%s",
+				alertResult["dn"], alertResult["alert_level"], alertResult["trigger"], utils.FormatTimestamp(alertResult["start_at"]), alertResult["status"])
 		}
 	} else if message == "EVENT_REPORT" {
 		alertResult["event"] = req["alert_event"]
@@ -117,8 +119,8 @@ func (s *AlertService) AddAlert(req map[string]interface{}) error {
 
 		reportTime := req["report_time"]
 		alertResult["start_at"] = reportTime
-		content = fmt.Sprintf("【告警通知】设备：%s，触发类型：%s，触发事件：%s，告警时间：%s，当前状态：%s",
-			alertResult["dn"], alertResult["trigger"], alertResult["event"], utils.FormatTimestamp(alertResult["start_at"]), alertResult["type"])
+		content = fmt.Sprintf("【告警通知】设备：%s，告警等级：%s，触发类型：%s，触发事件：%s，告警时间：%s，当前状态：%s",
+			alertResult["dn"], alertResult["alert_level"], alertResult["trigger"], alertResult["event"], utils.FormatTimestamp(alertResult["start_at"]), alertResult["type"])
 
 	} else {
 		return nil
