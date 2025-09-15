@@ -10,9 +10,10 @@ type Udf struct {
 
 // ExService 定义外部服务的数据结构
 type ExService struct {
-	Name        string `json:"name"`
-	NewName     string `json:"newName"`
-	Address     string `json:"address"`
-	Description string `json:"description"`
-	Action      string `json:"action"`
+	Name        string            `json:"name"`
+	NewName     string            `json:"newName"`
+	Address     string            `json:"address"`
+	Description string            `json:"description"`
+	Action      string            `json:"action"`
+	Headers     map[string]string `json:"headers"` // 新增: 动态 headers
 }

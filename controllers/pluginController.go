@@ -137,6 +137,16 @@ func (c *UdfController) EditService() {
 		c.Error(400, "Invalid JSON")
 	}
 
+	// 1. 默认 headers
+	headers := map[string]string{
+		"Accept-Charset": "utf-8",
+	}
+
+	// 2. 合并用户传入 headers
+	for k, v := range req.Headers {
+		headers[k] = v
+	}
+
 	// 1. 构造 JSON 配置
 	serviceConfig := map[string]interface{}{
 		"about": map[string]interface{}{
@@ -150,7 +160,7 @@ func (c *UdfController) EditService() {
 				"address":  req.Address,
 				"protocol": "rest",
 				"options": map[string]interface{}{
-					"headers":            map[string]string{"Accept-Charset": "utf-8"},
+					"headers":            headers,
 					"insecureSkipVerify": true,
 				},
 				"schemaless": true,
