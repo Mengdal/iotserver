@@ -280,7 +280,7 @@ func ValidateRuleUpdateRequest(req *RuleUpdateRequest, typeStyle string) error {
 	}
 
 	// 5. 校验静默时间（可选）
-	if req.SilenceTime == "-1" {
+	if constants.ReturnSilenceTimestamp(req.SilenceTime) == -1 {
 		return errors.New("静默时间配置有误")
 	}
 

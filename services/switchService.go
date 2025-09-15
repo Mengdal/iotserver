@@ -380,7 +380,7 @@ func (p *PropertySetProcessor) SendOffline(dn string) error {
 		"dn":          dn,
 		"messageType": "DEVICE_STATUS",
 		"status":      "offline",
-		"time":        time.Now(),
+		"time":        time.Now().Unix(),
 	}
 
 	newPayload, err := json.Marshal(out)

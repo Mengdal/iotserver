@@ -294,6 +294,7 @@ func (c *EngineController) EngineConfig() {
 
 	if ruleEngine.Status == string(constants.RuleStart) {
 		err = common.Ekuiper.StartRule(ctx, req.Name+"__Engine")
+		err = common.Ekuiper.RestartRule(ctx, req.Name+"__Engine")
 		if err != nil {
 			c.Error(400, "规则启动失败: "+err.Error())
 		}

@@ -10,7 +10,6 @@ import (
 	"iotServer/models/constants"
 	"iotServer/models/dtos"
 	"iotServer/utils"
-	"log"
 	"time"
 )
 
@@ -144,11 +143,12 @@ func (c *RuleController) Update() {
 	alertRule.DeviceId = string(idsJson)
 	alertRule.SubRule = string(subRuleJson)
 	alertRule.Notify = string(subNotifyJson)
-
+	//更新规则后，规则需要启动后restart
 	if alertRule.Status == string(constants.RuleStart) {
 		err = common.Ekuiper.StartRule(ctx, req.Name)
+		err = common.Ekuiper.RestartRule(ctx, req.Name)
 		if err != nil {
-			log.Println(400, "规则启动失败")
+			c.Error(400, "规则启动失败"+err.Error())
 			alertRule.Status = string(constants.RuleStop)
 		}
 	}
