@@ -40,7 +40,23 @@ func (c *UdfController) Create() {
 	}
 	defer resp.Body.Close()
 	respBody, _ := io.ReadAll(resp.Body)
-	c.Error(resp.StatusCode, string(respBody))
+	status := resp.StatusCode
+	var message map[string]interface{}
+	if json.Valid(respBody) {
+		if err := json.Unmarshal(respBody, &message); err != nil {
+			c.Error(400, "参数解析失败: "+err.Error())
+			return
+		}
+	} else {
+		// 不是合法 JSON，直接当字符串处理
+		message = map[string]interface{}{
+			"message": string(respBody),
+		}
+	}
+	if status == 201 {
+		status = 200
+	}
+	c.ErrorDetail(status, message["message"].(string), string(respBody))
 }
 
 // Get @Title UDF获取
@@ -223,8 +239,11 @@ func (c *UdfController) EditService() {
 	defer resp.Body.Close()
 
 	respData, _ := io.ReadAll(resp.Body)
-	c.Ctx.Output.SetStatus(resp.StatusCode)
-	c.Ctx.Output.Body(respData)
+	status := resp.StatusCode
+	if resp.StatusCode == 201 {
+		status = 200
+	}
+	c.ErrorDetail(status, "", string(respData))
 }
 
 // DeleteService @Title 删除外部函数
@@ -248,17 +267,29 @@ func (c *UdfController) DeleteService() {
 	c.ErrorDetail(resp.StatusCode, "", string(respData))
 }
 
-// ListServices @Title 查询所有外部函数
-// @Description 查询外部函数List
+// ListServices @Title 查询所有外部函数或某个函数详情
+// @Description 查询外部函数List or Single
 // @Param   Authorization  header    string     true  "Bearer YourToken"
+// @Param   name           query     string     false "外部函数名称"
 // @Success 200 {object}   controllers.SimpleResult
 // @Failure 400 "错误信息"
 // @router /listServices [post]
 func (c *UdfController) ListServices() {
-	resp, err := http.Get(common.EkuiperServer + "/services/functions")
-	if err != nil {
-		c.Error(500, "Failed to list services: "+err.Error())
+	name := c.GetString("name")
+	var resp *http.Response
+	var err error
+	if name != "" {
+		resp, err = http.Get(common.EkuiperServer + "/services/" + name)
+		if err != nil {
+			c.Error(500, "Failed to list service: "+err.Error())
+		}
+	} else {
+		resp, err = http.Get(common.EkuiperServer + "/services/functions")
+		if err != nil {
+			c.Error(500, "Failed to list services: "+err.Error())
+		}
 	}
+
 	defer resp.Body.Close()
 	respData, _ := io.ReadAll(resp.Body)
 	var data interface{}
