@@ -59,6 +59,19 @@ func ParseJson(s string) map[string]interface{} {
 	return m
 }
 
+// ParseJsonArray 解析 JSON 字符串
+func ParseJsonArray(s string) []map[string]interface{} {
+	if s == "" {
+		return []map[string]interface{}{}
+	}
+
+	var m []map[string]interface{}
+	if err := json.Unmarshal([]byte(s), &m); err != nil {
+		return []map[string]interface{}{}
+	}
+	return m
+}
+
 var (
 	node *snowflake.Node
 	once sync.Once

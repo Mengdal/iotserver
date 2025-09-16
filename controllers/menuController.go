@@ -206,7 +206,7 @@ func (c *MenuController) getObjects(menus []models.Menu) []dtos.MenuDTO {
 			Id:             menu.Id,
 			Type:           menu.Type,
 			ParentId:       menu.ParentId,
-			PermissionList: utils.ParseJson(menu.PermissionList),
+			PermissionList: utils.ParseJsonArray(menu.PermissionList),
 			Meta:           utils.ParseJson(menu.Meta),
 			Children:       c.children(&menu.Id),
 			Priority:       menu.Priority,
