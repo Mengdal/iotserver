@@ -8,6 +8,7 @@ import (
 	"iotServer/models/dtos"
 	"iotServer/utils"
 	"strconv"
+	"strings"
 )
 
 type ModelController struct {
@@ -384,34 +385,65 @@ func (c *ModelController) TypeList() {
 
 	// 定义一个轻量 struct 仅映射 Type 字段
 	type OnlyType struct {
-		Type string `orm:"column(Type)"`
+		Type string `orm:"column(type)"`
 	}
 
-	var results []OnlyType
+	// 用 map 去重
+	typeMap := make(map[string]struct{})
 
-	// 构建查询条件
-	query := o.QueryTable(new(models.Properties)).
+	// --- 查询 Properties 的 Type ---
+	var propResults []OnlyType
+	_, err := o.QueryTable(new(models.Properties)).
 		Filter("Product__Id", productId).
-		Filter("Type__isnull", false). // 筛选 Type 不为 null
-		Exclude("Type", "").           // 排除 Type 为空字符串
-		Distinct()
-
-	// 如果提供了 name 参数，则添加模糊搜索条件
-	if name != "" {
-		query = query.Filter("Name__icontains", name)
-	}
-
-	// 查询 Type 字段
-	_, err := query.All(&results, "Type")
+		Filter("Type__isnull", false).
+		Exclude("Type", "").
+		All(&propResults, "Type")
 	if err != nil {
-		c.Error(400, "查询失败: "+err.Error())
+		c.Error(400, "查询 Properties 失败: "+err.Error())
+		return
+	}
+	for _, r := range propResults {
+		typeMap[r.Type] = struct{}{}
 	}
 
-	// 提取结果为字符串切片
-	var types []string
-	for _, r := range results {
-		types = append(types, r.Type)
+	// --- 查询 Events 的 Type ---
+	var eventResults []OnlyType
+	_, err = o.QueryTable(new(models.Events)).
+		Filter("Product__Id", productId).
+		Filter("Type__isnull", false).
+		Exclude("Type", "").
+		All(&eventResults, "Type")
+	if err != nil {
+		c.Error(400, "查询 Events 失败: "+err.Error())
+		return
+	}
+	for _, r := range eventResults {
+		typeMap[r.Type] = struct{}{}
 	}
 
-	c.Success(types)
+	// --- 查询 Actions 的 Type ---
+	var actionResults []OnlyType
+	_, err = o.QueryTable(new(models.Actions)).
+		Filter("Product__Id", productId).
+		Filter("Type__isnull", false).
+		Exclude("Type", "").
+		All(&actionResults, "Type")
+	if err != nil {
+		c.Error(400, "查询 Actions 失败: "+err.Error())
+		return
+	}
+	for _, r := range actionResults {
+		typeMap[r.Type] = struct{}{}
+	}
+
+	// 转换为切片
+	var uniqueTypes []string
+	for t := range typeMap {
+		// 如果传了 name 参数，执行模糊匹配
+		if name == "" || strings.Contains(strings.ToLower(t), strings.ToLower(name)) {
+			uniqueTypes = append(uniqueTypes, t)
+		}
+	}
+
+	c.Success(uniqueTypes)
 }
