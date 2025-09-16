@@ -123,11 +123,11 @@ func (c *ProductController) Detail() {
 // @Description 创建新产品，仅支持部分字段，自动绑定当前用户
 // @Param   Authorization  header  string  true  "Bearer YourToken"
 // @Param   name         query   string  true  "产品名称"
-// @Param   status       query    bool   true  "是否启用"
+// @Param   status       query    bool   false "是否启用"
 // @Param   description  query   string  false "描述"
 // @Param   nodeType     query   string  false "类型(默认：网关子设备)"
 // @Param   factory      query   string  false "工厂名称"
-// @Param   categoryId   query   string  false "内置标准物模型品类"
+// @Param   categoryId   query   int64   false "内置标准物模型品类"
 // @Success 200 {object} controllers.SimpleResult "返回产品ID"
 // @Failure 400 参数错误 / 权限不足
 // @router /create [post]
@@ -141,6 +141,7 @@ func (c *ProductController) Create() {
 	description := c.GetString("description")
 	nodeType := c.GetString("nodeType", "网关子设备") // 控制器代码
 	categoryId, _ := c.GetInt64("categoryId")
+	factory := c.GetString("factory")
 
 	if name == "" {
 		c.Error(400, "参数有误")
@@ -165,6 +166,7 @@ func (c *ProductController) Create() {
 		Protocol:       string(constants.MQTT),
 		NodeType:       nodeType,
 		CategoryId:     categoryId,
+		Factory:        factory,
 	}
 
 	// 获取用户对象
@@ -230,6 +232,7 @@ func (c *ProductController) Create() {
 // @Param	name	    query	string	false	"产品名称"
 // @Param   status      query    bool   true  "是否启用"
 // @Param	description	query	string	false	"描述"
+// @Param   categoryId  query   int64   false "内置标准物模型品类"
 // @Success 200 {object} controllers.SimpleResult "操作成功"
 // @Failure 400 参数错误 / 无权限
 // @router /update [post]
@@ -237,6 +240,7 @@ func (c *ProductController) Update() {
 
 	//产品ID
 	id, _ := c.GetInt64("id")
+	categoryId, _ := c.GetInt64("categoryId")
 
 	userId, ok := c.Ctx.Input.GetData("user_id").(int64)
 	if !ok {
@@ -275,6 +279,63 @@ func (c *ProductController) Update() {
 	status, _ := c.GetBool("status")
 	product.Status = convertStatus(status)
 
+	// 更新产品 若非原品类删除关联模型后重新绑定
+	if product.CategoryId != categoryId {
+		// 1. 删除旧的属性、事件、服务
+		_, err := o.QueryTable(new(models.Properties)).Filter("product_id", id).Delete()
+		if err != nil {
+			c.Error(500, "删除旧属性失败: "+err.Error())
+		}
+		_, err = o.QueryTable(new(models.Events)).Filter("product_id", id).Delete()
+		if err != nil {
+			c.Error(500, "删除旧事件失败: "+err.Error())
+		}
+		_, err = o.QueryTable(new(models.Actions)).Filter("product_id", id).Delete()
+		if err != nil {
+			c.Error(500, "删除旧服务失败: "+err.Error())
+		}
+
+		// 2. 加载新的物模型数据
+		if categoryId != 0 {
+			var properties []*models.Properties
+			var events []*models.Events
+			var actions []*models.Actions
+
+			// 解析并生成新的物模型实体
+			err := services.ParseThingModelToEntities(categoryId, o, &properties, &events, &actions)
+			if err != nil {
+				c.Error(400, "解析新物模型失败: "+err.Error())
+			}
+
+			// 保存新的物模型数据
+			for _, property := range properties {
+				property.Product = &product // 关联到当前产品
+				property.BeforeInsert()
+				if _, err := o.Insert(property); err != nil {
+					c.Error(500, "保存新属性失败: "+err.Error())
+				}
+			}
+
+			for _, event := range events {
+				event.Product = &product // 关联到当前产品
+				event.BeforeInsert()
+				if _, err := o.Insert(event); err != nil {
+					c.Error(500, "保存新事件失败: "+err.Error())
+				}
+			}
+
+			for _, action := range actions {
+				action.Product = &product // 关联到当前产品
+				action.BeforeInsert()
+				if _, err := o.Insert(action); err != nil {
+					c.Error(500, "保存新服务失败: "+err.Error())
+				}
+			}
+		}
+		// 更新产品记录中的 CategoryId
+		product.CategoryId = categoryId
+
+	}
 	// 更新数据库
 	_ = product.BeforeUpdate()
 	_, err = o.Update(&product)
