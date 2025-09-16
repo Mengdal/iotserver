@@ -42,7 +42,7 @@ type HttpOption struct {
 }
 
 type MqttOption struct {
-	Broker          string `json:"broker"`
+	Server          string `json:"server"`
 	Topic           string `json:"topic"`
 	Client          string `json:"client"`
 	ProtocolVersion string `json:"protocolVersion"`

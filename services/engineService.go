@@ -48,7 +48,7 @@ func ParseOption(resourceType string, optionStr interface{}) interface{} {
 		return opt
 	case "消息对队列MQTT":
 		var opt dtos.MqttOption
-		if err := json.Unmarshal(data, &opt); err != nil || opt.Broker == "" || opt.Topic == "" {
+		if err := json.Unmarshal(data, &opt); err != nil || opt.Server == "" || opt.Topic == "" {
 			return nil
 		}
 		return opt
@@ -146,7 +146,7 @@ func validateHttp(opt dtos.HttpOption) error {
 
 // MQTT 测试
 func validateMqtt(opt dtos.MqttOption) error {
-	opts := mqtt.NewClientOptions().AddBroker(opt.Broker).SetClientID(opt.Client)
+	opts := mqtt.NewClientOptions().AddBroker(opt.Server).SetClientID(opt.Client)
 	if opt.Username != "" {
 		opts.SetUsername(opt.Username)
 	}
@@ -288,7 +288,7 @@ func sendHttp(opt dtos.HttpOption, req map[string]interface{}) error {
 
 func sendMqtt(opt dtos.MqttOption, req map[string]interface{}) error {
 	opts := mqtt.NewClientOptions().
-		AddBroker(opt.Broker).
+		AddBroker(opt.Server).
 		SetClientID(opt.Client).
 		SetUsername(opt.Username).
 		SetPassword(opt.Password)
