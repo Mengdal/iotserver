@@ -83,12 +83,14 @@ func (c *AlertController) GetAlarmRecord() {
 	resultList := make([]map[string]interface{}, 0)
 	for _, alert := range alerts {
 		var alertContent map[string]interface{}
-		if err := json.Unmarshal([]byte(alert.AlertResult), &alertContent); err == nil {
-			alertContent["id"] = alert.Id
-			alertContent["handler"] = alert.Status
-			alertContent["treated_time"] = alert.TreatedTime
-			resultList = append(resultList, alertContent)
+		err := json.Unmarshal([]byte(alert.AlertResult), &alertContent)
+		if err != nil || alert.AlertResult == "null" {
+			continue
 		}
+		alertContent["id"] = alert.Id
+		alertContent["handler"] = alert.Status
+		alertContent["treated_time"] = alert.TreatedTime
+		resultList = append(resultList, alertContent)
 	}
 
 	// 替换原始列表为处理后的告警内容

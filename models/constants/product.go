@@ -48,6 +48,20 @@ const (
 	EventTypeError EventType = "error"
 )
 
+// GetEventTypeDescription 根据 EventType 返回对应的中文描述
+func GetEventTypeDescription(eventType string) string {
+	switch eventType {
+	case string(EventTypeInfo):
+		return "信息"
+	case string(EventTypeAlert):
+		return "告警"
+	case string(EventTypeError):
+		return "故障"
+	default:
+		return "未知类型"
+	}
+}
+
 type ProductStatus int
 
 const (

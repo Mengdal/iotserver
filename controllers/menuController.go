@@ -26,10 +26,10 @@ func (c *MenuController) List() {
 // @Description 创建新菜单（名称不能重复）
 // @Param   Authorization    header   string  true        "Bearer YourToken"
 // @Param   path             query    string  false       "路径"
-// @Param   component        query    string  true        "组件"
+// @Param   component        query    string  false       "组件"
 // @Param   name             query    string  true        "名称"
 // @Param   redirect         query    string  false       "重定向"
-// @Param   status           query    int    true        "是否启用"
+// @Param   status           query    int    true         "是否启用"
 // @Param   type             query    int     true        "类型"
 // @Param   parentId         query    int     false       "父级菜单ID"
 // @Param   permissionList   query    string  false       "按钮权限列表"
@@ -53,7 +53,7 @@ func (c *MenuController) Create() {
 	permissionList := c.GetString("permissionList")
 	meta := c.GetString("meta")
 
-	if component == "" || name == "" || meta == "" {
+	if name == "" || meta == "" {
 		c.Error(400, "必填字段缺失")
 	}
 	if existing, _ := c.findByName(name); existing != nil {

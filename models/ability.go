@@ -1,6 +1,7 @@
 package models
 
 import (
+	"encoding/json"
 	"time"
 )
 
@@ -10,6 +11,10 @@ type InputOutput struct {
 	Code     string `json:"code"`      //eg：CurrentTemperature
 	Name     string `json:"name"`      //温度
 	TypeSpec string `json:"type_spec"` //{"type":"float","specs":"{\"min\":\"-40\",\"max\":\"120\",\"step\":\"0.01\",\"unit\":\"℃\",\"unitName\":\"摄氏度\"}"}
+}
+type TypeSpec struct {
+	Specs json.RawMessage `json:"specs"`
+	Type  string          `json:"type"`
 }
 
 // Properties 属性

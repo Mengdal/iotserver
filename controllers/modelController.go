@@ -155,7 +155,7 @@ func (c *ModelController) Create() {
 		} else {
 			property.Id = req.Id
 			_ = property.BeforeUpdate()
-			if _, err := o.Update(&property); err != nil {
+			if _, err := o.Update(&property, "name", "code", "description", "tag", "access_mode", "type", "type_spec", "updated"); err != nil {
 				c.Error(500, "保存属性失败: "+err.Error())
 			}
 		}
@@ -211,7 +211,7 @@ func (c *ModelController) Create() {
 		} else {
 			event.Id = req.Id
 			_ = event.BeforeUpdate()
-			if _, err := o.Update(&event); err != nil {
+			if _, err := o.Update(&event, "name", "code", "description", "tag", "event_type", "type", "output_params", "updated"); err != nil {
 				c.Error(500, "保存事件失败: "+err.Error())
 			}
 		}
@@ -288,7 +288,7 @@ func (c *ModelController) Create() {
 		} else {
 			action.Id = req.Id
 			_ = action.BeforeUpdate()
-			if _, err := o.Update(&action); err != nil {
+			if _, err := o.Update(&action, "name", "code", "description", "tag", "call_type", "type", "input_params", "output_params", "updated"); err != nil {
 				c.Error(500, "保存服务失败: "+err.Error())
 			}
 		}

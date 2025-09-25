@@ -183,7 +183,7 @@ func (c *EngineController) EditEngine() {
 	} else {
 		ruleEngine.Id = req.Id
 		ruleEngine.BeforeUpdate()
-		_, err := o.Update(&ruleEngine)
+		_, err := o.Update(&ruleEngine, "modified", "name", "description", "status", "filter", "data_resource_id")
 		if err != nil {
 			c.Error(400, "更新失败")
 		}
