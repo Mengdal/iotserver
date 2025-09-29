@@ -9,6 +9,7 @@ import (
 	"log"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type TagService struct{}
@@ -34,7 +35,7 @@ func (s *TagService) GetAllDevices(page, size int) (*utils.PageResult, error) {
 	data, err := HttpGet(url)
 	if err != nil {
 		log.Printf("获取设备列表失败: %v", err)
-		return nil, fmt.Errorf("API请求失败: %v", err)
+		return nil, fmt.Errorf(data)
 	}
 
 	// 解析响应
@@ -111,7 +112,7 @@ func (s *TagService) GetNoBindDevices() ([]map[string]string, error) {
 	data, err := HttpGet(url)
 	if err != nil {
 		log.Printf("获取设备列表失败: %v", err)
-		return nil, fmt.Errorf("API请求失败: %v", err)
+		return nil, fmt.Errorf(data)
 	}
 
 	// 解析响应
@@ -298,22 +299,67 @@ func (s *TagService) DevicesTagsTree2(tagName, tagValue string) ([]map[string]in
 
 // 获取设备的所有标签
 func (s *TagService) ListTagsByDevice(path string) (map[string]map[string]string, error) {
+	// 记录查询开始时间
+	startTime := time.Now()
+	// 将路径分割为设备列表
+	devices := strings.Split(path, "/")
+
+	// 设置每个批次的最大设备数
+	batchSize := 150
+
+	// 初始化结果map
+	result := make(map[string]map[string]string)
+
+	// 分批处理设备列表
+	for i := 0; i < len(devices); i += batchSize {
+		// 计算当前批次的结束索引
+		end := i + batchSize
+		if end > len(devices) {
+			end = len(devices)
+		}
+
+		// 获取当前批次的设备
+		batchDevices := devices[i:end]
+
+		// 构造当前批次的路径
+		batchPath := strings.Join(batchDevices, "/")
+
+		// 查询当前批次的设备标签
+		batchResult, err := s.listTagsByDeviceBatch(batchPath)
+		if err != nil {
+			log.Printf("查询设备标签失败: %v", err)
+			return nil, fmt.Errorf("API请求失败: %v", err)
+		}
+
+		// 合并结果
+		for device, tags := range batchResult {
+			result[device] = tags
+		}
+	}
+	// 记录查询结束时间并计算耗时
+	endTime := time.Now()
+	duration := endTime.Sub(startTime)
+	log.Printf("设备标签查询完成，总耗时: %v，结果: 未查询到设备标签", duration)
+	if len(result) == 0 {
+		return nil, fmt.Errorf("未查询到设备标签")
+	}
+
+	return result, nil
+}
+
+// 批量查询设备标签的辅助方法
+func (s *TagService) listTagsByDeviceBatch(path string) (map[string]map[string]string, error) {
 	url := fmt.Sprintf("http://%s/tag/listTags/%s", IoTPServer, path)
 
 	data, err := HttpGet(url)
 	if err != nil {
-		log.Printf("查询设备标签失败: %v", err)
-		return nil, fmt.Errorf("API请求失败: %v", err)
+		return nil, err
 	}
 
 	// 通用结构：map[设备名]map[string]string
 	var wrapper map[string]map[string]string
 	if err := json.Unmarshal([]byte(data), &wrapper); err != nil {
 		return nil, fmt.Errorf("解析响应失败: %v", err)
-	}
-
-	if len(wrapper) == 0 {
-		return nil, fmt.Errorf("未查询到设备标签")
 	}
 
 	return wrapper, nil
