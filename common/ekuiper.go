@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	beego "github.com/beego/beego/v2/server/web"
 	"io"
 	"io/ioutil"
 	"iotServer/models/dtos"
@@ -44,11 +45,48 @@ func NewEkuiperClient(baseURL string) *EkuiperClient {
 }
 
 func InitEuiper() {
-	// 1. 先GET判断流是否存在 默认创建全局stream流
-	stream := "stream"
+	var mqttURL, _ = beego.AppConfig.String("mqttServer")
+	var ClientId, _ = beego.AppConfig.String("ClientId")
+	var Username, _ = beego.AppConfig.String("Username")
+	var Password, _ = beego.AppConfig.String("Password")
+	var stream = "stream"
+
+	// 1. 配置MQTT连接
+	connUrl := fmt.Sprintf("%s/metadata/sources/mqtt/confKeys/init", EkuiperServer)
+	connReq := map[string]interface{}{
+		"qos":                0,
+		"server":             "tcp://" + mqttURL,
+		"username":           Username,
+		"password":           Password,
+		"clientid":           ClientId,
+		"protocolVersion":    "3.1.1",
+		"insecureSkipVerify": false,
+	}
+
+	b, _ := json.Marshal(connReq)
+	req, err := http.NewRequest("PUT", connUrl, bytes.NewReader(b))
+	if err != nil {
+		log.Fatalf("创建 MQTT 连接请求失败: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{Timeout: 1 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Fatalf("配置 MQTT 连接失败: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 && resp.StatusCode != 201 {
+		body, _ := ioutil.ReadAll(resp.Body)
+		log.Printf("Ekuiper 配置 MQTT 连接失败: %s", string(body))
+	} else {
+		log.Println("EKuiper MQTT 连接配置成功")
+	}
+
+	// 2. 先GET判断流是否存在 默认创建全局stream流
 
 	url := fmt.Sprintf("%s/streams/%s", EkuiperServer, stream)
-	resp, err := http.Get(url)
+	resp, err = http.Get(url)
 	if err != nil {
 		log.Fatalln("初始化ekuiper失败，查询服务是否启动")
 	}
@@ -63,11 +101,20 @@ func InitEuiper() {
 		log.Fatalln("初始化ekuiper失败，查询服务是否正常")
 	}
 
-	// 2. 不存在则创建  实时数据主题 edge/property/{SN}/post
+	// 1. 不存在则创建  实时数据主题 edge/property/{SN}/post
 	createUrl := fmt.Sprintf("%s/streams", EkuiperServer)
-	sql := fmt.Sprintf("CREATE STREAM %s () WITH (DATASOURCE=\"/edge/stream/+/post\", FORMAT=\"JSON\", SHARED = \"true\")", stream)
+	sql := fmt.Sprintf(`
+        CREATE STREAM %s ()
+        WITH (
+            DATASOURCE="/edge/stream/+/post",
+            FORMAT="JSON",
+            SHARED="true",
+            TYPE="mqtt",
+            CONF_KEY="init"
+        )
+    `, stream)
 	reqBody := map[string]string{"sql": sql}
-	b, _ := json.Marshal(reqBody)
+	b, _ = json.Marshal(reqBody)
 	resp2, err := http.Post(createUrl, "application/json", bytes.NewReader(b))
 	if err != nil {
 		log.Fatalf("create stream failed: %v", err)
