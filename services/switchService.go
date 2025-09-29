@@ -9,8 +9,6 @@ import (
 	"iotServer/common"
 	"iotServer/iotp"
 	"iotServer/models"
-	"iotServer/models/constants"
-	"iotServer/utils"
 	"log"
 	"net"
 	"regexp"
@@ -33,7 +31,7 @@ func InitMQTT() {
 	}
 
 	Connector = common.NewMqttConnector(
-		host, port, 5, mqttUsername, mqttPassword, mqttClientId, 60, false, 10,
+		host, port, 5, mqttUsername, mqttPassword, mqttClientId, 60, true, 10,
 	)
 
 	if err := Connector.Connect(); err != nil {
@@ -132,23 +130,43 @@ func (p *PropertySetProcessor) Init() error {
 
 // 消息处理回调
 func (p *PropertySetProcessor) handleMessage(client mqtt.Client, msg mqtt.Message) {
-	// 使用 goroutine 异步处理
-	go func() {
-		start := time.Now()
-		topic := msg.Topic()
-		payload := string(msg.Payload())
+	// 确保工作池已初始化
+	workerOnce.Do(func() {
+		initWorkerPool()
+	})
 
-		log.Printf("消息开始处理: %s", topic)
+	topic := msg.Topic()
+	payload := string(msg.Payload())
 
-		defer func() {
-			log.Printf("消息处理完成: %s (耗时: %v)", topic, time.Since(start))
-		}()
+	// 根据主题选择处理函数
+	var handler func(string, string) error
+	if strings.HasPrefix(topic, "lm/gw/ctrlResponse/") {
+		handler = p.processControlResponse
+	} else if strings.HasPrefix(topic, "/edge/event/") && strings.HasSuffix(topic, "/post") {
+		handler = p.processAlertEvent
+	} else if strings.HasPrefix(topic, "/edge/property/") && strings.HasSuffix(topic, "/post") {
+		handler = p.handlePropertyMessage
+	} else if strings.HasPrefix(topic, "/edge/stream/") && strings.HasSuffix(topic, "/post") {
+		handler = p.handleStreamMessage
+	} else {
+		log.Printf("未知的主题类型: %s", topic)
+		return
+	}
 
-		// 处理消息
-		if err := p.process(topic, payload); err != nil {
-			log.Printf("消息处理失败: %s -- %v", topic, err)
-		}
-	}()
+	// 将任务提交到工作池
+	job := Job{
+		Topic:   topic,
+		Payload: payload,
+		Handler: handler,
+	}
+
+	// 非阻塞地提交任务，如果队列满了就丢弃并记录
+	select {
+	case jobQueue <- job:
+		log.Printf("任务已提交到队列: %s", topic)
+	default:
+		log.Printf("任务队列已满，丢弃消息: %s", topic)
+	}
 }
 
 func (p *PropertySetProcessor) process(topic, payload string) error {
@@ -193,14 +211,16 @@ func (p *PropertySetProcessor) processControlResponse(topic, payload string) err
 
 // 处理报警事件
 func (p *PropertySetProcessor) processAlertEvent(topic, payload string) error {
+	// 确保事件处理工作池已初始化
+	eventWorkerOnce.Do(func() {
+		initEventWorkerPool()
+	})
+
 	// 从主题中提取设备ID
 	parts := strings.Split(topic, "/")
 	if len(parts) < 3 {
 		return fmt.Errorf("报警主题格式错误: %s", topic)
 	}
-	//sn := parts[3]
-
-	log.Printf("收到报警事件: %s %s", topic, payload)
 
 	// 解析JSON
 	var alertData map[string]interface{}
@@ -208,60 +228,19 @@ func (p *PropertySetProcessor) processAlertEvent(topic, payload string) error {
 		return fmt.Errorf("报警JSON解析失败: %v", err)
 	}
 
-	point := alertData["tag"]
-	split := strings.Split(point.(string), ".")
-	dn := split[0]
-	tag := split[1]
-	eventTime := alertData["timestamp"]
-	event := alertData["event"]
-	value := alertData["value"]
-	typeName := alertData["type"]
-	if typeName == "AlarmTrigger" {
-		typeName = "网关事件触发"
-	} else {
-		typeName = "网关事件解除"
-	}
-	typeR := alertData["status"]
-	if typeR == "Error" && value == "0" {
-		typeR = "质量不为Good"
-	} else {
-		typeR = "点值超出范围"
+	// 将事件处理任务提交到工作池
+	job := EventJob{
+		Topic: topic,
+		Data:  alertData,
 	}
 
-	timestamp, _ := iotp.GetTimestamp(eventTime.(string))
-	out := map[string]interface{}{
-		"alert_level": "重要",
-		"code":        tag,
-		"dn":          dn,
-		"start_at":    timestamp,
-		"name":        tag,
-		"rule_name":   event,
-		"trigger":     typeName,
-		"type":        typeR,
-		"value":       value,
-	}
-	newPayload, err := json.Marshal(out)
-	if err != nil {
-		return fmt.Errorf("JSON序列化失败: %v", err)
-	}
-
-	// 网关事件直接存入Alert_List
-	o := orm.NewOrm()
-	// 构建告警记录
-	alert := &models.AlertList{
-		AlertRule:   nil,
-		TriggerTime: time.Now().UnixMilli(),
-		IsSend:      false,
-		Status:      string(constants.Untreated),
-		AlertResult: string(newPayload),
-	}
-
-	// 保存到数据库
-	if err = alert.BeforeInsert(); err != nil {
-		return fmt.Errorf("插入失败: %v", err)
-	}
-	if _, err = o.Insert(alert); err != nil {
-		return fmt.Errorf("保存告警记录失败: %v", err)
+	// 非阻塞地提交任务
+	select {
+	case eventJobQueue <- job:
+		// 任务提交成功
+	default:
+		// 任务队列已满，记录警告但不返回错误，避免阻塞消息处理
+		log.Printf("警告: 事件处理队列已满，丢弃事件: %s", topic)
 	}
 
 	return nil
@@ -285,6 +264,12 @@ func (p *PropertySetProcessor) handlePropertyMessage(topic, payload string) erro
 		return fmt.Errorf("JSON解析失败:%v", err)
 	}
 
+	// 确保转发工作池已初始化
+	forwardWorkerOnce.Do(func() {
+		initForwardWorkerPool(p.mqttClient)
+	})
+
+	// 为每个item创建转发任务
 	for _, item := range arr {
 		// 转换为 eKuiper 友好格式
 		data := make(map[string]map[string]interface{})
@@ -301,18 +286,36 @@ func (p *PropertySetProcessor) handlePropertyMessage(topic, payload string) erro
 		}
 		newPayload, err := json.Marshal(out)
 		if err != nil {
-			log.Println("JSON序列化失败:", err)
+			log.Printf("JSON序列化失败: %v", err)
 			continue
 		}
 
-		// 转发到新主题（每个设备一个主题）
-		newTopic := fmt.Sprintf("/edge/stream/%s/post", sn)
-		if err := p.mqttClient.Publish(newTopic, 0, newPayload); err != nil {
-			log.Println("转发失败:", err.Error())
-		} else {
-			log.Printf("已转发到 %s: %s\n", newTopic, string(newPayload))
+		// 创建转发任务
+		tasks := []struct {
+			topic string
+		}{
+			{fmt.Sprintf("/edge/stream/%s/post", sn)},
+			{fmt.Sprintf("/edge/event/%s/post", sn)},
+		}
+
+		// 将转发任务提交到转发工作池
+		for _, task := range tasks {
+			job := ForwardJob{
+				Topic:   task.topic,
+				Payload: newPayload,
+				Client:  p.mqttClient,
+			}
+
+			// 非阻塞提交任务
+			select {
+			case forwardJobQueue <- job:
+				log.Printf("转发任务已提交到队列: %s", task.topic)
+			default:
+				log.Printf("转发任务队列已满，丢弃任务: %s", task.topic)
+			}
 		}
 	}
+
 	return nil
 }
 
@@ -320,6 +323,11 @@ var tagService = iotp.TagService{}
 
 // 处理流数据为更新设备状态
 func (p *PropertySetProcessor) handleStreamMessage(topic, payload string) error {
+	parts := strings.Split(topic, "/")
+	if len(parts) < 5 {
+		return fmt.Errorf("主题格式错误:%v", topic)
+	}
+	sn := parts[3]
 	// 解析传入的 payload 数据
 	var message struct {
 		Data        map[string]map[string]interface{} `json:"data"`
@@ -330,12 +338,15 @@ func (p *PropertySetProcessor) handleStreamMessage(topic, payload string) error 
 		return fmt.Errorf("JSON解析失败:%v", err)
 	}
 	// 属性上报更新设备状态
-	if message.MessageType != "PROPERTY_REPORT" {
-		return nil
+	if message.MessageType == "PROPERTY_REPORT" {
+		dn := message.Dn
+		//如果是系统点PIN上网关
+		if dn == "system" {
+			dn = dn + sn
+		}
+		// - 数据持久化 使用线程服务更新设备状态，避免频繁查询
+		UpdateDeviceStatus(dn, tagService)
 	}
-	// - 数据持久化
-	tagService.AddTag(message.Dn, "status", "1")
-	tagService.AddTag(message.Dn, "lastOnline", utils.InterfaceToString(time.Now().Unix()))
 
 	return nil
 }
