@@ -175,16 +175,17 @@ func (c *UserController) Login() {
 		c.Error(400, "获取角色出错")
 	}
 
-	menuController := &MenuController{}
-	menuController.Ctx = c.Ctx
-	menuTree := menuController.tree()
+	var menus []dtos.MenuDTO
+	err = json.Unmarshal([]byte(role.Permission), &menus)
+	if err != nil {
+		c.Error(400, "菜单数据解析失败")
+	}
 	result := map[string]interface{}{
-		"token":      token,
-		"menu":       menuTree,
-		"roleId":     role.Id,
-		"roleName":   role.Name,
-		"userId":     user.Id,
-		"permission": role.Permission,
+		"token":    token,
+		"menu":     menus,
+		"roleId":   role.Id,
+		"roleName": role.Name,
+		"userId":   user.Id,
 	}
 	c.Success(result)
 }
