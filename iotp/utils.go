@@ -9,13 +9,29 @@ import (
 
 func HttpGet(url string) (string, error) {
 	client := &http.Client{}
-	req, _ := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return "", err
+	}
+
 	resp, err := client.Do(req)
 	if err != nil {
 		return "", err
 	}
-	body, _ := ioutil.ReadAll(resp.Body)
 	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+
+	// 检查HTTP响应状态码
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		if resp.StatusCode == 401 {
+			return "暂无上传设备", fmt.Errorf("HTTP request failed with status code %d: %s", resp.StatusCode, string(body))
+		}
+		return "", fmt.Errorf("HTTP request failed with status code %d: %s", resp.StatusCode, string(body))
+	}
 
 	return string(body), nil
 }
