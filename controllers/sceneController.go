@@ -118,16 +118,26 @@ func (c *SceneController) Update() {
 	scene.Action = string(ActionMarshal)
 	scene.Condition = string(ConditionMarshal)
 
+	// 先更新场景数据
+	if _, err := o.Update(&scene); err != nil {
+		c.Error(400, "更新场景出错"+err.Error())
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	//生成场景联动
 	if req.Condition[0].ConditionType == "notify" && req.Id != 0 {
 		services.BuildEkuiperRule(ctx, req, scene.Name)
+	} else if req.Condition[0].ConditionType == "timer" && req.Id != 0 {
+		if err := c.sceneService.StopScene(req.Id); err != nil {
+			c.Error(400, fmt.Sprintf(err.Error()))
+		}
+		if err := c.sceneService.StartScene(req.Id); err != nil {
+			c.Error(400, fmt.Sprintf(err.Error()))
+		}
 	}
-	if _, err := o.Update(&scene); err != nil {
-		c.Error(400, "更新场景出错"+err.Error())
-	}
+
 	c.SuccessMsg()
 }
 

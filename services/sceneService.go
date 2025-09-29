@@ -104,7 +104,7 @@ func (s *SceneService) StartScene(id int64) error {
 
 	// 检查是否已经在运行
 	if scene.Status == string(constants.RuleStart) {
-		return fmt.Errorf("场景已在运行中")
+		return fmt.Errorf("场景已在运行中，请停止后编辑")
 	}
 
 	// 解析条件，加载定时场景
@@ -135,9 +135,14 @@ func (s *SceneService) StopScene(id int64) error {
 	}
 
 	// 停止ekuiper规则
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	common.Ekuiper.StopRule(ctx, scene.Name)
+	go func(name string) {
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+		defer cancel()
+		if err := common.Ekuiper.StopRule(ctx, name); err != nil {
+			// 这里可以选择打印日志，不影响主流程
+			log.Printf("StopRule 异步失败: %v", err)
+		}
+	}(scene.Name)
 
 	// 更新状态
 	scene.Status = "stopped"
@@ -294,13 +299,17 @@ func (s *SceneService) loadSceneToCron(scene models.Scene) error {
 			}
 		} else if condition.ConditionType == "notify" {
 			// 设备触发 启动ekuiper规则
-			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-			defer cancel()
-			common.Ekuiper.StartRule(ctx, scene.Name)
+			go func(name string) {
+				ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+				defer cancel()
+				if err := common.Ekuiper.StartRule(ctx, name); err != nil {
+					// 这里可以选择打印日志，不影响主流程
+					log.Printf("StartRule 异步失败: %v", err)
+				}
+			}(scene.Name)
 			return nil
 		}
 	}
-
 	return fmt.Errorf("场景 %d 没有找到有效的定时条件", scene.Id)
 }
 
