@@ -189,7 +189,7 @@ func validateKafka(opt dtos.KafkaOption) error {
 
 // InfluxDB 测试
 func validateInflux(opt dtos.InfluxOption) error {
-	client := influxdb2.NewClient(opt.Url, opt.Token)
+	client := influxdb2.NewClient(opt.Addr, opt.Token)
 	defer client.Close()
 	_, err := client.Ready(context.Background())
 	if err != nil {
@@ -332,7 +332,7 @@ func sendInflux(opt dtos.InfluxOption, req map[string]interface{}) error {
 	)
 
 	url := fmt.Sprintf("%s/api/v2/write?org=%s&bucket=%s&precision=ns",
-		opt.Url, opt.Username, opt.DatabaseName)
+		opt.Addr, opt.Username, opt.DatabaseName)
 	reqHttp, err := http.NewRequest("POST", url, bytes.NewBuffer([]byte(data)))
 	if err != nil {
 		return err

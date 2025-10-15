@@ -62,7 +62,7 @@ type KafkaOption struct {
 }
 
 type InfluxOption struct {
-	Url          string `json:"url"`
+	Addr         string `json:"addr"`
 	Token        string `json:"token"`
 	Username     string `json:"username"`
 	Password     string `json:"password"`
