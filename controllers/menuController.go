@@ -1,11 +1,15 @@
 package controllers
 
 import (
+	"encoding/json"
+	"fmt"
 	"github.com/beego/beego/v2/client/orm"
 	"iotServer/models"
 	"iotServer/models/dtos"
 	"iotServer/utils"
 	"sort"
+	"strconv"
+	"strings"
 )
 
 type MenuController struct {
@@ -179,15 +183,44 @@ func (c *MenuController) Delete() {
 	if id <= 0 {
 		c.Error(400, "菜单ID无效")
 	}
-	//TODO 删除前检查是否有角色引用该菜单
+
 	o := orm.NewOrm()
+	var roles []models.Role
+	_, err := o.QueryTable(new(models.Role)).All(&roles)
+	if err != nil {
+		c.Error(400, "查询失败: "+err.Error())
+	}
+
+	for _, role := range roles {
+		var roleMenus []RoleMenu
+		if role.Permission != "" {
+			if err := json.Unmarshal([]byte(role.Permission), &roleMenus); err != nil {
+				// 如果解析失败，尝试作为字符串处理
+				if strings.Contains(role.Permission, strconv.FormatInt(id, 10)) {
+					c.Error(400, fmt.Sprintf("该菜单已被角色'%s'引用，无法删除", role.Name))
+				}
+				continue
+			}
+			// 检查是否有匹配的菜单ID
+			if containsMenuId(roleMenus, id) {
+				c.Error(400, fmt.Sprintf("该菜单已被角色'%s'引用，无法删除", role.Name))
+			}
+
+		}
+	}
+
 	// 递归删除菜单及其所有子菜单
-	err := c.deleteMenuRecursive(o, id)
+	err = c.deleteMenuRecursive(o, id)
 	if err != nil {
 		c.Error(400, "删除失败: "+err.Error())
 	}
 
 	c.SuccessMsg()
+}
+
+type RoleMenu struct {
+	Id       int64      `json:"id"`
+	Children []RoleMenu `json:"children"`
 }
 
 func convertStatus(b bool) int {
@@ -307,4 +340,19 @@ func (c *MenuController) deleteMenuRecursive(o orm.Ormer, menuId int64) error {
 	// 删除当前菜单
 	_, err = o.Delete(&models.Menu{Id: menuId})
 	return err
+}
+
+func containsMenuId(roleMenus []RoleMenu, targetId int64) bool {
+	for _, menu := range roleMenus {
+		if menu.Id == targetId {
+			return true
+		}
+		// 递归检查子菜单
+		if len(menu.Children) > 0 {
+			if containsMenuId([]RoleMenu(menu.Children), targetId) {
+				return true
+			}
+		}
+	}
+	return false
 }
