@@ -9,7 +9,6 @@ import (
 	"log"
 	"strconv"
 	"strings"
-	"time"
 )
 
 type TagService struct{}
@@ -299,8 +298,6 @@ func (s *TagService) DevicesTagsTree2(tagName, tagValue string) ([]map[string]in
 
 // 获取设备的所有标签
 func (s *TagService) ListTagsByDevice(path string) (map[string]map[string]string, error) {
-	// 记录查询开始时间
-	startTime := time.Now()
 	// 将路径分割为设备列表
 	devices := strings.Split(path, "/")
 
@@ -336,10 +333,6 @@ func (s *TagService) ListTagsByDevice(path string) (map[string]map[string]string
 			result[device] = tags
 		}
 	}
-	// 记录查询结束时间并计算耗时
-	endTime := time.Now()
-	duration := endTime.Sub(startTime)
-	log.Printf("设备标签查询完成，总耗时: %v，结果: 未查询到设备标签", duration)
 	if len(result) == 0 {
 		return nil, fmt.Errorf("未查询到设备标签")
 	}

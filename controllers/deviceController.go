@@ -127,7 +127,7 @@ func (c *DeviceController) Bind() {
 	}
 
 	// 循环绑定产品ID标签
-	err = services.BindDeviceTags(tagService, req.DeviceName, req.ProductID, product.Name)
+	err = services.BindDeviceTags(tagService, req.DeviceName, req.ProductID, product.Name, req.Tags)
 	if err != nil {
 		c.Error(400, "绑定失败: "+err.Error())
 	}

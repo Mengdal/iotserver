@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func BindDeviceTags(s iotp.TagService, deviceNames []string, productID int64, productName string) error {
+func BindDeviceTags(s iotp.TagService, deviceNames []string, productID int64, productName string, tags map[string]string) error {
 	productIDStr := strconv.FormatInt(productID, 10)
 	nowStr := strconv.FormatInt(time.Now().Unix(), 10)
 
@@ -15,7 +15,7 @@ func BindDeviceTags(s iotp.TagService, deviceNames []string, productID int64, pr
 		if deviceName == "" {
 			continue
 		}
-		tags := map[string]string{
+		initTags := map[string]string{
 			"productName": productName,
 			"productId":   productIDStr,
 			"created":     nowStr,
@@ -23,7 +23,12 @@ func BindDeviceTags(s iotp.TagService, deviceNames []string, productID int64, pr
 			"lastOnline":  "0",
 		}
 
+		// 将 tags 合并到 initTags 中
 		for key, val := range tags {
+			initTags[key] = val
+		}
+
+		for key, val := range initTags {
 			if err := s.AddTag(deviceName, key, val); err != nil {
 				return fmt.Errorf("设备 %s 绑定失败: %v", deviceName, err)
 			}

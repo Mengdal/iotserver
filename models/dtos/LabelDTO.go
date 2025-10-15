@@ -24,10 +24,22 @@ type TagAddRequest struct {
 	TagValue   string `json:"tagValue"`
 }
 
+// TagMultiAddRequest 单个设备多个标签
+type TagMultiAddRequest struct {
+	DeviceName string            `json:"deviceName"`
+	Tags       map[string]string `json:"tags"` // {"tagA":"v1","tagB":"v2"}
+}
+
+// TagBatchAddRequest 多设备多个标签
+type TagBatchAddRequest struct {
+	Devices []TagMultiAddRequest `json:"devices"`
+}
+
 // ProductAddRequest 产品标签添加请求
 type ProductAddRequest struct {
-	ProductID  int64    `json:"productId"`  // 新增产品ID字段
-	DeviceName []string `json:"deviceName"` // 将设备ID改为数组
+	ProductID  int64             `json:"productId"`  // 新增产品ID字段
+	DeviceName []string          `json:"deviceName"` // 将设备ID改为数组
+	Tags       map[string]string `json:"tags"`       // {"tagA":"v1","tagB":"v2"}
 }
 
 // TagRemoveRequest 标签删除请求
