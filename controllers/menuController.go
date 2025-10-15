@@ -34,6 +34,7 @@ func (c *MenuController) List() {
 // @Param   parentId         query    int     false       "父级菜单ID"
 // @Param   permissionList   query    string  false       "按钮权限列表"
 // @Param   meta             query    string  true        "元数据"
+// @Param   priority         query    int     false       "优先级"
 // @Success 200 {object} controllers.SimpleResult "操作成功"
 // @Failure 400 "参数错误或创建失败"
 // @router /create [post]
@@ -45,6 +46,7 @@ func (c *MenuController) Create() {
 	status, _ := c.GetInt("status")
 	typ, _ := c.GetInt("type")
 	parentId, _ := c.GetInt("parentId")
+	priority, _ := c.GetInt("priority")
 	var parentIdPtr *int64
 	if parentId > 0 {
 		temp := int64(parentId)
@@ -71,6 +73,7 @@ func (c *MenuController) Create() {
 		ParentId:       parentIdPtr,
 		PermissionList: permissionList,
 		Meta:           meta,
+		Priority:       priority,
 	}
 
 	if _, err := o.Insert(&menu); err != nil {
@@ -92,6 +95,7 @@ func (c *MenuController) Create() {
 // @Param   parentId         query    int     false       "父级菜单ID"
 // @Param   permissionList   query    string  false       "按钮权限列表"
 // @Param   meta             query    string  true        "元数据"
+// @Param   priority         query    int     false       "优先级"
 // @Success 200 {object} controllers.SimpleResult "操作成功"
 // @Failure 400 "参数错误或更新失败"
 // @router /edit [post]
@@ -175,9 +179,11 @@ func (c *MenuController) Delete() {
 	if id <= 0 {
 		c.Error(400, "菜单ID无效")
 	}
-
+	//TODO 删除前检查是否有角色引用该菜单
 	o := orm.NewOrm()
-	if _, err := o.Delete(&models.Menu{Id: id}); err != nil {
+	// 递归删除菜单及其所有子菜单
+	err := c.deleteMenuRecursive(o, id)
+	if err != nil {
 		c.Error(400, "删除失败: "+err.Error())
 	}
 
@@ -280,4 +286,25 @@ func (c *MenuController) findByName(name string) (*models.Menu, error) {
 		return nil, err
 	}
 	return &menu, nil
+}
+
+// deleteMenuRecursive 递归删除菜单及其所有子菜单
+func (c *MenuController) deleteMenuRecursive(o orm.Ormer, menuId int64) error {
+	// 先查找并删除所有子菜单
+	children, err := c.listByParentId(&menuId)
+	if err != nil {
+		return err
+	}
+
+	// 递归删除每个子菜单
+	for _, child := range children {
+		err = c.deleteMenuRecursive(o, child.Id)
+		if err != nil {
+			return err
+		}
+	}
+
+	// 删除当前菜单
+	_, err = o.Delete(&models.Menu{Id: menuId})
+	return err
 }
