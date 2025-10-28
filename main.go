@@ -129,6 +129,7 @@ func runDev() {
 	initSwagger()
 	common.InitEuiper()
 	controllers.GlobalSceneService.LoadScenesFromDatabase() // 加载场景数据
+	services.LoadAllDeviceCategoryKeys()                    //加载超级表缓存
 	beego.Run()
 }
 
@@ -177,7 +178,8 @@ func (p *program) run() {
 
 	log.Println("【Service】服务已启动...")
 
-	<-p.exitCh // 阻塞直到收到 Stop 信号
+	services.LoadAllDeviceCategoryKeys() //加载超级表缓存
+	<-p.exitCh                           // 阻塞直到收到 Stop 信号
 }
 
 func setWorkingDirectoryToExecPath() {

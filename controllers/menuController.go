@@ -205,7 +205,6 @@ func (c *MenuController) Delete() {
 			if containsMenuId(roleMenus, id) {
 				c.Error(400, fmt.Sprintf("该菜单已被角色'%s'引用，无法删除", role.Name))
 			}
-
 		}
 	}
 

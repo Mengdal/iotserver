@@ -43,7 +43,6 @@ func InitMQTT() {
 	if err := Processor.Init(); err != nil {
 		log.Printf("订阅控制响应失败: %v", err)
 	}
-
 }
 
 func NewSwitchService() *SwitchService {
@@ -89,13 +88,18 @@ func (s *SwitchService) WriteBack(clientID string, data map[string]interface{}) 
 type PropertySetProcessor struct {
 	mqttClient    common.MqttConnector
 	switchService *SwitchService
+	tdWriter      *TDengineWriter
 }
 
 // 创建新的处理器实例
 func NewPropertySetProcessor(mqttClient common.MqttConnector, switchService *SwitchService) *PropertySetProcessor {
+	service, _ := NewTDengineService()
+	writer := service.NewTDengineWriter(2*time.Second, 500)
+	initWorkerPool()
 	return &PropertySetProcessor{
 		mqttClient:    mqttClient,
 		switchService: switchService,
+		tdWriter:      writer,
 	}
 }
 
@@ -128,26 +132,26 @@ func (p *PropertySetProcessor) Init() error {
 	return nil
 }
 
-// 消息处理回调
+// 消息处理回调 - 仅负责接收消息并入队
 func (p *PropertySetProcessor) handleMessage(client mqtt.Client, msg mqtt.Message) {
-	// 确保工作池已初始化
-	workerOnce.Do(func() {
-		initWorkerPool()
-	})
 
+	// 检查是否为保留消息
+	if msg.Retained() {
+		return
+	}
 	topic := msg.Topic()
 	payload := string(msg.Payload())
 
 	// 根据主题选择处理函数
-	var handler func(string, string) error
+	var jobType string
 	if strings.HasPrefix(topic, "lm/gw/ctrlResponse/") {
-		handler = p.processControlResponse
+		jobType = "control_response"
 	} else if strings.HasPrefix(topic, "/edge/event/") && strings.HasSuffix(topic, "/post") {
-		handler = p.processAlertEvent
+		jobType = "alert_event"
 	} else if strings.HasPrefix(topic, "/edge/property/") && strings.HasSuffix(topic, "/post") {
-		handler = p.handlePropertyMessage
+		jobType = "property_message"
 	} else if strings.HasPrefix(topic, "/edge/stream/") && strings.HasSuffix(topic, "/post") {
-		handler = p.handleStreamMessage
+		jobType = "stream_message"
 	} else {
 		log.Printf("未知的主题类型: %s", topic)
 		return
@@ -155,9 +159,10 @@ func (p *PropertySetProcessor) handleMessage(client mqtt.Client, msg mqtt.Messag
 
 	// 将任务提交到工作池
 	job := Job{
-		Topic:   topic,
-		Payload: payload,
-		Handler: handler,
+		Topic:     topic,
+		Payload:   payload,
+		Type:      jobType,
+		Processor: Processor,
 	}
 
 	// 非阻塞地提交任务，如果队列满了就丢弃并记录
@@ -167,24 +172,6 @@ func (p *PropertySetProcessor) handleMessage(client mqtt.Client, msg mqtt.Messag
 	default:
 		log.Printf("任务队列已满，丢弃消息: %s", topic)
 	}
-}
-
-func (p *PropertySetProcessor) process(topic, payload string) error {
-	// 判断是控制响应主题还是报警主题
-	if strings.HasPrefix(topic, "lm/gw/ctrlResponse/") {
-		// 处理控制响应
-		return p.processControlResponse(topic, payload)
-	} else if strings.HasPrefix(topic, "/edge/event/") && strings.HasSuffix(topic, "/post") {
-		// 处理报警事件
-		return p.processAlertEvent(topic, payload)
-	} else if strings.HasPrefix(topic, "/edge/property/") && strings.HasSuffix(topic, "/post") {
-		// 处理实时数据
-		return p.handlePropertyMessage(topic, payload)
-	} else if strings.HasPrefix(topic, "/edge/stream/") && strings.HasSuffix(topic, "/post") {
-		// 处理设备状态
-		return p.handleStreamMessage(topic, payload)
-	}
-	return fmt.Errorf("未知的主题类型: %s", topic)
 }
 
 // 处理控制响应
@@ -209,43 +196,6 @@ func (p *PropertySetProcessor) processControlResponse(topic, payload string) err
 	return p.switchService.WriteBack(clientID, object)
 }
 
-// 处理报警事件
-func (p *PropertySetProcessor) processAlertEvent(topic, payload string) error {
-	// 确保事件处理工作池已初始化
-	eventWorkerOnce.Do(func() {
-		initEventWorkerPool()
-	})
-
-	// 从主题中提取设备ID
-	parts := strings.Split(topic, "/")
-	if len(parts) < 3 {
-		return fmt.Errorf("报警主题格式错误: %s", topic)
-	}
-
-	// 解析JSON
-	var alertData map[string]interface{}
-	if err := json.Unmarshal([]byte(payload), &alertData); err != nil {
-		return fmt.Errorf("报警JSON解析失败: %v", err)
-	}
-
-	// 将事件处理任务提交到工作池
-	job := EventJob{
-		Topic: topic,
-		Data:  alertData,
-	}
-
-	// 非阻塞地提交任务
-	select {
-	case eventJobQueue <- job:
-		// 任务提交成功
-	default:
-		// 任务队列已满，记录警告但不返回错误，避免阻塞消息处理
-		log.Printf("警告: 事件处理队列已满，丢弃事件: %s", topic)
-	}
-
-	return nil
-}
-
 // 转发实时数据主题
 func (p *PropertySetProcessor) handlePropertyMessage(topic, payload string) error {
 	// 提取SN
@@ -254,20 +204,23 @@ func (p *PropertySetProcessor) handlePropertyMessage(topic, payload string) erro
 		return fmt.Errorf("主题格式错误:%v", topic)
 	}
 	sn := parts[3]
-	// 解析原始数组数据
-	var arr []struct {
-		Dn         string                 `json:"dn"`
-		Properties map[string]interface{} `json:"properties"`
-		Time       int64                  `json:"time"`
-	}
+	// 解析数组数据
+	var arr []MqttMessage
 	if err := json.Unmarshal([]byte(payload), &arr); err != nil {
 		return fmt.Errorf("JSON解析失败:%v", err)
 	}
 
-	// 确保转发工作池已初始化
-	forwardWorkerOnce.Do(func() {
-		initForwardWorkerPool(p.mqttClient)
-	})
+	// 或者完全异步处理，不等待写入完成
+	for _, m := range arr {
+		go func(msg MqttMessage) {
+			defer func() {
+				if r := recover(); r != nil {
+					log.Printf("TDengine 写入 panic: %v", r)
+				}
+			}()
+			p.tdWriter.Add(msg)
+		}(m)
+	}
 
 	// 为每个item创建转发任务
 	for _, item := range arr {
@@ -298,20 +251,11 @@ func (p *PropertySetProcessor) handlePropertyMessage(topic, payload string) erro
 			{fmt.Sprintf("/edge/event/%s/post", sn)},
 		}
 
-		// 将转发任务提交到转发工作池
 		for _, task := range tasks {
-			job := ForwardJob{
-				Topic:   task.topic,
-				Payload: newPayload,
-				Client:  p.mqttClient,
-			}
-
-			// 非阻塞提交任务
-			select {
-			case forwardJobQueue <- job:
-				log.Printf("转发任务已提交到队列: %s", task.topic)
-			default:
-				log.Printf("转发任务队列已满，丢弃任务: %s", task.topic)
+			if err := p.mqttClient.Publish(task.topic, 0, newPayload); err != nil {
+				log.Printf("消息转发失败: %s -- %v", task.topic, err)
+			} else {
+				log.Printf("消息转发完成: %s", task.topic)
 			}
 		}
 	}

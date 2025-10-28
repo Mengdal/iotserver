@@ -127,11 +127,13 @@ func (c *DeviceController) Bind() {
 	}
 
 	// 循环绑定产品ID标签
-	err = services.BindDeviceTags(tagService, req.DeviceName, req.ProductID, product.Name, req.Tags)
+	err = services.BindDeviceTags(tagService, req.DeviceName, req.ProductID, product.Name, product.Key, product.CategoryId, req.Tags)
 	if err != nil {
 		c.Error(400, "绑定失败: "+err.Error())
 	}
 	c.Success("批量绑定成功")
+	// 加载超级表缓存
+	services.LoadAllDeviceCategoryKeys()
 }
 
 // Delete @Title 删除设备

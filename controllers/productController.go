@@ -178,13 +178,13 @@ func (c *ProductController) Create() {
 	_ = product.BeforeInsert()
 
 	//用户选择了标准品类
+	var properties []*models.Properties
+	var events []*models.Events
+	var actions []*models.Actions
 	if categoryId != 0 {
 		// 初始化物模型数据
-		var properties []*models.Properties
-		var events []*models.Events
-		var actions []*models.Actions
 		//TODO 初步处理标准模型的生成 event及actions未处理
-		err := services.ParseThingModelToEntities(categoryId, o, &properties, &events, &actions)
+		_, err := services.ParseThingModelToEntities(categoryId, o, &properties, &events, &actions)
 		if err != nil {
 			c.Error(400, err.Error())
 		}
@@ -302,11 +302,10 @@ func (c *ProductController) Update() {
 			var actions []*models.Actions
 
 			// 解析并生成新的物模型实体
-			err := services.ParseThingModelToEntities(categoryId, o, &properties, &events, &actions)
+			_, err := services.ParseThingModelToEntities(categoryId, o, &properties, &events, &actions)
 			if err != nil {
 				c.Error(400, "解析新物模型失败: "+err.Error())
 			}
-
 			// 保存新的物模型数据
 			for _, property := range properties {
 				property.Product = &product // 关联到当前产品
@@ -342,6 +341,28 @@ func (c *ProductController) Update() {
 	if err != nil {
 		c.Error(400, "更新失败")
 	}
+
+	// 同步生成超级表 1、创建产品时生成对应的超级表 2、上传的设备找到对应的超级表 3、产品标签打上分组
+	// 子表名称使用若为系统模型或自定义模型Key
+	service, err := services.NewTDengineService()
+	category := models.Category{Id: categoryId}
+	var categoryKey string
+	if o.Read(&category) == nil {
+		categoryKey = category.CategoryKey
+	} else {
+		categoryKey = product.Key
+	}
+	// 产品发布时 创建超级表
+	if status {
+		var properties []*models.Properties
+		_, err = o.QueryTable(new(models.Properties)).Filter("product_id", id).All(&properties)
+
+		err = service.UpdateSuperTableSchema(services.DBName, categoryKey, properties)
+		if err != nil {
+			c.Error(500, "创建超级表失败: "+err.Error())
+		}
+	}
+
 	c.SuccessMsg()
 }
 

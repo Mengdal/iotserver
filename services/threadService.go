@@ -1,10 +1,10 @@
 package services
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/beego/beego/v2/client/orm"
-	"iotServer/common"
 	"iotServer/iotp"
 	"iotServer/models"
 	"iotServer/models/constants"
@@ -17,42 +17,23 @@ import (
 
 // 定义全局的工作池参数
 var (
-	workerPoolSize    = 50                           // 工作协程数量
-	jobQueue          = make(chan Job, 10000)        // 任务队列
-	workerOnce        sync.Once                      // 确保工作池只初始化一次
-	forwardWorkerPool = 50                           // 专门用于转发的工作协程数量
-	forwardJobQueue   = make(chan ForwardJob, 10000) // 转发任务队列
-	forwardWorkerOnce sync.Once                      // 确保转发工作池只初始化一次
+	workerPoolSize = 100                   // 工作协程数量
+	jobQueue       = make(chan Job, 10000) // 任务队列
 	// 设备状态缓存相关
 	deviceStatusCache = make(map[string]int64) // 设备ID -> 最后更新时间戳
 	cacheMutex        sync.RWMutex             // 保护缓存的读写锁
-	cacheTTL          = 24 * time.Hour         // 缓存有效期
+	cacheTTL          = 1 * time.Hour          // 缓存有效期
 	maxCacheSize      = 10000                  // 缓存最大条目数
-	// 事件处理相关
-	eventWorkerOnce sync.Once
-	eventJobQueue   = make(chan EventJob, 1000) // 事件处理任务队列
-	eventWorkerSize = 20                        // 事件处理工作协程数量
-	eventCache      = sync.Map{}
+	eventCache        = sync.Map{}             // 事件缓存
+	StableCache       = sync.Map{}             // 超级表缓存
 )
 
 // 定义消息处理任务结构
 type Job struct {
-	Topic   string
-	Payload string
-	Handler func(string, string) error
-}
-
-// 定义转发任务结构
-type ForwardJob struct {
-	Topic   string
-	Payload []byte
-	Client  common.MqttConnector
-}
-
-// EventJob 事件处理任务结构
-type EventJob struct {
-	Topic string
-	Data  map[string]interface{}
+	Topic     string
+	Payload   string
+	Type      string
+	Processor *PropertySetProcessor
 }
 
 // 初始化消息处理工作池
@@ -63,63 +44,50 @@ func initWorkerPool() {
 	log.Printf("已启动 %d 个工作协程处理MQTT消息", workerPoolSize)
 }
 
-// 初始化转发工作池
-func initForwardWorkerPool(client common.MqttConnector) {
-	for i := 0; i < forwardWorkerPool; i++ {
-		go forwardWorker(forwardJobQueue, client)
-	}
-	log.Printf("已启动 %d 个工作协程处理转发任务", forwardWorkerPool)
-}
+// 在 worker 函数中根据任务类型处理不同业务
+func worker(jobs <-chan Job) {
+	for job := range jobs {
+		start := time.Now()
 
-// 初始化事件处理工作池
-func initEventWorkerPool() {
-	for i := 0; i < eventWorkerSize; i++ {
-		go eventWorker(eventJobQueue)
-	}
-	log.Printf("已启动 %d 个事件处理工作协程", eventWorkerSize)
-}
+		// 用 context 控制超时
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		done := make(chan error, 1)
 
-// 消息处理工作协程
-func worker(jobQueue <-chan Job) {
-	for job := range jobQueue {
-		func() {
+		go func() {
 			defer func() {
 				if r := recover(); r != nil {
-					log.Printf("Worker处理任务时发生panic: %v", r)
+					log.Printf("Worker panic: %v, topic=%s", r, job.Topic)
+					done <- fmt.Errorf("panic: %v", r)
 				}
 			}()
 
-			start := time.Now()
-			log.Printf("开始处理消息: %s", job.Topic)
-
-			if err := job.Handler(job.Topic, job.Payload); err != nil {
-				log.Printf("消息处理失败: %s -- %v", job.Topic, err)
-			} else {
-				log.Printf("消息处理完成: %s (耗时: %v)", job.Topic, time.Since(start))
+			var err error
+			switch job.Type {
+			case "control_response":
+				err = job.Processor.processControlResponse(job.Topic, job.Payload)
+			case "alert_event":
+				err = processAlertEventJob(job.Topic, job.Payload)
+			case "property_message":
+				err = job.Processor.handlePropertyMessage(job.Topic, job.Payload)
+			case "stream_message":
+				err = job.Processor.handleStreamMessage(job.Topic, job.Payload)
+			default:
+				err = fmt.Errorf("未知任务类型: %s", job.Type)
 			}
+			done <- err
 		}()
-	}
-}
 
-// 转发工作协程
-func forwardWorker(jobQueue <-chan ForwardJob, client common.MqttConnector) {
-	for job := range jobQueue {
-		func() {
-			defer func() {
-				if r := recover(); r != nil {
-					log.Printf("ForwardWorker处理任务时发生panic: %v", r)
-				}
-			}()
-
-			start := time.Now()
-			log.Printf("开始转发消息: %s", job.Topic)
-
-			if err := client.Publish(job.Topic, 0, job.Payload); err != nil {
-				log.Printf("消息转发失败: %s -- %v", job.Topic, err)
+		select {
+		case err := <-done:
+			if err != nil {
+				log.Printf("[Worker] 任务失败: %v, 类型=%s", err, job.Type)
 			} else {
-				log.Printf("消息转发完成: %s (耗时: %v)", job.Topic, time.Since(start))
+				log.Printf("[Worker] 任务完成 [%s], 耗时=%v", job.Topic, time.Since(start))
 			}
-		}()
+		case <-ctx.Done():
+			log.Printf("[Worker] ⚠️任务超时 [%s]", job.Topic)
+		}
+		cancel()
 	}
 }
 
@@ -191,31 +159,14 @@ func cleanupExpiredCacheEntries() {
 	log.Printf("清理了 %d 个过期设备状态缓存条目", len(expiredKeys))
 }
 
-// 事件处理工作协程
-func eventWorker(jobQueue <-chan EventJob) {
-	// 每个worker拥有自己的数据库连接
-	o := orm.NewOrm()
-
-	for job := range jobQueue {
-		func() {
-			defer func() {
-				if r := recover(); r != nil {
-					log.Printf("事件处理工作协程发生panic: %v", r)
-				}
-			}()
-
-			start := time.Now()
-			if err := processAlertEventJob(job.Topic, job.Data, o); err != nil {
-				log.Printf("事件处理失败: %s -- %v", job.Topic, err)
-			} else {
-				log.Printf("事件处理完成: %s (耗时: %v)", job.Topic, time.Since(start))
-			}
-		}()
-	}
-}
-
 // processAlertEventJob 处理单个事件任务
-func processAlertEventJob(topic string, alertData map[string]interface{}, o orm.Ormer) error {
+func processAlertEventJob(topic string, alerts string) error {
+	var alertData map[string]interface{}
+	err := json.Unmarshal([]byte(alerts), &alertData)
+	if err != nil {
+		return err
+	}
+	o := orm.NewOrm()
 	// tag只有从网关发出才有，其他情况从实时主题转发过来，查询是否为事件后通知
 	point := alertData["tag"]
 	out := make(map[string]interface{})

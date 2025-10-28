@@ -15,16 +15,16 @@ func ParseThingModelToEntities(
 	properties *[]*models.Properties,
 	events *[]*models.Events,
 	actions *[]*models.Actions,
-) error {
+) (string, error) {
 	// 查询品类信息
 	var category models.Category
 	if err := o.QueryTable(new(models.Category)).Filter("id", categoryId).One(&category); err != nil {
-		return fmt.Errorf("物模型不存在")
+		return "", fmt.Errorf("物模型不存在")
 	}
 	// 查询物模型信息
 	var thingModel models.ThingModel
 	if err := o.QueryTable(new(models.ThingModel)).Filter("category_key", category.CategoryKey).One(&thingModel); err != nil {
-		return fmt.Errorf("物模型不存在")
+		return "", fmt.Errorf("物模型不存在")
 	}
 	// 解析ThingModelJSON，提取properties、events、actions
 	if thingModel.ThingModelJson != "" {
@@ -196,7 +196,7 @@ func ParseThingModelToEntities(
 			}
 		}
 	}
-	return nil
+	return category.CategoryKey, nil
 }
 
 // 辅助函数
