@@ -12,6 +12,7 @@ import (
 // DeviceController 设备管理控制器
 type DeviceController struct {
 	BaseController
+	service services.DevicesService
 }
 
 var tagService = iotp.TagService{}
@@ -29,7 +30,7 @@ func (c *DeviceController) GetAllDevices() {
 	page, _ := c.GetInt("page", 1)
 	size, _ := c.GetInt("size", 10)
 
-	devices, err := tagService.GetAllDevices(page, size)
+	devices, err := c.service.GetAllDevices(page, size)
 	if err != nil {
 		c.Error(400, "获取设备列表失败: "+err.Error())
 	}
@@ -37,14 +38,14 @@ func (c *DeviceController) GetAllDevices() {
 	c.Success(devices)
 }
 
-// GetDevicesTree @Title 获取设备树
+// GetTagsTree @Title 获取设备点树(iotEdgeDB)
 // @Description 根据传入产品获取点树
 // @Param   Authorization  header  string  true  "Bearer YourToken"
 // @Param   productId      query   string  true  "产品ID"
 // @Success 200 {object} controllers.SimpleResult "返回结果树"
 // @Failure 400 "错误信息"
 // @router /getTagsTree [post]
-func (c *DeviceController) GetDevicesTree() {
+func (c *DeviceController) GetTagsTree() {
 	productId := c.GetString("productId")
 	data, err := tagService.DevicesTagsTree2("productId", productId)
 	if err != nil {
@@ -53,7 +54,21 @@ func (c *DeviceController) GetDevicesTree() {
 	c.Success(data)
 }
 
-// GetNoBindDevices @Title 查询未绑定设备
+// GetDevicesTree @Title 获取设备树
+// @Description 根据传入产品设备树
+// @Param   Authorization  header  string  true  "Bearer YourToken"
+// @Success 200 {object} controllers.SimpleResult "返回结果树"
+// @Failure 400 "错误信息"
+// @router /getDevicesTree [post]
+func (c *DeviceController) GetDevicesTree() {
+	data, err := c.service.GetDevicesTree()
+	if err != nil {
+		c.Error(400, err.Error())
+	}
+	c.Success(data)
+}
+
+// GetNoBindDevices @Title 查询未绑定设备(iotEdgeDB)
 // @Description 添加设备时查询未绑定产品的设备
 // @Param   Authorization  header  string  true  "Bearer YourToken"
 // @Success 200 {object} controllers.SimpleResult
@@ -69,7 +84,7 @@ func (c *DeviceController) GetNoBindDevices() {
 	c.Success(devices)
 }
 
-// Update @Title 设备标签
+// Update @Title 设备标签(iotEdgeDB)
 // @Description 给指定设备打上标签信息，如果key值相同则为更新操作
 // @Param   Authorization  header  string  true  "Bearer YourToken"
 // @Param   body    	   body    dtos.TagAddRequest  true  "更新内容"
@@ -131,9 +146,9 @@ func (c *DeviceController) Bind() {
 	if err != nil {
 		c.Error(400, "绑定失败: "+err.Error())
 	}
-	c.Success("批量绑定成功")
 	// 加载超级表缓存
-	services.LoadAllDeviceCategoryKeys()
+	go services.LoadAllDeviceCategoryKeys()
+	c.Success("批量绑定成功")
 }
 
 // Delete @Title 删除设备
@@ -149,7 +164,8 @@ func (c *DeviceController) Delete() {
 		c.Error(400, "设备ID不能为空")
 	}
 
-	err := tagService.DeleteDevices(deviceID)
+	//err := tagService.DeleteDevices(deviceID)
+	err := c.service.DeleteDevice(deviceID)
 	if err != nil {
 		c.Error(400, "删除设备失败: "+err.Error())
 	}
