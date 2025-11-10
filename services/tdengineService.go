@@ -69,7 +69,7 @@ func (t *TDengineService) NewTDengineWriter(flushInterval time.Duration, maxBatc
 
 // 创建数据库
 func (t *TDengineService) CreateDatabase(dbName string) error {
-	query := fmt.Sprintf("CREATE DATABASE IF NOT EXISTS %s", dbName)
+	query := fmt.Sprintf("CREATE DATABASE IF NOT EXISTS %s KEEP 3650", dbName)
 	_, err := t.db.Exec(query)
 	return err
 }
@@ -79,11 +79,11 @@ func (t *TDengineService) CreateStable(dbName, stableName, schema string, tags s
 	var query string
 	if tags == "" {
 		// 无标签的超级表
-		query = fmt.Sprintf("CREATE STABLE IF NOT EXISTS %s.%s (%s) TAGS (`tag` BINARY(64))",
+		query = fmt.Sprintf("CREATE STABLE IF NOT EXISTS %s.`%s` (%s) TAGS (`tag` BINARY(64))",
 			dbName, stableName, schema)
 	} else {
 		// 有标签的超级表
-		query = fmt.Sprintf("CREATE STABLE IF NOT EXISTS %s.%s (%s) TAGS (%s)",
+		query = fmt.Sprintf("CREATE STABLE IF NOT EXISTS %s.`%s` (%s) TAGS (%s)",
 			dbName, stableName, schema, tags)
 	}
 	_, err := t.db.Exec(query)
@@ -294,6 +294,7 @@ func containsColumn(columns []string, columnName string) bool {
 // UpdateSuperTableSchema 方法中添加超级表更新逻辑
 func (t *TDengineService) UpdateSuperTableSchema(dbName, stableName string, newProperties []*models.Properties) error {
 	// 获取现有列名
+	t.CreateDatabase(dbName)
 	existingColumns, err := t.getExistingColumns(dbName, stableName)
 	if err != nil {
 		// 如果是表不存在的错误，则创建超级表
@@ -403,99 +404,6 @@ func GetDeviceCategoryKeyFromCache(deviceName string) (string, bool) {
 		}
 	}
 	return "", false
-}
-
-func SyncCreateStable(categoryKey string) {
-	service, err := NewTDengineService()
-	if err != nil {
-		panic(err)
-	}
-	defer service.Close()
-
-	// 创建数据库
-	err = service.CreateDatabase(DBName)
-	if err != nil {
-		fmt.Println("创建数据库失败:", err)
-		return
-	}
-
-	// 创建超级表
-	schema := "ts TIMESTAMP, current FLOAT, voltage INT, phase FLOAT"
-	tags := "location BINARY(64), groupId INT"
-	err = service.CreateStable(DBName, categoryKey, schema, tags)
-	if err != nil {
-		fmt.Println("创建超级表失败:", err)
-		return
-	}
-
-	// 创建子表 存在
-	//tagsValue := []services.Tag{
-	//	{"location", "beijing"},
-	//	{"groupId", 1},
-	//}
-	//err = service.CreateTable("power", "meters", "meter_beijing_001", tagsValue)
-	//if err != nil {
-	//	fmt.Printf("创建子表失败: %v\n", err)
-	//	return
-	//}
-
-	//data := map[string]interface{}{
-	//	"ts":      time.Now(),
-	//	"current": 10.5,
-	//	"voltage": 220,
-	//	"phase":   1.2,
-	//}
-	//err = service.InsertSingleData("power.meter_beijing_001", data)
-	//if err != nil {
-	//	fmt.Printf("插入数据失败: %v\n", err)
-	//}
-
-	// 2. 定义每个超级表对应字段
-	//stableColumns := map[string][]string{
-	//	"Sensor": {"light1", "light2", "sensor"},
-	//	"system": {"IOPoints", "START_TIME", "TIME", "TIME_MINUTE", "TIME_SECOND"},
-	//}
-
-	//// 3. 初始化写入器（2 秒刷一次缓冲，最多 500 条就立即写）
-	//writer := service.NewTDengineWriter(2*time.Second, 500)
-	//
-	//// 4. 模拟 MQTT 数据
-	//msgs := []services.MqttMessage{
-	//	{
-	//		Dn: "meter_beijing_001",
-	//		Properties: map[string]interface{}{
-	//			"ts":      time.Now(),
-	//			"current": 10.51,
-	//			"voltage": 221,
-	//			"phase":   1.3,
-	//		},
-	//		Time: time.Now().UnixNano() / 1e6,
-	//	},
-	//	{
-	//		Dn: "Sensor",
-	//		Properties: map[string]interface{}{
-	//			"light1": 1,
-	//			"light2": 0,
-	//			"sensor": 0,
-	//		},
-	//		Time: time.Now().UnixNano() / 1e6, // 毫秒时间戳
-	//	},
-	//	{
-	//		Dn: "system",
-	//		Properties: map[string]interface{}{
-	//			"IOPoints":    "20",
-	//			"START_TIME":  "2025-10-16 14:37:37",
-	//			"TIME":        "2025-10-16 16:37:06",
-	//			"TIME_MINUTE": "37",
-	//			"TIME_SECOND": "6",
-	//		},
-	//		Time: time.Now().UnixNano() / 1e6,
-	//	},
-	//}
-	//
-	//for _, m := range msgs {
-	//	writer.Add(m)
-	//}
 }
 
 // DemoConnect 连接示例
