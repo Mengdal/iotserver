@@ -22,7 +22,7 @@ type ThingModelProperties struct {
 	AccessModel constants.AccessModel `json:"access_model" example:"R" description:"访问模式：R/RW"`
 	Require     bool                  `json:"require" example:"true" description:"是否必填"`
 	DataType    constants.SpecsType   `json:"type" example:"int" description:"数据类型：int/float/string/bool/double/enum..."`
-	TypeSpec    interface{}           `json:"specs" description:"{\"min\":\"-40\",\"max\":\"120\",\"step\":\"0.01\",\"unit\":\"℃\",\"unitName\":\"摄氏度\"}" description:"字段规格(JSON字符串)"`
+	TypeSpec    interface{}           `json:"specs" description:"{\"min\":\"-40\",\"max\":\"120\",\"step\":\"0.01\",\"unit\":\"℃\",\"unitName\":\"摄氏度\",\"valueType\":\"(S:瞬时量，L:累积量，K:开关量, C:产量，YL:用量)\"}" description:"字段规格(JSON字符串)"`
 }
 
 type ThingModelEvents struct {
