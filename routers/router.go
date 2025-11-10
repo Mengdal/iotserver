@@ -91,6 +91,27 @@ func init() {
 				&controllers.UdfController{},
 			),
 		),
+		beego.NSNamespace("/report",
+			beego.NSInclude(
+				&controllers.ReportController{},
+			),
+		),
+		beego.NSNamespace("/position",
+			beego.NSInclude(
+				&controllers.PositionController{},
+			),
+		),
+
+		beego.NSNamespace("/group",
+			beego.NSInclude(
+				&controllers.GroupController{},
+			),
+		),
+		beego.NSNamespace("/project",
+			beego.NSInclude(
+				&controllers.ProjectController{},
+			),
+		),
 	)
 	beego.AddNamespace(ns)
 }

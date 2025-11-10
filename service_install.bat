@@ -163,6 +163,7 @@ docker rm -f ekuiper 2>nul
 
 docker run -d --name ekuiper ^
     --restart unless-stopped ^
+    -e MQTT_SOURCE__DEFAULT__SERVER="tcp://host.docker.internal:1883" ^
     -p 9081:9081 ^
     lfedge/ekuiper:latest
 
