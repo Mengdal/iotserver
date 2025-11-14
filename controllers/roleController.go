@@ -234,6 +234,13 @@ func CheckModelOwnership(o orm.Ormer, model string, resourceID int64, userID int
 			return false
 		}
 		resourceUserID = u.Id
+	case "project":
+		var d models.Project
+		if err := o.QueryTable("project").Filter("id", resourceID).One(&d); err != nil {
+			fmt.Println("CheckModelOwnership: 查询 project 失败:", err)
+			return false
+		}
+		resourceUserID = d.Id
 	default:
 		fmt.Println("CheckModelOwnership: 不支持的模型:", model)
 		return false
