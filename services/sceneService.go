@@ -457,14 +457,7 @@ func (s *SceneService) AllDeviceStatusCron() error {
 
 	// 查询设备上次在线时间
 	for _, device := range devices {
-		key, err := tagService.GetTagValue(device, "lastOnline")
-		if err != nil {
-			return fmt.Errorf(err.Error())
-		}
-		lastOnline, err := strconv.ParseInt(key, 10, 64)
-		if err != nil {
-			return fmt.Errorf(err.Error())
-		}
+		lastOnline := deviceStatusCache[device]
 		// 如果最后在线时间距离现在超过1小时，则标记为离线
 		if currentTime-lastOnline > 3600 { // 3600秒 = 1小时
 			// 更新设备状态为离线(假设"0"表示离线，"1"表示在线)

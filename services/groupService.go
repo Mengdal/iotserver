@@ -93,9 +93,9 @@ func (s *GroupService) BatchGroup(projectId, groupId int64, deviceIds string) er
 		return err
 	}
 
-	// 批量更新设备的group外键
+	//TODO 批量更新设备的group外键
 	num, err := o.QueryTable(new(models.Device)).
-		Filter("project_id", projectId).
+		//Filter("project_id", projectId).
 		Filter("id__in", ids).
 		Update(orm.Params{
 			"group_id": groupId,
@@ -113,9 +113,9 @@ func (s *GroupService) UnBatchGroup(projectId int64, deviceIds string) error {
 		return err
 	}
 
-	// 批量更新设备，将group_id设置为null或0来解绑
+	//TODO 批量更新设备，将group_id设置为null或0来解绑
 	_, err = o.QueryTable(new(models.Device)).
-		Filter("project_id", projectId).
+		//Filter("project_id", projectId).
 		Filter("id__in", ids).
 		Update(orm.Params{
 			"group_id": nil, // 或者使用 0，取决于你的数据库设计

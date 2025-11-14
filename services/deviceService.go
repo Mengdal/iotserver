@@ -10,16 +10,32 @@ import (
 	"iotServer/utils"
 	"strconv"
 	"sync"
+	"time"
 )
 
 // DevicesService 设备管理服务
 type DevicesService struct{}
 
 // GetAllDevices 获取所有设备（分页）
-func (s *DevicesService) GetAllDevices(page, size int) (*utils.PageResult, error) {
+func (s *DevicesService) GetAllDevices(page, size int, productId int64, status, name string) (*utils.PageResult, error) {
 	var devices []*models.Device
 	o := orm.NewOrm()
 	query := o.QueryTable(new(models.Device)).RelatedSel("Product", "Position", "Group")
+
+	// 按产品ID筛选
+	if productId > 0 {
+		query = query.Filter("product_id", productId)
+	}
+
+	// 按状态筛选
+	if status != "" {
+		query = query.Filter("status", status)
+	}
+
+	// 按名称模糊查询
+	if name != "" {
+		query = query.Filter("name__icontains", name)
+	}
 
 	result, err := utils.Paginate(query, page, size, &devices)
 	if err != nil {
@@ -208,13 +224,13 @@ func BindDeviceTags(s iotp.TagService, deviceNames []string, productID int64, pr
 			defer wg.Done()
 			defer func() { <-semaphore }() // 释放并发槽
 
-			// 绑定 IOTP 设备标签 暂时废弃
-			/*		productIDStr := strconv.FormatInt(productID, 10)
-					nowStr := strconv.FormatInt(time.Now().Unix(), 10)
-					if err := bindIOTPDevice(s, deviceName, productIDStr, productName, nowStr, tags); err != nil {
-						errChan <- fmt.Errorf("设备 %s 标签绑定失败: %v", deviceName, err)
-						return
-					}*/
+			// 绑定 IOTP 设备标签
+			productIDStr := strconv.FormatInt(productID, 10)
+			nowStr := strconv.FormatInt(time.Now().Unix(), 10)
+			if err := bindIOTPDevice(s, deviceName, productIDStr, productName, nowStr, tags); err != nil {
+				errChan <- fmt.Errorf("设备 %s 标签绑定失败: %v", deviceName, err)
+				return
+			}
 
 			// 创建 / 更新 TDengine 子表
 			if err := BindTDDevice(t, o, deviceName, productID, productKey, categoryId, tags); err != nil {
@@ -232,21 +248,25 @@ func BindDeviceTags(s iotp.TagService, deviceNames []string, productID int64, pr
 	return nil
 }
 func bindIOTPDevice(s iotp.TagService, deviceName, productIDStr, productName, nowStr string, tags map[string]string) error {
-	initTags := map[string]string{
-		"productName": productName,
-		"productId":   productIDStr,
-		"created":     nowStr,
-		"status":      "0",
-		"lastOnline":  "0",
-	}
-	// 将 tags 合并到 initTags 中
-	for key, val := range tags {
-		initTags[key] = val
-	}
-	for key, val := range initTags {
-		if err := s.AddTag(deviceName, key, val); err != nil {
-			return fmt.Errorf("设备 %s 绑定失败: %v", deviceName, err)
+	/*	initTags := map[string]string{
+			"productName": productName,
+			"productId": productIDStr,
+			"created":     nowStr,
+			"status":      "0",
+			"lastOnline":  "0",
 		}
+		// 将 tags 合并到 initTags 中
+		for key, val := range tags {
+			initTags[key] = val
+		}
+		for key, val := range initTags {
+			if err := s.AddTagEdge(deviceName, key, val); err != nil {
+				return fmt.Errorf("设备 %s 绑定失败: %v", deviceName, err)
+			}
+		}*/
+	// 只保留 productId 标签
+	if err := s.AddTagEdge(deviceName, "productId", productIDStr); err != nil {
+		return fmt.Errorf("设备 %s 绑定失败: %v", deviceName, err)
 	}
 	return nil
 }

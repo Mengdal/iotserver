@@ -22,6 +22,9 @@ var tagService = iotp.TagService{}
 // @Param   Authorization  header  string  true  "Bearer YourToken"
 // @Param   page           query   int     false "当前页码，默认1"
 // @Param   size           query   int     false "每页数量，默认10"
+// @Param   productId      query   int64   false "产品ID"
+// @Param   status         query   string  false "设备状态"
+// @Param   name           query   string  false "设备名称(模糊查询)
 // @Success 200 {object} controllers.SimpleResult
 // @Failure 400 "请求错误"
 // @router /all [post]
@@ -29,8 +32,11 @@ func (c *DeviceController) GetAllDevices() {
 
 	page, _ := c.GetInt("page", 1)
 	size, _ := c.GetInt("size", 10)
+	productId, _ := c.GetInt64("productId")
+	status := c.GetString("status")
+	name := c.GetString("name")
 
-	devices, err := c.service.GetAllDevices(page, size)
+	devices, err := c.service.GetAllDevices(page, size, productId, status, name)
 	if err != nil {
 		c.Error(400, "获取设备列表失败: "+err.Error())
 	}
@@ -47,7 +53,7 @@ func (c *DeviceController) GetAllDevices() {
 // @router /getTagsTree [post]
 func (c *DeviceController) GetTagsTree() {
 	productId := c.GetString("productId")
-	data, err := tagService.DevicesTagsTree2("productId", productId)
+	data, err := tagService.DevicesTagsTree2("product_id", productId)
 	if err != nil {
 		c.Error(400, err.Error())
 	}

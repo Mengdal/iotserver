@@ -289,7 +289,7 @@ func (p *PropertySetProcessor) handleStreamMessage(topic, payload string) error 
 			dn = dn + sn
 		}
 		// - 数据持久化 使用线程服务更新设备状态，避免频繁查询
-		UpdateDeviceStatus(dn, tagService)
+		UpdateDeviceStatus(sn, dn, tagService)
 	}
 
 	return nil

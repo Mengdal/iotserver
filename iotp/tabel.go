@@ -176,32 +176,41 @@ func (s *TagService) DeleteDevices(deviceNames ...string) error {
 
 // 获取拥有指定标签值的所有设备
 func (s *TagService) ListDevicesByTag(tagName, tagValue string) ([]string, error) {
-	url := fmt.Sprintf("http://%s/tag/listDevices/%s/%s",
-		IoTPServer,
-		s.escapePathSegment(tagName),
-		s.escapePathSegment(tagValue))
+	o := orm.NewOrm()
+	var devices []*models.Device
 
-	data, err := HttpGet(url)
-	if err != nil {
-		log.Printf("查询设备列表失败: %v", err)
-		return nil, fmt.Errorf("API请求失败: %v", err)
+	// 直接使用 tagName 作为字段名进行查询
+	o.QueryTable(new(models.Device)).Filter(tagName, tagValue).All(&devices)
+
+	// 提取设备名称
+	deviceNames := make([]string, len(devices))
+	for i, device := range devices {
+		deviceNames[i] = device.Name
 	}
 
-	// 解析新的响应结构
-	var response struct {
-		Devices []string `json:"devices"`
-		Info    string   `json:"info"`
-	}
-	if err := json.Unmarshal([]byte(data), &response); err != nil {
-		return nil, fmt.Errorf("解析响应失败: %v", err)
-	}
+	return deviceNames, nil
+	// IoTp 标签设备查询
+	/*	url := fmt.Sprintf("http://%s/tag/listDevices/%s/%s",
+			IoTPServer,
+			s.escapePathSegment(tagName),
+			s.escapePathSegment(tagValue))
 
-	// 检查是否有错误信息
-	//if response.Info != "" && response.Info != "OK" {
-	//	return nil, fmt.Errorf("API返回错误: %s", response.Info)
-	//}
+		data, err := HttpGet(url)
+		if err != nil {
+			log.Printf("查询设备列表失败: %v", err)
+			return nil, fmt.Errorf("API请求失败: %v", err)
+		}
 
-	return response.Devices, nil
+		// 解析新的响应结构
+		var response struct {
+			Devices []string `json:"devices"`
+			Info    string   `json:"info"`
+		}
+		if err := json.Unmarshal([]byte(data), &response); err != nil {
+			return nil, fmt.Errorf("解析响应失败: %v", err)
+		}
+
+		return response.Devices, nil*/
 }
 
 // DevicesTagsTree 获取拥有指定标签值的设备树 V1
@@ -360,29 +369,101 @@ func (s *TagService) listTagsByDeviceBatch(path string) (map[string]map[string]s
 
 // 获取设备指定标签的值
 func (s *TagService) GetTagValue(deviceName, tagName string) (string, error) {
-	url := fmt.Sprintf("http://%s/tag/getTag/%s/%s",
-		IoTPServer,
-		s.escapePathSegment(deviceName),
-		s.escapePathSegment(tagName))
-
-	data, err := HttpGet(url)
+	device := models.Device{Name: deviceName}
+	o := orm.NewOrm()
+	err := o.Read(&device, "name")
 	if err != nil {
-		log.Printf("查询标签值失败: %v", err)
-		return "", fmt.Errorf("API请求失败: %v", err)
+		return "", fmt.Errorf("设备不存在: %v", err)
 	}
+	// 根据标签名称返回对应的设备字段值
+	switch tagName {
+	case "productName":
+		if device.Product != nil {
+			// 需要查询完整的产品信息
+			product := models.Product{Id: device.Product.Id}
+			if o.Read(&product) == nil {
+				return product.Name, nil
+			}
+		}
+		return "", nil
+	case "productId":
+		if device.Product != nil {
+			return strconv.FormatInt(device.Product.Id, 10), nil
+		}
+		return "", nil
+	case "positionId":
+		if device.Position != nil {
+			return strconv.FormatInt(device.Position.Id, 10), nil
+		}
+		return "", nil
+	case "groupId":
+		if device.Group != nil {
+			return strconv.FormatInt(device.Group.Id, 10), nil
+		}
+		return "", nil
+	case "status":
+		return device.Status, nil
+	case "created":
+		return strconv.FormatInt(device.Created, 10), nil
+	case "lastOnline":
+		return device.LastOnline, nil
+	default:
+		// 对于其他标签，可能需要从 TDengine 或其他地方获取
+		return "", fmt.Errorf("不支持的标签: %s", tagName)
+	}
+	// IotP标签查询
+	/*	url := fmt.Sprintf("http://%s/tag/getTag/%s/%s",
+			IoTPServer,
+			s.escapePathSegment(deviceName),
+			s.escapePathSegment(tagName))
 
-	var result struct {
-		Value string `json:"value"`
-	}
-	if err := json.Unmarshal([]byte(data), &result); err != nil {
-		return "", fmt.Errorf("解析响应失败: %v", err)
-	}
+		data, err := HttpGet(url)
+		if err != nil {
+			log.Printf("查询标签值失败: %v", err)
+			return "", fmt.Errorf("API请求失败: %v", err)
+		}
 
-	return result.Value, nil
+		var result struct {
+			Value string `json:"value"`
+		}
+		if err := json.Unmarshal([]byte(data), &result); err != nil {
+			return "", fmt.Errorf("解析响应失败: %v", err)
+		}
+
+		return result.Value, nil*/
 }
 
 // 为设备添加标签
 func (s *TagService) AddTag(deviceName, tagName, tagValue string) error {
+
+	o := orm.NewOrm()
+	// 根据标签名称构建更新参数
+	updateParams := orm.Params{}
+	switch tagName {
+	case "status":
+		updateParams["status"] = tagValue
+	case "lastOnline":
+		updateParams["lastOnline"] = tagValue
+	case "description":
+		updateParams["description"] = tagValue
+	case "sn":
+		updateParams["GWSN"] = tagValue
+	default:
+		log.Printf("忽略不支持的标签: %s", tagName)
+		return nil
+	}
+	_, err := o.QueryTable(new(models.Device)).
+		Filter("name", deviceName).
+		Update(updateParams)
+
+	if err != nil {
+		return fmt.Errorf("更新设备失败: %v", err)
+	}
+	return nil
+}
+
+func (s *TagService) AddTagEdge(deviceName, tagName, tagValue string) error {
+	// IotP标签添加
 	url := fmt.Sprintf("http://%s/tag/addTag/%s/%s/%s",
 		IoTPServer,
 		s.escapePathSegment(deviceName),

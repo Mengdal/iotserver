@@ -92,13 +92,17 @@ func worker(jobs <-chan Job) {
 }
 
 // UpdateDeviceStatus 更新设备状态，避免频繁的重复更新
-func UpdateDeviceStatus(deviceId string, tagService iotp.TagService) bool {
+func UpdateDeviceStatus(sn, deviceId string, tagService iotp.TagService) bool {
 	currentTime := time.Now().Unix()
 
 	// 检查缓存，避免重复处理
 	cacheMutex.RLock()
 	lastUpdateTime, exists := deviceStatusCache[deviceId]
 	cacheMutex.RUnlock()
+
+	if exists == false {
+		log.Printf("设备：" + deviceId + "不存在")
+	}
 
 	// 如果缓存存在且未过期，则跳过处理
 	if exists && time.Since(time.Unix(lastUpdateTime, 0)) < cacheTTL {
@@ -113,11 +117,13 @@ func UpdateDeviceStatus(deviceId string, tagService iotp.TagService) bool {
 		return false // 无需更新
 	} else {
 		// 更新设备状态为在线
+		tagService.AddTag(deviceId, "sn", sn)
 		tagService.AddTag(deviceId, "status", "1")
 		tagService.AddTag(deviceId, "lastOnline", utils.InterfaceToString(currentTime))
 
 		// 更新缓存
 		updateCache(deviceId, currentTime)
+		log.Printf(deviceId + "已经更新")
 		return true // 已更新
 	}
 }

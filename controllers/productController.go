@@ -92,6 +92,7 @@ func GetAllSubUserIds(userId int64) ([]int64, error) {
 // @Description 产品物模型
 // @Param   Authorization  header  string  true  "Bearer YourToken"
 // @Param   productId      query   int     false "产品Id"
+// @Param   valueType      query   string  false "值类型(S:瞬时量，L:累积量，K:开关量, C:产量，YL:用量)"
 // @Success 200 {object} controllers.SimpleResult "请求成功"
 // @Failure 400 用户ID不存在 或 查询失败
 // @router /detail [post]
@@ -226,6 +227,19 @@ func (c *ProductController) Create() {
 	_, err := o.Insert(&product)
 	if err != nil {
 		c.Error(400, "创建失败: "+err.Error())
+	}
+
+	// 同步生成超级表 1、创建产品时生成对应的超级表 2、上传的设备找到对应的超级表 3、产品标签打上分组
+	service, err := services.NewTDengineService()
+	// 产品发布时 创建超级表
+	if status {
+		var properties []*models.Properties
+		_, err = o.QueryTable(new(models.Properties)).Filter("product_id", id).All(&properties)
+
+		err = service.UpdateSuperTableSchema(services.DBName, product.Key, properties)
+		if err != nil {
+			c.Error(500, "创建超级表失败: "+err.Error())
+		}
 	}
 
 	c.Success(product.Id)

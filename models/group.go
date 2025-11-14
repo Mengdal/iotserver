@@ -10,6 +10,7 @@ type Group struct {
 	Project     *Project `orm:"rel(fk);column(project_id);on_delete(cascade)" json:"project"` // 项目ID
 	Type        int8     `orm:"null" json:"type"`                                             // 分组类型 0:包含 1: 不包含
 	Sort        int64    `orm:"null" json:"sort"`
+	ProductId   int64    `orm:"-" json:"product_id"` // 产品Id
 }
 
 func init() {
