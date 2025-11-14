@@ -10,6 +10,7 @@ import (
 	"iotServer/models/constants"
 	"iotServer/models/dtos"
 	"iotServer/utils"
+	"strings"
 	"time"
 )
 
@@ -253,7 +254,7 @@ func (c *RuleController) OperateRule() {
 		c.Error(400, "无效的操作类型，仅支持 start、stop、restart、delete")
 	}
 
-	if err != nil {
+	if err != nil && !strings.Contains(err.Error(), "not found") {
 		c.Error(400, fmt.Sprintf("%s失败: %v", message, err))
 	}
 
