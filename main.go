@@ -48,13 +48,25 @@ func initSwagger() {
 
 // 初始化日志文件
 func initLogger() {
-	logFile, err := os.OpenFile(`service.log`, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	const logFile = "service.log"
+	const maxSize = 100 * 1024 * 1024 // 100MB
+
+	// 如果存在日志文件且超过最大限制 → 直接清空覆盖
+	if fi, err := os.Stat(logFile); err == nil {
+		if fi.Size() >= maxSize {
+			// truncate 清空
+			_ = os.Truncate(logFile, 0)
+		}
+	}
+
+	// 继续你的日志打开逻辑
+	logFileHandle, err := os.OpenFile(logFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err != nil {
 		log.Fatal("无法打开日志文件:", err)
 	}
 
 	// 设置全局日志输出
-	log.SetOutput(logFile)
+	log.SetOutput(logFileHandle)
 	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
 }
 
@@ -111,7 +123,7 @@ func validateToken(ctx *context.Context) bool {
 }
 
 func main() {
-	beego.SetStaticPath("/", "static/dist") //前端资源
+	beego.SetStaticPath("/", "static/dist-pro") //前端资源
 
 	if beego.BConfig.RunMode == "dev" {
 		runDev()
