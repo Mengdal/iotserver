@@ -125,7 +125,7 @@ func (s *ProjectService) UploadImage(projectId int64, fileHeader multipart.FileH
 	}
 
 	// 创建图片存放目录
-	imagePath := "./static/dist"
+	imagePath := "./static/dist-pro"
 	err = os.MkdirAll(imagePath, os.ModePerm)
 	if err != nil {
 		return "", fmt.Errorf("failed to create image directory")
@@ -177,7 +177,7 @@ func (s *ProjectService) UploadLogo(projectId int64, fileHeader multipart.FileHe
 	}
 
 	// 创建图片存放目录
-	imagePath := "./static/dist"
+	imagePath := "./static/dist-pro"
 	err = os.MkdirAll(imagePath, os.ModePerm)
 	if err != nil {
 		return "", fmt.Errorf("failed to create image directory")
@@ -228,7 +228,7 @@ func (s *ProjectService) UploadIcon(projectId int64, fileHeader multipart.FileHe
 	}
 
 	// 创建图片存放目录
-	imagePath := "./static/dist"
+	imagePath := "./static/dist-pro"
 	err = os.MkdirAll(imagePath, os.ModePerm)
 	if err != nil {
 		return "", fmt.Errorf("failed to create image directory")

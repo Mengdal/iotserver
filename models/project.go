@@ -18,7 +18,7 @@ type Project struct {
 	Area           string     `orm:"size(255);null" json:"area"`                                      // 区域面积
 	DeviceNum      int        `orm:"null;default(0)" json:"deviceNum"`                                // 设备数量
 	Images         string     `orm:"size(255);null;default(/images/image_default.png)" json:"images"` // 首页大图
-	Logo           string     `orm:"size(255);null;default(/images/logo_default.png)" json:"logo"`    // 企业LOGO
+	Logo           string     `orm:"size(255);null;default(/images/logo.png)" json:"logo"`            // 企业LOGO
 	PersonNum      string     `orm:"size(255);null" json:"personNum"`                                 // 企业人数
 	Ranges         string     `orm:"size(255);null;default(-1d)" json:"ranges"`                       // 日期范围
 	ActiveTime     time.Time  `orm:"type(timestamp);auto_now_add" json:"activeTime"`                  // 激活时间

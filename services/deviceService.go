@@ -147,6 +147,10 @@ func (s *DevicesService) DeleteDevice(deviceName string) error {
 		return fmt.Errorf("删除原子表失败: %v", execErr)
 	}
 
+	err = tagService.RemoveTag(deviceName, "productId")
+	if err != nil {
+		return fmt.Errorf("删除设备失败: %v", err)
+	}
 	return nil
 }
 
