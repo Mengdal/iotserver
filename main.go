@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/beego/beego/v2/client/orm"
 	beego "github.com/beego/beego/v2/server/web"
 	"github.com/beego/beego/v2/server/web/context"
 	"github.com/beego/beego/v2/server/web/filter/cors"
@@ -91,6 +92,7 @@ func validateToken(ctx *context.Context) bool {
 		"/api/scada/delete",
 		"/api/scada/getAlarmRecord",
 		"/api/ws",
+		"/ws",
 		"/api/ekuiper/callback",
 	}
 	for _, path := range skipPaths {
@@ -126,8 +128,10 @@ func main() {
 	beego.SetStaticPath("/", "static/dist-pro") //前端资源
 
 	if beego.BConfig.RunMode == "dev" {
+		orm.Debug = true
 		runDev()
 	} else {
+		orm.Debug = false        //关闭SQL打印
 		initLogger()             //日志记录
 		common.SetCommandParam() //接收命令行参数
 		ServiceOperate(common.Service())
@@ -190,7 +194,7 @@ func (p *program) run() {
 
 	log.Println("【Service】服务已启动...")
 
-	services.LoadAllDeviceCategoryKeys() //加载超级表缓存
+	services.LoadAllDeviceCategoryKeys() // 加载超级表缓存
 	<-p.exitCh                           // 阻塞直到收到 Stop 信号
 }
 
