@@ -262,7 +262,7 @@ func (t *TDengineService) Close() error {
 
 // 获取超级表现有列
 func (t *TDengineService) getExistingColumns(dbName, stableName string) ([]string, error) {
-	query := fmt.Sprintf("DESCRIBE %s.%s", dbName, stableName)
+	query := fmt.Sprintf("DESCRIBE %s.`%s`", dbName, stableName)
 	rows, err := t.QueryData(query)
 	if err != nil {
 		return nil, err
@@ -328,7 +328,7 @@ func (t *TDengineService) UpdateSuperTableSchema(dbName, stableName string, newP
 
 // 添加列
 func (t *TDengineService) AlterStableAddColumnIfNotExists(dbName, stableName, columnName, columnType string) error {
-	query := fmt.Sprintf("ALTER STABLE %s.%s ADD COLUMN `%s` %s",
+	query := fmt.Sprintf("ALTER STABLE %s.`%s` ADD COLUMN `%s` %s",
 		dbName, stableName, columnName, columnType)
 	_, err := t.db.Exec(query)
 	return err
@@ -336,7 +336,7 @@ func (t *TDengineService) AlterStableAddColumnIfNotExists(dbName, stableName, co
 
 // 删除列
 func (t *TDengineService) DeleteStableAddColumnIfNotExists(dbName, stableName, columnName, columnType string) error {
-	query := fmt.Sprintf("ALTER STABLE %s.%s DROP COLUMN `%s` %s",
+	query := fmt.Sprintf("ALTER STABLE %s.`%s` DROP COLUMN `%s` %s",
 		dbName, stableName, columnName, columnType)
 	_, err := t.db.Exec(query)
 	return err

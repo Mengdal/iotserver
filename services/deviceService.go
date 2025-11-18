@@ -228,6 +228,12 @@ func BindDeviceTags(s iotp.TagService, deviceNames []string, productID int64, pr
 			defer wg.Done()
 			defer func() { <-semaphore }() // 释放并发槽
 
+			// 创建 / 更新 TDengine 子表
+			if err := BindTDDevice(t, o, deviceName, productID, productKey, categoryId, tags); err != nil {
+				errChan <- fmt.Errorf("设备 %s 标签绑定失败: %v", deviceName, err)
+				return
+			}
+
 			// 绑定 IOTP 设备标签
 			productIDStr := strconv.FormatInt(productID, 10)
 			nowStr := strconv.FormatInt(time.Now().Unix(), 10)
@@ -236,10 +242,6 @@ func BindDeviceTags(s iotp.TagService, deviceNames []string, productID int64, pr
 				return
 			}
 
-			// 创建 / 更新 TDengine 子表
-			if err := BindTDDevice(t, o, deviceName, productID, productKey, categoryId, tags); err != nil {
-				errChan <- fmt.Errorf("设备 %s 标签绑定失败: %v", deviceName, err)
-			}
 		}(deviceName)
 	}
 
@@ -281,6 +283,7 @@ func BindTDDevice(service *TDengineService, o orm.Ormer, deviceName string, prod
 	product := models.Product{Id: productId}
 	positionId, _ := strconv.ParseInt(tags["positionId"], 10, 64)
 	groupId, _ := strconv.ParseInt(tags["groupId"], 10, 64)
+	description, _ := tags["description"]
 	var query string
 	var categoryKey string
 
@@ -293,7 +296,7 @@ func BindTDDevice(service *TDengineService, o orm.Ormer, deviceName string, prod
 	}
 
 	return o.DoTx(func(ctx context.Context, txOrm orm.TxOrmer) error {
-		device := models.Device{Name: deviceName, Product: &product, CategoryKey: categoryKey, Position: &models.Position{Id: positionId}, Group: &models.Group{Id: groupId}}
+		device := models.Device{Name: deviceName, Product: &product, CategoryKey: categoryKey, Position: &models.Position{Id: positionId}, Group: &models.Group{Id: groupId}, Description: description}
 		if err := txOrm.Read(&device, "name"); err == nil {
 			// 设备存在，检查是否需要更换超级表
 			if device.CategoryKey != categoryKey {
@@ -350,7 +353,7 @@ func BindTDDevice(service *TDengineService, o orm.Ormer, deviceName string, prod
 				DBName, device.Name, DBName, categoryKey, SubLabel, productId)
 			if _, execErr := service.db.Exec(query); execErr != nil {
 				logs.Error("创建子表TAG失败:", execErr)
-				return fmt.Errorf("创建子表TAG失败: %v", execErr)
+				return fmt.Errorf("请重新发布产品")
 			}
 		}
 
