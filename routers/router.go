@@ -113,5 +113,12 @@ func init() {
 			),
 		),
 	)
+	// 独立的 WebSocket 命名空间
+	ws := beego.NewNamespace("/ws",
+		beego.NSInclude(
+			&edgeController.WebsocketController{},
+		),
+	)
+	beego.AddNamespace(ws)
 	beego.AddNamespace(ns)
 }
