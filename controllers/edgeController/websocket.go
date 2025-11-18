@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/beego/beego/v2/client/orm"
+	beego "github.com/beego/beego/v2/server/web"
 	"github.com/gorilla/websocket"
-	"iotServer/controllers"
 	"iotServer/iotp"
 	"iotServer/models"
 	"iotServer/services"
@@ -18,7 +18,7 @@ import (
 )
 
 type WebsocketController struct {
-	controllers.BaseController
+	beego.Controller
 }
 
 type operate struct {
