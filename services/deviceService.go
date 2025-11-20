@@ -312,6 +312,7 @@ func BindTDDevice(service *TDengineService, o orm.Ormer, deviceName string, prod
 				device.CategoryKey = categoryKey
 				device.Position = &models.Position{Id: positionId}
 				device.Group = &models.Group{Id: groupId}
+				device.Description = description
 				device.BeforeUpdate()
 				if _, updateErr := txOrm.Update(&device); updateErr != nil {
 					return fmt.Errorf("更新设备信息失败: %v", updateErr)
