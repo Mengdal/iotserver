@@ -328,7 +328,7 @@ func (c *EngineController) DelEngine() {
 	defer cancel()
 
 	err = common.Ekuiper.DeleteRule(ctx, engine.Name+"__Engine")
-	if err != nil {
+	if err != nil && !strings.Contains(err.Error(), "not found") {
 		c.Error(400, "更新规则失败: "+err.Error())
 	}
 	c.SuccessMsg()
