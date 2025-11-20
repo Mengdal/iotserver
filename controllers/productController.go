@@ -98,7 +98,7 @@ func GetAllSubUserIds(userId int64) ([]int64, error) {
 // @router /detail [post]
 func (c *ProductController) Detail() {
 	productId, _ := c.GetInt64("productId")
-
+	valueType := c.GetString("valueType")
 	o := orm.NewOrm()
 
 	// 查询产品
@@ -110,8 +110,21 @@ func (c *ProductController) Detail() {
 		c.Error(400, "查询失败")
 	}
 
-	// 查询属性
-	o.LoadRelated(&product, "Properties")
+	// 查询属性并进行筛选
+	if valueType != "" {
+		var properties []*models.Properties
+		pattern := fmt.Sprintf("%%\\\"valueType\\\":\\\"%s\\\"%%", valueType)
+		// 使用 Raw SQL 查询处理未转义的 JSON 字符串
+		_, err := o.Raw("SELECT * FROM properties WHERE product_id = ? AND type_spec LIKE ?",
+			productId, pattern).QueryRows(&properties)
+
+		if err != nil {
+			c.Error(400, "查询属性失败: "+err.Error())
+		}
+		product.Properties = properties
+	} else {
+		o.LoadRelated(&product, "Properties")
+	}
 	// 查询事件
 	o.LoadRelated(&product, "Events")
 	// 查询动作

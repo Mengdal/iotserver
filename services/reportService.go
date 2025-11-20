@@ -927,7 +927,7 @@ func (r *ReportService) buildReportData(deviceList *[]*models.Device, properties
 			subtotal["dn"] = "小计"
 			subtotal["dn_en"] = "subTotal"
 			if val, exists := groupTotals[groupKey]; exists {
-				subtotal["duration"] = val
+				subtotal["duration"] = formatFloat(val, 0.01)
 			}
 			array = append(array, subtotal)
 		}
@@ -941,7 +941,7 @@ func (r *ReportService) buildReportData(deviceList *[]*models.Device, properties
 			totalRow["group"] = "合计"
 			totalRow["group_en"] = "total"
 		}
-		totalRow["duration"] = grandTotal
+		totalRow["duration"] = formatFloat(grandTotal, 0.01)
 		array = append(array, totalRow)
 	} else {
 		// 原有逻辑：不按分组统计
