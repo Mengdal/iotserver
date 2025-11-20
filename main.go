@@ -178,6 +178,9 @@ func (p *program) run() {
 	log.Println("【Service】初始化数据库...")
 	common.InitDB()
 
+	log.Println("【Service】加载超级表缓存...")
+	services.LoadAllDeviceCategoryKeys() // 加载超级表缓存
+
 	log.Println("【Service】启动 MQTT 服务...")
 	go services.InitMQTT()
 
@@ -194,8 +197,7 @@ func (p *program) run() {
 
 	log.Println("【Service】服务已启动...")
 
-	services.LoadAllDeviceCategoryKeys() // 加载超级表缓存
-	<-p.exitCh                           // 阻塞直到收到 Stop 信号
+	<-p.exitCh // 阻塞直到收到 Stop 信号
 }
 
 func setWorkingDirectoryToExecPath() {
