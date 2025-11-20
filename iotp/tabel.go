@@ -435,7 +435,9 @@ func (s *TagService) GetTagValue(deviceName, tagName string) (string, error) {
 
 // 为设备添加标签
 func (s *TagService) AddTag(deviceName, tagName, tagValue string) error {
-
+	if len(tagValue) == 0 {
+		return nil
+	}
 	o := orm.NewOrm()
 	// 根据标签名称构建更新参数
 	updateParams := orm.Params{}

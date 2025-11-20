@@ -92,7 +92,7 @@ func worker(jobs <-chan Job) {
 }
 
 // UpdateDeviceStatus 更新设备状态，避免频繁的重复更新
-func UpdateDeviceStatus(sn, deviceId string, tagService iotp.TagService) bool {
+func UpdateDeviceStatus(sn, deviceId, desc string, tagService iotp.TagService) bool {
 	currentTime := time.Now().Unix()
 
 	// 检查缓存，避免重复处理
@@ -119,6 +119,7 @@ func UpdateDeviceStatus(sn, deviceId string, tagService iotp.TagService) bool {
 		// 更新设备状态为在线
 		tagService.AddTag(deviceId, "sn", sn)
 		tagService.AddTag(deviceId, "status", "1")
+		tagService.AddTag(deviceId, "description", desc)
 		tagService.AddTag(deviceId, "lastOnline", utils.InterfaceToString(currentTime))
 
 		// 更新缓存

@@ -234,6 +234,7 @@ func (p *PropertySetProcessor) handlePropertyMessage(topic, payload string) erro
 		}
 		out := map[string]interface{}{
 			"dn":          item.Dn,
+			"desc":        item.Desc,
 			"messageType": "PROPERTY_REPORT",
 			"data":        data,
 		}
@@ -276,6 +277,7 @@ func (p *PropertySetProcessor) handleStreamMessage(topic, payload string) error 
 	var message struct {
 		Data        map[string]map[string]interface{} `json:"data"`
 		Dn          string                            `json:"dn"`
+		Desc        string                            `json:"desc"`
 		MessageType string                            `json:"messageType"`
 	}
 	if err := json.Unmarshal([]byte(payload), &message); err != nil {
@@ -289,7 +291,7 @@ func (p *PropertySetProcessor) handleStreamMessage(topic, payload string) error 
 			dn = dn + sn
 		}
 		// - 数据持久化 使用线程服务更新设备状态，避免频繁查询
-		UpdateDeviceStatus(sn, dn, tagService)
+		UpdateDeviceStatus(sn, dn, message.Desc, tagService)
 	}
 
 	return nil

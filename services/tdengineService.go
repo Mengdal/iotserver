@@ -24,6 +24,7 @@ type TDengineService struct {
 }
 type MqttMessage struct {
 	Dn         string                 `json:"dn"`         // 超级表名
+	Desc       string                 `json:"desc"`       // 设备描述
 	Properties map[string]interface{} `json:"properties"` // 列和值
 	Time       int64                  `json:"time"`       // 时间戳
 }
@@ -171,7 +172,7 @@ func (w *TDengineWriter) flush() {
 		return
 	}
 
-	// 构建跨表批量插入SQL（保留你原逻辑）
+	// 构建跨表批量插入SQL
 	var sqlBuilder strings.Builder
 	sqlBuilder.WriteString("INSERT INTO ")
 	firstTable := true
