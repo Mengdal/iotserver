@@ -1,0 +1,52 @@
+version: '3.3'
+
+services:
+  luomi-iotp:
+    image: crpi-fi41hm0burr0lgf2.cn-hangzhou.personal.cr.aliyuncs.com/lmgateway/luomi-iotp:2.0.23
+    container_name: luomi-iotp
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+      - "1883:1883"
+    volumes:
+      - ./mount/data:/mosquitto/data
+      - ./mount/log:/mosquitto/log
+
+  ekuiper:
+    image: crpi-fi41hm0burr0lgf2.cn-hangzhou.personal.cr.aliyuncs.com/lmgateway/ekuiper:2.2.1-dev
+    container_name: ekuiper
+    restart: unless-stopped
+    ports:
+      - "9081:9081"
+    environment:
+      - MQTT_SOURCE__DEFAULT__SERVER=tcp://luomi-iotp:1883
+    depends_on:
+      - luomi-iotp
+
+  tdengine:
+    image: crpi-fi41hm0burr0lgf2.cn-hangzhou.personal.cr.aliyuncs.com/lmgateway/tdengine:3.3.8.1
+    container_name: tdengine
+    restart: unless-stopped
+    ports:
+      - "6030:6030"
+      - "6041:6041"
+      - "6043:6043"
+      - "6060:6060"
+      - "6044-6049:6044-6049"
+      - "6044-6045:6044-6045/udp"
+      - "6050:6050"
+      - "6055:6055"
+    volumes:
+      - ./mount/taos/data:/var/lib/taos
+      - ./mount/taos/log:/var/log/taos
+
+  ekuiper-manager:
+    image: crpi-fi41hm0burr0lgf2.cn-hangzhou.personal.cr.aliyuncs.com/lmgateway/ekuiper-manager:1.9.5-plus
+    container_name: ekuiper-manager
+    restart: unless-stopped
+    ports:
+      - "9082:9082"
+    environment:
+      - DEFAULT_EKUIPER_ENDPOINT=http://ekuiper:9081
+    depends_on:
+      - ekuiper
