@@ -7,14 +7,16 @@ import (
 
 // Scene 场景联动主表
 type Scene struct {
-	Id          int64  `orm:"pk;auto" json:"id"` // 场景ID
-	Name        string `orm:"type(text)" json:"name"`
-	Description string `orm:"type(text);null" json:"description"`
-	Status      string `orm:"type(text);null" json:"status"`
-	Created     int64  `orm:"null" json:"created"`
-	Modified    int64  `orm:"null" json:"modified"`
-	Condition   string `orm:"type(text);null" json:"condition"` // 场景触发条件
-	Action      string `orm:"type(text);null" json:"action"`    // 场景动作
+	Id          int64       `orm:"pk;auto" json:"id"` // 场景ID
+	Name        string      `orm:"type(text);unique" json:"name"`
+	Description string      `orm:"type(text);null" json:"description"`
+	Status      string      `orm:"type(text);null" json:"status"`
+	Created     int64       `orm:"null" json:"created"`
+	Modified    int64       `orm:"null" json:"modified"`
+	Condition   string      `orm:"type(text);null" json:"condition"` // 场景触发条件
+	Action      string      `orm:"type(text);null" json:"action"`    // 场景动作
+	Department  *Department `orm:"rel(fk);on_delete(cascade);null" json:"-"`
+	UserId      int64       `orm:"null" json:"user_id"` //用户ID
 }
 
 func init() {

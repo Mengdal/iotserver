@@ -9,6 +9,7 @@ import (
 	"iotServer/common"
 	"iotServer/iotp"
 	"iotServer/models"
+	"iotServer/utils"
 	"log"
 	"net"
 	"regexp"
@@ -78,7 +79,7 @@ func (s *SwitchService) WriteBack(clientID string, data map[string]interface{}) 
 				log.Printf("writeLog panic: %v", r)
 			}
 		}()
-		writeLog(seq, status, clientID, dn, tag, val, "手动控制", 0)
+		writeLog(seq, status, clientID, dn, tag, val, "手动控制", 0, 0)
 	}()
 
 	return nil
@@ -94,7 +95,7 @@ type PropertySetProcessor struct {
 // 创建新的处理器实例
 func NewPropertySetProcessor(mqttClient common.MqttConnector, switchService *SwitchService) *PropertySetProcessor {
 	service, _ := NewTDengineService()
-	writer := service.NewTDengineWriter(2*time.Second, 500)
+	writer := service.NewTDengineWriter(2*time.Second, 300)
 	initWorkerPool()
 	return &PropertySetProcessor{
 		mqttClient:    mqttClient,
@@ -168,7 +169,7 @@ func (p *PropertySetProcessor) handleMessage(client mqtt.Client, msg mqtt.Messag
 	// 非阻塞地提交任务，如果队列满了就丢弃并记录
 	select {
 	case jobQueue <- job:
-		log.Printf("任务已提交到队列: %s", topic)
+		utils.DebugLog("任务已提交到队列: %s", topic)
 	default:
 		log.Printf("任务队列已满，丢弃消息: %s", topic)
 	}
@@ -256,7 +257,7 @@ func (p *PropertySetProcessor) handlePropertyMessage(topic, payload string) erro
 			if err := p.mqttClient.Publish(task.topic, 0, newPayload); err != nil {
 				log.Printf("消息转发失败: %s -- %v", task.topic, err)
 			} else {
-				log.Printf("消息转发完成: %s", task.topic)
+				utils.DebugLog("消息转发完成: %s", task.topic)
 			}
 		}
 	}
@@ -298,18 +299,23 @@ func (p *PropertySetProcessor) handleStreamMessage(topic, payload string) error 
 }
 
 // Deal 发布控制命令
-func (p *PropertySetProcessor) Deal(dn, tag, val, channel string, userId int64) (string, error) {
+func (p *PropertySetProcessor) Deal(dn, tag, val, channel string, userId, tenantId int64) (string, error) {
+	/*		var sn string
+			device, err := iotp.NewTagService().ListTagsByDevice(dn)
+			sn = device[dn]["GWSN"]*/
 	//优先掏出SN
+	o := orm.NewOrm()
 	var sn string
-	device, err := iotp.NewTagService().ListTagsByDevice(dn)
-	sn = device[dn]["GWSN"]
-
+	var err error
+	device := &models.Device{Name: dn}
+	err = o.Read(device, "name")
+	sn = device.GWSN
 	//控制命令保存
 	seq := fmt.Sprintf("seq-%d", time.Now().UnixNano())
-	writeLog(seq, "WAIT", sn, dn, tag, val, channel, userId)
+	writeLog(seq, "WAIT", sn, dn, tag, val, channel, userId, tenantId)
 
-	if err != nil || sn == "" {
-		return seq, fmt.Errorf("设备未包含网关信息")
+	if err != nil || sn == "" || device.Tenant != tenantId {
+		return seq, fmt.Errorf("the device does not contain gateway information or no permission")
 	}
 
 	topic := fmt.Sprintf("lm/iot/ctrlRequest/%s", sn)
@@ -352,18 +358,19 @@ func (p *PropertySetProcessor) SendOffline(dn string) error {
 	return nil
 }
 
-func writeLog(seq, status, sn, dn, tag, val, channel string, userId int64) {
+func writeLog(seq, status, sn, dn, tag, val, channel string, userId, tenantId int64) {
 	o := orm.NewOrm()
 	if status == "WAIT" {
 		writeLog := models.WriteLog{
-			Seq:     seq,
-			Sn:      sn,
-			Dn:      dn,
-			Tag:     tag,
-			Val:     val,
-			Status:  "WAIT",
-			Channel: channel,
-			UserId:  userId,
+			Seq:        seq,
+			Sn:         sn,
+			Dn:         dn,
+			Tag:        tag,
+			Val:        val,
+			Status:     "WAIT",
+			Channel:    channel,
+			UserId:     userId,
+			Department: &models.Department{Id: tenantId},
 		}
 		_ = writeLog.BeforeInsert()
 		_, err := o.Insert(&writeLog)

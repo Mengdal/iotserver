@@ -26,7 +26,7 @@ func (c *LabelController) ListDevicesByTag() {
 		c.Error(400, "参数解析失败: "+err.Error())
 	}
 
-	devices, err := tagService.ListDevicesByTag(req.TagName, req.TagValue)
+	devices, err := tagService.ListDevicesByTag(req.TagName, req.TagValue, nil)
 	if err != nil {
 		c.Error(400, "查询失败: "+err.Error())
 	}

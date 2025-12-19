@@ -15,6 +15,7 @@ type AlertController struct {
 
 // GetAlarmRecord @Title 获取Scada告警记录
 // @Description 适用于网关返回的告警记录
+// @Param   Authorization  header  string  true  "Bearer YourToken"
 // @Param body body dtos.AlarmRecordReq true "请求参数"
 // @Success 200 {object} controllers.SimpleResult
 // @Failure 400 "查询出错"
@@ -35,7 +36,9 @@ func (c *AlertController) GetAlarmRecord() {
 	}
 
 	o := orm.NewOrm()
-	qs := o.QueryTable(new(models.AlertList)).OrderBy("-TriggerTime")
+	userId, _ := c.Ctx.Input.GetData("user_id").(int64)
+	tenantId, _ := models.GetUserTenantId(userId)
+	qs := o.QueryTable(new(models.AlertList)).Filter("department_id", tenantId).OrderBy("-TriggerTime")
 
 	// 构建查询条件
 	if req.Status != "" {
@@ -48,7 +51,7 @@ func (c *AlertController) GetAlarmRecord() {
 		} else {
 			IsSystem = false
 		}
-		qs = qs.Filter("AlertRule__isnull", IsSystem)
+		qs = qs.Filter("AlertRule__isnull", !IsSystem)
 	}
 
 	loc, err := time.LoadLocation("Asia/Shanghai")

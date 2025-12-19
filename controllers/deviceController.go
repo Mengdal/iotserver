@@ -23,12 +23,21 @@ var tagService = iotp.TagService{}
 // @Param   page           query   int     false "当前页码，默认1"
 // @Param   size           query   int     false "每页数量，默认10"
 // @Param   productId      query   int64   false "产品ID"
+// @Param   projectId      query   int64   false "项目ID"
 // @Param   status         query   string  false "设备状态"
 // @Param   name           query   string  false "设备名称(模糊查询)
 // @Success 200 {object} controllers.SimpleResult
 // @Failure 400 "请求错误"
 // @router /all [post]
 func (c *DeviceController) GetAllDevices() {
+	projectId, _ := c.GetInt64("projectId")
+	userId, _ := c.Ctx.Input.GetData("user_id").(int64)
+	projectIds, err := models.GetUserProjectIds(userId, projectId)
+	tenantId, err := models.GetUserIsRoot(userId)
+	isTenant := true
+	if err != nil {
+		isTenant = false
+	}
 
 	page, _ := c.GetInt("page", 1)
 	size, _ := c.GetInt("size", 10)
@@ -36,7 +45,7 @@ func (c *DeviceController) GetAllDevices() {
 	status := c.GetString("status")
 	name := c.GetString("name")
 
-	devices, err := c.service.GetAllDevices(page, size, productId, status, name)
+	devices, err := c.service.GetAllDevices(page, size, tenantId, projectIds, productId, status, name, isTenant)
 	if err != nil {
 		c.Error(400, "获取设备列表失败: "+err.Error())
 	}
@@ -44,16 +53,23 @@ func (c *DeviceController) GetAllDevices() {
 	c.Success(devices)
 }
 
-// GetTagsTree @Title 获取设备点树(iotEdgeDB)
+// GetTagsTree @Title 获取设备点树
 // @Description 根据传入产品获取点树
 // @Param   Authorization  header  string  true  "Bearer YourToken"
 // @Param   productId      query   string  true  "产品ID"
+// @Param   projectId      query   int64   false "项目ID"
 // @Success 200 {object} controllers.SimpleResult "返回结果树"
 // @Failure 400 "错误信息"
 // @router /getTagsTree [post]
 func (c *DeviceController) GetTagsTree() {
 	productId := c.GetString("productId")
-	data, err := tagService.DevicesTagsTree2("product_id", productId)
+	projectId, _ := c.GetInt64("projectId")
+	userId, _ := c.Ctx.Input.GetData("user_id").(int64)
+	projectIds, err := models.GetUserProjectIds(userId, projectId)
+	if err != nil {
+		c.Error(400, err.Error())
+	}
+	data, err := tagService.DevicesTagsTree2(projectIds, "product_id", productId)
 	if err != nil {
 		c.Error(400, err.Error())
 	}
@@ -63,11 +79,15 @@ func (c *DeviceController) GetTagsTree() {
 // GetDevicesTree @Title 获取设备树
 // @Description 根据传入产品设备树
 // @Param   Authorization  header  string  true  "Bearer YourToken"
+// @Param   projectId      query   int64   false "项目ID"
 // @Success 200 {object} controllers.SimpleResult "返回结果树"
 // @Failure 400 "错误信息"
 // @router /getDevicesTree [post]
 func (c *DeviceController) GetDevicesTree() {
-	data, err := c.service.GetDevicesTree()
+	projectId, _ := c.GetInt64("projectId")
+	userId, _ := c.Ctx.Input.GetData("user_id").(int64)
+	projectIds, err := models.GetUserProjectIds(userId, projectId)
+	data, err := c.service.GetDevicesTree(projectIds)
 	if err != nil {
 		c.Error(400, err.Error())
 	}
@@ -140,21 +160,19 @@ func (c *DeviceController) Bind() {
 		c.Error(400, "设备ID列表不能为空")
 	}
 	o := orm.NewOrm()
-	var product models.Product
-	product.Id = req.ProductID
-	err := o.Read(&product)
-	if err != nil {
+	product := models.Product{Id: req.ProductID}
+	if err := o.Read(&product); err != nil {
 		c.Error(400, "产品ID无效")
 	}
-
+	tenantId := product.Department.Id
 	// 循环绑定产品ID标签
-	err = services.BindDeviceTags(tagService, req.DeviceName, req.ProductID, product.Name, product.Key, product.CategoryId, req.Tags)
+	err := services.BindDeviceTags(tagService, tenantId, req.DeviceName, req.ProductID, product.Name, product.Key, product.CategoryId, req.Tags)
 	if err != nil {
 		c.Error(400, "绑定失败: "+err.Error())
 	}
 	// 加载超级表缓存
 	go services.LoadAllDeviceCategoryKeys()
-	c.Success("批量绑定成功")
+	c.SuccessMsg()
 }
 
 // Delete @Title 删除设备
@@ -171,7 +189,9 @@ func (c *DeviceController) Delete() {
 	}
 
 	//err := tagService.DeleteDevices(deviceID)
-	err := c.service.DeleteDevice(deviceID)
+	userId, _ := c.Ctx.Input.GetData("user_id").(int64)
+	tenantId, _ := models.GetUserTenantId(userId)
+	err := c.service.DeleteDevice(deviceID, tenantId)
 	if err != nil {
 		c.Error(400, "删除设备失败: "+err.Error())
 	}

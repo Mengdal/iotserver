@@ -22,9 +22,10 @@ type WriteController struct {
 // @router /command [post]
 func (c *WriteController) Command(deviceCode, tagCode, val string) {
 	userId := c.Ctx.Input.GetData("user_id").(int64)
+	tenantId, _ := models.GetUserTenantId(userId)
 	// 发布控制命令
-	if _, err := services.Processor.Deal(deviceCode, tagCode, val, "手动控制", userId); err != nil {
-		c.Error(400, "控制命令发送失败,"+err.Error())
+	if _, err := services.Processor.Deal(deviceCode, tagCode, val, "手动控制", userId, tenantId); err != nil {
+		c.Error(400, "控制命令发送失败:"+err.Error())
 	}
 	c.SuccessMsg()
 }
@@ -44,10 +45,12 @@ func (c *WriteController) Log() {
 	logType := c.GetString("type")
 	page, _ := c.GetInt("page", 1)
 	size, _ := c.GetInt("size", 10)
+	userId, _ := c.Ctx.Input.GetData("user_id").(int64)
+	tenantId, _ := models.GetUserTenantId(userId)
 
 	var logs []*models.WriteLog
 	o := orm.NewOrm()
-	qs := o.QueryTable(new(models.WriteLog))
+	qs := o.QueryTable(new(models.WriteLog)).Filter("department_id", tenantId)
 	if logType == "手动控制" || logType == "组态下发" {
 		qs = qs.Filter("channel", logType)
 	}

@@ -81,18 +81,13 @@ func writeData(id string, ws *websocket.Conn, token string, val string) error {
 	// 1. Token验证
 	claims, ok := utils.ParseToken(token)
 	if !ok {
-		//TODO 后面加入token校验
-		log.Println("token过期")
-		//return fmt.Errorf("token过期")
+		return fmt.Errorf("token过期")
 	}
-
-	// 2. 获取用户ID
 	userId, ok := claims["user_id"].(float64)
 	if !ok {
-		//TODO 后面加入token校验
-		userId = 0
-		//return fmt.Errorf("无效的用户ID")
+		return fmt.Errorf("无效的用户ID")
 	}
+	tenantId, _ := models.GetUserTenantId(int64(userId))
 
 	// 3. 解析设备标签
 	parts := strings.Split(id, ".")
@@ -115,7 +110,7 @@ func writeData(id string, ws *websocket.Conn, token string, val string) error {
 
 	var tagID = deviceCode + "." + tagCode
 	// 发送控制命令
-	seq, err := services.Processor.Deal(deviceCode, tagCode, val, "组态下发", int64(userId))
+	seq, err := services.Processor.Deal(deviceCode, tagCode, val, "组态下发", int64(userId), tenantId)
 	if err != nil {
 		fail.Data = tagID
 		ws.WriteJSON(fail)

@@ -7,19 +7,20 @@ import (
 
 // AlertRule 告警规则
 type AlertRule struct {
-	Id          int64  `orm:"auto;pk" json:"id"`
-	Created     int64  `orm:"column(created);null" json:"created"`
-	Modified    int64  `orm:"column(modified);null" json:"modified"`
-	Name        string `orm:"size(255);null;unique" json:"name"`
-	DeviceId    string `orm:"size(255);null;index" json:"device_id"`
-	AlertType   string `orm:"size(64);null" json:"alert_type"`               // 告警类型
-	AlertLevel  string `orm:"size(64);null" json:"alert_level"`              // 告警级别
-	Status      string `orm:"size(64);null" json:"status"`                   // 状态：running/stopped
-	Condition   string `orm:"type(text);null" json:"condition"`              // 执行条件：anyone/all
-	SubRule     string `orm:"type(text);null" json:"sub_rule"`               // 子规则配置(JSON字符串)
-	Notify      string `orm:"type(text);null" json:"notify"`                 // 通知配置(JSON字符串)
-	SilenceTime string `orm:"column(silence_time);null" json:"silence_time"` // 静默时间
-	Description string `orm:"type(text);null" json:"description"`
+	Id          int64       `orm:"auto;pk" json:"id"`
+	Created     int64       `orm:"column(created);null" json:"created"`
+	Modified    int64       `orm:"column(modified);null" json:"modified"`
+	Name        string      `orm:"size(255);null;unique" json:"name"`
+	DeviceId    string      `orm:"size(255);null;index" json:"device_id"`
+	AlertType   string      `orm:"size(64);null" json:"alert_type"`               // 告警类型
+	AlertLevel  string      `orm:"size(64);null" json:"alert_level"`              // 告警级别
+	Status      string      `orm:"size(64);null" json:"status"`                   // 状态：running/stopped
+	Condition   string      `orm:"type(text);null" json:"condition"`              // 执行条件：anyone/all
+	SubRule     string      `orm:"type(text);null" json:"sub_rule"`               // 子规则配置(JSON字符串)
+	Notify      string      `orm:"type(text);null" json:"notify"`                 // 通知配置(JSON字符串)
+	SilenceTime string      `orm:"column(silence_time);null" json:"silence_time"` // 静默时间
+	Description string      `orm:"type(text);null" json:"description"`
+	Department  *Department `orm:"rel(fk);on_delete(cascade);null" json:"-"`
 
 	// 反向关联 alert_list
 	AlertLists []*AlertList `orm:"reverse(many);null" json:"alert_lists,omitempty"`
@@ -27,15 +28,16 @@ type AlertRule struct {
 
 // AlertList 告警记录
 type AlertList struct {
-	Id          int64  `orm:"auto;pk" json:"id"`
-	Created     int64  `orm:"column(created);null" json:"created"`
-	Modified    int64  `orm:"column(modified);null" json:"modified"`
-	TriggerTime int64  `orm:"column(trigger_time);null" json:"trigger_time"` // 触发时间
-	AlertResult string `orm:"type(text);null" json:"alert_result"`           // 告警内容(JSON)
-	Status      string `orm:"size(64);null" json:"status"`                   // 状态：未处理/已处理/忽略
-	TreatedTime int64  `orm:"column(treated_time);null" json:"treated_time"` // 处理时间
-	Message     string `orm:"type(text);null" json:"message"`                // 处理意见
-	IsSend      bool   `orm:"column(is_send);null" json:"is_send"`           // 是否发送通知
+	Id          int64       `orm:"auto;pk" json:"id"`
+	Created     int64       `orm:"column(created);null" json:"created"`
+	Modified    int64       `orm:"column(modified);null" json:"modified"`
+	TriggerTime int64       `orm:"column(trigger_time);null" json:"trigger_time"` // 触发时间
+	AlertResult string      `orm:"type(text);null" json:"alert_result"`           // 告警内容(JSON)
+	Status      string      `orm:"size(64);null" json:"status"`                   // 状态：未处理/已处理/忽略
+	TreatedTime int64       `orm:"column(treated_time);null" json:"treated_time"` // 处理时间
+	Message     string      `orm:"type(text);null" json:"message"`                // 处理意见
+	IsSend      bool        `orm:"column(is_send);null" json:"is_send"`           // 是否发送通知
+	Department  *Department `orm:"rel(fk);on_delete(cascade);null" json:"-"`
 
 	AlertRule *AlertRule `orm:"rel(fk);column(alert_rule_id);on_delete(do_nothing);on_update(do_nothing);null" json:"alert_rule,omitempty"`
 }

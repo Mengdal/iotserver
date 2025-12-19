@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"iotServer/models"
 	"iotServer/services"
 	"strconv"
 )
@@ -14,17 +15,11 @@ type PositionController struct {
 // @Title Create Position
 // @Description 创建位置
 // @Param   Authorization    header   string  true    "Bearer YourToken"
-// @Param   projectId     query    int     true       "项目ID"
-// @Param   name         query    string  true        "位置名称"
-// @Param   parentId     query    int     false       "父节点ID"
+// @Param   name        	 query    string  true    "位置名称"
+// @Param   parentId     	 query    int     false   "父节点ID"
 // @Success 200 {object} web.Result
 // @router /create [post]
 func (c *PositionController) Create() {
-	projectId, err := strconv.ParseInt(c.GetString("projectId"), 10, 64)
-	if err != nil {
-		c.Error(400, "Invalid project ID")
-	}
-
 	name := c.GetString("name")
 	if name == "" {
 		c.Error(400, "Name is required")
@@ -39,8 +34,9 @@ func (c *PositionController) Create() {
 		}
 		parentId = &pid
 	}
-
-	err = c.service.Create(projectId, name, parentId)
+	userId, _ := c.Ctx.Input.GetData("user_id").(int64)
+	tenantId, err := models.GetUserTenantId(userId)
+	err = c.service.Create(tenantId, name, parentId)
 	if err != nil {
 		c.Error(400, err.Error())
 	} else {
@@ -61,7 +57,9 @@ func (c *PositionController) Delete() {
 		c.Error(400, "Invalid ID")
 	}
 
-	err = c.service.DeleteAll(id)
+	userId, _ := c.Ctx.Input.GetData("user_id").(int64)
+	tenantId, err := models.GetUserTenantId(userId)
+	err = c.service.DeleteAll(tenantId, id)
 	if err != nil {
 		c.Error(400, err.Error())
 	} else {
@@ -73,18 +71,12 @@ func (c *PositionController) Delete() {
 // @Title Edit Position
 // @Description 编辑位置
 // @Param   Authorization header   string  true        "Bearer YourToken"
-// @Param   projectId     query    int     true        "项目ID"
 // @Param   id            query    int     true        "位置ID"
 // @Param   name          query    string  true        "位置名称"
 // @Param   parentId      query    int     false       "父节点ID"
 // @Success 200 {object} web.Result
 // @router /edit [post]
 func (c *PositionController) Edit() {
-	projectId, err := strconv.ParseInt(c.GetString("projectId"), 10, 64)
-	if err != nil {
-		c.Error(400, "Invalid project ID")
-	}
-
 	id, err := strconv.ParseInt(c.GetString("id"), 10, 64)
 	if err != nil {
 		c.Error(400, "Invalid ID")
@@ -95,7 +87,9 @@ func (c *PositionController) Edit() {
 		c.Error(400, "Name is required")
 	}
 
-	err = c.service.Edit(projectId, id, name)
+	userId, _ := c.Ctx.Input.GetData("user_id").(int64)
+	tenantId, err := models.GetUserTenantId(userId)
+	err = c.service.Edit(tenantId, id, name)
 	if err != nil {
 		c.Error(400, err.Error())
 	} else {
@@ -107,16 +101,12 @@ func (c *PositionController) Edit() {
 // @Title Get Position Tree
 // @Description 获取位置树
 // @Param   Authorization header   string  true        "Bearer YourToken"
-// @Param   projectId     query    int     true        "项目ID"
 // @Success 200 {object} web.Result
 // @router /tree [post]
 func (c *PositionController) List() {
-	projectId, err := strconv.ParseInt(c.GetString("projectId"), 10, 64)
-	if err != nil {
-		c.Error(400, "Invalid project ID")
-	}
-
-	tree, err := c.service.TreeOnly(projectId)
+	userId, _ := c.Ctx.Input.GetData("user_id").(int64)
+	tenantId, err := models.GetUserTenantId(userId)
+	tree, err := c.service.TreeOnly(tenantId)
 	if err != nil {
 		c.Error(400, err.Error())
 	} else {

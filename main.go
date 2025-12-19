@@ -50,7 +50,7 @@ func initSwagger() {
 // 初始化日志文件
 func initLogger() {
 	const logFile = "service.log"
-	const maxSize = 100 * 1024 * 1024 // 100MB
+	const maxSize = 100 * 1024 // 10MB
 
 	// 如果存在日志文件且超过最大限制 → 直接清空覆盖
 	if fi, err := os.Stat(logFile); err == nil {
@@ -60,7 +60,7 @@ func initLogger() {
 		}
 	}
 
-	// 继续你的日志打开逻辑
+	// 继续日志打开逻辑
 	logFileHandle, err := os.OpenFile(logFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err != nil {
 		log.Fatal("无法打开日志文件:", err)
@@ -90,7 +90,7 @@ func validateToken(ctx *context.Context) bool {
 		"/api/scada/detail",
 		"/api/scada/updateStatus",
 		"/api/scada/delete",
-		"/api/scada/getAlarmRecord",
+		//"/api/scada/getAlarmRecord",
 		"/api/ws",
 		"/ws",
 		"/api/ekuiper/callback",
@@ -104,21 +104,42 @@ func validateToken(ctx *context.Context) bool {
 	token := ctx.Request.Header.Get("Authorization")
 	if token == "" {
 		ctx.Output.SetStatus(401)
-
-		ctx.Output.JSON(map[string]string{"error": "Unauthorized: missing token"}, false, false)
+		ctx.Output.JSON(map[string]interface{}{
+			"code":    401,
+			"message": "Unauthorized: missing token",
+		}, false, false)
 		return false
 	}
 
 	claims, ok := utils.ParseToken(token)
 	if !ok {
 		ctx.Output.SetStatus(403)
-		ctx.Output.JSON(map[string]string{"Forbidden": "invalid token , 请重新登录"}, false, false)
+		ctx.Output.JSON(map[string]interface{}{
+			"code":    403,
+			"message": "invalid token , 请重新登录",
+		}, false, false)
 		return false
+	}
+
+	// 检查租户权限
+	if departmentId, ok := claims["department_id"].(float64); ok {
+		if !utils.CheckResourceBelongsToTenant(ctx, int64(departmentId)) {
+			ctx.Output.SetStatus(402)
+			ctx.Output.JSON(map[string]interface{}{
+				"code":    402,
+				"message": "无权限访问该资源",
+			}, false, false)
+			return false
+		}
 	}
 
 	// 将 user_id 存入上下文供后续方法使用
 	if userId, ok := claims["user_id"].(float64); ok {
 		ctx.Input.SetData("user_id", int64(userId))
+	}
+	// 将 department_id 存入上下文供后续方法使用
+	if departmentId, ok := claims["department_id"].(float64); ok {
+		ctx.Input.SetData("department_id", int64(departmentId))
 	}
 
 	return true

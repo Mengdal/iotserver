@@ -208,3 +208,17 @@ func SendHttpPost(url string, data interface{}) error {
 
 	return nil
 }
+
+func GetResourceIds(resourceIds string) ([]int64, error) {
+	// 解析资源ID列表
+	idList := strings.Split(resourceIds, ",")
+
+	var ids []int64
+	for _, idStr := range idList {
+		if id, err := strconv.ParseInt(strings.TrimSpace(idStr), 10, 64); err == nil {
+			ids = append(ids, id)
+		}
+	}
+
+	return ids, nil
+}

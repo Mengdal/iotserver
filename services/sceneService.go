@@ -94,12 +94,12 @@ func (s *SceneService) SceneList(req dtos.SceneQueryRequest) (*dtos.SceneListRes
 }
 
 // StartScene 启动场景
-func (s *SceneService) StartScene(id int64) error {
+func (s *SceneService) StartScene(id, userId int64) error {
 	o := orm.NewOrm()
 	scene := models.Scene{Id: id}
-
-	if err := o.Read(&scene); err != nil {
-		return fmt.Errorf("场景不存在: %v", err)
+	tenantId, _ := models.GetUserTenantId(userId)
+	if err := o.Read(&scene); err != nil || scene.Department == nil || scene.Department.Id != tenantId {
+		return fmt.Errorf("scene not found or no permission")
 	}
 
 	// 检查是否已经在运行
@@ -108,7 +108,7 @@ func (s *SceneService) StartScene(id int64) error {
 	}
 
 	// 解析条件，加载定时场景
-	if err := s.loadSceneToCron(scene); err != nil {
+	if err := s.loadSceneToCron(scene, userId); err != nil {
 		return fmt.Errorf("请重新配置该场景，Reason：" + err.Error())
 	}
 	// 更新状态
@@ -120,12 +120,12 @@ func (s *SceneService) StartScene(id int64) error {
 }
 
 // StopScene 停止场景
-func (s *SceneService) StopScene(id int64) error {
+func (s *SceneService) StopScene(id, userId int64) error {
 	o := orm.NewOrm()
 	scene := models.Scene{Id: id}
-
-	if err := o.Read(&scene); err != nil {
-		return fmt.Errorf("场景不存在: %v", err)
+	tenantId, _ := models.GetUserTenantId(userId)
+	if err := o.Read(&scene); err != nil || scene.Department == nil || scene.Department.Id != tenantId {
+		return fmt.Errorf("scene not found or no permission")
 	}
 
 	// 移除定时任务
@@ -152,14 +152,16 @@ func (s *SceneService) StopScene(id int64) error {
 }
 
 // DeleteScene 删除场景
-func (s *SceneService) DeleteScene(id int64) error {
-	// 先停止场景
-	s.StopScene(id)
-
-	scene := models.Scene{Id: id}
+func (s *SceneService) DeleteScene(id, userId int64) error {
 	o := orm.NewOrm()
-	o.Read(&scene)
+	scene := models.Scene{Id: id}
+	tenantId, _ := models.GetUserTenantId(userId)
+	if err := o.Read(&scene); err != nil || scene.Department == nil || scene.Department.Id != tenantId {
+		return fmt.Errorf("scene not found or no permission")
+	}
 
+	// 先停止场景
+	s.StopScene(id, tenantId)
 	// 删除ekuiper中的同名场景规则
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -170,12 +172,12 @@ func (s *SceneService) DeleteScene(id int64) error {
 }
 
 // ExecuteScene 执行场景动作
-func ExecuteScene(id int64) error {
+func ExecuteScene(id, userId int64) error {
 	o := orm.NewOrm()
 	scene := models.Scene{Id: id}
-
-	if err := o.Read(&scene); err != nil {
-		return fmt.Errorf("场景不存在: %v", err)
+	tenantId, _ := models.GetUserTenantId(userId)
+	if err := o.Read(&scene); err != nil || scene.Department == nil || scene.Department.Id != tenantId {
+		return fmt.Errorf("scene not found or no permission")
 	}
 
 	// 解析动作
@@ -190,7 +192,7 @@ func ExecuteScene(id int64) error {
 	var writeLog models.WriteLog
 	for _, action := range actions {
 		// 调用设备控制接口
-		seq, err := Processor.Deal(action.DeviceName, action.Code, action.Value, "场景控制", id)
+		seq, err := Processor.Deal(action.DeviceName, action.Code, action.Value, "场景控制", userId, tenantId)
 		if err != nil {
 			//更新SEQ失败状态
 			writeLog.Seq = seq
@@ -207,10 +209,10 @@ func ExecuteScene(id int64) error {
 }
 
 // RestartScene 手动执行场景
-func (s *SceneService) RestartScene(id int64) error {
-	err := ExecuteScene(id)
+func (s *SceneService) RestartScene(id, userId int64) error {
+	err := ExecuteScene(id, userId)
 	if err != nil {
-		return fmt.Errorf("执行失败：%v" + err.Error())
+		return err
 	}
 	return nil
 }
@@ -244,7 +246,7 @@ func (s *SceneService) LoadScenesFromDatabase() error {
 
 	loadedCount := 0
 	for _, scene := range scenes {
-		if err := s.loadSceneToCron(scene); err != nil {
+		if err := s.loadSceneToCron(scene, scene.UserId); err != nil {
 			log.Printf("加载场景 %d 失败: %v", scene.Id, err)
 			continue
 		}
@@ -270,7 +272,7 @@ func (s *SceneService) LoadScenesFromDatabase() error {
 }
 
 // loadSceneToCron 将定时场景加载到cron中，触发场景加载ekuiper
-func (s *SceneService) loadSceneToCron(scene models.Scene) error {
+func (s *SceneService) loadSceneToCron(scene models.Scene, userId int64) error {
 	// 解析条件，查找定时条件
 	var conditions []dtos.Condition
 	err := json.Unmarshal([]byte(scene.Condition), &conditions)
@@ -285,7 +287,7 @@ func (s *SceneService) loadSceneToCron(scene models.Scene) error {
 				// 添加定时任务
 				entryID, err := s.cron.AddFunc(cronExpr, func() {
 					log.Printf("定时任务触发: 场景ID=%d, 名称=%s", scene.Id, scene.Name)
-					ExecuteScene(scene.Id)
+					ExecuteScene(scene.Id, userId)
 				})
 				if err != nil {
 					return fmt.Errorf("添加定时任务失败: %v", err)
@@ -447,7 +449,7 @@ func (s *SceneService) DeviceStatusCron() error {
 // 全局设备离线检测
 func (s *SceneService) AllDeviceStatusCron() error {
 	// 查询所有在线设备
-	devices, err := tagService.ListDevicesByTag("status", "1")
+	devices, err := tagService.ListDevicesByTag("status", "1", nil)
 	if err != nil {
 		return fmt.Errorf(err.Error())
 	}
@@ -480,7 +482,7 @@ func ExecCallBack(req map[string]interface{}) error {
 	if err := o.Read(&scene, "Name"); err != nil {
 		return fmt.Errorf(err.Error())
 	}
-	if err := ExecuteScene(scene.Id); err != nil {
+	if err := ExecuteScene(scene.Id, scene.UserId); err != nil {
 		return fmt.Errorf(err.Error())
 	}
 	return nil

@@ -175,12 +175,23 @@ func (s *TagService) DeleteDevices(deviceNames ...string) error {
 }
 
 // 获取拥有指定标签值的所有设备
-func (s *TagService) ListDevicesByTag(tagName, tagValue string) ([]string, error) {
+func (s *TagService) ListDevicesByTag(tagName, tagValue string, projectIds []int64) ([]string, error) {
 	o := orm.NewOrm()
 	var devices []*models.Device
 
-	// 直接使用 tagName 作为字段名进行查询
-	o.QueryTable(new(models.Device)).Filter(tagName, tagValue).All(&devices)
+	// 构建查询
+	query := o.QueryTable(new(models.Device)).Filter(tagName, tagValue)
+
+	// 只有当 projectIds 不为空时才添加部门过滤条件
+	if len(projectIds) > 0 {
+		query = query.Filter("department_id__in", projectIds)
+	}
+	// 如果 projectIds 为空，则只按 tagName 和 tagValue 过滤
+
+	_, err := query.All(&devices)
+	if err != nil {
+		return nil, err
+	}
 
 	// 提取设备名称
 	deviceNames := make([]string, len(devices))
@@ -214,7 +225,7 @@ func (s *TagService) ListDevicesByTag(tagName, tagValue string) ([]string, error
 }
 
 // DevicesTagsTree 获取拥有指定标签值的设备树 V1
-func (s *TagService) DevicesTagsTree(tagName, tagValue string) ([]map[string]interface{}, error) {
+/*func (s *TagService) DevicesTagsTree(tagName, tagValue string) ([]map[string]interface{}, error) {
 	// 根据标签筛选设备
 	devices, err := s.ListDevicesByTag(tagName, tagValue)
 	if err != nil {
@@ -254,12 +265,13 @@ func (s *TagService) DevicesTagsTree(tagName, tagValue string) ([]map[string]int
 	}
 
 	return deviceTree, nil
-}
+}*/
 
 // DevicesTagsTree2 获取拥有指定标签值的设备树 V2
-func (s *TagService) DevicesTagsTree2(tagName, tagValue string) ([]map[string]interface{}, error) {
+func (s *TagService) DevicesTagsTree2(projectIds []int64, tagName, tagValue string) ([]map[string]interface{}, error) {
+	o := orm.NewOrm()
 	// 根据标签筛选设备
-	devices, err := s.ListDevicesByTag(tagName, tagValue)
+	devices, err := s.ListDevicesByTag(tagName, tagValue, projectIds)
 	if err != nil {
 		return nil, err
 	}
@@ -268,7 +280,6 @@ func (s *TagService) DevicesTagsTree2(tagName, tagValue string) ([]map[string]in
 	var deviceTree []map[string]interface{}
 
 	// 根据产品返回统一模型
-	o := orm.NewOrm()
 	var tags []*models.Properties
 	productIdInt, _ := strconv.ParseInt(tagValue, 10, 64)
 	_, err = o.QueryTable(new(models.Properties)).

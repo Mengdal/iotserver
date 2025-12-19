@@ -37,11 +37,12 @@ func (c *EngineController) Sources() {
 		c.Error(400, "不支持的消息类型，目前支持：[\"HTTP推送\",\"消息对队列MQTT\",\"消息队列Kafka\",\"InfluxDB\",\"TDengine\"]")
 	}
 	o := orm.NewOrm()
+	userId, _ := c.Ctx.Input.GetData("user_id").(int64)
+	tenantId, _ := models.GetUserTenantId(userId)
 
 	// 查询资源
 	var dataSources []*models.DataResource
-	qs := o.QueryTable(new(models.DataResource)).
-		Filter("type", name)
+	qs := o.QueryTable(new(models.DataResource)).Filter("department_id", tenantId).Filter("type", name)
 	paginate, err := utils.Paginate(qs, page, size, &dataSources)
 	if err != nil {
 		c.Error(400, "查询失败")
@@ -61,10 +62,12 @@ func (c *EngineController) Valid() {
 	id, _ := c.GetInt64("id")
 
 	o := orm.NewOrm()
-	var dataSources models.DataResource
-	dataSources.Id = id
+	userId, _ := c.Ctx.Input.GetData("user_id").(int64)
+	tenantId, _ := models.GetUserTenantId(userId)
+
+	dataSources := models.DataResource{Id: id}
 	err := o.Read(&dataSources)
-	if err != nil {
+	if err != nil || dataSources.Department == nil || dataSources.Department.Id != tenantId {
 		c.Error(400, "查询状态失败")
 	}
 
@@ -119,15 +122,21 @@ func (c *EngineController) EditSource() {
 		dataSources.Health = string(constants.RuleStart)
 	}
 	o := orm.NewOrm()
-
+	userId, _ := c.Ctx.Input.GetData("user_id").(int64)
+	tenantId, _ := models.GetUserTenantId(userId)
 	if req.Id == 0 {
 		dataSources.BeforeInsert()
+		dataSources.Department = &models.Department{Id: tenantId}
 		_, err := o.Insert(&dataSources)
 		if err != nil {
 			c.Error(400, "插入失败")
 		}
 	} else {
 		dataSources.Id = req.Id
+		resource := &models.DataResource{Id: req.Id}
+		if err := o.Read(resource); err != nil || resource.Department == nil || resource.Department.Id != tenantId {
+			c.Error(400, "resource not found or no permission")
+		}
 		dataSources.BeforeUpdate()
 		_, err := o.Update(&dataSources)
 		if err != nil {
@@ -149,8 +158,13 @@ func (c *EngineController) DelSource() {
 	id, _ := c.GetInt64("id")
 
 	o := orm.NewOrm()
-	resource := models.DataResource{Id: id}
-	_, err := o.Delete(&resource)
+	userId, _ := c.Ctx.Input.GetData("user_id").(int64)
+	tenantId, _ := models.GetUserTenantId(userId)
+	resource := &models.DataResource{Id: id}
+	if err := o.Read(resource); err != nil || resource.Department == nil || resource.Department.Id != tenantId {
+		c.Error(400, "resource not found or no permission")
+	}
+	_, err := o.Delete(resource)
 	if err != nil {
 		c.Error(400, "删除失败")
 	}
@@ -171,17 +185,24 @@ func (c *EngineController) EditEngine() {
 	}
 
 	o := orm.NewOrm()
+	userId, _ := c.Ctx.Input.GetData("user_id").(int64)
+	tenantId, _ := models.GetUserTenantId(userId)
 	ruleEngine := models.RuleEngine{Name: req.Name, Description: req.Description}
 	ruleEngine.Status = string(constants.RuleStop) //默认关闭
 	if req.Id == 0 {
 		// 创建告警规则
 		ruleEngine.BeforeInsert()
+		ruleEngine.Department = &models.Department{Id: tenantId}
 		_, err := o.Insert(&ruleEngine)
 		if err != nil {
 			c.Error(400, "插入失败:"+err.Error())
 		}
 	} else {
 		ruleEngine.Id = req.Id
+		engine := &models.RuleEngine{Id: req.Id}
+		if err := o.Read(engine); err != nil || engine.Department == nil || engine.Department.Id != tenantId {
+			c.Error(400, "ruleEngine not found or no permission")
+		}
 		ruleEngine.BeforeUpdate()
 		_, err := o.Update(&ruleEngine, "modified", "name", "description", "status", "filter", "data_resource_id")
 		if err != nil {
@@ -211,10 +232,11 @@ func (c *EngineController) Engines() {
 		c.Error(400, "不支持的状态")
 	}
 	o := orm.NewOrm()
-
+	userId, _ := c.Ctx.Input.GetData("user_id").(int64)
+	tenantId, _ := models.GetUserTenantId(userId)
 	// 查询资源
 	var ruleEngines []*models.RuleEngine
-	qs := o.QueryTable(new(models.RuleEngine))
+	qs := o.QueryTable(new(models.RuleEngine)).Filter("department_id", tenantId)
 	if name != "" {
 		qs = qs.Filter("name__icontains", name)
 	}
@@ -246,13 +268,15 @@ func (c *EngineController) EngineConfig() {
 	}
 	// 2. 取出设备及属性类型
 	o := orm.NewOrm()
+	userId, _ := c.Ctx.Input.GetData("user_id").(int64)
+	tenantId, _ := models.GetUserTenantId(userId)
 	var ruleEngine models.RuleEngine
-	var dataSource models.DataResource
-	dataSource.Id = req.DataSourceId
-
 	ruleEngine.Id = req.Id
+	if err := o.Read(&ruleEngine); err != nil || ruleEngine.Department == nil || ruleEngine.Department.Id != tenantId {
+		c.Error(400, "engine not found or no permission")
+	}
 	ruleEngine.Name = req.Name
-	ruleEngine.DataResource = &dataSource
+	ruleEngine.DataResource = &models.DataResource{Id: req.DataSourceId}
 	ruleEngine.Status = req.Status
 	ruleEngine.Description = req.Description
 	filter := req.Filter
@@ -314,8 +338,10 @@ func (c *EngineController) DelEngine() {
 	id, _ := c.GetInt64("id")
 
 	o := orm.NewOrm()
+	userId, _ := c.Ctx.Input.GetData("user_id").(int64)
+	tenantId, _ := models.GetUserTenantId(userId)
 	engine := models.RuleEngine{Id: id}
-	if err := o.Read(&engine); err != nil {
+	if err := o.Read(&engine); err != nil || engine.Department == nil || engine.Department.Id != tenantId {
 		c.Error(400, "规则引擎未找到！")
 	}
 
@@ -347,8 +373,10 @@ func (c *EngineController) ControllerEngine() {
 	status := c.GetString("status")
 
 	o := orm.NewOrm()
+	userId, _ := c.Ctx.Input.GetData("user_id").(int64)
+	tenantId, _ := models.GetUserTenantId(userId)
 	engine := models.RuleEngine{Id: id}
-	if err := o.Read(&engine); err != nil {
+	if err := o.Read(&engine); err != nil || engine.Department == nil || engine.Department.Id != tenantId {
 		c.Error(400, "规则引擎未找到！")
 	}
 	engine.Status = status

@@ -107,9 +107,14 @@ func init() {
 				&controllers.GroupController{},
 			),
 		),
-		beego.NSNamespace("/project",
+		beego.NSNamespace("/tenant",
 			beego.NSInclude(
-				&controllers.ProjectController{},
+				&controllers.TenantController{},
+			),
+		),
+		beego.NSNamespace("/department",
+			beego.NSInclude(
+				&controllers.DepartmentController{},
 			),
 		),
 	)

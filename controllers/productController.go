@@ -8,7 +8,6 @@ import (
 	"iotServer/models/constants"
 	"iotServer/services"
 	"iotServer/utils"
-	"strconv"
 )
 
 type ProductController struct {
@@ -29,34 +28,14 @@ func (c *ProductController) Get() {
 	size, _ := c.GetInt("size", 10)
 	name := c.GetString("name")
 
-	userId, ok := c.Ctx.Input.GetData("user_id").(int64)
-	if !ok {
-		c.Error(400, "用户ID不存在")
-	}
+	userId, _ := c.Ctx.Input.GetData("user_id").(int64)
+	tenantId, _ := models.GetUserTenantId(userId)
 
 	o := orm.NewOrm()
-
-	// 获取当前用户信息
-	var currentUser models.User
-	currentUser.Id = userId
-	err := o.Read(&currentUser)
-	if err != nil {
-		c.Error(400, "用户不存在")
-	}
-
-	// 如果是父用户（ParentId == nil），获取自己和所有子用户的产品
-	var userIds []int64
-	if currentUser.ParentId == nil {
-		userIds, _ = GetAllSubUserIds(userId)
-		userIds = append(userIds, userId) // 包括自己
-	} else {
-		userIds = []int64{userId} // 子用户只能查看自己的产品
-	}
-
 	// 查询产品
 	var products []*models.Product
 	qs := o.QueryTable(new(models.Product)).
-		Filter("user_id__in", userIds)
+		Filter("department_id", tenantId)
 	// 如果提供了名称参数，则添加模糊搜索条件
 	if name != "" {
 		qs = qs.Filter("name__icontains", name)
@@ -68,24 +47,6 @@ func (c *ProductController) Get() {
 	}
 
 	c.Success(paginate)
-}
-
-// GetAllSubUserIds 递归获取某个用户下的所有子用户ID
-func GetAllSubUserIds(userId int64) ([]int64, error) {
-	o := orm.NewOrm()
-	var users []*models.User
-	_, err := o.QueryTable(new(models.User)).Filter("parent_id", userId).All(&users)
-	if err != nil {
-		return nil, err
-	}
-
-	var ids []int64
-	for _, user := range users {
-		ids = append(ids, user.Id)
-		subIds, _ := GetAllSubUserIds(user.Id)
-		ids = append(ids, subIds...)
-	}
-	return ids, nil
 }
 
 // Detail @Title 获取产品详情
@@ -102,8 +63,7 @@ func (c *ProductController) Detail() {
 	o := orm.NewOrm()
 
 	// 查询产品
-	var product models.Product
-	product.Id = productId
+	product := models.Product{Id: productId}
 	err := o.QueryTable(new(models.Product)).Filter("id", productId).One(&product)
 
 	if err != nil {
@@ -161,10 +121,8 @@ func (c *ProductController) Create() {
 		c.Error(400, "参数有误")
 	}
 
-	userId, ok := c.Ctx.Input.GetData("user_id").(int64)
-	if !ok {
-		c.Error(400, "用户ID不存在")
-	}
+	userId, _ := c.Ctx.Input.GetData("user_id").(int64)
+	tenantId, _ := models.GetUserTenantId(userId)
 
 	o := orm.NewOrm()
 
@@ -181,12 +139,8 @@ func (c *ProductController) Create() {
 		NodeType:       nodeType,
 		CategoryId:     categoryId,
 		Factory:        factory,
+		Department:     &models.Department{Id: tenantId},
 	}
-
-	// 获取用户对象
-	var user models.User
-	user.Id = userId
-	product.User = &user
 
 	// Created / Modified
 	_ = product.BeforeInsert()
@@ -274,32 +228,14 @@ func (c *ProductController) Update() {
 	//产品ID
 	id, _ := c.GetInt64("id")
 	categoryId, _ := c.GetInt64("categoryId")
-
-	userId, ok := c.Ctx.Input.GetData("user_id").(int64)
-	if !ok {
-		c.Error(400, "用户ID不存在")
-	}
+	userId, _ := c.Ctx.Input.GetData("user_id").(int64)
+	tenantId, _ := models.GetUserTenantId(userId)
 
 	o := orm.NewOrm()
-
-	var product models.Product
-	product.Id = id
-
+	product := models.Product{Id: id}
 	err := o.Read(&product)
-	if err != nil {
-		c.Error(400, "产品不存在")
-	}
-
-	// 权限判断（假设你有 CheckModelOwnership 函数）
-	var productIDInt int64
-	_, err = fmt.Sscanf(strconv.FormatInt(id, 10), "%d", &productIDInt)
-	if err != nil {
-		c.Error(400, "产品ID必须是数字")
-	}
-	fmt.Println("产品ID", productIDInt)
-
-	if !CheckModelOwnership(o, "product", productIDInt, userId, "user_id") {
-		c.Error(400, "无权限")
+	if err != nil || product.Department == nil || product.Department.Id != tenantId {
+		c.Error(400, "产品不存在或无操作权限")
 	}
 
 	// 更新字段
@@ -405,26 +341,21 @@ func (c *ProductController) Update() {
 func (c *ProductController) Delete() {
 	id, _ := c.GetInt64("id")
 
-	userId, ok := c.Ctx.Input.GetData("user_id").(int64)
-	if !ok {
-		c.Error(400, "用户ID不存在")
-	}
+	userId, _ := c.Ctx.Input.GetData("user_id").(int64)
+	tenantId, _ := models.GetUserTenantId(userId)
 
 	o := orm.NewOrm()
-
-	fmt.Println("产品ID", id)
-	// 权限判断
-	if !CheckModelOwnership(o, "product", id, userId, "user_id") {
-		c.Error(400, "无权限")
+	product := models.Product{Id: id}
+	if err := o.Read(&product); err != nil {
+		c.Error(400, "NOT FOUND")
 	}
-
-	// 执行删除
-	var product models.Product
-	product.Id = id
-
-	_, err := o.Delete(&product)
-	if err != nil {
-		c.Error(400, "删除失败")
+	if product.Department != nil && product.Department.Id == tenantId {
+		_, err := o.Delete(&product)
+		if err != nil {
+			c.Error(400, "删除失败")
+		}
+	} else {
+		c.Error(400, "无操作权限")
 	}
 
 	c.SuccessMsg()

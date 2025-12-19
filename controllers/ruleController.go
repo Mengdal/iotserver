@@ -34,8 +34,10 @@ func (c *RuleController) Edit() {
 	if !constants.IsValidAlertLevel(req.AlertLevel) {
 		c.Error(400, "参数不合法")
 	}
+	userId, _ := c.Ctx.Input.GetData("user_id").(int64)
+	tenantId, _ := models.GetUserTenantId(userId)
 	o := orm.NewOrm()
-	alertRule := models.AlertRule{Name: req.Name, AlertLevel: req.AlertLevel, Description: req.Description}
+	alertRule := models.AlertRule{Name: req.Name, AlertLevel: req.AlertLevel, Description: req.Description, Department: &models.Department{Id: tenantId}}
 	alertRule.Status = string(constants.RuleStop)                 //默认关闭
 	alertRule.Condition = string(constants.WorkerConditionAnyone) //任意条件触发
 	if req.Id == 0 {
@@ -71,7 +73,8 @@ func (c *RuleController) Update() {
 	if err := json.NewDecoder(c.Ctx.Request.Body).Decode(&req); err != nil {
 		c.Error(400, "参数解析失败: "+err.Error())
 	}
-
+	userId, _ := c.Ctx.Input.GetData("user_id").(int64)
+	tenantId, _ := models.GetUserTenantId(userId)
 	// 2. 取出设备及属性类型
 	o := orm.NewOrm()
 	ids := req.SubRule[0].DeviceId
@@ -118,22 +121,23 @@ func (c *RuleController) Update() {
 
 	// 6. 检查规则是否已存在,存在则更新，不存在则新建
 	var alertRule models.AlertRule
-	if err = o.QueryTable(new(models.AlertRule)).Filter("name", req.Name).One(&alertRule); err != nil {
+	if err = o.QueryTable(new(models.AlertRule)).Filter("department_id", tenantId).Filter("name", req.Name).One(&alertRule); err != nil {
 		c.Error(400, "规则不存在，请创建后配置")
 	}
 
-	if err := common.Ekuiper.RuleExist(ctx, req.Name); err == nil {
-		err = common.Ekuiper.UpdateRule(ctx, actions, req.Name, sql)
+	if err := common.Ekuiper.RuleExist(ctx, req.Name+"__Rule"); err == nil {
+		err = common.Ekuiper.UpdateRule(ctx, actions, req.Name+"__Rule", sql)
 		if err != nil {
 			c.Error(400, "更新规则失败: "+err.Error())
 		}
 	} else {
-		err = common.Ekuiper.CreateRule(ctx, actions, req.Name, sql)
+		err = common.Ekuiper.CreateRule(ctx, actions, req.Name+"__Rule", sql)
 		if err != nil {
 			c.Error(400, "更新规则失败: "+err.Error())
 		}
 		alertRule.Condition = string(constants.WorkerConditionAnyone)
 		alertRule.Status = string(constants.RuleStart)
+		alertRule.Department = &models.Department{Id: tenantId}
 	}
 
 	// 7 . 全部操作完成写盘保存
@@ -146,8 +150,8 @@ func (c *RuleController) Update() {
 	alertRule.Notify = string(subNotifyJson)
 	//更新规则后，规则需要启动后restart
 	if alertRule.Status == string(constants.RuleStart) {
-		err = common.Ekuiper.StartRule(ctx, req.Name)
-		err = common.Ekuiper.RestartRule(ctx, req.Name)
+		err = common.Ekuiper.StartRule(ctx, req.Name+"__Rule")
+		err = common.Ekuiper.RestartRule(ctx, req.Name+"__Rule")
 		if err != nil {
 			c.Error(400, "规则启动失败"+err.Error())
 			alertRule.Status = string(constants.RuleStop)
@@ -188,13 +192,13 @@ func (c *RuleController) GetRuleStatus() {
 
 	} else {
 		// 检查规则是否存在
-		err = common.Ekuiper.RuleExist(ctx, ruleID)
+		err = common.Ekuiper.RuleExist(ctx, ruleID+"__Rule")
 		if err != nil {
 			c.Error(400, "检查规则存在性失败: "+err.Error())
 		}
 
 		// 获取规则状态
-		stats, err = common.Ekuiper.GetRuleStats(ctx, ruleID)
+		stats, err = common.Ekuiper.GetRuleStats(ctx, ruleID+"__Rule")
 		if err != nil {
 			c.Error(400, "获取规则状态失败: "+err.Error())
 		}
@@ -218,12 +222,13 @@ func (c *RuleController) OperateRule() {
 	if req.RuleID == "" || req.Action == "" {
 		c.Error(400, "ruleId 和 action 参数不能为空")
 	}
+	userId, _ := c.Ctx.Input.GetData("user_id").(int64)
+	tenantId, _ := models.GetUserTenantId(userId)
 
-	var rule models.AlertRule
-	rule.Name = req.RuleID
+	rule := models.AlertRule{Name: req.RuleID}
 	o := orm.NewOrm()
-	if err := o.Read(&rule, "Name"); err != nil {
-		c.Error(400, "规则查询失败")
+	if err := o.Read(&rule, "Name"); err != nil || rule.Department == nil || rule.Department.Id != tenantId {
+		c.Error(400, "rule not found or no permission")
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -235,19 +240,19 @@ func (c *RuleController) OperateRule() {
 
 	switch req.Action {
 	case "start":
-		err = common.Ekuiper.StartRule(ctx, req.RuleID)
+		err = common.Ekuiper.StartRule(ctx, req.RuleID+"__Rule")
 		message = "规则已启动"
 		rule.Status = string(constants.RuleStart)
 	case "stop":
-		err = common.Ekuiper.StopRule(ctx, req.RuleID)
+		err = common.Ekuiper.StopRule(ctx, req.RuleID+"__Rule")
 		message = "规则已停止"
 		rule.Status = string(constants.RuleStop)
 	case "delete":
-		err = common.Ekuiper.DeleteRule(ctx, req.RuleID)
+		err = common.Ekuiper.DeleteRule(ctx, req.RuleID+"__Rule")
 		message = "规则已删除"
 		flag = true
 	case "restart":
-		err = common.Ekuiper.RestartRule(ctx, req.RuleID)
+		err = common.Ekuiper.RestartRule(ctx, req.RuleID+"__Rule")
 		message = "规则已重启"
 		rule.Status = string(constants.RuleStart)
 	default:
@@ -294,8 +299,10 @@ func (c *RuleController) List() {
 
 	var engines []*models.AlertRule
 	o := orm.NewOrm()
+	userId, _ := c.Ctx.Input.GetData("user_id").(int64)
+	tenantId, _ := models.GetUserTenantId(userId)
 
-	qs := o.QueryTable(new(models.AlertRule))
+	qs := o.QueryTable(new(models.AlertRule)).Filter("department_id", tenantId)
 	if name != "" {
 		qs = qs.Filter("name__icontains", name)
 	}

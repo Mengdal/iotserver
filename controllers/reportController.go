@@ -1,6 +1,9 @@
 package controllers
 
-import "iotServer/services"
+import (
+	"iotServer/models"
+	"iotServer/services"
+)
 
 // ReportController 综合报表
 type ReportController struct {
@@ -46,15 +49,21 @@ func (c *ReportController) TimePeriodReport() {
 	if start == "" || end == "" {
 		c.Error(400, "开始时间和结束时间不能为空")
 	}
-
-	//if productId <= 0 {
-	//	c.Error(400, "产品ID无效")
-	//}
+	userId, _ := c.Ctx.Input.GetData("user_id").(int64)
+	tenantId, _ := models.GetUserTenantId(userId)
+	var projectIds []int64
+	var err error
+	if projectId != 0 {
+		projectIds, err = models.GetUserProjectIds(userId, projectId)
+		if err != nil {
+			c.Error(400, err.Error())
+		}
+	}
 
 	reportService, err := services.NewReportService()
 	// 调用服务获取报表数据
 	result, err := reportService.TimePeriodReport(
-		page, size, start, end, projectId, search,
+		page, size, start, end, tenantId, projectIds, search,
 		productId, propertyIds, resourceType, resourceIds, dateType, multipleType, reportType)
 
 	if err != nil {

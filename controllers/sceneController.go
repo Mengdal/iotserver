@@ -37,11 +37,16 @@ func (c *SceneController) Edit() {
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
 		c.Error(400, "参数解析失败: "+err.Error())
 	}
+	userId, _ := c.Ctx.Input.GetData("user_id").(int64)
+	tenantId, _ := models.GetUserTenantId(userId)
 
 	o := orm.NewOrm()
-	scene := models.Scene{Name: req.Name, Description: req.Description}
+	scene := models.Scene{Name: req.Name, Description: req.Description, Department: &models.Department{Id: tenantId}, UserId: userId}
 	scene.Status = string(constants.RuleStop) //默认关闭
 	if req.Id == 0 {
+		if err := o.Read(&scene, "name"); err != nil || scene.Id != 0 {
+			c.Error(400, "current name is not available")
+		}
 		// 创建告警规则
 		scene.BeforeInsert()
 		_, err := o.Insert(&scene)
@@ -74,11 +79,13 @@ func (c *SceneController) List() {
 	size, _ := c.GetInt("size", 10)
 	name := c.GetString("name")
 	status := c.GetString("status")
+	userId := c.Ctx.Input.GetData("user_id").(int64)
+	tenantId, _ := models.GetUserTenantId(userId)
 
 	var scens []*models.Scene
 	o := orm.NewOrm()
 
-	qs := o.QueryTable(new(models.Scene))
+	qs := o.QueryTable(new(models.Scene)).Filter("department_id", tenantId)
 	if name != "" {
 		qs = qs.Filter("name__icontains", name)
 	}
@@ -106,11 +113,12 @@ func (c *SceneController) Update() {
 		c.Error(400, "参数解析失败: "+err.Error())
 	}
 	// 2. 取出设备及属性类型
+	userId, _ := c.Ctx.Input.GetData("user_id").(int64)
+	tenantId, _ := models.GetUserTenantId(userId)
 	o := orm.NewOrm()
-	var scene models.Scene
-	scene.Id = req.Id
-	if err := o.Read(&scene); err != nil {
-		c.Error(400, "场景查询失败: "+err.Error())
+	scene := models.Scene{Id: req.Id}
+	if err := o.Read(&scene); err != nil || scene.Department == nil || scene.Department.Id != tenantId {
+		c.Error(400, "scene not found or no permission")
 	}
 
 	ActionMarshal, _ := json.Marshal(req.Action)
@@ -130,10 +138,10 @@ func (c *SceneController) Update() {
 	if req.Condition[0].ConditionType == "notify" && req.Id != 0 {
 		services.BuildEkuiperRule(ctx, req, scene.Name)
 	} else if req.Condition[0].ConditionType == "timer" && req.Id != 0 {
-		if err := c.sceneService.StopScene(req.Id); err != nil {
+		if err := c.sceneService.StopScene(req.Id, userId); err != nil {
 			c.Error(400, fmt.Sprintf(err.Error()))
 		}
-		if err := c.sceneService.StartScene(req.Id); err != nil {
+		if err := c.sceneService.StartScene(req.Id, userId); err != nil {
 			c.Error(400, fmt.Sprintf(err.Error()))
 		}
 	}
@@ -153,22 +161,23 @@ func (c *SceneController) OperateScene() {
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
 		c.Error(400, "参数解析失败: "+err.Error())
 	}
+	userId, _ := c.Ctx.Input.GetData("user_id").(int64)
 
 	var err error
 	var message string
 
 	switch req.Action {
 	case "start":
-		err = c.sceneService.StartScene(req.SceneId)
+		err = c.sceneService.StartScene(req.SceneId, userId)
 		message = "场景已启动"
 	case "stop":
-		err = c.sceneService.StopScene(req.SceneId)
+		err = c.sceneService.StopScene(req.SceneId, userId)
 		message = "场景已停止"
 	case "delete":
-		err = c.sceneService.DeleteScene(req.SceneId)
+		err = c.sceneService.DeleteScene(req.SceneId, userId)
 		message = "场景已删除"
 	case "restart":
-		err = c.sceneService.RestartScene(req.SceneId)
+		err = c.sceneService.RestartScene(req.SceneId, userId)
 		message = "场景已执行"
 	default:
 		c.Error(400, "无效的操作类型，仅支持 start、stop、restart、delete")

@@ -171,6 +171,53 @@ if !errorlevel! neq 0 (
     echo [警告] ekuiper容器启动失败
 )
 
+
+:: ==== TDengine Docker 安装 ====
+echo [信息] 正在检查 TDengine 镜像...
+docker images --format "{{.Repository}}" | findstr tdengine >nul
+if !errorlevel! equ 0 (
+    echo [信息] 镜像 tdengine 已存在，跳过加载
+) else (
+    echo [信息] 正在拉取 TDengine 镜像...
+    docker pull tdengine/tsdb:latest
+    if !errorlevel! neq 0 (
+        echo [警告] TDengine 镜像拉取失败，尝试使用本地镜像文件...
+        if exist tdengine.tar (
+            docker load -i tdengine.tar
+            if !errorlevel! neq 0 (
+                echo [错误] TDengine 镜像加载失败
+                pause
+                exit /b 1
+            )
+        ) else (
+            echo [错误] 缺少 tdengine.tar 镜像文件
+            pause
+            exit /b 1
+        )
+    )
+)
+
+:: ==== 启动 TDengine 容器 ====
+echo [信息] 正在启动 TDengine 容器...
+docker rm -f tdengine 2>nul
+mkdir "%cd%\mount\taos\data" "%cd%\mount\taos\log" 2>nul
+
+docker run -d ^
+    -v "%cd%\mount\taos\data:/var/lib/taos" ^
+    -v "%cd%\mount\taos\log:/var/log/taos" ^
+    -p 6030:6030 -p 6041:6041 -p 6043:6043 -p 6060:6060 ^
+    -p 6044-6049:6044-6049 -p 6044-6045:6044-6045/udp ^
+    -p 6050:6050 -p 6055:6055 ^
+    --name tdengine-tsdb ^
+    --restart unless-stopped ^
+    tdengine/tsdb:latest
+
+if !errorlevel! neq 0 (
+    echo [错误] TDengine 容器启动失败
+    pause
+    exit /b 1
+)
+
 :: ==== 服务安装 ====
 echo [信息] 安装系统服务...
 

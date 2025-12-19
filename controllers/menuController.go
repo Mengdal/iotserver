@@ -6,6 +6,7 @@ import (
 	"github.com/beego/beego/v2/client/orm"
 	"iotServer/models"
 	"iotServer/models/dtos"
+	"iotServer/services"
 	"iotServer/utils"
 	"sort"
 	"strconv"
@@ -14,6 +15,7 @@ import (
 
 type MenuController struct {
 	BaseController
+	service services.MenuService
 }
 
 // List @Title 菜单列表（全部）
@@ -22,7 +24,9 @@ type MenuController struct {
 // @Success 200 {object} controllers.SimpleResult "返回菜单树"
 // @router /list [post]
 func (c *MenuController) List() {
-	tree := c.tree()
+	userId, _ := c.Ctx.Input.GetData("user_id").(int64)
+	tenantId, _ := models.GetUserTenantId(userId)
+	tree := c.tree(tenantId)
 	c.Success(tree)
 }
 
@@ -62,7 +66,9 @@ func (c *MenuController) Create() {
 	if name == "" || meta == "" {
 		c.Error(400, "必填字段缺失")
 	}
-	if existing, _ := c.findByName(name); existing != nil {
+	userId, _ := c.Ctx.Input.GetData("user_id").(int64)
+	tenantId, _ := models.GetUserTenantId(userId)
+	if existing, _ := c.findByName(tenantId, name); existing != nil {
 		c.Error(400, "菜单名称重复，请更换后重试！")
 	}
 
@@ -78,6 +84,7 @@ func (c *MenuController) Create() {
 		PermissionList: permissionList,
 		Meta:           meta,
 		Priority:       priority,
+		Department:     &models.Department{Id: tenantId},
 	}
 
 	if _, err := o.Insert(&menu); err != nil {
@@ -131,7 +138,13 @@ func (c *MenuController) Edit() {
 	if err := o.Read(&menu); err != nil {
 		c.Error(400, "菜单不存在")
 	}
-	existing, _ := c.findByName(name)
+
+	userId, _ := c.Ctx.Input.GetData("user_id").(int64)
+	tenantId, _ := models.GetUserTenantId(userId)
+	if menu.Department == nil || menu.Department.Id != tenantId {
+		c.Error(400, "无操作权限")
+	}
+	existing, _ := c.findByName(tenantId, name)
 	if existing != nil && existing.Id != id {
 		c.Error(400, "菜单名称重复，请更换后重试！")
 	}
@@ -168,6 +181,9 @@ func (c *MenuController) Edit() {
 	if _, err := o.Update(&menu); err != nil {
 		c.Error(400, "更新失败")
 	}
+	if err := c.checkMenuReferenced(tenantId, menu); err != nil {
+		c.Success(err.Error())
+	}
 	c.SuccessMsg()
 }
 
@@ -183,10 +199,12 @@ func (c *MenuController) Delete() {
 	if id <= 0 {
 		c.Error(400, "菜单ID无效")
 	}
+	userId, _ := c.Ctx.Input.GetData("user_id").(int64)
+	tenantId, _ := models.GetUserTenantId(userId)
 
 	o := orm.NewOrm()
 	var roles []models.Role
-	_, err := o.QueryTable(new(models.Role)).All(&roles)
+	_, err := o.QueryTable(new(models.Role)).Filter("department_id", tenantId).All(&roles)
 	if err != nil {
 		c.Error(400, "查询失败: "+err.Error())
 	}
@@ -209,7 +227,7 @@ func (c *MenuController) Delete() {
 	}
 
 	// 递归删除菜单及其所有子菜单
-	err = c.deleteMenuRecursive(o, id)
+	err = c.deleteMenuRecursive(o, tenantId, id)
 	if err != nil {
 		c.Error(400, "删除失败: "+err.Error())
 	}
@@ -229,9 +247,38 @@ func convertStatus(b bool) int {
 	return 0
 }
 
+// checkMenuReferenced 检查菜单是否被角色引用
+func (c *MenuController) checkMenuReferenced(tenantId int64, menu models.Menu) error {
+	o := orm.NewOrm()
+	var roles []models.Role
+	_, err := o.QueryTable(new(models.Role)).Filter("department_id", tenantId).All(&roles)
+	if err != nil {
+		return fmt.Errorf("查询角色失败: %v", err)
+	}
+	var roleName string
+	var isUsed bool
+	for _, role := range roles {
+		var roleMenus []RoleMenu
+		if role.Permission != "" {
+			if err := json.Unmarshal([]byte(role.Permission), &roleMenus); err != nil {
+				continue
+			}
+			// 检查是否有匹配的菜单ID
+			if containsMenuId(roleMenus, menu.Id) {
+				isUsed = true
+				roleName += " " + role.Name
+			}
+		}
+	}
+	if isUsed {
+		return fmt.Errorf("以下角色请重新编辑后使用:" + roleName)
+	}
+	return nil
+}
+
 // =====================================service=========================================
 
-func (c *MenuController) getObjects(menus []models.Menu) []dtos.MenuDTO {
+func (c *MenuController) getObjects(departmentId int64, menus []models.Menu) []dtos.MenuDTO {
 	var DTO []dtos.MenuDTO
 	for _, menu := range menus {
 
@@ -246,7 +293,7 @@ func (c *MenuController) getObjects(menus []models.Menu) []dtos.MenuDTO {
 			ParentId:       menu.ParentId,
 			PermissionList: utils.ParseJsonArray(menu.PermissionList),
 			Meta:           utils.ParseJson(menu.Meta),
-			Children:       c.children(&menu.Id),
+			Children:       c.children(departmentId, &menu.Id),
 			Priority:       menu.Priority,
 		}
 		DTO = append(DTO, dto)
@@ -258,46 +305,46 @@ func (c *MenuController) getObjects(menus []models.Menu) []dtos.MenuDTO {
 	return DTO
 }
 
-func (c *MenuController) children(parentId *int64) []dtos.MenuDTO {
-	array, err := c.listByParentId(parentId)
+func (c *MenuController) children(departmentId int64, parentId *int64) []dtos.MenuDTO {
+	array, err := c.listByParentId(departmentId, parentId)
 	if err != nil {
 		c.Error(400, "查询失败")
 	}
-	return c.getObjects(array)
+	return c.getObjects(departmentId, array)
 }
-func (c *MenuController) tree() []dtos.MenuDTO {
-	array, err := c.listByRoot()
+func (c *MenuController) tree(departmentId int64) []dtos.MenuDTO {
+	array, err := c.listByRoot(departmentId)
 	if err != nil {
 		c.Error(400, "查询失败")
 	}
-	return c.getObjects(array)
+	return c.getObjects(departmentId, array)
 }
-func (c *MenuController) treeEnable() []dtos.MenuDTO {
-	array, err := c.listByRootEnable()
+func (c *MenuController) treeEnable(departmentId int64) []dtos.MenuDTO {
+	array, err := c.listByRootEnable(departmentId)
 	if err != nil {
 		c.Error(400, "查询失败")
 	}
-	return c.getObjects(array)
+	return c.getObjects(departmentId, array)
 }
 
-func (c *MenuController) listByRoot() ([]models.Menu, error) {
+func (c *MenuController) listByRoot(departmentId int64) ([]models.Menu, error) {
 	o := orm.NewOrm()
-	qs := o.QueryTable(new(models.Menu)).Filter("ParentId__isnull", true)
+	qs := o.QueryTable(new(models.Menu)).Filter("ParentId__isnull", true).Filter("department_id", departmentId)
 	var menus []models.Menu
 	_, err := qs.All(&menus)
 	return menus, err
 }
-func (c *MenuController) listByRootEnable() ([]models.Menu, error) {
+func (c *MenuController) listByRootEnable(departmentId int64) ([]models.Menu, error) {
 	o := orm.NewOrm()
-	qs := o.QueryTable(new(models.Menu)).Filter("ParentId__isnull", true).Filter("Status", 1)
+	qs := o.QueryTable(new(models.Menu)).Filter("ParentId__isnull", true).Filter("Status", 1).Filter("department_id", departmentId)
 	var menus []models.Menu
 	_, err := qs.All(&menus)
 	return menus, err
 }
 
-func (c *MenuController) listByParentId(parentId *int64) ([]models.Menu, error) {
+func (c *MenuController) listByParentId(departmentId int64, parentId *int64) ([]models.Menu, error) {
 	o := orm.NewOrm()
-	qs := o.QueryTable(new(models.Menu))
+	qs := o.QueryTable(new(models.Menu)).Filter("department_id", departmentId)
 
 	if parentId == nil {
 		qs = qs.Filter("ParentId__isnull", true)
@@ -310,10 +357,10 @@ func (c *MenuController) listByParentId(parentId *int64) ([]models.Menu, error) 
 	return menus, err
 }
 
-func (c *MenuController) findByName(name string) (*models.Menu, error) {
+func (c *MenuController) findByName(departmentId int64, name string) (*models.Menu, error) {
 	o := orm.NewOrm()
 	var menu models.Menu
-	err := o.QueryTable(new(models.Menu)).Filter("Name", name).One(&menu)
+	err := o.QueryTable(new(models.Menu)).Filter("department_id", departmentId).Filter("Name", name).One(&menu)
 	if err != nil {
 		return nil, err
 	}
@@ -321,23 +368,33 @@ func (c *MenuController) findByName(name string) (*models.Menu, error) {
 }
 
 // deleteMenuRecursive 递归删除菜单及其所有子菜单
-func (c *MenuController) deleteMenuRecursive(o orm.Ormer, menuId int64) error {
+func (c *MenuController) deleteMenuRecursive(o orm.Ormer, departmentId int64, menuId int64) error {
 	// 先查找并删除所有子菜单
-	children, err := c.listByParentId(&menuId)
+	children, err := c.listByParentId(departmentId, &menuId)
 	if err != nil {
 		return err
 	}
 
 	// 递归删除每个子菜单
 	for _, child := range children {
-		err = c.deleteMenuRecursive(o, child.Id)
+		err = c.deleteMenuRecursive(o, departmentId, child.Id)
 		if err != nil {
 			return err
 		}
 	}
 
 	// 删除当前菜单
-	_, err = o.Delete(&models.Menu{Id: menuId})
+	menu := &models.Menu{Id: menuId}
+	if err = o.Read(menu); err != nil {
+		return err
+	}
+
+	if menu.Department != nil && menu.Department.Id == departmentId {
+		_, err = o.Delete(menu)
+	} else {
+		return fmt.Errorf("无操作权限")
+	}
+
 	return err
 }
 

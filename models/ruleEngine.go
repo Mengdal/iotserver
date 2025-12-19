@@ -6,14 +6,14 @@ import (
 )
 
 type RuleEngine struct {
-	Id          int64  `orm:"auto;pk" json:"id"`
-	Created     int64  `orm:"null" json:"created"`
-	Modified    int64  `orm:"null" json:"modified"`
-	Name        string `orm:"size(255);unique" json:"name"`
-	Description string `orm:"null;type(text)" json:"description"`
-	Status      string `orm:"null;type(text)" json:"status"`
-	Filter      string `orm:"null;type(text)" json:"filter"`
-
+	Id           int64         `orm:"auto;pk" json:"id"`
+	Created      int64         `orm:"null" json:"created"`
+	Modified     int64         `orm:"null" json:"modified"`
+	Name         string        `orm:"size(255);unique" json:"name"`
+	Description  string        `orm:"null;type(text)" json:"description"`
+	Status       string        `orm:"null;type(text)" json:"status"`
+	Filter       string        `orm:"null;type(text)" json:"filter"`
+	Department   *Department   `orm:"rel(fk);on_delete(cascade);null" json:"-"`
 	DataResource *DataResource `orm:"rel(fk);column(data_resource_id);on_delete(cascade);on_update(do_nothing);null" json:"data_resource,omitempty"`
 }
 

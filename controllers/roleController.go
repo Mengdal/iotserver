@@ -1,7 +1,7 @@
 package controllers
 
 import (
-	"fmt"
+	"database/sql"
 	"github.com/beego/beego/v2/client/orm"
 	"iotServer/models"
 	"iotServer/utils"
@@ -17,13 +17,15 @@ type RoleController struct {
 // @Success 200 {object} controllers.SimpleResult "请求成功"
 // @router /template [post]
 func (c *RoleController) Template() {
+	userId, _ := c.Ctx.Input.GetData("user_id").(int64)
+	tenantId, _ := models.GetUserTenantId(userId)
 	menuCtrl := &MenuController{}
-	tree := menuCtrl.treeEnable()
+	tree := menuCtrl.treeEnable(tenantId)
 	c.Success(tree)
 }
 
 // GetRoleList @Title 分页获取角色列表
-// @Description 分页获取角色列表，仅有主账户含角色
+// @Description 分页获取角色列表
 // @Param   Authorization  header  string  true  "Bearer YourToken"
 // @Param   page     query   int     false   "当前页码，默认1"
 // @Param   size     query   int     false   "每页数量，默认10"
@@ -33,15 +35,15 @@ func (c *RoleController) GetRoleList() {
 	page, _ := c.GetInt("page", 1)
 	size, _ := c.GetInt("size", 10)
 
-	//userId := c.Ctx.Input.GetData("user_id")
+	userId := c.Ctx.Input.GetData("user_id").(int64)
+	tenantId, _ := models.GetUserTenantId(userId)
 
 	o := orm.NewOrm()
 	var roles []models.Role
-	qs := o.QueryTable(new(models.Role))
+	qs := o.QueryTable(new(models.Role)).SetCond(orm.NewCondition().And("department_id", tenantId).Or("department_id__isnull", true))
 	pageResult, err := utils.Paginate(qs, page, size, &roles)
 	if err != nil {
 		c.Error(400, "查询失败: "+err.Error())
-		return
 	}
 
 	c.Success(pageResult)
@@ -57,11 +59,13 @@ func (c *RoleController) GetRoleList() {
 func (c *RoleController) GetRole() {
 	id, _ := c.GetInt("id")
 
+	userId := c.Ctx.Input.GetData("user_id").(int64)
+	tenantId, _ := models.GetUserTenantId(userId)
+
 	o := orm.NewOrm()
 	role := models.Role{Id: int64(id)}
-	if err := o.Read(&role); err != nil {
-		c.Error(400, "角色不存在")
-		return
+	if err := o.Read(&role); err != nil || (role.DepartmentId.Int64 != 0 && role.DepartmentId.Int64 != tenantId) {
+		c.Error(400, "role not found or no permission")
 	}
 
 	c.Success(role)
@@ -87,25 +91,22 @@ func (c *RoleController) Create() {
 
 	o := orm.NewOrm()
 
-	var currentUser models.User
-	userId, ok := c.Ctx.Input.GetData("user_id").(int64)
-	currentUser.Id = userId
-	err := o.Read(&currentUser)
-	if !ok || err != nil || currentUser.ParentId != nil {
-		c.Error(400, "用户无权限")
-	}
+	userId := c.Ctx.Input.GetData("user_id").(int64)
+	tenantId, _ := models.GetUserTenantId(userId)
 
 	role := models.Role{
 		Name:        name,
 		Description: description,
 		Permission:  permission,
-		UserId:      userId,
+		DepartmentId: sql.NullInt64{
+			Int64: tenantId,
+			Valid: true,
+		},
 	}
 
 	id, err := o.Insert(&role)
 	if err != nil {
 		c.Error(400, "创建失败")
-		return
 	}
 
 	c.Success(id)
@@ -134,16 +135,8 @@ func (c *RoleController) Edit() {
 	o := orm.NewOrm()
 
 	role := models.Role{Id: int64(id)}
-	if err := o.Read(&role); err != nil {
-		c.Error(400, "角色不存在")
-	}
-
-	var currentUser models.User
-	userId, ok := c.Ctx.Input.GetData("user_id").(int64)
-	currentUser.Id = userId
-	err := o.Read(&currentUser)
-	if !ok || err != nil || currentUser.ParentId != nil || currentUser.Id != role.UserId {
-		c.Error(400, "用户无权限")
+	if err := o.Read(&role); err != nil || !role.DepartmentId.Valid {
+		c.Error(400, "无操作权限")
 	}
 
 	role.Name = name
@@ -170,13 +163,11 @@ func (c *RoleController) Edit() {
 func (c *RoleController) Delete() {
 	id, _ := c.GetInt("id")
 	userId, _ := c.Ctx.Input.GetData("user_id").(int64)
+	tenantId, _ := models.GetUserTenantId(userId)
 
 	o := orm.NewOrm()
-	role := models.Role{Id: int64(id)}
+	role := &models.Role{Id: int64(id)}
 
-	if !CheckModelOwnership(o, "role", int64(id), userId, "") {
-		c.Error(400, "用户无权限或已删除")
-	}
 	// 先检查是否有用户引用这个角色
 	cnt, err := o.QueryTable(new(models.User)).Filter("Role__Id", id).Count()
 	if err != nil {
@@ -185,89 +176,12 @@ func (c *RoleController) Delete() {
 	if cnt > 0 {
 		c.Error(400, "该角色已被用户使用，无法删除")
 	}
-	if _, err := o.Delete(&role); err != nil {
+	if err = o.Read(role); err != nil || !role.DepartmentId.Valid || role.DepartmentId.Int64 != tenantId {
+		c.Error(400, "无操作权限")
+	}
+	if _, err := o.Delete(role); err != nil {
 		c.Error(400, "删除失败")
 	}
 
 	c.SuccessMsg()
-}
-
-// CheckModelOwnership 检查某个资源是否属于当前用户
-// orm 表名 资源ID 当前用户ID 资源中用户ID字段
-func CheckModelOwnership(o orm.Ormer, model string, resourceID int64, userID int64, userIDField string) bool {
-	if userIDField == "" {
-		userIDField = "user_id"
-	}
-
-	// 获取当前用户信息
-	var currentUser models.User
-	currentUser.Id = userID
-	if err := o.Read(&currentUser); err != nil {
-		fmt.Println("CheckModelOwnership: 用户不存在 - ID:", userID)
-		return false
-	}
-
-	// 获取资源的归属用户ID
-	var resourceUserID int64
-
-	switch model {
-	case "product":
-		var p models.Product
-		if err := o.QueryTable("product").Filter("id", resourceID).One(&p, "user_id"); err != nil {
-			fmt.Println("CheckModelOwnership: 查询 product 失败:", err)
-			return false
-		}
-		resourceUserID = p.User.Id
-
-	case "role":
-		var r models.Role
-		if err := o.QueryTable("role").Filter("id", resourceID).One(&r); err != nil {
-			fmt.Println("CheckModelOwnership: 查询 role 失败:", err)
-			return false
-		}
-		resourceUserID = r.UserId
-
-	case "user":
-		var u models.User
-		if err := o.QueryTable("user").Filter("id", resourceID).One(&u); err != nil {
-			fmt.Println("CheckModelOwnership: 查询 user 失败:", err)
-			return false
-		}
-		resourceUserID = u.Id
-	case "project":
-		var d models.Project
-		if err := o.QueryTable("project").Filter("id", resourceID).One(&d); err != nil {
-			fmt.Println("CheckModelOwnership: 查询 project 失败:", err)
-			return false
-		}
-		resourceUserID = d.Id
-	default:
-		fmt.Println("CheckModelOwnership: 不支持的模型:", model)
-		return false
-	}
-
-	// 情况 1：资源归属就是当前用户
-	if resourceUserID == userID {
-		return true
-	}
-
-	// 情况 2：子用户不能访问他人资源
-	if currentUser.ParentId != nil {
-		return false
-	}
-
-	// 情况 3：主用户可访问其子用户资源
-	var owner models.User
-	owner.Id = resourceUserID
-	if err := o.Read(&owner); err != nil {
-		fmt.Println("CheckModelOwnership: 资源所属用户不存在 - ID:", resourceUserID)
-		return false
-	}
-
-	if owner.ParentId != nil && *owner.ParentId == userID {
-		return true
-	}
-
-	fmt.Println("CheckModelOwnership: 权限不足 - user:", userID, ", resource user:", resourceUserID)
-	return false
 }

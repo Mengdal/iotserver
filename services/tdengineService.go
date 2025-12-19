@@ -9,6 +9,7 @@ import (
 	beego "github.com/beego/beego/v2/server/web"
 	_ "github.com/taosdata/driver-go/v3/taosRestful"
 	"iotServer/models"
+	"iotServer/utils"
 	"strings"
 	"sync"
 	"time"
@@ -239,7 +240,7 @@ func (w *TDengineWriter) flush() {
 	if _, err := w.db.Exec(sqlStr); err != nil {
 		fmt.Printf("批量插入失败: %v\nSQL: %s\n", err, sqlStr)
 	} else {
-		fmt.Printf("批量插入成功: %d 条记录\n", insertedCount)
+		utils.DebugLog("批量插入成功: %d 条记录\n", insertedCount)
 	}
 }
 

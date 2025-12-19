@@ -3,10 +3,15 @@ package utils
 import (
 	"crypto/rand"
 	"encoding/json"
+	"github.com/beego/beego/v2/client/orm"
+	beego "github.com/beego/beego/v2/server/web"
+	"github.com/beego/beego/v2/server/web/context"
 	"github.com/bwmarrin/snowflake"
 	"github.com/golang-jwt/jwt/v5"
+	"iotServer/models"
 	"log"
 	"math/big"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -14,15 +19,16 @@ import (
 var jwtSecret = []byte("LMGateway")
 
 // GenerateToken 生成 JWT Token
-func GenerateToken(userId int64) (string, error) {
+func GenerateToken(userId, departmentId int64) (string, error) {
 	nowTime := time.Now()
 	expireTime := nowTime.Add(24 * time.Hour * 7)
 
 	claims := jwt.MapClaims{
-		"user_id": userId,                         // 自定义字段：用户ID
-		"iss":     "LMGateway",                    // 标准字段：签发者 issuer
-		"iat":     jwt.NewNumericDate(nowTime),    // 标准字段：签发时间 issued at
-		"exp":     jwt.NewNumericDate(expireTime), // 标准字段：过期时间 expiration
+		"user_id":       userId,                         // 自定义字段：用户ID
+		"department_id": departmentId,                   // 自定义字段：租户ID
+		"iss":           "LMGateway",                    // 标准字段：签发者 issuer
+		"iat":           jwt.NewNumericDate(nowTime),    // 标准字段：签发时间 issued at
+		"exp":           jwt.NewNumericDate(expireTime), // 标准字段：过期时间 expiration
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -102,4 +108,36 @@ func GenerateDeviceSecret(n int) string {
 		b[i] = charset[idx.Uint64()]
 	}
 	return string(b)
+}
+
+// CheckResourceBelongsToTenant 检查资源是否属于当前部门
+func CheckResourceBelongsToTenant(ctx *context.Context, userTenantId int64) bool {
+	o := orm.NewOrm()
+
+	// 从请求参数中获取部门ID或项目ID
+	projectId := ctx.Input.Query("projectId")
+
+	// 如果有部门ID参数，验证部门是否属于当前租户
+	if projectId != "" {
+		deptId, err := strconv.ParseInt(projectId, 10, 64)
+		if err != nil {
+			return false
+		}
+
+		department := models.Department{Id: deptId}
+		if err := o.Read(&department); err != nil {
+			return false
+		}
+		// 集团账号登录
+		return department.TenantId == userTenantId
+	}
+
+	// 如果没有特定的部门或项目参数，默认允许访问
+	return true
+}
+
+func DebugLog(format string, v ...interface{}) {
+	if beego.BConfig.RunMode == "dev" {
+		log.Printf(format, v...)
+	}
 }

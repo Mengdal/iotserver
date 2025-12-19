@@ -18,7 +18,7 @@ type ModelController struct {
 // Get @Title 获取模型列表
 // @Description 查询当前产品下的模型详情
 // @Param   Authorization  header  string  true  "Bearer YourToken"
-// @Param   id          query   int64  true  "产品ID"
+// @Param   id             query   int64   true  "产品ID"
 // @Param   page           query   int     false "当前页码，默认1"
 // @Param   size           query   int     false "每页数量，默认10"
 // @Success 200 {object} controllers.SimpleResult "请求成功"
@@ -58,7 +58,6 @@ func (c *ModelController) Get() {
 func (c *ModelController) Delete() {
 	id, _ := c.GetInt64("id")
 	thingModelType := c.GetString("thingModelType")
-	userId, _ := c.Ctx.Input.GetData("user_id").(int64)
 	o := orm.NewOrm()
 
 	var productId int64
@@ -78,10 +77,6 @@ func (c *ModelController) Delete() {
 		}
 	default:
 		c.Error(400, "未知的模型类型")
-	}
-
-	if ownership := CheckModelOwnership(o, "product", productId, userId, ""); !ownership {
-		c.Error(400, "权限不足")
 	}
 
 	_, err := o.Delete(model, "id")

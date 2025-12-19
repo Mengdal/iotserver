@@ -31,19 +31,19 @@ func NewReportService() (*ReportService, error) {
 }
 
 // TimePeriodReport 时间段报表生成
-func (r *ReportService) TimePeriodReport(page, size int, start, end string, projectId int64, search string,
+func (r *ReportService) TimePeriodReport(page, size int, start, end string, tenantId int64, projectIds []int64, search string,
 	productId int64, propertyIds string, resourceType string, resourceIds string, dateType string, multipleType bool, reportType string) (interface{}, error) {
 	// 1. 根据统计类型获取设备
 	var Ids []int64
 	var err error
 	if reportType != "report" {
-		Ids, err = GetResourceIds(resourceIds)
+		Ids, err = utils.GetResourceIds(resourceIds)
 		if err != nil {
 			return nil, fmt.Errorf("show devices error: %v", err)
 		}
 	}
 	// 2. 根据分页查询设备
-	devicePage, err := r.pageByProjectAndProduct(page, size, projectId, search, productId, Ids, resourceType)
+	devicePage, err := r.pageByProjectAndProduct(page, size, tenantId, projectIds, search, productId, Ids, resourceType)
 	if err != nil {
 		return nil, fmt.Errorf("查询设备失败，原因: %v", err)
 	}
@@ -66,7 +66,7 @@ func (r *ReportService) TimePeriodReport(page, size int, start, end string, proj
 	var result interface{}
 	if reportType == "report" {
 
-		fld, err := r.query(product.Key, dateType, start, end, projectId, deviceList, properties)
+		fld, err := r.query(product.Key, dateType, start, end, deviceList, properties)
 		if err != nil {
 			return nil, fmt.Errorf("查询首末值数据失败: %v", err)
 		}
@@ -83,12 +83,12 @@ func (r *ReportService) TimePeriodReport(page, size int, start, end string, proj
 		// 7. 处理响应
 		result = r.dealResponse(array, labels, devicePage)
 	} else if reportType == "analysis" {
-		result, err = r.UsageAnalysis(product.Key, dateType, start, end, projectId, deviceList, properties)
+		result, err = r.UsageAnalysis(resourceType, product.Key, dateType, start, end, deviceList, properties)
 		if err != nil {
 			return nil, fmt.Errorf("查询用量数据失败: %v", err)
 		}
 	} else if reportType == "compareAnalysis" {
-		result, err = r.CompareAnalysis(product.Key, dateType, start, end, projectId, deviceList, properties)
+		result, err = r.CompareAnalysis(product.Key, dateType, start, end, deviceList, properties)
 		if err != nil {
 			return nil, fmt.Errorf("查询同比数据失败: %v", err)
 		}
@@ -97,22 +97,8 @@ func (r *ReportService) TimePeriodReport(page, size int, start, end string, proj
 	return result, nil
 }
 
-func GetResourceIds(resourceIds string) ([]int64, error) {
-	// 解析资源ID列表
-	idList := strings.Split(resourceIds, ",")
-
-	var ids []int64
-	for _, idStr := range idList {
-		if id, err := strconv.ParseInt(strings.TrimSpace(idStr), 10, 64); err == nil {
-			ids = append(ids, id)
-		}
-	}
-
-	return ids, nil
-}
-
 // query 查询时间段内首末值差值数据
-func (r *ReportService) query(productKey, dateType, start, end string, projectId int64,
+func (r *ReportService) query(productKey, dateType, start, end string,
 	deviceList *[]*models.Device, properties []models.Properties) ([]FirstLastDiff, error) {
 
 	_, startTime, endTime, err := parseTimeRange(dateType, start, end)
@@ -149,7 +135,7 @@ func (r *ReportService) query(productKey, dateType, start, end string, projectId
            GROUP BY tbname`,
 			property.Code, property.Code, property.Code, property.Code,
 			DBName, productKey, deviceConditions,
-			startTime.UnixNano()/1e6, endTime.UnixNano()/1e6)
+			startTime.UnixMilli(), endTime.UnixMilli())
 
 		rows, err := r.tdService.db.Query(query)
 		if err != nil {
@@ -173,7 +159,6 @@ func (r *ReportService) query(productKey, dateType, start, end string, projectId
 				}
 			}
 		}
-		//stepValue := getDecimalPlaces(step)
 
 		for rows.Next() {
 			var dn string
@@ -212,15 +197,29 @@ func (r *ReportService) query(productKey, dateType, start, end string, projectId
 }
 
 // UsageAnalysis 用量分析报表
-func (r *ReportService) UsageAnalysis(productKey, dateType, start, end string, projectId int64,
+func (r *ReportService) UsageAnalysis(resourceType, productKey, dateType, start, end string,
 	deviceList *[]*models.Device, properties []models.Properties) (interface{}, error) {
 
 	deviceConditions := ""
+	deviceToLabel := make(map[string]string)  // 核心修改：设备名到组名的映射
+	uniqueLabels := make(map[string]struct{}) // 记录有哪些唯一的组，用于后续遍历
 	for i, device := range *deviceList {
 		if i > 0 {
 			deviceConditions += ", "
 		}
 		deviceConditions += fmt.Sprintf("'%s'", device.Name)
+		if resourceType == "Raw" {
+			continue
+		} else if resourceType == "Group" {
+			groupName := device.Group.Name
+			deviceToLabel[device.Name] = groupName
+			uniqueLabels[groupName] = struct{}{}
+		} else if resourceType == "Position" {
+			positionName := device.Position.Name
+			deviceToLabel[device.Name] = positionName
+			uniqueLabels[positionName] = struct{}{}
+		}
+
 	}
 
 	_, startTime, endTime, err := parseTimeRange(dateType, start, end)
@@ -282,9 +281,16 @@ func (r *ReportService) UsageAnalysis(productKey, dateType, start, end string, p
 
 	// 为每个设备初始化数据
 	deviceResults := make(map[string]map[string]float64)
-	for _, device := range *deviceList {
-		deviceResults[device.Name] = make(map[string]float64)
-		summary[device.Name] = 0.0
+	if resourceType == "Raw" {
+		for _, device := range *deviceList {
+			deviceResults[device.Name] = make(map[string]float64)
+			summary[device.Name] = 0.0
+		}
+	} else {
+		for gName := range uniqueLabels {
+			deviceResults[gName] = make(map[string]float64)
+			summary[gName] = 0.0
+		}
 	}
 
 	// 处理查询结果
@@ -302,26 +308,58 @@ func (r *ReportService) UsageAnalysis(productKey, dateType, start, end string, p
 		if Diff.Valid {
 			formattedValue := formatFloat(Diff.Float64, step)
 			periodKey := r.formatPeriodKey(dateType, wstart)
-			deviceResults[dn][periodKey] = formattedValue
-			summary[dn] = formatFloat(summary[dn]+formattedValue, step)
+
+			if resourceType == "Raw" {
+				deviceResults[dn][periodKey] = formattedValue
+				summary[dn] = formatFloat(summary[dn]+formattedValue, step)
+			} else {
+				groupName, exists := deviceToLabel[dn]
+				if !exists {
+					continue // 理论上不应该发生，除非查询出的设备不在列表中
+				}
+				deviceResults[groupName][periodKey] += formattedValue
+				summary[groupName] = formatFloat(summary[groupName]+formattedValue, step)
+			}
+
 		}
 	}
 
 	// 构建最终的detail数据结构
 	periods := r.generatePeriods(dateType, startTime, endTime)
-	for _, device := range *deviceList {
-		deviceData := make([]map[string]interface{}, len(periods))
-		for i, period := range periods {
-			data := make(map[string]interface{})
-			data["first"] = period
-			if val, exists := deviceResults[device.Name][period]; exists {
-				data["second"] = val
-			} else {
-				data["second"] = nil
+	if resourceType == "Raw" {
+		for _, device := range *deviceList {
+			deviceData := make([]map[string]interface{}, len(periods))
+			for i, period := range periods {
+				data := make(map[string]interface{})
+				data["first"] = period
+				if val, exists := deviceResults[device.Name][period]; exists {
+					data["second"] = val
+				} else {
+					data["second"] = nil
+				}
+				deviceData[i] = data
 			}
-			deviceData[i] = data
+			detail[device.Name] = deviceData
 		}
-		detail[device.Name] = deviceData
+	} else {
+		for groupName := range uniqueLabels {
+			groupData := make([]map[string]interface{}, len(periods))
+
+			for i, period := range periods {
+				data := make(map[string]interface{})
+				data["first"] = period
+
+				// 检查该组在这个时间点是否有数据
+				if val, exists := deviceResults[groupName][period]; exists {
+					// 再次 format 确保累加后的精度正确 (可选)
+					data["second"] = formatFloat(val, step)
+				} else {
+					data["second"] = nil
+				}
+				groupData[i] = data
+			}
+			detail[groupName] = groupData
+		}
 	}
 
 	// 构造返回结果
@@ -333,7 +371,7 @@ func (r *ReportService) UsageAnalysis(productKey, dateType, start, end string, p
 }
 
 // CompareAnalysis 同比分析报表
-func (r *ReportService) CompareAnalysis(productKey, dateType, start, end string, projectId int64,
+func (r *ReportService) CompareAnalysis(productKey, dateType, start, end string,
 	deviceList *[]*models.Device, properties []models.Properties) (interface{}, error) {
 
 	deviceConditions := ""
@@ -637,7 +675,7 @@ func (r *ReportService) generatePeriods(dateType string, start, end time.Time) [
 }
 
 // pageByProjectAndCategory 分页查询设备
-func (r *ReportService) pageByProjectAndProduct(page, size int, projectId int64, search string, productId int64, ids []int64, resourceType string) (*utils.PageResult, error) {
+func (r *ReportService) pageByProjectAndProduct(page, size int, tenantId int64, projectIds []int64, search string, productId int64, ids []int64, resourceType string) (*utils.PageResult, error) {
 	// 这里需要根据您的实际数据库实现查询逻辑
 	var devices []*models.Device
 	o := orm.NewOrm()
@@ -662,9 +700,13 @@ func (r *ReportService) pageByProjectAndProduct(page, size int, projectId int64,
 		query = query.Filter("id__in", ids)
 	}
 
-	//if projectId > 0 {
-	//	query = query.Filter("project_id", projectId)
-	//}
+	if tenantId != 0 {
+		query = query.Filter("tenant_id", tenantId)
+	}
+
+	if len(projectIds) > 0 {
+		query = query.Filter("department_id__in", projectIds)
+	}
 
 	// 如果指定了分类ID，则添加分类筛选条件
 	if productId > 0 {
@@ -764,12 +806,12 @@ func parseTimeRange(dateType, start, end string) (baseTimeStr string, startTime,
 	switch dateType {
 	case "interval": // 时段报表，使用输入的开始结束时间
 		baseTimeStr = start
-		startTime, err = time.Parse("2006-01-02 15:04:05", baseTimeStr)
+		startTime, err = time.ParseInLocation("2006-01-02 15:04:05", baseTimeStr, loc)
 		if err != nil {
 			err = fmt.Errorf("开始时间格式错误: %v", err)
 			return
 		}
-		endTime, err = time.Parse("2006-01-02 15:04:05", end)
+		endTime, err = time.ParseInLocation("2006-01-02 15:04:05", end, loc)
 		if err != nil {
 			err = fmt.Errorf("结束时间格式错误: %v", err)
 			return
@@ -777,7 +819,7 @@ func parseTimeRange(dateType, start, end string) (baseTimeStr string, startTime,
 	case "day": // 日报表，使用 start 日期的 00:00:00 到 23:59:59
 		baseTimeStr = start[:10]
 		var baseTime time.Time
-		baseTime, err = time.Parse("2006-01-02", baseTimeStr) // 只取日期部分
+		baseTime, err = time.ParseInLocation("2006-01-02", baseTimeStr, loc) // 只取日期部分
 		if err != nil {
 			err = fmt.Errorf("日期格式错误: %v", err)
 			return
@@ -787,7 +829,7 @@ func parseTimeRange(dateType, start, end string) (baseTimeStr string, startTime,
 	case "month": // 月报表，使用 start 月份的第一天到最后一天
 		baseTimeStr = start[:7]
 		var baseTime time.Time
-		baseTime, err = time.Parse("2006-01", baseTimeStr) // 取年月部分
+		baseTime, err = time.ParseInLocation("2006-01", baseTimeStr, loc) // 取年月部分
 		if err != nil {
 			err = fmt.Errorf("月份格式错误: %v", err)
 			return
@@ -799,7 +841,7 @@ func parseTimeRange(dateType, start, end string) (baseTimeStr string, startTime,
 	case "year": // 年报表，使用 start 年份的第一天到最后一天
 		baseTimeStr = start[:4]
 		var baseTime time.Time
-		baseTime, err = time.Parse("2006", baseTimeStr) // 取年份部分
+		baseTime, err = time.ParseInLocation("2006", baseTimeStr, loc) // 取年份部分
 		if err != nil {
 			err = fmt.Errorf("年份格式错误: %v", err)
 			return
@@ -830,7 +872,7 @@ func (r *ReportService) dealLabels(labelType string, properties []models.Propert
 	} else if labelType == "Group" {
 		labels = append(labels, map[string]string{"prop": "group", "label": "标签"})
 	}
-	labels = append(labels, map[string]string{"prop": "dn", "label": "设备名称"})
+	labels = append(labels, map[string]string{"prop": "dn", "label": "设备"})
 	if len(properties) > 1 {
 		// 多属性表头
 		for _, property := range properties {

@@ -50,7 +50,7 @@ func worker(jobs <-chan Job) {
 		start := time.Now()
 
 		// 用 context 控制超时
-		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		done := make(chan error, 1)
 
 		go func() {
@@ -82,10 +82,10 @@ func worker(jobs <-chan Job) {
 			if err != nil {
 				log.Printf("[Worker] 任务失败: %v, 类型=%s", err, job.Type)
 			} else {
-				log.Printf("[Worker] 任务完成 [%s], 耗时=%v", job.Topic, time.Since(start))
+				utils.DebugLog("[Worker] 任务完成 [%s], 耗时=%v", job.Topic, time.Since(start))
 			}
 		case <-ctx.Done():
-			log.Printf("[Worker] ⚠️任务超时 [%s]", job.Topic)
+			log.Printf("[Worker] 任务超时 [%s]", job.Topic)
 		}
 		cancel()
 	}
@@ -101,7 +101,7 @@ func UpdateDeviceStatus(sn, deviceId, desc string, tagService iotp.TagService) b
 	cacheMutex.RUnlock()
 
 	if exists == false {
-		log.Printf("设备：" + deviceId + "不存在")
+		utils.DebugLog("设备：" + deviceId + "不存在")
 	}
 
 	// 如果缓存存在且未过期，则跳过处理
@@ -124,7 +124,7 @@ func UpdateDeviceStatus(sn, deviceId, desc string, tagService iotp.TagService) b
 
 		// 更新缓存
 		updateCache(deviceId, currentTime)
-		log.Printf(deviceId + "已经更新")
+		utils.DebugLog(deviceId + "已经更新")
 		return true // 已更新
 	}
 }

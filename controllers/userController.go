@@ -6,6 +6,7 @@ import (
 	"github.com/beego/beego/v2/core/validation"
 	"iotServer/models"
 	"iotServer/models/dtos"
+	"iotServer/services"
 	"iotServer/utils"
 )
 
@@ -45,15 +46,20 @@ func (c *UserController) GetAll() {
 			roleId = u.Role.Id
 			roleName = u.Role.Name
 		}
+		var departmentId int64
+		if u.Department != nil {
+			departmentId = u.Department.Id
+		}
 		userDtos = append(userDtos, dtos.UserDto{
-			Id:         u.Id,
-			Email:      u.Email,
-			Username:   u.Username,
-			ParentId:   u.ParentId,
-			WebToken:   u.WebToken,
-			CreateTime: u.CreateTime,
-			RoleId:     roleId, // 如果只要 roleId
-			RoleName:   roleName,
+			Id:           u.Id,
+			Email:        u.Email,
+			Username:     u.Username,
+			ParentId:     u.ParentId,
+			WebToken:     u.WebToken,
+			CreateTime:   u.CreateTime,
+			RoleId:       roleId, // 如果只要 roleId
+			RoleName:     roleName,
+			DepartmentId: departmentId,
 		})
 	}
 	result.List = userDtos
@@ -94,6 +100,9 @@ func (c *UserController) Put() {
 	}
 	if req.Email != "" {
 		user.Email = req.Email
+	}
+	if req.DepartmentId != 0 {
+		user.Department.Id = req.DepartmentId
 	}
 
 	if _, err := newOrm.Update(&user); err != nil {
@@ -164,7 +173,7 @@ func (c *UserController) Login() {
 	if err != nil || user.Password != password {
 		c.Error(400, "用户不存在或密码错误")
 	}
-	token, _ := utils.GenerateToken(user.Id)
+	token, _ := utils.GenerateToken(user.Id, user.Department.Id)
 	user.WebToken = token
 	_, err = o.Update(&user)
 	if err != nil {
@@ -175,17 +184,32 @@ func (c *UserController) Login() {
 		c.Error(400, "获取角色出错")
 	}
 
+	projects, err := models.GetUserProjects(user)
+	if err != nil {
+		c.Error(400, err.Error())
+	}
+	enable := true
+	tenant := &models.Tenant{Id: user.Department.Id}
+	err = o.Read(tenant)
+	if err != nil {
+		enable = false
+	}
 	var menus []dtos.MenuDTO
 	err = json.Unmarshal([]byte(role.Permission), &menus)
 	if err != nil {
 		c.Error(400, "菜单数据解析失败")
 	}
 	result := map[string]interface{}{
-		"token":    token,
-		"menu":     menus,
-		"roleId":   role.Id,
-		"roleName": role.Name,
-		"userId":   user.Id,
+		"token":        token,
+		"menu":         menus,
+		"roleId":       role.Id,
+		"roleName":     role.Name,
+		"userId":       user.Id,
+		"username":     username,
+		"departmentId": user.Department.Id,
+		"tenantId":     tenant.Id,
+		"project":      projects,
+		"enable":       enable,
 	}
 	c.Success(result)
 }
@@ -227,18 +251,40 @@ func (c *UserController) Register() {
 	if req.UserId != 0 {
 		var currentUser models.User
 		currentUser.Id = req.UserId
-		if err := newOrm.Read(&currentUser); err != nil || currentUser.ParentId != nil {
+		if err := newOrm.Read(&currentUser); err != nil || currentUser.ParentId != nil || req.DepartmentId == 0 {
 			c.Error(400, "用户不存在或无权限")
 		}
 
 		this.ParentId = &currentUser.Id
+		this.Department = &models.Department{Id: req.DepartmentId}
 	} else {
 		//无token则创建父账户
 		this.ParentId = nil
+		this.Role = &models.Role{Id: 0}
 	}
 
 	if _, err := newOrm.Insert(&this); err != nil {
 		c.Error(400, "注册失败")
+	}
+	if this.ParentId == nil {
+		departmentService := services.DepartmentService{}
+		id, err := departmentService.CreateDepartment(this.Username+"_TENANT", this.Username, "", this.Username, "1", "", 0, 0, "TENANT")
+		if err != nil {
+			c.Error(400, err.Error())
+		}
+		this.Department = &models.Department{Id: id}
+		newOrm.Update(&this, "Department")
+		tenantService := services.TenantService{}
+		_, err = tenantService.Create(this.Id, id, this.Username+"_TENANT", "", "", "")
+		if err != nil {
+			c.Error(400, err.Error())
+		}
+		// 初始化租户菜单权限
+		menuService := services.MenuService{}
+		err = menuService.InitTenantMenus(id)
+		if err != nil {
+			c.Error(400, "初始化菜单失败")
+		}
 	}
 	c.SuccessMsg()
 }
@@ -255,10 +301,9 @@ func (c *UserController) Delete() {
 	userId, _ := c.Ctx.Input.GetData("user_id").(int64)
 
 	o := orm.NewOrm()
-	user := models.User{Id: int64(id)}
-
-	if !CheckModelOwnership(o, "user", int64(id), userId, "") {
-		c.Error(400, "用户无权限或已删除")
+	user := &models.User{Id: int64(id)}
+	if err := o.QueryTable(user).Filter("Id", id).RelatedSel("Department").One(user); err != nil || user.Department == nil || user.Department.TenantId != userId {
+		c.Error(400, "user not found or no permission")
 	}
 
 	if _, err := o.Delete(&user); err != nil {

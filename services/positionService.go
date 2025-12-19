@@ -9,13 +9,13 @@ import (
 type PositionService struct{}
 
 // Create 创建位置
-func (s *PositionService) Create(projectId int64, name string, parentId *int64) error {
+func (s *PositionService) Create(departmentId int64, name string, parentId *int64) error {
 	o := orm.NewOrm()
 
 	// 检查是否已存在根节点
 	if parentId == nil {
-		rootPosition := &models.Position{Project: &models.Project{Id: projectId}, ParentPosition: nil}
-		if o.QueryTable(new(models.Position)).Filter("project_id", projectId).Filter("parent_position__isnull", true).One(rootPosition) == nil {
+		rootPosition := &models.Position{Department: &models.Department{Id: departmentId}, ParentPosition: nil}
+		if o.QueryTable(new(models.Position)).Filter("department_id", departmentId).Filter("parent_position__isnull", true).One(rootPosition) == nil {
 			return fmt.Errorf("only one root node is allowed to be created")
 		}
 	}
@@ -23,19 +23,19 @@ func (s *PositionService) Create(projectId int64, name string, parentId *int64) 
 	// 检查同级是否有重名
 	var position models.Position
 	if parentId == nil {
-		if o.QueryTable(new(models.Position)).Filter("project_id", projectId).Filter("name", name).Filter("parent_position__isnull", true).One(&position) == nil {
+		if o.QueryTable(new(models.Position)).Filter("department_id", departmentId).Filter("name", name).Filter("parent_position__isnull", true).One(&position) == nil {
 			return fmt.Errorf("same level, duplicate names")
 		}
 	} else {
-		if o.QueryTable(new(models.Position)).Filter("project_id", projectId).Filter("name", name).Filter("parent_position", *parentId).One(&position) == nil {
+		if o.QueryTable(new(models.Position)).Filter("department_id", departmentId).Filter("name", name).Filter("parent_position", *parentId).One(&position) == nil {
 			return fmt.Errorf("same level, duplicate names")
 		}
 	}
 
 	// 创建新位置
 	newPosition := &models.Position{
-		Name:    name,
-		Project: &models.Project{Id: projectId},
+		Name:       name,
+		Department: &models.Department{Id: departmentId},
 	}
 
 	if parentId == nil {
@@ -68,14 +68,13 @@ func (s *PositionService) Delete(id int64) error {
 }
 
 // DeleteAll 递归删除位置及其子节点
-func (s *PositionService) DeleteAll(id int64) error {
+func (s *PositionService) DeleteAll(departmentId, id int64) error {
 	o := orm.NewOrm()
 	position := &models.Position{Id: id}
 
-	if o.Read(position) != nil {
-		return fmt.Errorf("position not found")
+	if o.Read(position) != nil || position.Department == nil || position.Department.Id != departmentId {
+		return fmt.Errorf("position not found or no permission")
 	}
-
 	return s.deleteRecursive(position)
 }
 
@@ -103,13 +102,13 @@ func (s *PositionService) deleteRecursive(node *models.Position) error {
 }
 
 // Edit 编辑位置
-func (s *PositionService) Edit(projectId int64, id int64, name string) error {
+func (s *PositionService) Edit(departmentId int64, id int64, name string) error {
 	o := orm.NewOrm()
 
 	// 查找要编辑的位置
 	position := &models.Position{Id: id}
-	if o.QueryTable(new(models.Position)).RelatedSel("ParentPosition").Filter("id", id).One(position) != nil {
-		return fmt.Errorf("the position does not exist")
+	if o.QueryTable(new(models.Position)).RelatedSel("ParentPosition").Filter("id", id).One(position) != nil || position.Department == nil || position.Department.Id != departmentId {
+		return fmt.Errorf("the position does not exist or no permission")
 	}
 	var parentId int64
 	if position.ParentPosition != nil {
@@ -120,11 +119,11 @@ func (s *PositionService) Edit(projectId int64, id int64, name string) error {
 	// 检查同级是否有重名
 	var existingPosition models.Position
 	if parentId == 0 {
-		if o.QueryTable(new(models.Position)).Filter("project_id", projectId).Filter("name", name).Filter("parent_position__isnull", true).Exclude("id", id).One(&existingPosition) == nil {
+		if o.QueryTable(new(models.Position)).Filter("department_id", departmentId).Filter("name", name).Filter("parent_position__isnull", true).Exclude("id", id).One(&existingPosition) == nil {
 			return fmt.Errorf("same level, duplicate names")
 		}
 	} else {
-		if o.QueryTable(new(models.Position)).Filter("project_id", &models.Project{Id: projectId}).Filter("name", name).Filter("parent_position", &models.Position{Id: parentId}).Exclude("id", id).One(&existingPosition) == nil {
+		if o.QueryTable(new(models.Position)).Filter("department_id", &models.Department{Id: departmentId}).Filter("name", name).Filter("parent_position", &models.Position{Id: parentId}).Exclude("id", id).One(&existingPosition) == nil {
 			return fmt.Errorf("same level, duplicate names")
 		}
 	}
@@ -144,16 +143,16 @@ func (s *PositionService) Edit(projectId int64, id int64, name string) error {
 	}
 
 	// 批量更新子节点的全名
-	return s.batchUpdateFullName(projectId, oldFullName, position.FullName)
+	return s.batchUpdateFullName(departmentId, oldFullName, position.FullName)
 }
 
 // batchUpdateFullName 批量更新子节点全名
-func (s *PositionService) batchUpdateFullName(projectId int64, oldFullName string, newFullName string) error {
+func (s *PositionService) batchUpdateFullName(departmentId int64, oldFullName string, newFullName string) error {
 	o := orm.NewOrm()
 
 	// 查找所有以旧全名为前缀的位置
 	positions := make([]*models.Position, 0)
-	_, err := o.QueryTable(new(models.Position)).Filter("project_id", &models.Project{Id: projectId}).Filter("full_name__startswith", oldFullName+"/").All(&positions)
+	_, err := o.QueryTable(new(models.Position)).Filter("department_id", &models.Department{Id: departmentId}).Filter("full_name__startswith", oldFullName+"/").All(&positions)
 	if err != nil {
 		return err
 	}
@@ -171,12 +170,12 @@ func (s *PositionService) batchUpdateFullName(projectId int64, oldFullName strin
 }
 
 // TreeOnly 获取位置树
-func (s *PositionService) TreeOnly(projectId int64) (map[string]interface{}, error) {
+func (s *PositionService) TreeOnly(departmentId int64) (map[string]interface{}, error) {
 	o := orm.NewOrm()
 
 	// 查找根节点
 	root := &models.Position{}
-	err := o.QueryTable(new(models.Position)).Filter("project_id", projectId).Filter("parent_position__isnull", true).One(root)
+	err := o.QueryTable(new(models.Position)).Filter("department_id", departmentId).Filter("parent_position__isnull", true).One(root)
 	if err != nil {
 		// 如果没有找到根节点，返回空树
 		return make(map[string]interface{}), nil

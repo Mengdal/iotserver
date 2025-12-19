@@ -1,7 +1,6 @@
 package services
 
 import (
-	"context"
 	"fmt"
 	"github.com/beego/beego/v2/client/orm"
 	"github.com/beego/beego/v2/core/logs"
@@ -17,11 +16,15 @@ import (
 type DevicesService struct{}
 
 // GetAllDevices 获取所有设备（分页）
-func (s *DevicesService) GetAllDevices(page, size int, productId int64, status, name string) (*utils.PageResult, error) {
+func (s *DevicesService) GetAllDevices(page, size int, tenantId int64, departmentId []int64, productId int64, status, name string, isTenant bool) (*utils.PageResult, error) {
 	var devices []*models.Device
 	o := orm.NewOrm()
 	query := o.QueryTable(new(models.Device)).RelatedSel("Product", "Position", "Group")
 
+	query = query.Filter("tenant_id", tenantId)
+	if !isTenant && len(departmentId) > 0 {
+		query = query.Filter("department_id__in", departmentId)
+	}
 	// 按产品ID筛选
 	if productId > 0 {
 		query = query.Filter("product_id", productId)
@@ -57,8 +60,8 @@ func (s *DevicesService) GetAllDevices(page, size int, productId int64, status, 
 			device.PositionId = device.Position.Id
 			device.PositionName = device.Position.Name
 		}
-		if device.Project != nil {
-			device.ProjectId = device.Project.Id
+		if device.Department != nil {
+			device.ProjectId = device.Department.Id
 		}
 		if device.Group != nil {
 			device.GroupId = device.Group.Id
@@ -129,15 +132,15 @@ func (s *DevicesService) BindDeviceToProduct(productId int64, deviceNames []stri
 }
 
 // DeleteDevice 删除设备
-func (s *DevicesService) DeleteDevice(deviceName string) error {
+func (s *DevicesService) DeleteDevice(deviceName string, tenantId int64) error {
 	if deviceName == "" {
 		return fmt.Errorf("设备ID不能为空")
 	}
 
 	o := orm.NewOrm()
-	_, err := o.QueryTable(new(models.Device)).Filter("name", deviceName).Delete()
-	if err != nil {
-		return fmt.Errorf("删除设备失败: %v", err)
+	count, err := o.QueryTable(new(models.Device)).Filter("tenant_id", tenantId).Filter("name", deviceName).Delete()
+	if err != nil || count == 0 {
+		return fmt.Errorf("device not found ")
 	}
 
 	dropQuery := fmt.Sprintf("DROP TABLE IF EXISTS %s.`%s`", DBName, deviceName)
@@ -154,7 +157,7 @@ func (s *DevicesService) DeleteDevice(deviceName string) error {
 	return nil
 }
 
-func (s *DevicesService) GetDevicesTree() ([]map[string]interface{}, error) {
+func (s *DevicesService) GetDevicesTree(departmentIds []int64) ([]map[string]interface{}, error) {
 	o := orm.NewOrm()
 
 	// 查询所有产品
@@ -166,7 +169,11 @@ func (s *DevicesService) GetDevicesTree() ([]map[string]interface{}, error) {
 
 	// 查询所有设备并关联产品信息
 	var devices []*models.Device
-	_, err = o.QueryTable(new(models.Device)).RelatedSel("Product").All(&devices)
+	query := o.QueryTable(new(models.Device)).RelatedSel("Product")
+	if len(departmentIds) > 0 {
+		query = query.Filter("department_id__in", departmentIds)
+	}
+	_, err = query.All(&devices)
 	if err != nil {
 		return nil, fmt.Errorf("查询设备失败: %v", err)
 	}
@@ -208,13 +215,22 @@ func (s *DevicesService) GetDevicesTree() ([]map[string]interface{}, error) {
 	return tree, nil
 }
 
-func BindDeviceTags(s iotp.TagService, deviceNames []string, productID int64, productName string, productKey string, categoryId int64, tags map[string]string) error {
+func BindDeviceTags(s iotp.TagService, tenantId int64, deviceNames []string, productID int64, productName string, productKey string, categoryId int64, tags map[string]string) error {
 	if len(deviceNames) == 0 {
 		return nil
 	}
 
 	o := orm.NewOrm()
 	t, _ := NewTDengineService()
+	// 如果自定义模型则使用product_key作为超级表Key
+	category := models.Category{Id: categoryId}
+	var categoryKey string
+	err := o.Read(&category)
+	if err != nil {
+		categoryKey = productKey
+	} else {
+		categoryKey = category.CategoryKey
+	}
 
 	// 批量处理设备绑定
 	errChan := make(chan error, len(deviceNames))
@@ -229,18 +245,30 @@ func BindDeviceTags(s iotp.TagService, deviceNames []string, productID int64, pr
 			defer func() { <-semaphore }() // 释放并发槽
 
 			// 创建 / 更新 TDengine 子表
-			if err := BindTDDevice(t, o, deviceName, productID, productKey, categoryId, tags); err != nil {
+			if err := BindTDDevice(t, o, tenantId, deviceName, productID, productKey, categoryKey, tags); err != nil {
 				errChan <- fmt.Errorf("设备 %s 标签绑定失败: %v", deviceName, err)
 				return
 			}
 
 			// 绑定 IOTP 设备标签
-			productIDStr := strconv.FormatInt(productID, 10)
-			nowStr := strconv.FormatInt(time.Now().Unix(), 10)
-			if err := bindIOTPDevice(s, deviceName, productIDStr, productName, nowStr, tags); err != nil {
-				errChan <- fmt.Errorf("设备 %s 标签绑定失败: %v", deviceName, err)
-				return
-			}
+			//productIDStr := strconv.FormatInt(productID, 10)
+			//nowStr := strconv.FormatInt(time.Now().Unix(), 10)
+			//if err := bindIOTPDevice(s, deviceName, productIDStr, productName, nowStr, tags); err != nil {
+			//	errChan <- fmt.Errorf("设备 %s 标签绑定失败: %v", deviceName, err)
+			//	return
+			//}
+
+			// IOTP 标签（异步）
+			go func() {
+				_ = bindIOTPDevice(
+					s,
+					deviceName,
+					strconv.FormatInt(productID, 10),
+					productName,
+					strconv.FormatInt(time.Now().Unix(), 10),
+					tags,
+				)
+			}()
 
 		}(deviceName)
 	}
@@ -278,86 +306,97 @@ func bindIOTPDevice(s iotp.TagService, deviceName, productIDStr, productName, no
 }
 
 // 设备绑定时 创建子表
-func BindTDDevice(service *TDengineService, o orm.Ormer, deviceName string, productId int64, productKey string, categoryId int64, tags map[string]string) error {
-	category := models.Category{Id: categoryId}
+func BindTDDevice(service *TDengineService, o orm.Ormer, tenantId int64, deviceName string, productId int64, productKey string, categoryKey string, tags map[string]string) error {
+	var query string
 	product := models.Product{Id: productId}
 	positionId, _ := strconv.ParseInt(tags["positionId"], 10, 64)
 	groupId, _ := strconv.ParseInt(tags["groupId"], 10, 64)
 	description, _ := tags["description"]
-	var query string
-	var categoryKey string
 
-	// 如果自定义模型则使用product_key作为超级表Key
-	err := o.Read(&category)
+	// 开始事务
+	tx, err := o.Begin()
 	if err != nil {
-		categoryKey = productKey
-	} else {
-		categoryKey = category.CategoryKey
+		return fmt.Errorf("开启事务失败: %v", err)
 	}
 
-	return o.DoTx(func(ctx context.Context, txOrm orm.TxOrmer) error {
-		device := models.Device{Name: deviceName, Product: &product, CategoryKey: categoryKey, Position: &models.Position{Id: positionId}, Group: &models.Group{Id: groupId}, Description: description}
-		if err := txOrm.Read(&device, "name"); err == nil {
-			// 设备存在，检查是否需要更换超级表
-			if device.CategoryKey != categoryKey {
-				// 超级表发生变化，需要重建子表
-				// 1. 删除原子表
-				dropQuery := fmt.Sprintf("DROP TABLE IF EXISTS %s.`%s`", DBName, device.Name)
-				if _, execErr := service.db.Exec(dropQuery); execErr != nil {
-					return fmt.Errorf("删除原子表失败: %v", execErr)
-				}
-
-				// 2. 更新设备信息
-				device.Product = &product
-				device.CategoryKey = categoryKey
-				device.Position = &models.Position{Id: positionId}
-				device.Group = &models.Group{Id: groupId}
-				device.Description = description
-				device.BeforeUpdate()
-				if _, updateErr := txOrm.Update(&device); updateErr != nil {
-					return fmt.Errorf("更新设备信息失败: %v", updateErr)
-				}
-
-				// 3. 创建新的子表
-				query = fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s.`%s` USING %s.`%s` (%s) TAGS (%d)",
-					DBName, device.Name, DBName, categoryKey, SubLabel, productId)
-				if _, execErr := service.db.Exec(query); execErr != nil {
-					logs.Error("创建新子表失败:", execErr)
-					return fmt.Errorf("创建新子表失败: %v", execErr)
-				}
-			} else {
-				// 超级表未变，只更新设备信息和标签
-				device.Product = &product
-				device.CategoryKey = categoryKey
-				device.Position = &models.Position{Id: positionId}
-				device.Group = &models.Group{Id: groupId}
-				device.BeforeUpdate()
-				if _, updateErr := txOrm.Update(&device); updateErr != nil {
-					return fmt.Errorf("更新设备信息失败: %v", updateErr)
-				}
-
-				// 更新子表的 TAG
-				query = fmt.Sprintf("ALTER TABLE %s.`%s` SET TAG productid=%d", DBName, device.Name, productId)
-				if _, execErr := service.db.Exec(query); execErr != nil {
-					logs.Error("更新子表TAG失败:", execErr)
-					return fmt.Errorf("更新子表TAG失败: %v", execErr)
-				}
+	// 使用 defer 确保事务被正确处理
+	var txCommitted bool
+	defer func() {
+		if !txCommitted {
+			if rollbackErr := tx.Rollback(); rollbackErr != nil {
+				logs.Error("事务回滚失败:", rollbackErr)
 			}
-		} else {
-			// 设备不存在，创建新设备
-			device.BeforeInsert()
-			if _, insertErr := txOrm.Insert(&device); insertErr != nil {
-				return fmt.Errorf("插入设备信息失败: %v", insertErr)
+		}
+	}()
+
+	device := models.Device{Name: deviceName, Product: &product, CategoryKey: categoryKey, Position: &models.Position{Id: positionId}, Group: &models.Group{Id: groupId}, Description: description, Tenant: tenantId}
+	if err := tx.Read(&device, "name"); err == nil {
+		// 设备存在，检查是否需要更换超级表
+		if device.CategoryKey != categoryKey {
+			// 超级表发生变化，需要重建子表
+			// 1. 删除原子表
+			dropQuery := fmt.Sprintf("DROP TABLE IF EXISTS %s.`%s`", DBName, device.Name)
+			if _, execErr := service.db.Exec(dropQuery); execErr != nil {
+				return fmt.Errorf("删除原子表失败: %v", execErr)
 			}
 
+			// 2. 更新设备信息
+			device.Product = &product
+			device.CategoryKey = categoryKey
+			device.Position = &models.Position{Id: positionId}
+			device.Group = &models.Group{Id: groupId}
+			device.Description = description
+			device.BeforeUpdate()
+			if _, updateErr := tx.Update(&device); updateErr != nil {
+				return fmt.Errorf("更新设备信息失败: %v", updateErr)
+			}
+
+			// 3. 创建新的子表
 			query = fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s.`%s` USING %s.`%s` (%s) TAGS (%d)",
 				DBName, device.Name, DBName, categoryKey, SubLabel, productId)
 			if _, execErr := service.db.Exec(query); execErr != nil {
-				logs.Error("创建子表TAG失败:", execErr)
-				return fmt.Errorf("请重新发布产品")
+				logs.Error("创建新子表失败:", execErr)
+				return fmt.Errorf("创建新子表失败: %v", execErr)
+			}
+		} else {
+			// 超级表未变，只更新设备信息和标签
+			device.Product = &product
+			device.CategoryKey = categoryKey
+			device.Position = &models.Position{Id: positionId}
+			device.Group = &models.Group{Id: groupId}
+			device.Description = description
+			device.BeforeUpdate()
+			if _, updateErr := tx.Update(&device); updateErr != nil {
+				return fmt.Errorf("更新设备信息失败: %v", updateErr)
+			}
+
+			// 更新子表的 TAG
+			query = fmt.Sprintf("ALTER TABLE %s.`%s` SET TAG productid=%d", DBName, device.Name, productId)
+			if _, execErr := service.db.Exec(query); execErr != nil {
+				logs.Error("更新子表TAG失败:", execErr)
+				return fmt.Errorf("更新子表TAG失败: %v", execErr)
 			}
 		}
+	} else {
+		// 设备不存在，创建新设备
+		device.BeforeInsert()
+		if _, insertErr := tx.Insert(&device); insertErr != nil {
+			return fmt.Errorf("插入设备信息失败: %v", insertErr)
+		}
 
-		return nil
-	})
+		query = fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s.`%s` USING %s.`%s` (%s) TAGS (%d)",
+			DBName, device.Name, DBName, categoryKey, SubLabel, productId)
+		if _, execErr := service.db.Exec(query); execErr != nil {
+			logs.Error("创建子表TAG失败:", execErr)
+			return fmt.Errorf("请重新发布产品")
+		}
+	}
+
+	// 提交事务
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("提交事务失败: %v", err)
+	}
+	txCommitted = true
+
+	return nil
 }

@@ -8,6 +8,7 @@ import (
 	"iotServer/models"
 	"iotServer/models/constants"
 	"iotServer/utils"
+	"strings"
 	"time"
 )
 
@@ -25,11 +26,20 @@ func (s *AlertService) AddAlert(req map[string]interface{}) error {
 	ruleId := req["rule_id"].(string)
 	deviceId := req["deviceId"].(string)
 	alertResult["dn"] = deviceId
-	alertResult["rule_name"] = ruleId
+
+	var ruleName string
+	index := strings.LastIndex(ruleId, "__")
+	if index > 0 {
+		ruleName = ruleId[:index] // 跳过 "__" 本身
+	} else {
+		ruleName = ruleId
+	}
+
+	alertResult["rule_name"] = ruleName
 
 	o := orm.NewOrm()
 	var rule models.AlertRule
-	rule.Name = ruleId
+	rule.Name = ruleName
 	if err := o.Read(&rule, "Name"); err != nil {
 		return fmt.Errorf("查询失败: %v", err)
 	}
@@ -49,7 +59,7 @@ func (s *AlertService) AddAlert(req map[string]interface{}) error {
 		} else {
 			// 如果找到了记录且仍在静默期内，则跳过
 			if now-latestAlert.TriggerTime < constants.ReturnSilenceTimestamp(rule.SilenceTime) {
-				logs.Info("告警规则 %s 处于静默期，跳过本次告警", ruleId)
+				logs.Info("告警规则 %s 处于静默期，跳过本次告警", ruleName)
 				return nil
 			}
 		}
@@ -139,6 +149,7 @@ func (s *AlertService) AddAlert(req map[string]interface{}) error {
 		IsSend:      false,
 		Status:      string(constants.Untreated),
 		AlertResult: string(alertMarshal),
+		Department:  &models.Department{Id: rule.Department.Id},
 	}
 
 	// 保存到数据库
@@ -290,35 +301,3 @@ func (s *AlertService) BatchUpdateAlertStatus(ids []int64, status string, messag
 		})
 	return err
 }
-
-//// 新增方法：获取告警统计
-//func (s *AlertService) GetAlertStats(startTime, endTime int64) (map[string]interface{}, error) {
-//	o := orm.NewOrm()
-//	stats := make(map[string]interface{})
-//
-//	// 获取未处理告警数
-//	var untreated int64
-//	err := o.QueryTable("alert_list").
-//		Filter("status", constants.Untreated).
-//		Filter("trigger_time__gte", startTime).
-//		Filter("trigger_time__lte", endTime).
-//		Count(&untreated)
-//	if err != nil {
-//		return nil, err
-//	}
-//	stats["untreated"] = untreated
-//
-//	// 获取已处理告警数
-//	var treated int64
-//	err = o.QueryTable("alert_list").
-//		Filter("status", constants.Treated).
-//		Filter("trigger_time__gte", startTime).
-//		Filter("trigger_time__lte", endTime).
-//		Count(&treated)
-//	if err != nil {
-//		return nil, err
-//	}
-//	stats["treated"] = treated
-//
-//	return stats, nil
-//}
