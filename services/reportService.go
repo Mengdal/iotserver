@@ -642,6 +642,8 @@ func (r *ReportService) formatPeriodKey(dateType string, t time.Time) string {
 	switch dateType {
 	case "day":
 		return fmt.Sprintf("%02d", t.Hour())
+	case "week":
+		return fmt.Sprintf("%01d", t.Weekday()+1)
 	case "month":
 		return fmt.Sprintf("%02d", t.Day())
 	case "year":
@@ -659,6 +661,8 @@ func (r *ReportService) generatePeriods(dateType string, start, end time.Time) [
 		for i := 0; i < 24; i++ {
 			periods = append(periods, fmt.Sprintf("%02d", i))
 		}
+	case "week": // 添加周报表的周期生成
+		periods = append(periods, "1", "2", "3", "4", "5", "6", "7")
 	case "month":
 		days := end.Day()
 		for i := 1; i <= days; i++ {
