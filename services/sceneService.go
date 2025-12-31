@@ -11,6 +11,7 @@ import (
 	"iotServer/models"
 	"iotServer/models/constants"
 	"iotServer/models/dtos"
+	"iotServer/utils"
 	"log"
 	"strconv"
 	"sync"
@@ -442,7 +443,7 @@ func (s *SceneService) DeviceStatusCron() error {
 			}
 		}
 	}
-	log.Printf("设备离线检测执行完成，共检测 %d 个规则\n", len(deviceMap))
+	utils.DebugLog("设备离线检测执行完成，共检测 %d 个规则\n", len(deviceMap))
 	return nil
 }
 

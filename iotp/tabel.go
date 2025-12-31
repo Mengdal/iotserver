@@ -271,7 +271,7 @@ func (s *TagService) ListDevicesByTag(tagName, tagValue string, projectIds []int
 func (s *TagService) DevicesTagsTree2(projectIds []int64, tagName, tagValue string) ([]map[string]interface{}, error) {
 	o := orm.NewOrm()
 	// 根据标签筛选设备
-	devices, err := s.ListDevicesByTag(tagName, tagValue, projectIds)
+	devices, err := s.ListDevicesByTag(tagName, tagValue, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -511,5 +511,12 @@ func (s *TagService) RemoveTag(deviceName, tagName string) error {
 // 处理URL路径中的特殊字符
 func (s *TagService) escapePathSegment(segment string) string {
 	// 替换可能影响URL路径的特殊字符
-	return strings.ReplaceAll(segment, "/", "_")
+	escaped := strings.ReplaceAll(segment, "/", "_")
+	escaped = strings.ReplaceAll(escaped, "#", "%23") // 处理 # 号
+	escaped = strings.ReplaceAll(escaped, "?", "%3F") // 处理 ? 号
+	escaped = strings.ReplaceAll(escaped, "&", "%26") // 处理 & 号
+	escaped = strings.ReplaceAll(escaped, "=", "%3D") // 处理 = 号
+	escaped = strings.ReplaceAll(escaped, " ", "%20") // 处理空格
+	escaped = strings.ReplaceAll(escaped, "%", "%25") // 处理 % 号
+	return escaped
 }

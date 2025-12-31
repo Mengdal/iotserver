@@ -32,13 +32,21 @@ func (s *DevicesService) GetAllDevices(page, size int, tenantId int64, departmen
 
 	// 按状态筛选
 	if status != "" {
-		query = query.Filter("status", status)
+		if status == "0" {
+			// 当status为"0"时，筛选status为"0"或为空的设备
+			query = query.Filter("status__in", []string{"0", ""})
+		} else {
+			query = query.Filter("status", status)
+		}
 	}
 
 	// 按名称模糊查询
 	if name != "" {
 		query = query.Filter("name__icontains", name)
 	}
+
+	// 按组ID排序
+	query = query.OrderBy("-group__name", "name", "id")
 
 	result, err := utils.Paginate(query, page, size, &devices)
 	if err != nil {
@@ -58,7 +66,7 @@ func (s *DevicesService) GetAllDevices(page, size int, tenantId int64, departmen
 		}
 		if device.Position != nil {
 			device.PositionId = device.Position.Id
-			device.PositionName = device.Position.Name
+			device.PositionName = device.Position.FullName
 		}
 		if device.Department != nil {
 			device.ProjectId = device.Department.Id

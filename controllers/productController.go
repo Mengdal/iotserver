@@ -40,7 +40,7 @@ func (c *ProductController) Get() {
 	if name != "" {
 		qs = qs.Filter("name__icontains", name)
 	}
-	qs = qs.OrderBy("-created") // 降序排列，最新的在前
+	qs = qs.OrderBy("created") // 降序排列，最新的在前
 	paginate, err := utils.Paginate(qs, page, size, &products)
 	if err != nil {
 		c.Error(400, "查询失败")
@@ -52,7 +52,8 @@ func (c *ProductController) Get() {
 // Detail @Title 获取产品详情
 // @Description 产品物模型
 // @Param   Authorization  header  string  true  "Bearer YourToken"
-// @Param   productId      query   int     false "产品Id"
+// @Param   productId      query   int     true  "产品Id"
+// @Param   deviceName     query   string  false "设备Id"
 // @Param   valueType      query   string  false "值类型(S:瞬时量，L:累积量，K:开关量, C:产量，YL:用量)"
 // @Success 200 {object} controllers.SimpleResult "请求成功"
 // @Failure 400 用户ID不存在 或 查询失败
@@ -60,6 +61,7 @@ func (c *ProductController) Get() {
 func (c *ProductController) Detail() {
 	productId, _ := c.GetInt64("productId")
 	valueType := c.GetString("valueType")
+	deviceName := c.GetString("deviceName")
 	o := orm.NewOrm()
 
 	// 查询产品
@@ -89,6 +91,40 @@ func (c *ProductController) Detail() {
 	o.LoadRelated(&product, "Events")
 	// 查询动作
 	o.LoadRelated(&product, "Actions")
+
+	if deviceName != "" {
+		reportService, _ := services.NewReportService()
+		propertiesWithValue, err := reportService.GetRealData(deviceName, product.Properties)
+		if err != nil {
+			c.Error(400, "查询属性值失败: "+err.Error())
+		}
+		// 构建完整的响应结构
+		response := map[string]interface{}{
+			"id":              product.Id,
+			"name":            product.Name,
+			"key":             product.Key,
+			"cloudProductId":  product.CloudProductId,
+			"cloudInstanceId": product.CloudInstanceId,
+			"platform":        product.Platform,
+			"protocol":        product.Protocol,
+			"nodeType":        product.NodeType,
+			"netType":         product.NetType,
+			"dataFormat":      product.DataFormat,
+			"lastSyncTime":    product.LastSyncTime,
+			"factory":         product.Factory,
+			"description":     product.Description,
+			"status":          product.Status,
+			"extra":           product.Extra,
+			"categoryId":      product.CategoryId,
+			"created":         product.Created,
+			"modified":        product.Modified,
+			"properties":      propertiesWithValue,
+			"events":          product.Events,
+			"actions":         product.Actions,
+		}
+
+		c.Success(response)
+	}
 
 	c.Success(product)
 }

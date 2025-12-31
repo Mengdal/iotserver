@@ -639,8 +639,53 @@ func init() {
 
 	beego.GlobalControllerRouter["iotServer/controllers:ReportController"] = append(beego.GlobalControllerRouter["iotServer/controllers:ReportController"],
 		beego.ControllerComments{
+			Method:           "AggregateQuery",
+			Router:           `/history/aggregate`,
+			AllowHTTPMethods: []string{"post"},
+			MethodParams:     param.Make(),
+			Filters:          nil,
+			Params:           nil})
+
+	beego.GlobalControllerRouter["iotServer/controllers:ReportController"] = append(beego.GlobalControllerRouter["iotServer/controllers:ReportController"],
+		beego.ControllerComments{
+			Method:           "HistoryQuery",
+			Router:           `/history/query`,
+			AllowHTTPMethods: []string{"post"},
+			MethodParams:     param.Make(),
+			Filters:          nil,
+			Params:           nil})
+
+	beego.GlobalControllerRouter["iotServer/controllers:ReportController"] = append(beego.GlobalControllerRouter["iotServer/controllers:ReportController"],
+		beego.ControllerComments{
+			Method:           "DownloadTemplate",
+			Router:           `/template`,
+			AllowHTTPMethods: []string{"get"},
+			MethodParams:     param.Make(),
+			Filters:          nil,
+			Params:           nil})
+
+	beego.GlobalControllerRouter["iotServer/controllers:ReportController"] = append(beego.GlobalControllerRouter["iotServer/controllers:ReportController"],
+		beego.ControllerComments{
 			Method:           "TimePeriodReport",
 			Router:           `/timePeriod`,
+			AllowHTTPMethods: []string{"post"},
+			MethodParams:     param.Make(),
+			Filters:          nil,
+			Params:           nil})
+
+	beego.GlobalControllerRouter["iotServer/controllers:ReportController"] = append(beego.GlobalControllerRouter["iotServer/controllers:ReportController"],
+		beego.ControllerComments{
+			Method:           "UploadExcelData",
+			Router:           `/uploadExcel`,
+			AllowHTTPMethods: []string{"post"},
+			MethodParams:     param.Make(),
+			Filters:          nil,
+			Params:           nil})
+
+	beego.GlobalControllerRouter["iotServer/controllers:ReportController"] = append(beego.GlobalControllerRouter["iotServer/controllers:ReportController"],
+		beego.ControllerComments{
+			Method:           "SinglePointInsert",
+			Router:           `/uploadSingle`,
 			AllowHTTPMethods: []string{"post"},
 			MethodParams:     param.Make(),
 			Filters:          nil,
