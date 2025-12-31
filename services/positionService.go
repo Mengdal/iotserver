@@ -186,6 +186,7 @@ func (s *PositionService) TreeOnly(departmentId int64) (map[string]interface{}, 
 	tree["id"] = root.Id
 	tree["parentId"] = nil
 	tree["name"] = root.Name
+	tree["fullName"] = root.FullName
 	children, err := s.childrenOnly(root.Id)
 	if err != nil {
 		return nil, err
@@ -213,6 +214,7 @@ func (s *PositionService) childrenOnly(parentId int64) ([]map[string]interface{}
 		object["id"] = position.Id
 		object["parentId"] = position.ParentPosition.Id
 		object["name"] = position.Name
+		object["fullName"] = position.FullName
 
 		// 递归获取子节点
 		children, err := s.childrenOnly(position.Id)
