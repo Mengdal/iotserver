@@ -138,6 +138,7 @@ func (r *ReportService) query(productKey, dateType, start, end string,
 			startTime.UnixMilli(), endTime.UnixMilli())
 
 		rows, err := r.tdService.db.Query(query)
+		utils.DebugLog(query)
 		if err != nil {
 			logs.Warn("查询属性 %s 数据失败: %v", property.Code, err)
 			continue
@@ -273,6 +274,7 @@ func (r *ReportService) UsageAnalysis(resourceType, productKey, dateType, start,
 		startTime.UnixNano()/1e6, endTime.UnixNano()/1e6, aggDateType(dateType))
 
 	rows, err := r.tdService.db.Query(query)
+	utils.DebugLog(query)
 	if err != nil {
 		logs.Warn("查询用量数据失败: %v", err)
 		return nil, fmt.Errorf("查询用量数据失败: %v", err)
@@ -789,7 +791,7 @@ func aggDateType(val string) (aggType string) {
 		aggType = ""
 	case "day":
 		aggType = "1h"
-	case "month":
+	case "month", "week":
 		aggType = "1d"
 	case "year":
 		aggType = "1n"
@@ -826,6 +828,24 @@ func parseTimeRange(dateType, start, end string) (baseTimeStr string, startTime,
 		}
 		startTime = time.Date(baseTime.Year(), baseTime.Month(), baseTime.Day(), 0, 0, 0, 0, loc)
 		endTime = time.Date(baseTime.Year(), baseTime.Month(), baseTime.Day(), 23, 59, 59, 0, loc)
+	case "week": // 周报表，使用 start 日期所在周的周一 00:00:00 到周日 23:59:59
+		baseTimeStr = start[:10]
+		var baseTime time.Time
+		baseTime, err = time.ParseInLocation("2006-01-02", baseTimeStr, loc) // 只取日期部分
+		if err != nil {
+			err = fmt.Errorf("日期格式错误: %v", err)
+			return
+		}
+		// 计算该日期所在周的周一
+		weekday := int(baseTime.Weekday())
+		if weekday == 0 { // 如果是周日，则周一为6天前
+			startTime = time.Date(baseTime.Year(), baseTime.Month(), baseTime.Day()-6, 0, 0, 0, 0, loc)
+		} else { // 如果是周一到周六，则周一为weekday-1天前
+			startTime = time.Date(baseTime.Year(), baseTime.Month(), baseTime.Day()-(weekday-1), 0, 0, 0, 0, loc)
+		}
+		// 计算该周的周日
+		endTime = startTime.AddDate(0, 0, 6) // 周一加6天为周日
+		endTime = time.Date(endTime.Year(), endTime.Month(), endTime.Day(), 23, 59, 59, 0, loc)
 	case "month": // 月报表，使用 start 月份的第一天到最后一天
 		baseTimeStr = start[:7]
 		var baseTime time.Time
@@ -925,9 +945,19 @@ func (r *ReportService) buildReportData(deviceList *[]*models.Device, properties
 		for _, device := range *deviceList {
 			var groupKey string
 			if resourceType == "Position" {
-				groupKey = device.Position.Name
-			} else {
-				groupKey = device.Group.Name // 假设设备模型中有 GroupName 字段
+				// 检查 Position 是否为空
+				if device.Position != nil {
+					groupKey = device.Position.Name
+				} else {
+					groupKey = "未分组" // 默认分组名
+				}
+			} else { // Group
+				// 检查 Group 是否为空
+				if device.Group != nil {
+					groupKey = device.Group.Name
+				} else {
+					groupKey = "未分组" // 默认分组名
+				}
 			}
 
 			groupedData[groupKey] = append(groupedData[groupKey], device)
@@ -1058,4 +1088,38 @@ func (r *ReportService) buildDeviceData(device *models.Device, properties []mode
 	}
 
 	return obj
+}
+
+// SinglePointInsert 单点补录数据到TDengine
+func (r *ReportService) SinglePointInsert(deviceName, tagCode, timestamp, value string) error {
+	// 验证设备是否存在
+	o := orm.NewOrm()
+	device := models.Device{Name: deviceName}
+	err := o.Read(&device, "Name")
+	if err != nil {
+		return fmt.Errorf("设备 %s 不存在", deviceName)
+	}
+
+	// 解析时间戳
+	parsedTime, err := parseExcelTime(timestamp)
+	if err != nil {
+		return fmt.Errorf("时间戳格式错误: %v", err)
+	}
+
+	// 构建批量插入请求
+	requests := []BatchInsertDataRequest{
+		{
+			DeviceName:   deviceName,
+			PropertyCode: tagCode,
+			DataPoints: []DataPointRequest{
+				{
+					Timestamp: parsedTime,
+					Value:     value,
+				},
+			},
+		},
+	}
+
+	// 使用现有的批量插入方法
+	return r.BatchInsertData(requests)
 }
