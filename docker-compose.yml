@@ -36,6 +36,8 @@ services:
       - "6044-6045:6044-6045/udp"
       - "6050:6050"
       - "6055:6055"
+    environment:
+      - TZ=Asia/Shanghai
     volumes:
       - ./mount/taos/data:/var/lib/taos
       - ./mount/taos/log:/var/log/taos

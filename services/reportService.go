@@ -271,7 +271,7 @@ func (r *ReportService) UsageAnalysis(resourceType, productKey, dateType, start,
 			ORDER BY tbname, _wstart`,
 		property.Code, property.Code, property.Code, property.Code,
 		DBName, productKey, deviceConditions,
-		startTime.UnixNano()/1e6, endTime.UnixNano()/1e6, aggDateType(dateType))
+		startTime.UnixMilli(), endTime.UnixMilli(), aggDateType(dateType))
 
 	rows, err := r.tdService.db.Query(query)
 	utils.DebugLog(query)
