@@ -639,6 +639,15 @@ func init() {
 
 	beego.GlobalControllerRouter["iotServer/controllers:ReportController"] = append(beego.GlobalControllerRouter["iotServer/controllers:ReportController"],
 		beego.ControllerComments{
+			Method:           "ExportTimePeriodReport",
+			Router:           `/export/timePeriod`,
+			AllowHTTPMethods: []string{"post"},
+			MethodParams:     param.Make(),
+			Filters:          nil,
+			Params:           nil})
+
+	beego.GlobalControllerRouter["iotServer/controllers:ReportController"] = append(beego.GlobalControllerRouter["iotServer/controllers:ReportController"],
+		beego.ControllerComments{
 			Method:           "AggregateQuery",
 			Router:           `/history/aggregate`,
 			AllowHTTPMethods: []string{"post"},

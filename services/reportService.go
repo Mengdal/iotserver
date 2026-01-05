@@ -1,11 +1,13 @@
 package services
 
 import (
+	"bytes"
 	"database/sql"
 	"encoding/json"
 	"fmt"
 	"github.com/beego/beego/v2/client/orm"
 	"github.com/beego/beego/v2/core/logs"
+	"github.com/xuri/excelize/v2"
 	"iotServer/models"
 	"iotServer/utils"
 	"strconv"
@@ -1092,6 +1094,124 @@ func (r *ReportService) buildDeviceData(device *models.Device, properties []mode
 	}
 
 	return obj
+}
+
+// ExportTimePeriodReportToExcel 导出时间段报表到Excel
+func (r *ReportService) ExportTimePeriodReportToExcel(start, end string, tenantId int64, projectIds []int64, search string,
+	productId int64, propertyIds string, resourceType string, resourceIds string, dateType string, multipleType bool, reportType string) ([]byte, error) {
+
+	// 调用报表查询方法获取数据 - 使用最大页码以获取所有数据
+	result, err := r.TimePeriodReport(
+		1, 999999, start, end, tenantId, projectIds, search,
+		productId, propertyIds, resourceType, resourceIds, dateType, multipleType, reportType)
+	if err != nil {
+		return nil, err
+	}
+
+	// 创建Excel文件
+	f := excelize.NewFile()
+	sheetName := "Sheet1"
+	f.SetSheetName("Sheet1", sheetName)
+
+	// 根据报表类型设置表头和数据
+	if result != nil {
+		// 确保结果是正确的map结构 - 根据dealResponse方法，返回的是包含tableData和tableLabel的map
+		if pageResult, ok := result.(map[string]interface{}); ok {
+			// 获取tableData
+			var tableData []interface{}
+
+			if data, exists := pageResult["tableData"]; exists {
+				// 尝试不同的类型转换
+				if td, ok := data.([]interface{}); ok {
+					tableData = td
+				} else if td2, ok := data.([]map[string]interface{}); ok {
+					// 如果是[]map[string]interface{}类型，转换为[]interface{}
+					for _, item := range td2 {
+						tableData = append(tableData, item)
+					}
+				}
+			}
+
+			// 获取tableLabel用于设置表头
+			var headers []string
+			var headerProps []string
+
+			if labelData, exists := pageResult["tableLabel"]; exists {
+				// 根据实际的dealLabels方法，返回的是[]map[string]string类型
+				if tableLabel, ok := labelData.([]map[string]string); ok && len(tableLabel) > 0 {
+					for _, label := range tableLabel {
+						if labelStr, exists := label["label"]; exists {
+							headers = append(headers, labelStr)
+						}
+						if propStr, exists := label["prop"]; exists {
+							headerProps = append(headerProps, propStr)
+						}
+					}
+				} else {
+					return nil, fmt.Errorf("invalid data")
+				}
+			} else {
+				// 如果没有tableLabel，使用默认表头
+				headers = []string{"设备", "属性名称", "开始读数", "结束读数", "用量"}
+				headerProps = []string{"dn", "tag", "first", "last", "duration"}
+			}
+
+			// 设置表头
+			for i, header := range headers {
+				cell, _ := excelize.CoordinatesToCellName(i+1, 1)
+				f.SetCellValue(sheetName, cell, header)
+			}
+
+			// 如果有数据，则填充数据
+			if tableData != nil && len(tableData) > 0 {
+				rowIndex := 2
+				for _, row := range tableData {
+					// 确保rowData是map[string]interface{}类型
+					var rowData map[string]interface{}
+					if rd, ok := row.(map[string]interface{}); ok {
+						rowData = rd
+					} else if rd2, ok := row.(map[string]string); ok {
+						// 如果是map[string]string类型，转换为map[string]interface{}
+						rowData = make(map[string]interface{})
+						for k, v := range rd2 {
+							rowData[k] = v
+						}
+					}
+
+					if rowData != nil {
+						for colIndex, prop := range headerProps {
+							cell, _ := excelize.CoordinatesToCellName(colIndex+1, rowIndex)
+							if value, exists := rowData[prop]; exists {
+								// 确保值不为nil
+								if value != nil {
+									// 检查是否为指针类型，如果是则解引用
+									if valPtr, isPtr := value.(*float64); isPtr && valPtr != nil {
+										f.SetCellValue(sheetName, cell, *valPtr)
+									} else {
+										f.SetCellValue(sheetName, cell, value)
+									}
+								} else {
+									f.SetCellValue(sheetName, cell, "")
+								}
+							} else {
+								f.SetCellValue(sheetName, cell, "")
+							}
+						}
+					}
+					rowIndex++
+				}
+			}
+		}
+	}
+
+	// 将Excel文件写入字节数组
+	var buf bytes.Buffer
+	err = f.Write(&buf)
+	if err != nil {
+		return nil, fmt.Errorf("生成Excel文件失败: %v", err)
+	}
+
+	return buf.Bytes(), nil
 }
 
 // SinglePointInsert 单点补录数据到TDengine
