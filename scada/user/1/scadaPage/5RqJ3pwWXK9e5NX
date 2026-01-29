@@ -1,0 +1,866 @@
+{
+  "editCanvasConfig": {
+    "projectName": "首页",
+    "width": 1920,
+    "height": 1080,
+    "filterShow": false,
+    "hueRotate": 0,
+    "saturate": 1,
+    "contrast": 1,
+    "brightness": 1,
+    "opacity": 1,
+    "rotateZ": 0,
+    "rotateX": 0,
+    "rotateY": 0,
+    "skewX": 0,
+    "skewY": 0,
+    "blendMode": "normal",
+    "background": null,
+    "backgroundImage": null,
+    "selectColor": true,
+    "chartThemeColor": "dark",
+    "chartCustomThemeColorInfo": null,
+    "chartThemeSetting": {
+      "title": {
+        "show": true,
+        "textStyle": {
+          "color": "#BFBFBF",
+          "fontSize": 18
+        },
+        "subtextStyle": {
+          "color": "#A2A2A2",
+          "fontSize": 14
+        }
+      },
+      "xAxis": {
+        "show": true,
+        "name": "",
+        "nameGap": 15,
+        "nameTextStyle": {
+          "color": "#B9B8CE",
+          "fontSize": 12
+        },
+        "inverse": false,
+        "axisLabel": {
+          "show": true,
+          "fontSize": 12,
+          "color": "#B9B8CE",
+          "rotate": 0
+        },
+        "position": "bottom",
+        "axisLine": {
+          "show": true,
+          "lineStyle": {
+            "color": "#B9B8CE",
+            "width": 1
+          },
+          "onZero": true
+        },
+        "axisTick": {
+          "show": true,
+          "length": 5
+        },
+        "splitLine": {
+          "show": false,
+          "lineStyle": {
+            "color": "#484753",
+            "width": 1,
+            "type": "solid"
+          }
+        }
+      },
+      "yAxis": {
+        "show": true,
+        "name": "",
+        "nameGap": 15,
+        "nameTextStyle": {
+          "color": "#B9B8CE",
+          "fontSize": 12
+        },
+        "inverse": false,
+        "axisLabel": {
+          "show": true,
+          "fontSize": 12,
+          "color": "#B9B8CE",
+          "rotate": 0
+        },
+        "position": "left",
+        "axisLine": {
+          "show": true,
+          "lineStyle": {
+            "color": "#B9B8CE",
+            "width": 1
+          },
+          "onZero": true
+        },
+        "axisTick": {
+          "show": true,
+          "length": 5
+        },
+        "splitLine": {
+          "show": true,
+          "lineStyle": {
+            "color": "#484753",
+            "width": 1,
+            "type": "solid"
+          }
+        }
+      },
+      "legend": {
+        "show": true,
+        "type": "scroll",
+        "x": "center",
+        "y": "top",
+        "icon": "circle",
+        "orient": "horizontal",
+        "textStyle": {
+          "color": "#B9B8CE",
+          "fontSize": 18
+        },
+        "itemHeight": 15,
+        "itemWidth": 15,
+        "pageTextStyle": {
+          "color": "#B9B8CE"
+        }
+      },
+      "grid": {
+        "show": false,
+        "left": "10%",
+        "top": "60",
+        "right": "10%",
+        "bottom": "60"
+      },
+      "dataset": null,
+      "renderer": "svg"
+    },
+    "previewScaleType": "full",
+    "keepBad": true,
+    "errorToValue": "ERROR"
+  },
+  "componentList": [
+    {
+      "id": "id_554j4q9jq7o000",
+      "isGroup": false,
+      "attr": {
+        "x": 471,
+        "y": 64,
+        "w": 500,
+        "h": 300,
+        "offsetX": 0,
+        "offsetY": 0,
+        "zIndex": -1
+      },
+      "styles": {
+        "filterShow": false,
+        "hueRotate": 0,
+        "saturate": 1,
+        "contrast": 1,
+        "brightness": 1,
+        "opacity": 1,
+        "rotateZ": 0,
+        "rotateX": 0,
+        "rotateY": 0,
+        "skewX": 0,
+        "skewY": 0,
+        "blendMode": "normal",
+        "animations": []
+      },
+      "preview": {
+        "overFlowHidden": false
+      },
+      "status": {
+        "lock": false,
+        "hide": false
+      },
+      "request": {
+        "requestDataType": 1,
+        "requestHttpType": "get",
+        "requestUrl": "",
+        "requestInterval": null,
+        "requestIntervalUnit": "second",
+        "requestContentType": 0,
+        "requestParamsBodyType": "none",
+        "requestSQLContent": {
+          "sql": "select * from  where"
+        },
+        "requestParams": {
+          "Body": {
+            "form-data": {},
+            "x-www-form-urlencoded": {},
+            "json": "",
+            "xml": ""
+          },
+          "Header": {},
+          "Params": {}
+        }
+      },
+      "filter": null,
+      "events": {
+        "action": [],
+        "baseEvent": {
+          "click": null,
+          "dblclick": null,
+          "mouseenter": null,
+          "mouseleave": null
+        },
+        "advancedEvents": {
+          "vnodeMounted": null,
+          "vnodeBeforeMount": null
+        },
+        "interactEvents": []
+      },
+      "key": "TextCommon",
+      "chartConfig": {
+        "key": "TextCommon",
+        "chartKey": "VTextCommon",
+        "conKey": "VCTextCommon",
+        "title": "文字",
+        "category": "Texts",
+        "categoryName": "文本",
+        "package": "Informations",
+        "chartFrame": "common",
+        "image": "text_static.png"
+      },
+      "option": {
+        "isShowAccuracy": true,
+        "precision": "",
+        "isShowBindPoint": true,
+        "category": "siglePoint",
+        "bindPoint": "",
+        "flag": "0",
+        "link": "",
+        "linkHead": "http://",
+        "dataset": "首页",
+        "judgmentValue": "",
+        "fontSize": 20,
+        "fontColor": "#4a9ef8",
+        "paddingX": 10,
+        "paddingY": 10,
+        "textAlign": "center",
+        "fontWeight": "normal",
+        "borderWidth": 0,
+        "borderColor": "#ffffff",
+        "borderRadius": 5,
+        "letterSpacing": 5,
+        "writingMode": "horizontal-tb",
+        "backgroundColor": "none",
+        "isWrite": "0",
+        "stringField1": "",
+        "stringField2": "",
+        "stringField3": "",
+        "arrayField1": [],
+        "arrayField2": [],
+        "arrayField3": [],
+        "objectField1": {},
+        "objectField2": {},
+        "objectField3": {}
+      }
+    },
+    {
+      "id": "id_3nsvkgiu1ji000",
+      "isGroup": false,
+      "attr": {
+        "x": 117,
+        "y": 448,
+        "w": 500,
+        "h": 300,
+        "offsetX": 0,
+        "offsetY": 0,
+        "zIndex": -1
+      },
+      "styles": {
+        "filterShow": false,
+        "hueRotate": 0,
+        "saturate": 1,
+        "contrast": 1,
+        "brightness": 1,
+        "opacity": 1,
+        "rotateZ": 0,
+        "rotateX": 0,
+        "rotateY": 0,
+        "skewX": 0,
+        "skewY": 0,
+        "blendMode": "normal",
+        "animations": []
+      },
+      "preview": {
+        "overFlowHidden": false
+      },
+      "status": {
+        "lock": false,
+        "hide": false
+      },
+      "request": {
+        "requestDataType": 1,
+        "requestHttpType": "get",
+        "requestUrl": "",
+        "requestInterval": null,
+        "requestIntervalUnit": "second",
+        "requestContentType": 0,
+        "requestParamsBodyType": "none",
+        "requestSQLContent": {
+          "sql": "select * from  where"
+        },
+        "requestParams": {
+          "Body": {
+            "form-data": {},
+            "x-www-form-urlencoded": {},
+            "json": "",
+            "xml": ""
+          },
+          "Header": {},
+          "Params": {}
+        }
+      },
+      "filter": null,
+      "events": {
+        "action": [],
+        "baseEvent": {
+          "click": null,
+          "dblclick": null,
+          "mouseenter": null,
+          "mouseleave": null
+        },
+        "advancedEvents": {
+          "vnodeMounted": null,
+          "vnodeBeforeMount": null
+        },
+        "interactEvents": []
+      },
+      "key": "LineHistory",
+      "chartConfig": {
+        "key": "LineHistory",
+        "chartKey": "VLineHistory",
+        "conKey": "VCLineHistory",
+        "title": "历史折线图",
+        "category": "Lines",
+        "categoryName": "折线图",
+        "package": "Charts",
+        "chartFrame": "echarts",
+        "image": "line.png"
+      },
+      "option": {
+        "legend": {
+          "show": false,
+          "type": "scroll",
+          "x": "center",
+          "y": "top",
+          "icon": "circle",
+          "orient": "horizontal",
+          "textStyle": {
+            "color": "#B9B8CE",
+            "fontSize": 18
+          },
+          "itemHeight": 15,
+          "itemWidth": 15,
+          "pageTextStyle": {
+            "color": "#B9B8CE"
+          }
+        },
+        "xAxis": {
+          "show": true,
+          "name": "",
+          "nameGap": 15,
+          "nameTextStyle": {
+            "color": "#B9B8CE",
+            "fontSize": 12
+          },
+          "inverse": false,
+          "axisLabel": {
+            "show": true,
+            "fontSize": 12,
+            "color": "#B9B8CE",
+            "rotate": 0
+          },
+          "position": "bottom",
+          "axisLine": {
+            "show": true,
+            "lineStyle": {
+              "color": "#B9B8CE",
+              "width": 1
+            },
+            "onZero": true
+          },
+          "axisTick": {
+            "show": true,
+            "length": 5
+          },
+          "splitLine": {
+            "show": false,
+            "lineStyle": {
+              "color": "#484753",
+              "width": 1,
+              "type": "solid"
+            }
+          },
+          "type": "category"
+        },
+        "yAxis": {
+          "show": true,
+          "name": "",
+          "nameGap": 15,
+          "nameTextStyle": {
+            "color": "#B9B8CE",
+            "fontSize": 12
+          },
+          "inverse": false,
+          "axisLabel": {
+            "show": true,
+            "fontSize": 12,
+            "color": "#B9B8CE",
+            "rotate": 0
+          },
+          "position": "left",
+          "axisLine": {
+            "show": true,
+            "lineStyle": {
+              "color": "#B9B8CE",
+              "width": 1
+            },
+            "onZero": true
+          },
+          "axisTick": {
+            "show": true,
+            "length": 5
+          },
+          "splitLine": {
+            "show": true,
+            "lineStyle": {
+              "color": "#484753",
+              "width": 1,
+              "type": "solid"
+            }
+          },
+          "type": "value"
+        },
+        "grid": {
+          "show": false,
+          "left": "10%",
+          "top": "60",
+          "right": "10%",
+          "bottom": "60"
+        },
+        "count": 100,
+        "intervalTime": 60000,
+        "starttime": "2025-07-10 10:26:58",
+        "endtime": "2025-07-11 10:26:58",
+        "precision": "",
+        "key": "LineHistory",
+        "category": "multiplePoint",
+        "bindPointList": [
+          {
+            "tagId": "YT_test.tag0004",
+            "desc": "",
+            "showValue": "YT_test.tag0004"
+          }
+        ],
+        "flag": "1",
+        "tooltip": {
+          "show": true,
+          "trigger": "axis",
+          "axisPointer": {
+            "type": "line"
+          }
+        },
+        "dataset": {
+          "dimensions": [
+            "product",
+            "YT_test.tag0004"
+          ],
+          "source": [
+            {
+              "tagIdYT_test.tag0004": "YT_test.tag0004",
+              "product": "07/11 10:27:32",
+              "id": "id_3nsvkgiu1ji000"
+            }
+          ]
+        },
+        "series": [
+          {
+            "type": "line",
+            "label": {
+              "show": false,
+              "position": "top",
+              "color": "#0E0E0EFF",
+              "fontSize": 12
+            },
+            "symbolSize": 5,
+            "itemStyle": {
+              "color": null,
+              "borderRadius": 0
+            },
+            "lineStyle": {
+              "type": "solid",
+              "width": 3,
+              "color": null
+            }
+          }
+        ],
+        "stringField1": "",
+        "stringField2": "",
+        "stringField3": "",
+        "arrayField1": [],
+        "arrayField2": [],
+        "arrayField3": [],
+        "objectField1": {},
+        "objectField2": {},
+        "objectField3": {},
+        "backgroundColor": "rgba(0,0,0,0)"
+      }
+    },
+    {
+      "id": "id_245s1yki13a800",
+      "isGroup": false,
+      "attr": {
+        "x": 736,
+        "y": 687,
+        "w": 1000,
+        "h": 300,
+        "offsetX": 0,
+        "offsetY": 0,
+        "zIndex": -1
+      },
+      "styles": {
+        "filterShow": false,
+        "hueRotate": 0,
+        "saturate": 1,
+        "contrast": 1,
+        "brightness": 1,
+        "opacity": 1,
+        "rotateZ": 0,
+        "rotateX": 0,
+        "rotateY": 0,
+        "skewX": 0,
+        "skewY": 0,
+        "blendMode": "normal",
+        "animations": []
+      },
+      "preview": {
+        "overFlowHidden": false
+      },
+      "status": {
+        "lock": false,
+        "hide": false
+      },
+      "request": {
+        "requestDataType": 1,
+        "requestHttpType": "get",
+        "requestUrl": "",
+        "requestInterval": null,
+        "requestIntervalUnit": "second",
+        "requestContentType": 0,
+        "requestParamsBodyType": "none",
+        "requestSQLContent": {
+          "sql": "select * from  where"
+        },
+        "requestParams": {
+          "Body": {
+            "form-data": {},
+            "x-www-form-urlencoded": {},
+            "json": "",
+            "xml": ""
+          },
+          "Header": {},
+          "Params": {}
+        }
+      },
+      "filter": null,
+      "events": {
+        "action": [],
+        "baseEvent": {
+          "click": null,
+          "dblclick": null,
+          "mouseenter": null,
+          "mouseleave": null
+        },
+        "advancedEvents": {
+          "vnodeMounted": null,
+          "vnodeBeforeMount": null
+        },
+        "interactEvents": []
+      },
+      "key": "QueryHistoryTables",
+      "chartConfig": {
+        "key": "QueryHistoryTables",
+        "chartKey": "VQueryHistoryTables",
+        "conKey": "VCQueryHistoryTables",
+        "title": "历史数据表格",
+        "category": "Tables",
+        "categoryName": "表格",
+        "package": "Tables",
+        "chartFrame": "static",
+        "image": "tables_basic.png"
+      },
+      "option": {
+        "key": "custom",
+        "comType": "table",
+        "count": 100,
+        "ids": [],
+        "desc": [],
+        "btnColor": "#18a058",
+        "bindPointList": [],
+        "dispatchEvent": "1",
+        "disableBindPointBanPonit": "0",
+        "apiType": 1,
+        "starttime": "2010-01-01 12:08:55",
+        "endtime": "2025-07-11 10:28:03",
+        "isShowTab": "0",
+        "dataset": {
+          "dimensions": [
+            {
+              "title": "Time",
+              "key": "time",
+              "align": "center"
+            },
+            {
+              "title": "Tag001",
+              "key": "Tag001",
+              "align": "center"
+            },
+            {
+              "title": "Tag002",
+              "key": "Tag002",
+              "align": "center"
+            }
+          ],
+          "source": [
+            {
+              "Tag001": "111.00000000",
+              "Tag002": "222",
+              "time": "2025-10-01"
+            },
+            {
+              "Tag001": "333",
+              "Tag002": "444",
+              "time": "2025-10-01"
+            }
+          ]
+        },
+        "decimalPlaces": 2,
+        "isAggregation": false,
+        "aggregationType": "LAST",
+        "aggregationPeriod": 60,
+        "aggregationCount": 100,
+        "align": "center",
+        "style": {
+          "border": "on",
+          "singleColumn": "off",
+          "singleLine": "off",
+          "bottomBordered": "on",
+          "striped": "on",
+          "fontSize": 16,
+          "borderWidth": 0,
+          "borderColor": "black",
+          "borderStyle": "solid"
+        },
+        "inputShow": "none"
+      }
+    },
+    {
+      "id": "id_nn8tkawb3eo00",
+      "isGroup": false,
+      "attr": {
+        "x": 745,
+        "y": 293,
+        "w": 995,
+        "h": 300,
+        "offsetX": 0,
+        "offsetY": 0,
+        "zIndex": -1
+      },
+      "styles": {
+        "filterShow": false,
+        "hueRotate": 0,
+        "saturate": 1,
+        "contrast": 1,
+        "brightness": 1,
+        "opacity": 1,
+        "rotateZ": 0,
+        "rotateX": 0,
+        "rotateY": 0,
+        "skewX": 0,
+        "skewY": 0,
+        "blendMode": "normal",
+        "animations": []
+      },
+      "preview": {
+        "overFlowHidden": false
+      },
+      "status": {
+        "lock": false,
+        "hide": false
+      },
+      "request": {
+        "requestDataType": 1,
+        "requestHttpType": "get",
+        "requestUrl": "",
+        "requestInterval": null,
+        "requestIntervalUnit": "second",
+        "requestContentType": 0,
+        "requestParamsBodyType": "none",
+        "requestSQLContent": {
+          "sql": "select * from  where"
+        },
+        "requestParams": {
+          "Body": {
+            "form-data": {},
+            "x-www-form-urlencoded": {},
+            "json": "",
+            "xml": ""
+          },
+          "Header": {},
+          "Params": {}
+        }
+      },
+      "filter": null,
+      "events": {
+        "action": [],
+        "baseEvent": {
+          "click": null,
+          "dblclick": null,
+          "mouseenter": null,
+          "mouseleave": null
+        },
+        "advancedEvents": {
+          "vnodeMounted": null,
+          "vnodeBeforeMount": null
+        },
+        "interactEvents": []
+      },
+      "key": "AlarmTables",
+      "chartConfig": {
+        "key": "AlarmTables",
+        "chartKey": "VAlarmTables",
+        "conKey": "VCAlarmTables",
+        "title": "报警数据表格",
+        "category": "Tables",
+        "categoryName": "表格",
+        "package": "Tables",
+        "chartFrame": "static",
+        "image": "tables_basic.png"
+      },
+      "option": {
+        "comType": "table",
+        "dispatchEvent": "1",
+        "disableBindPointBanPonit": "0",
+        "apiType": 1,
+        "starttime": "2010-01-01 12:08:55",
+        "endtime": "2025-07-11 10:28:06",
+        "isShowTab": "0",
+        "dataset": {
+          "dimensions": [
+            {
+              "title": "ID",
+              "key": "tag",
+              "ellipsis": {
+                "tooltip": true
+              },
+              "align": "center"
+            },
+            {
+              "title": "描述",
+              "key": "content",
+              "ellipsis": {
+                "tooltip": true
+              },
+              "align": "center"
+            },
+            {
+              "title": "时间",
+              "key": "timestamp",
+              "ellipsis": {
+                "tooltip": true
+              },
+              "align": "center"
+            },
+            {
+              "title": "状态",
+              "key": "status",
+              "ellipsis": {
+                "tooltip": true
+              },
+              "align": "center"
+            },
+            {
+              "title": "值",
+              "key": "value",
+              "ellipsis": {
+                "tooltip": true
+              },
+              "align": "center"
+            },
+            {
+              "title": "事件",
+              "key": "event",
+              "ellipsis": {
+                "tooltip": true
+              },
+              "align": "center"
+            },
+            {
+              "title": "类型",
+              "key": "type",
+              "ellipsis": {
+                "tooltip": true
+              },
+              "align": "center"
+            }
+          ],
+          "source": [
+            {
+              "tag": "Device1.tag0001",
+              "content": null,
+              "timestamp": "2025-03-04 09:03:40",
+              "status": "Good",
+              "value": "0.0000",
+              "event": "New Event",
+              "type": "AlarmTrigger"
+            },
+            {
+              "tag": "Device1.tag0001",
+              "content": null,
+              "timestamp": "2025-03-04 09:03:40",
+              "status": "Good",
+              "value": "0.0000",
+              "event": "New Event",
+              "type": "AlarmTrigger"
+            }
+          ]
+        },
+        "pagination": {
+          "page": 1,
+          "pageSize": 5
+        },
+        "align": "center",
+        "style": {
+          "border": "on",
+          "singleColumn": "off",
+          "singleLine": "off",
+          "bottomBordered": "on",
+          "striped": "on",
+          "fontSize": 16,
+          "borderWidth": 0,
+          "borderColor": "black",
+          "borderStyle": "solid"
+        },
+        "inputShow": "none"
+      }
+    }
+  ],
+  "requestGlobalConfig": {
+    "requestDataPond": [],
+    "requestOriginUrl": "",
+    "requestInterval": 30,
+    "requestIntervalUnit": "second",
+    "requestParams": {
+      "Body": {
+        "form-data": {},
+        "x-www-form-urlencoded": {},
+        "json": "",
+        "xml": ""
+      },
+      "Header": {},
+      "Params": {}
+    }
+  }
+}
