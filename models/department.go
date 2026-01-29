@@ -21,6 +21,14 @@ type Department struct {
 	Remark    string      `orm:"size(255);null" json:"remark"`
 	Created   int64       `orm:"null" json:"created"`
 	Modified  int64       `orm:"null" json:"modified"`
+
+	Factory     string `orm:"size(255);null" json:"factory"`
+	Active      int64  `orm:"null" json:"active"`
+	Description string `orm:"size(255);null" json:"desc"`
+	GIS         string `orm:"size(255);null;column(gis)" json:"gis" `
+	Address     string `orm:"size(255);null" json:"address" `
+	AreaId      int64  `orm:"index" json:"area_id"`
+	Capacity    string `orm:"null" json:"capacity" `
 }
 
 func init() {

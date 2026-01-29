@@ -34,7 +34,7 @@ func (c *DepartmentController) CreateDepartment() {
 		c.Error(400, "部门名称不能为空")
 	}
 
-	DepartmentID, err := c.service.CreateDepartment(req.Name, req.Leader, req.Phone, req.Email, req.Status, req.Remark, req.ParentID, req.Sort, req.LevelType)
+	DepartmentID, err := c.service.CreateDepartment(req.Name, req.Leader, req.Phone, req.Email, req.Status, req.Remark, req.ParentID, req.Sort, req.LevelType, req.Factory, req.Capacity, req.Address, req.GIS, req.Active, req.Description)
 	if err != nil {
 		c.Error(400, "创建部门失败: "+err.Error())
 	}
@@ -69,7 +69,8 @@ func (c *DepartmentController) UpdateDepartment() {
 	}
 	userId, _ := c.Ctx.Input.GetData("user_id").(int64)
 	tenantId, _ := models.GetUserTenantId(userId)
-	err := c.service.UpdateDepartment(tenantId, req.ID, req.Name, req.Leader, req.Phone, req.Email, req.Status, req.Remark, req.ParentID, req.Sort, req.DeviceIds)
+	err := c.service.UpdateDepartment(tenantId, req.ID, req.Name, req.Leader, req.Phone, req.Email, req.Status, req.Remark, req.ParentID, req.Sort, req.DeviceIds,
+		req.Factory, req.Capacity, req.Address, req.GIS, req.Active, req.Description)
 	if err != nil {
 		c.Error(400, "更新部门失败: "+err.Error())
 	}
@@ -167,50 +168,3 @@ func (c *DepartmentController) Detail() {
 
 	c.Success(project)
 }
-
-/*// GetDepartmentDevices @Title 获取部门设备列表
-// @Description 获取部门及其子部门的所有设备列表
-// @Param Authorization header string true "Bearer YourToken"
-// @Param departmentId query int64 true "部门ID"
-// @Param page query int false "页码，默认1"
-// @Param size query int false "每页数量，默认10"
-// @Success 200 {object} SimpleResult "查询成功"
-// @Failure 400 {object} SimpleResult "参数错误或查询失败"
-// @router /devices [get]
-func (c *DepartmentController) GetDepartmentDevices() {
-	departmentID, err := c.GetInt64("departmentId")
-	if err != nil || departmentID == 0 {
-		c.Error(400, "部门ID参数错误")
-	}
-
-	page, _ := c.GetInt("page", 1)
-	size, _ := c.GetInt("size", 10)
-
-	result, err := c.service.GetDepartmentDevices(departmentID, page, size)
-	if err != nil {
-		c.Error(400, "查询设备失败: "+err.Error())
-	}
-
-	c.Success(result)
-}
-
-// GetDepartmentDeviceTree @Title 获取部门设备树
-// @Description 获取部门及其子部门的设备树形结构
-// @Param Authorization header string true "Bearer YourToken"
-// @Param departmentId query int64 true "部门ID"
-// @Success 200 {object} SimpleResult "查询成功"
-// @Failure 400 {object} SimpleResult "参数错误或查询失败"
-// @router /deviceTree [get]
-func (c *DepartmentController) GetDepartmentDeviceTree() {
-	departmentID, err := c.GetInt64("departmentId")
-	if err != nil || departmentID == 0 {
-		c.Error(400, "部门ID参数错误")
-	}
-
-	result, err := c.service.GetDepartmentDeviceTree(departmentID)
-	if err != nil {
-		c.Error(400, "查询设备树失败: "+err.Error())
-	}
-
-	c.Success(result)
-}*/

@@ -24,6 +24,7 @@ var tagService = iotp.TagService{}
 // @Param   size           query   int     false "每页数量，默认10"
 // @Param   productId      query   int64   false "产品ID"
 // @Param   projectId      query   int64   false "项目ID"
+// @Param   positionId     query   int64   false "位置ID"
 // @Param   status         query   string  false "设备状态"
 // @Param   name           query   string  false "设备名称(模糊查询)
 // @Success 200 {object} controllers.SimpleResult
@@ -42,10 +43,11 @@ func (c *DeviceController) GetAllDevices() {
 	page, _ := c.GetInt("page", 1)
 	size, _ := c.GetInt("size", 10)
 	productId, _ := c.GetInt64("productId")
+	positionId, _ := c.GetInt64("positionId")
 	status := c.GetString("status")
 	name := c.GetString("name")
 
-	devices, err := c.service.GetAllDevices(page, size, tenantId, projectIds, productId, status, name, isTenant)
+	devices, err := c.service.GetAllDevices(page, size, tenantId, projectIds, productId, positionId, status, name, isTenant)
 	if err != nil {
 		c.Error(400, "获取设备列表失败: "+err.Error())
 	}

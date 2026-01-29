@@ -12,18 +12,24 @@ import (
 type DepartmentService struct{}
 
 // CreateDepartment 创建部门
-func (s *DepartmentService) CreateDepartment(name, leader, phone, email, status, remark string, parentID int64, sort int, levelType string) (int64, error) {
+func (s *DepartmentService) CreateDepartment(name, leader, phone, email, status, remark string, parentID int64, sort int, levelType string, factory string, capacity string, address string, gis string, active int64, description string) (int64, error) {
 	o := orm.NewOrm()
 
 	department := &models.Department{
-		Name:      name,
-		Leader:    leader,
-		Phone:     phone,
-		Email:     email,
-		Status:    status,
-		Remark:    remark,
-		Sort:      sort,
-		LevelType: levelType,
+		Name:        name,
+		Leader:      leader,
+		Phone:       phone,
+		Email:       email,
+		Status:      status,
+		Remark:      remark,
+		Sort:        sort,
+		LevelType:   levelType,
+		Factory:     factory,
+		Capacity:    capacity,
+		Address:     address,
+		GIS:         gis,
+		Active:      active,
+		Description: description,
 	}
 
 	// 验证父部门是否存在
@@ -69,7 +75,7 @@ func (s *DepartmentService) CreateDepartment(name, leader, phone, email, status,
 }
 
 // UpdateDepartment 更新部门信息
-func (s *DepartmentService) UpdateDepartment(departmentId int64, id int64, name, leader, phone, email, status, remark string, parentID int64, sort int, deviceIds []int64) error {
+func (s *DepartmentService) UpdateDepartment(departmentId int64, id int64, name, leader, phone, email, status, remark string, parentID int64, sort int, deviceIds []int64, factory string, capacity string, address string, gis string, active int64, description string) error {
 	o := orm.NewOrm()
 
 	department := &models.Department{Id: id}
@@ -106,6 +112,12 @@ func (s *DepartmentService) UpdateDepartment(departmentId int64, id int64, name,
 	department.Status = status
 	department.Remark = remark
 	department.Sort = sort
+	department.Factory = factory
+	department.Capacity = capacity
+	department.Address = address
+	department.GIS = gis
+	department.Active = active
+	department.Description = description
 
 	// 更新前处理
 	department.BeforeUpdate()

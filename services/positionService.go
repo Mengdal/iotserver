@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/beego/beego/v2/client/orm"
 	"iotServer/models"
+	"strconv"
 )
 
 type PositionService struct{}
@@ -227,4 +228,120 @@ func (s *PositionService) childrenOnly(parentId int64) ([]map[string]interface{}
 	}
 
 	return array, nil
+}
+
+// AreaTreeNode 定义前端需要的树形结构
+type AreaTreeNode struct {
+	Value    string          `json:"value"`
+	Label    string          `json:"label"`
+	ParentId string          `json:"parentId"`
+	Sort     int64           `json:"sort"`
+	Type     string          `json:"type"`     // 'area' 表示区域, 'department' 表示部门
+	Children []*AreaTreeNode `json:"children"` // 指针切片，方便后续追加
+}
+
+// GetAreaTreeWithDepartmentCount 获取带部门信息的区域树
+func (s *PositionService) GetAreaTreeWithDepartmentCount() ([]*AreaTreeNode, error) {
+	o := orm.NewOrm()
+
+	// Step 1: 一次性查出所有区域数据 (按照 Sort 排序)
+	var allAreas []*models.Area
+	_, err := o.QueryTable(new(models.Area)).All(&allAreas)
+	if err != nil {
+		return nil, err
+	}
+
+	// Step 2: 查找所有部门
+	var departments []*models.Department
+	_, err = o.QueryTable(new(models.Department)).All(&departments)
+	if err != nil {
+		return nil, err
+	}
+
+	// Step 3: 将部门按区域ID分组
+	departmentGroups := make(map[int64][]*models.Department)
+	for _, dept := range departments {
+		departmentGroups[dept.AreaId] = append(departmentGroups[dept.AreaId], dept)
+	}
+
+	// Step 4: 建立映射 Map (ID -> Node指针) - 先处理区域节点
+	nodeMap := make(map[string]*AreaTreeNode)
+	for _, area := range allAreas {
+		areaIdInt, err := strconv.ParseInt(area.Id, 10, 64)
+		if err != nil {
+			// 如果 area.Id 无法转换为 int64，跳过此区域
+			continue
+		}
+
+		// 获取该区域下的部门列表
+		deptsInArea := departmentGroups[areaIdInt]
+		count := len(deptsInArea)
+
+		label := area.Name
+		if count > 0 {
+			label = fmt.Sprintf("%s (%d)", area.Name, count)
+		}
+
+		nodeMap[area.Id] = &AreaTreeNode{
+			Value:    area.Id,
+			Label:    label,
+			ParentId: area.ParentArea,
+			Sort:     area.Sort,
+			Type:     "area", // 标识为区域
+			Children: make([]*AreaTreeNode, 0),
+		}
+	}
+
+	// Step 5: 将部门作为子节点添加到对应的区域节点
+	for _, area := range allAreas {
+		areaIdInt, err := strconv.ParseInt(area.Id, 10, 64)
+		if err != nil {
+			continue
+		}
+
+		// 获取该区域下的部门列表
+		deptsInArea := departmentGroups[areaIdInt]
+
+		// 为每个部门创建节点并添加到区域的子节点列表中
+		for _, dept := range deptsInArea {
+			deptNode := &AreaTreeNode{
+				Value:    fmt.Sprintf("%d", dept.Id), // 部门ID转为字符串
+				Label:    dept.Name,                  // 部门名称
+				ParentId: area.Id,                    // 父节点是区域ID
+				Sort:     int64(dept.Sort),           // 使用部门的排序
+				Type:     "department",               // 标识为部门
+				Children: make([]*AreaTreeNode, 0),   // 部门暂时没有子节点
+			}
+
+			// 添加到对应区域的子节点列表
+			if areaNode, exists := nodeMap[area.Id]; exists {
+				areaNode.Children = append(areaNode.Children, deptNode)
+			}
+		}
+	}
+
+	// Step 6: 组装树结构
+	var roots []*AreaTreeNode
+
+	for _, area := range allAreas {
+		node := nodeMap[area.Id] // 当前节点
+		parentId := area.ParentArea
+
+		// 判断是否是根节点
+		if parentId == "0" || parentId == "00" || parentId == "" {
+			roots = append(roots, node)
+		} else {
+			// 如果不是根节点，就找到它的父节点，把自己追加进去
+			if parentNode, ok := nodeMap[parentId]; ok {
+				parentNode.Children = append(parentNode.Children, node)
+			}
+		}
+	}
+
+	return roots, nil
+}
+
+// GetAreaTreeOptimized 内存组装版 (极速)
+func (s *PositionService) GetAreaTreeOptimized() ([]*AreaTreeNode, error) {
+	return s.GetAreaTreeWithDepartmentCount()
 }

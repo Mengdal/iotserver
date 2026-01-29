@@ -11,7 +11,17 @@ type Position struct {
 	Department     *Department `orm:"rel(fk);column(department_id);on_delete(cascade);null" json:"department"` // 部门ID
 }
 
+// Area 区域表
+type Area struct {
+	Id         string      `orm:"pk" json:"id"`               // 位置ID
+	Name       string      `orm:"size(255);null" json:"name"` // 区域名称
+	Sort       int64       `orm:"null" json:"sort"`
+	ParentArea string      `orm:"null"`                                                                    // 父节点
+	Department *Department `orm:"rel(fk);column(department_id);on_delete(cascade);null" json:"department"` // 部门ID
+}
+
 func init() {
 	// 注册模型
 	orm.RegisterModel(new(Position))
+	orm.RegisterModel(new(Area))
 }

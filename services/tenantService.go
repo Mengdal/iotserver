@@ -40,6 +40,13 @@ func (s *TenantService) Detail(tenantId, departmentId int64, page, size int) (*d
 		Remark:    department.Remark,
 		Created:   department.Created,
 		Modified:  department.Modified,
+		// 机构补充字段
+		Factory:     department.Factory,
+		Active:      department.Active,
+		Description: department.Description,
+		GIS:         department.GIS,
+		Capacity:    department.Capacity,
+		AreaId:      department.AreaId,
 	}
 	// 项目
 	if err != nil && tenant.Id == 0 && department.LevelType == "PROJECT" {
@@ -50,10 +57,12 @@ func (s *TenantService) Detail(tenantId, departmentId int64, page, size int) (*d
 		}
 		detail.Devices = result
 	} else if department.LevelType == "DEPARTMENT" {
+		// 对于部门级别的，单独设置部门地址
+		detail.Address = department.Address
 		return detail, nil
 	} else { // 租户
 		detail.Enable = tenant.Enable
-		detail.Address = tenant.Address
+		// 租户级别的地址
 		detail.Area = tenant.Area
 		detail.DeviceNum = tenant.DeviceNum
 		detail.Images = tenant.Images
@@ -63,6 +72,8 @@ func (s *TenantService) Detail(tenantId, departmentId int64, page, size int) (*d
 		detail.ActiveTime = tenant.ActiveTime
 		detail.Icon = tenant.Icon
 		detail.ExpirationTime = tenant.ExpirationTime
+		// 租户级别的地址信息
+		detail.Address = tenant.Address
 	}
 
 	return detail, nil

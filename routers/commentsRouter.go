@@ -574,6 +574,15 @@ func init() {
 			Filters:          nil,
 			Params:           nil})
 
+	beego.GlobalControllerRouter["iotServer/controllers:PositionController"] = append(beego.GlobalControllerRouter["iotServer/controllers:PositionController"],
+		beego.ControllerComments{
+			Method:           "ListArea",
+			Router:           `/treeArea`,
+			AllowHTTPMethods: []string{"post"},
+			MethodParams:     param.Make(),
+			Filters:          nil,
+			Params:           nil})
+
 	beego.GlobalControllerRouter["iotServer/controllers:ProductController"] = append(beego.GlobalControllerRouter["iotServer/controllers:ProductController"],
 		beego.ControllerComments{
 			Method:           "Create",

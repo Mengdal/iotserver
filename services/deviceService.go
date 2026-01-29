@@ -16,7 +16,7 @@ import (
 type DevicesService struct{}
 
 // GetAllDevices 获取所有设备（分页）
-func (s *DevicesService) GetAllDevices(page, size int, tenantId int64, departmentId []int64, productId int64, status, name string, isTenant bool) (*utils.PageResult, error) {
+func (s *DevicesService) GetAllDevices(page, size int, tenantId int64, departmentId []int64, productId int64, positionId int64, status, name string, isTenant bool) (*utils.PageResult, error) {
 	var devices []*models.Device
 	o := orm.NewOrm()
 	query := o.QueryTable(new(models.Device)).RelatedSel("Product", "Position", "Group")
@@ -28,6 +28,10 @@ func (s *DevicesService) GetAllDevices(page, size int, tenantId int64, departmen
 	// 按产品ID筛选
 	if productId > 0 {
 		query = query.Filter("product_id", productId)
+	}
+	// 按位置ID筛选
+	if positionId > 0 {
+		query = query.Filter("position_id", positionId)
 	}
 
 	// 按状态筛选

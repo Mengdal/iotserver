@@ -268,7 +268,8 @@ func (c *UserController) Register() {
 	}
 	if this.ParentId == nil {
 		departmentService := services.DepartmentService{}
-		id, err := departmentService.CreateDepartment(this.Username+"_TENANT", this.Username, "", this.Username, "1", "", 0, 0, "TENANT")
+		id, err := departmentService.CreateDepartment(this.Username+"_TENANT", this.Username, "", this.Username, "1", "", 0, 0, "TENANT",
+			"", "", "", "", 0, "")
 		if err != nil {
 			c.Error(400, err.Error())
 		}

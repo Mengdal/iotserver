@@ -113,3 +113,20 @@ func (c *PositionController) List() {
 		c.Success(tree)
 	}
 }
+
+// ListArea 获取区域树
+// @Title Get Area Tree
+// @Description 获取区域树
+// @Param   Authorization header   string  true        "Bearer YourToken"
+// @Success 200 {object} web.Result
+// @router /treeArea [post]
+func (c *PositionController) ListArea() {
+	//userId, _ := c.Ctx.Input.GetData("user_id").(int64)
+	//tenantId, err := models.GetUserTenantId(userId)
+	tree, err := c.service.GetAreaTreeWithDepartmentCount()
+	if err != nil {
+		c.Error(400, err.Error())
+	} else {
+		c.Success(tree)
+	}
+}
