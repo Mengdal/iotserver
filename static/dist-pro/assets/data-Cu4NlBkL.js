@@ -1,0 +1,1 @@
+import{r}from"./index-DfycOL0q.js";const o=e=>r.post({url:"/api/report/timePeriod",params:e}),p=e=>r.post({url:"/api/report/export/timePeriod",params:e,responseType:"blob"}),s=e=>r.post({url:"/api/device/getDevicesTree",params:e}),i=e=>r.post({url:"/api/report/history/query",data:e});export{s as a,i as d,p as e,o as g};
