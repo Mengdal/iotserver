@@ -1,0 +1,42 @@
+.dashboard {
+  // 首页没有标题条，顶部间距与「标题条 → 内容」保持同一节奏（20px），不再留 70px 大空白
+  padding: 20px 60px 40px;
+  background-image: url('../../../assets/images/bg-1.7f3acdfb.png');
+  background-position: top right;
+  background-repeat: no-repeat;
+  background-size: 100%;
+  .ant-card {
+    // box-shadow: 0 2px 5px 0 rgba(0,0,0,.4);
+    box-shadow: rgba(34, 34, 34, 0.1) 0px 3px 5px 0px;
+    .ant-card-head {
+      border: none;
+    }
+    .ant-card-grid {
+      box-shadow: none;
+      padding-top: 0;
+    }
+  }
+}
+/* 参考 demo 的卡片标题：图标 + 主标题 + 一行灰色说明 */
+.dashboard-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  &__icon {
+    display: inline-flex;
+    align-items: center;
+    color: rgba(0, 0, 0, 0.45);
+    font-size: 16px;
+  }
+}
+
+/* 设备消息量排名：空状态占位（与参考站一致；待后端 topMessage 接口就绪后替换为排行榜） */
+.device-message-rank {
+  &__empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 320px;
+  }
+}

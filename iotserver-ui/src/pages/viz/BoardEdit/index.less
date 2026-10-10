@@ -1,0 +1,117 @@
+/* 看板编辑器（参考 app.dash.builders 的 Dashboard：按钮加组件 + 网格流式 + 可缩放） */
+.board-editor {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - 120px);
+
+  &__toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 16px;
+  }
+
+  &__body {
+    flex: 1;
+    min-height: 0;
+    margin: 0 16px 20px;
+    background: #f6f7f9;
+    border: 1px solid #eff0f2;
+    border-radius: 10px;
+  }
+
+  /* 画布里的卡片：白底 + 细边 + hover 微浮起 */
+  &__grid .widget-card {
+    border-color: #eceef1;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+
+    &:hover {
+      border-color: #d9dee5;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+    }
+  }
+
+  &__grid {
+    width: 100% !important;
+  }
+
+  /* 选中组件高亮（编辑态） */
+  &__item--selected {
+    .widget-card {
+      box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.35);
+      border-radius: 8px;
+    }
+  }
+
+  /* 缩放把手在只读/查看态由 react-grid-layout 自己隐藏；这里只保证卡片撑满格子 */
+  .react-grid-item > .widget-card {
+    height: 100%;
+  }
+}
+
+/* 「添加组件」面板（参考 Dash 的 Add widget 菜单） */
+.board-editor__add-panel {
+  width: 260px;
+
+  .ant-input {
+    margin-bottom: 10px;
+  }
+}
+
+.board-editor__add-group {
+  padding: 4px 0 6px;
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.board-editor__add-list {
+  max-height: 240px;
+  overflow: auto;
+}
+
+.board-editor__add-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 8px;
+  font-size: 13px;
+  line-height: 20px;
+  border-radius: 6px;
+  cursor: pointer;
+
+  & + & {
+    margin-top: 2px;
+  }
+
+  &:hover {
+    color: #1677ff;
+    background: #f5f8ff;
+  }
+}
+
+.board-editor__add-empty {
+  padding: 10px 8px;
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.35);
+}
+
+/* 组件卡片：标题栏即拖动手柄 */
+.board-editor__grid {
+  .widget-card > .ant-card-head {
+    cursor: move;
+    user-select: none;
+  }
+
+  .widget-card > .ant-card-head button,
+  .widget-card > .ant-card-head .ant-dropdown-trigger {
+    cursor: pointer;
+  }
+
+  /* 拖动中：整块跟着走 */
+  .react-grid-item.react-draggable-dragging {
+    z-index: 20;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+    opacity: 0.92;
+  }
+}

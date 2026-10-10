@@ -1,0 +1,81 @@
+[Writable]
+LogLevel = 'INFO'
+LogPath = 'iotserver/logs/iotserver-core.log'
+
+[Service]
+Host = '0.0.0.0'
+ServerBindAddr = '' # Leave blank so default to Host value unless different value is needed.
+Port = 58081
+Protocol = 'http'
+Timeout = 45000
+# eKuiper 规则回调平台（告警上报 / 场景触发）使用的基地址。
+# docker-compose 部署用服务名 http://iotserver-core:58081；本地直接跑服务时填容器可达的宿主机地址。
+CallbackUrl = 'http://host.docker.internal:58081'
+CallbackToken = ''  # 留空=不校验回调密钥；生产建议设置为随机串
+
+[RpcServer]
+Address = '0.0.0.0:57081'
+UseTLS = false
+CertFile = ''
+KeyFile = ''
+
+[Clients]
+[Clients.Ekuiper]
+Protocol = 'http'
+Host = '127.0.0.1'
+Port = 9081
+
+[WebServer]
+Host = '0.0.0.0'
+Port = 3000
+Timeout = 120
+
+[Databases]
+[Databases.Metadata]
+[Databases.Metadata.Primary]
+Type = 'sqlite'
+DataSource = 'manifest/docker/db-data/core-data/core.db?_timeout=5000'
+#Type = 'mysql'
+#Dsn = 'root:123456@tcp(127.0.0.1:3306)/iotserver?charset=utf8mb4&parseTime=True&loc=Local'
+
+[Databases.Data]
+[Databases.Data.Primary]
+#Type = 'tstorage'
+#DataSource = 'manifest/docker/db-data/tstorage-data/'
+#Type = 'tdengine'
+#Dsn = 'root:taosdata@ws(127.0.0.1:6041)/iotserver'
+#Type = 'ducklake'
+#DataSource = 'manifest/docker/db-data/ducklake/catalog.db'  # 元数据（SQLite catalog）
+#Dsn = 'manifest/docker/db-data/ducklake/data'              # 数据文件（Parquet）目录
+Type = 'ducklake'
+DataSource = 'manifest/docker/db-data/ducklake/catalog.db'
+Dsn = 'manifest/docker/db-data/ducklake/data'
+
+[MessageQueue]
+Protocol = 'tcp'
+Host = '127.0.0.1'
+Port = 58090
+Type = 'mqtt'
+PublishTopicPrefix = 'eventbus/in'
+
+# 调试端点（/debug/pprof）：默认关闭。
+# 开启后需携带 x-token 且账号具备 system:debug:pprof 权限（超级管理员直通）。
+[Pprof]
+Enabled = false
+
+# 可视化看板（Shaper）嵌入配置
+# ApiKey 在 Shaper 的 Admin → API Keys 里创建（需要 jwt 权限）；密钥只留在服务端。
+# 也可以不写进本文件，改用环境变量 IOTSERVER_SHAPER_APIKEY（优先级更高）。
+[Shaper]
+Enabled = true
+BaseUrl = 'http://127.0.0.1:5454'
+ApiKey = ''
+DashboardId = ''
+# 首页卡片用的看板 ID（留空则前端用 DashboardId 或后端返回的 homeDashboardId）
+HomeDashboardId = ''
+# 浏览器侧看到的地址（容器部署时服务端走服务名、浏览器走宿主机地址），留空则与 BaseUrl 相同
+BrowserBaseUrl = ''
+# 看板管理登记文件（SQL 副本 + 首页/默认标记），默认 .shaper-boards.json
+BoardsFile = '.shaper-boards.json'
+# 本地未入库的 KEY=VALUE 文件（环境变量与上面的值都取不到时读它），默认值即下面的路径
+LocalEnvFile = '.env.shaper'

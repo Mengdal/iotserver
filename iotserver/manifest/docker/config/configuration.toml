@@ -1,0 +1,64 @@
+[Writable]
+LogLevel = 'INFO'
+LogPath = 'iotserver/logs/iotserver-core.log'
+
+[Service]
+Host = '0.0.0.0'
+ServerBindAddr = '' # Leave blank so default to Host value unless different value is needed.
+Port = 58081
+Protocol = 'http'
+Timeout = 45000
+
+[RpcServer]
+Address = '0.0.0.0:57081'
+UseTLS = false
+CertFile = ''
+KeyFile = ''
+
+[Clients]
+[Clients.Ekuiper]
+Protocol = 'http'
+Host = 'ekuiper'
+Port = 9081
+
+[WebServer]
+Host = '0.0.0.0'
+Port = 3000
+Timeout = 120
+
+[Databases]
+[Databases.Metadata]
+[Databases.Metadata.Primary]
+Type = 'sqlite'
+DataSource = 'iotserver/db-data/core-data/core.db?_timeout=5000'
+#Type = 'mysql'
+#Dsn = 'root:123456@tcp(127.0.0.1:3306)/iotserver?charset=utf8mb4&parseTime=True&loc=Local'
+
+
+[Databases.Data]
+[Databases.Data.Primary]
+#Type = 'tstorage'
+#DataSource = 'manifest/docker/db-data/tstorage-data/'
+#Type = 'tdengine'
+#Dsn = 'root:taosdata@ws(127.0.0.1:6041)/iotserver'
+Type = 'leveldb'
+DataSource = 'manifest/docker/db-data/leveldb-core-data/'
+
+[MessageQueue]
+Protocol = 'tcp'
+Host = 'mqtt-broker'
+Port = 58090
+Type = 'mqtt'
+PublishTopicPrefix = 'eventbus/in'
+
+[Shaper]
+Enabled = true
+# 容器内通过 compose 服务名访问（服务端换 JWT 用）
+BaseUrl = 'http://shaper:5454'
+# 浏览器直连的地址（宿主机映射端口；部署到服务器时改成服务器 IP/域名）
+BrowserBaseUrl = 'http://127.0.0.1:5454'
+# API Key 不写进配置文件：由下面这个本地文件提供（docker-compose.yml 里挂载进来）
+ApiKey = ''
+DashboardId = ''
+HomeDashboardId = ''
+LocalEnvFile = '/etc/iotserver-core/.env.shaper'

@@ -1,0 +1,44 @@
+# ===== 构建产物 / 二进制 =====
+/iotserver-core
+/iotserver-core-linux-amd64
+/cmd/iotserver-core/iotserver-core
+/devseed
+# 本地编出来的联调工具二进制（源码在 tools/ 下）
+/mqttpub
+/mqttsub
+*.exe
+*.test
+*.out
+
+# ===== 运行时数据（启动后自动生成，不入库）=====
+/logs/
+*.log
+# 运行时数据库/数据目录整体排除（含备份、tstorage、ducklake 等）
+manifest/docker/db-data/
+manifest/docker/db-data/core-data/core.db
+manifest/docker/db-data/core-data/*.db-shm
+manifest/docker/db-data/core-data/*.db-wal
+manifest/docker/db-data/leveldb-core-data/
+# DuckLake 数据目录：catalog（元数据）+ data（Parquet）+ extensions（扩展）
+manifest/docker/db-data/ducklake/
+manifest/docker/driver-data/
+kuiper/
+db-data/leveldb-core-data
+
+# ===== 依赖与缓存 =====
+/vendor/
+.gocache/
+
+# ===== 本地配置覆盖 =====
+.env.shaper
+*.local.toml
+configuration.local.toml
+
+# ===== IDE =====
+.idea/
+.vscode/
+*.iml
+
+# ===== 操作系统 =====
+.DS_Store
+Thumbs.db

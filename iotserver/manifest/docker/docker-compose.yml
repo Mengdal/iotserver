@@ -1,0 +1,93 @@
+version: "3"
+
+networks:
+  iotserver:
+    driver: bridge
+services:
+  mqtt-broker:
+    image: registry.cn-shanghai.aliyuncs.com/winc-link/mqtt-broker:2.6
+    container_name: mqtt-broker
+    hostname: mqtt-broker
+    restart: always
+    ports:
+      - "58090:58090"
+    networks:
+      - iotserver
+  ekuiper:
+    image: lfedge/ekuiper:2.4.2-slim
+    ports:
+      - "127.0.0.1:9081:9081"
+    container_name: ekuiper
+    hostname: ekuiper
+    restart: always
+    user: root
+    volumes:
+      - ./kuiper/data:/kuiper/data
+      - ./kuiper/log:/kuiper/log
+    environment:
+      MQTT_SOURCE__DEFAULT__SERVER: "tcp://mqtt-broker:58090"
+      KUIPER__BASIC__CONSOLELOG: "true"
+      KUIPER__BASIC__IGNORECASE: "false"
+    networks:
+      - iotserver
+  ekuiper-manager:
+    image: emqx/ekuiper-manager:1.9.5
+    container_name: ekuiper-manager
+    restart: always
+    ports:
+      - "9082:9082"
+    environment:
+      DEFAULT_EKUIPER_ENDPOINT: "http://ekuiper:9081"
+    networks:
+      - iotserver
+  iotserver-core:
+    image: registry.cn-shanghai.aliyuncs.com/winc-link/iotserver-core:v1.0
+    container_name: iotserver-core
+    restart: always
+    hostname: iotserver-core
+    ports:
+      - "3000:3000"
+      - "58081:58081"
+      - "57081:57081"
+    depends_on:
+      - ekuiper
+      - mqtt-broker
+    volumes:
+      - ./:/var/bin/iotserver
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./config/configuration.toml:/etc/iotserver-core/configuration.toml
+      # Shaper 的 API Key / 看板 ID（本地未入库；容器内由 configuration.toml 的 LocalEnvFile 指向它）
+      - ../../.env.shaper:/etc/iotserver-core/.env.shaper:ro
+    networks:
+      - iotserver
+
+  # 可视化看板（Shaper，SQL + DuckDB 驱动）。前端用官方 React SDK 直嵌，不走 iframe。
+  # 平台后端通过 /api/v1/shaper/embed 用 API Key 换短期 JWT（见 iotserver/.env.shaper）。
+  shaper:
+    image: taleshape/shaper:0.25.0
+    container_name: shaper
+    restart: always
+    hostname: shaper
+    # 镜像默认以 root 启动，entrypoint 会把 /data chown 给 uid 999 再降权；
+    # 这里的数据目录来自宿主机（属主是运行 docker 的用户），所以显式指定 uid/gid。
+    # Linux 服务器上通常是 1000:1000（可用 SHAPER_UID/SHAPER_GID 覆盖）。
+    user: "${SHAPER_UID:-501}:${SHAPER_GID:-20}"
+    ports:
+      - "127.0.0.1:5454:5454"   # Web UI / HTTP API（浏览器要能直连）
+      - "127.0.0.1:5455:5455"   # 内置 NATS：不监听的话嵌入的看板会一直 loading
+    volumes:
+      # 看板 SQL / API Key / DuckDB 数据（与独立评估用的 shaper/docker-compose.yml 同一份，
+      # 两者只能起一个，否则 5454 端口与 DuckDB 文件锁会冲突）
+      - ../../../shaper/data:/data
+      # 平台真实数据：以只读方式给 Shaper 的 DuckDB 用 sqlite 扩展 ATTACH（见 shaper/data/init.sql）
+      # 挂目录而不是单文件：单文件挂载会把容器内 /platform-db 建成 root 所有，
+      # 容器用户写不了 SQLite 的 -wal/-shm，读 WAL 库会报 attempt to write a readonly database
+      - ./db-data/core-data:/platform-db
+    environment:
+      SHAPER_CORS_DOMAINS: "127.0.0.1:3000,localhost:3000"
+      SHAPER_NATS_HOST: "0.0.0.0"
+      SHAPER_NATS_PORT: "5455"
+      SHAPER_ALLOWED_DUCKDB_EXTENSIONS: "sqlite,json"
+      SHAPER_INIT_SQL_FILE: "/data/init.sql"
+    networks:
+      - iotserver

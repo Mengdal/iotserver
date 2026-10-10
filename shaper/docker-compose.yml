@@ -1,0 +1,23 @@
+services:
+  shaper:
+    image: taleshape/shaper:0.25.0
+    container_name: shaper
+    restart: unless-stopped
+    # 用宿主机 uid 运行：① 直接复用已有的 ./data（看板、API Key 都在里面）
+    # ② 容器里生成的文件不会变成 root 属主
+    # 镜像默认以 root 启动，entrypoint 会 chown 数据目录后 gosu 到 uid 999，
+    # 那样会写不进宿主机 uid 的 ./data，所以这里显式指定 user。
+    user: "${UID:-501}:${GID:-20}"
+    ports:
+      - "127.0.0.1:5454:5454"   # Web UI / HTTP API
+      - "127.0.0.1:5455:5455"   # 内置 NATS（不指定就不监听，嵌入的看板会一直 loading）
+    volumes:
+      - ./data:/data            # SHAPER_DIR=/data（镜像默认）
+    environment:
+      # 浏览器侧平台的来源，跨域必须放行，否则页面静默失败
+      SHAPER_CORS_DOMAINS: "127.0.0.1:3000,localhost:3000"
+      SHAPER_NATS_HOST: "0.0.0.0"
+      SHAPER_NATS_PORT: "5455"
+      # 其余可覆盖项见 `docker run --rm taleshape/shaper:0.25.0 --help`
+      # SHAPER_ADDR: ":5454"
+      # SHAPER_INIT_SQL_FILE: "/data/init.sql"

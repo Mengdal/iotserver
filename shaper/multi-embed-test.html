@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <title>Shaper 多实例 + 容器拖拽 实测</title>
+  <style>
+    body { margin: 0; font: 13px/1.5 -apple-system, "PingFang SC", sans-serif; background: #f5f5f5; }
+    .bar { padding: 8px 12px; background: #fff; border-bottom: 1px solid #e5e5e5; display: flex; gap: 8px; align-items: center; }
+    .bar button { padding: 4px 10px; cursor: pointer; }
+    .splitter { width: 6px; background: #d9d9d9; cursor: col-resize; flex: 0 0 auto; }
+    .splitter:hover { background: #1677ff; }
+    #row { display: flex; height: calc(100vh - 44px); }
+    .tile { background: #fff; margin: 6px; border: 1px solid #ececec; display: flex; flex-direction: column; min-width: 0; }
+    .tile > .hd { padding: 4px 8px; font-weight: 600; border-bottom: 1px solid #f0f0f0; }
+    .tile > .body { flex: 1; min-height: 0; padding: 4px; }
+  </style>
+</head>
+<body>
+  <div class="bar">
+    <b>Shaper 多实例 + 容器尺寸</b>
+    <button onclick="setSplit(50)">50 / 50</button>
+    <button onclick="setSplit(75)">75 / 25</button>
+    <button onclick="setSplit(30)">30 / 70</button>
+    <button onclick="destroyAll()">destroy()</button>
+    <span id="status">loading…</span>
+  </div>
+  <div id="row">
+    <div class="tile" id="t1" style="flex: 1 1 0;">
+      <div class="hd">看板 1（柱状图）</div>
+      <div class="body" id="c1"></div>
+    </div>
+    <div class="splitter" id="sp"></div>
+    <div class="tile" id="t2" style="flex: 1 1 0;">
+      <div class="hd">看板 2（饼图）</div>
+      <div class="body" id="c2"></div>
+    </div>
+  </div>
+
+  <script>
+    // 令牌通过 URL 传入（测试页，不落盘）：?t1=...&t2=...&d1=...&d2=...
+    const q = new URLSearchParams(location.search);
+    const BASE = q.get('base') || 'http://127.0.0.1:5454';
+    const T1 = q.get('t1') || '', T2 = q.get('t2') || '';
+    const D1 = q.get('d1') || '', D2 = q.get('d2') || '';
+    window.__instances = [];
+    window.__status = () => document.getElementById('status').innerText;
+
+    function setSplit(pct) {
+      const left = pct, right = 100 - pct;
+      document.getElementById('t1').style.flex = left + ' 1 0';
+      document.getElementById('t2').style.flex = right + ' 1 0';
+      // 真实拖拽时浏览器会触发 resize；这里手动补一次，模拟 splitter 拖动结束
+      window.dispatchEvent(new Event('resize'));
+      return left + '/' + right;
+    }
+    window.setSplit = setSplit;
+
+    function destroyAll() {
+      window.__instances.forEach(i => { try { i.destroy(); } catch (e) {} });
+      window.__instances = [];
+      document.getElementById('c1').innerHTML = '';
+      document.getElementById('c2').innerHTML = '';
+      document.getElementById('status').innerText = 'destroyed';
+      return 'destroyed';
+    }
+    window.destroyAll = destroyAll;
+
+    // 模拟用户拖动 splitter：连续改宽度
+    window.dragSplit = function () {
+      let p = 50;
+      return new Promise(resolve => {
+        const timer = setInterval(() => {
+          p += 5;
+          setSplit(p);
+          if (p >= 75) { clearInterval(timer); resolve('dragged-to-75'); }
+        }, 120);
+      });
+    };
+
+    function mount() {
+      if (!window.shaper || !window.shaper.dashboard) { setTimeout(mount, 300); return; }
+      window.__instances.push(window.shaper.dashboard({
+        baseUrl: BASE, container: document.getElementById('c1'), dashboardId: D1,
+        getJwt: async () => T1,
+      }));
+      window.__instances.push(window.shaper.dashboard({
+        baseUrl: BASE, container: document.getElementById('c2'), dashboardId: D2,
+        getJwt: async () => T2,
+      }));
+      document.getElementById('status').innerText = '2 instances mounted';
+    }
+
+    const s = document.createElement('script');
+    s.src = BASE + '/embed/shaper.js';
+    s.onload = mount;
+    s.onerror = () => { document.getElementById('status').innerText = 'embed script failed'; };
+    document.body.appendChild(s);
+  </script>
+</body>
+</html>

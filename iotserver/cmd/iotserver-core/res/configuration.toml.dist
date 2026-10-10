@@ -1,0 +1,65 @@
+[Writable]
+LogLevel = 'INFO'
+LogPath = 'hummingbird/logs/hummingbird-core.log'
+
+[Service]
+Host = '0.0.0.0'
+ServerBindAddr = '' # Leave blank so default to Host value unless different value is needed.
+Port = 58081
+Protocol = 'http'
+Timeout = 45000
+
+[RpcServer]
+Address = '0.0.0.0:57081'
+UseTLS = false
+CertFile = ''
+KeyFile = ''
+
+[Clients]
+[Clients.Ekuiper]
+Protocol = 'http'
+Host = 'ekuiper'
+Port = 9081
+
+[WebServer]
+Host = '0.0.0.0'
+Port = 3000
+Timeout = 120
+
+[Databases]
+[Databases.Metadata]
+[Databases.Metadata.Primary]
+Type = 'sqlite'
+DataSource = 'hummingbird/db-data/core-data/core.db?_timeout=5000'
+#Type = 'mysql'
+#Dsn = 'root:123456@tcp(127.0.0.1:3306)/hummingbird?charset=utf8mb4&parseTime=True&loc=Local'
+
+
+[Databases.Data]
+[Databases.Data.Primary]
+Type = 'leveldb'
+DataSource = 'hummingbird/db-data/leveldb-core-data/'
+#Type = 'tdengine'
+#Dsn = 'root:taosdata@ws(127.0.0.1:6041)/hummingbird'
+
+[MessageQueue]
+Protocol = 'tcp'
+Host = 'mqtt-broker'
+Port = 58090
+Type = 'mqtt'
+PublishTopicPrefix = 'eventbus/in'
+
+# 可视化看板（Shaper）嵌入配置
+[Shaper]
+Enabled = true
+BaseUrl = 'http://127.0.0.1:5454'
+ApiKey = ''
+DashboardId = ''
+# 首页卡片用的看板 ID（留空则前端用 DashboardId 或后端返回的 homeDashboardId）
+HomeDashboardId = ''
+# 浏览器侧看到的地址（容器部署时服务端走服务名、浏览器走宿主机地址），留空则与 BaseUrl 相同
+BrowserBaseUrl = ''
+# 看板管理登记文件（SQL 副本 + 首页/默认标记），默认 .shaper-boards.json
+BoardsFile = '.shaper-boards.json'
+# 本地未入库的 KEY=VALUE 文件（环境变量与上面的值都取不到时读它），默认值即下面的路径
+LocalEnvFile = '.env.shaper'

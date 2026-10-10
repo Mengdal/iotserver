@@ -1,0 +1,6 @@
+# 运行时数据（看板 SQL、DuckDB、API Key 都在里面）
+data/
+*.log
+
+# 如果改用 docker named volume 而不是 ./data，可忽略下面这行
+# docker-compose.override.yml

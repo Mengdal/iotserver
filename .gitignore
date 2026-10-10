@@ -1,0 +1,35 @@
+# ===== 工作区级本地缓存 =====
+.gocache/
+.npm-cache/
+.pnpm-store/
+
+# ===== IDE =====
+.idea/
+.vscode/
+*.iml
+
+# ===== 操作系统 =====
+.DS_Store
+Thumbs.db
+
+# ===== 第三方 vendored 仓库（各自有独立 origin，不作为本项目内容）=====
+dash/
+
+# ===== 依赖与构建产物 =====
+node_modules/
+**/node_modules/
+*/build/
+dist/
+*.log
+
+# ===== 本地环境变量（保留 *.example）=====
+.env
+.env.*
+!.env.*.example
+
+# ===== 前端编译产物里的 source map（体积大且仅调试用，源码在 iotserver-ui/）=====
+iotserver/cmd/iotserver-ui/build/**/*.map
+
+# ===== 本地端到端测试工具与产物（不入库）=====
+.preview/
+*.png.tmp

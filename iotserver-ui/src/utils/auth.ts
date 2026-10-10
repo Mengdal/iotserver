@@ -1,0 +1,51 @@
+
+const USER_KEY = '$user$'
+
+export { USER_KEY }
+
+export const setUser = (user: any) => localStorage.setItem(USER_KEY, JSON.stringify(user))
+export const getUser = () => {
+  const userJson = localStorage.getItem(USER_KEY)
+  if (userJson) {
+    try {
+      return JSON.parse(userJson)
+    } catch (error) {
+      console.error(error)
+    }
+  }
+  return null
+}
+export const clearUser = () => localStorage.removeItem(USER_KEY)
+export const getToken = () => getUser()?.token
+
+/** 当前登录用户信息（登录接口返回的 user 节点） */
+export const getUserInfo = () => getUser()?.user || null
+
+/** 是否超级管理员 */
+export const isAdmin = (): boolean => {
+  const user = getUser()
+  if (user?.user?.admin === true || user?.admin === true) return true
+  return false
+}
+
+/** 当前用户权限标识集合 */
+export const getPermissions = (): string[] => {
+  const user = getUser()
+  const direct = user?.permissions
+  if (Array.isArray(direct) && direct.length > 0) return direct
+  const info = getUserInfo()
+  return Array.isArray(info?.permissions) ? info.permissions : []
+}
+
+/** 权限判断，管理员恒为 true；支持数组或多权限（满足其一） */
+export const hasPermission = (perm?: string | string[]): boolean => {
+  if (!perm || (Array.isArray(perm) && perm.length === 0)) return true
+  if (isAdmin()) return true
+  const owned = getPermissions()
+  if (owned.length === 0) return false
+  const list = Array.isArray(perm) ? perm : String(perm).split(',').map(item => item.trim())
+  return list.some(item => item !== '' && owned.includes(item))
+}
+
+/** 权限判断，语义化别名 */
+export const useAuth = (perm?: string | string[]): boolean => hasPermission(perm)
