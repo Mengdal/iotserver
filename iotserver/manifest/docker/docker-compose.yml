@@ -41,7 +41,9 @@ services:
     networks:
       - iotserver
   iotserver-core:
-    image: registry.cn-shanghai.aliyuncs.com/winc-link/iotserver-core:v1.0
+    # 镜像来自本仓库构建：make ui && make docker（默认 iotserver-core:v1.0）
+    # 需要换成自己的仓库/版本时，用环境变量覆盖：IOTSERVER_IMAGE=your-registry/iotserver-core:v1.2 docker compose up -d
+    image: ${IOTSERVER_IMAGE:-iotserver-core:v1.0}
     container_name: iotserver-core
     restart: always
     hostname: iotserver-core
@@ -56,7 +58,8 @@ services:
       - ./:/var/bin/iotserver
       - /var/run/docker.sock:/var/run/docker.sock
       - ./config/configuration.toml:/etc/iotserver-core/configuration.toml
-      # Shaper 的 API Key / 看板 ID（本地未入库；容器内由 configuration.toml 的 LocalEnvFile 指向它）
+      # Shaper 的 API Key / 看板 ID（本地未入库，需先由示例复制：cp .env.shaper.example .env.shaper）
+      # 注意：文件不存在时 docker 会把挂载点建成目录，导致容器内读不到配置
       - ../../.env.shaper:/etc/iotserver-core/.env.shaper:ro
     networks:
       - iotserver

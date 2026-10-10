@@ -17,7 +17,8 @@ help:
 	@echo "  make start        用 go run 直接启动（开发用）"
 	@echo "  make test         运行单元/集成测试"
 	@echo "  make fmt          格式化 Go 代码"
-	@echo "  make docker       构建并推送 Docker 镜像（$(IMAGE)）"
+	@echo "  make docker       构建并推送 Docker 镜像（先跑 make ui；镜像 $(IMAGE)）"
+	@echo "  make start-shaper 读取 .env.shaper 注入 Shaper 配置后启动"
 	@echo "  make clean        清理二进制"
 
 # 本地编译并启动
@@ -50,7 +51,8 @@ start-shaper:
 	./scripts/start-with-shaper.sh
 
 test:
-	go test ./internal/iotserver/core/e2e/ ./internal/iotserver/core/route/ ./internal/iotserver/core/infrastructure/... -count=1
+	# 覆盖全部后端包（含 application 层的 resourceapp/ruleengineapp/sceneapp 与 tools/healthcheck）
+	go test ./internal/... -count=1
 
 fmt:
 	gofmt -w cmd internal tools
@@ -58,7 +60,10 @@ fmt:
 generate/api:
 	cd cmd/iotserver-core && swag init --parseDependency --parseInternal --parseDepth 10
 
+# 构建并推送镜像。注意：Dockerfile 会把 $(UI_DST) 复制进镜像，
+# 因此首次构建前必须先执行 make ui（否则构建会失败）
 docker:
+	@test -f $(UI_DST)/index.html || (echo "缺少前端产物 $(UI_DST)，请先执行: make ui"; exit 1)
 	docker buildx build --platform linux/amd64 -t "$(IMAGE)" -f cmd/iotserver-core/Dockerfile --push .
 
 clean:

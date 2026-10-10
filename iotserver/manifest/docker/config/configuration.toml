@@ -8,6 +8,11 @@ ServerBindAddr = '' # Leave blank so default to Host value unless different valu
 Port = 58081
 Protocol = 'http'
 Timeout = 45000
+# eKuiper 规则动作回调平台的基地址：容器内用 compose 服务名（默认值即是它，可省略）
+CallbackUrl = 'http://iotserver-core:58081'
+# 回调共享密钥：非空时 eKuiper 回调必须带 X-Callback-Token（规则动作会自动带上）。
+# 生产环境建议设置成随机串，例如 openssl rand -hex 16
+CallbackToken = ''
 
 [RpcServer]
 Address = '0.0.0.0:57081'
@@ -37,12 +42,24 @@ DataSource = 'iotserver/db-data/core-data/core.db?_timeout=5000'
 
 [Databases.Data]
 [Databases.Data.Primary]
+# 默认数据层：DuckLake（DuckDB 内嵌列式存储，SQLite catalog + Parquet 数据文件）。
+# 路径相对容器工作目录 /var/bin/，即宿主机 manifest/docker/db-data/（compose 已挂载，重建容器不丢数据）。
+# 首次启动需要联网安装 ducklake 扩展（装到 catalog 同目录的 extensions/，之后离线也可用）。
+Type = 'ducklake'
+DataSource = 'iotserver/db-data/ducklake/catalog.db'   # 元数据（SQLite catalog）
+Dsn = 'iotserver/db-data/ducklake/data'                # 数据文件（Parquet）目录
+
+# 其它可选数据层：
 #Type = 'tstorage'
-#DataSource = 'manifest/docker/db-data/tstorage-data/'
+#DataSource = 'iotserver/db-data/tstorage-data/'
+#Type = 'leveldb'
+#DataSource = 'iotserver/db-data/leveldb-core-data/'
 #Type = 'tdengine'
 #Dsn = 'root:taosdata@ws(127.0.0.1:6041)/iotserver'
-Type = 'leveldb'
-DataSource = 'manifest/docker/db-data/leveldb-core-data/'
+
+# 调试端点 /debug/pprof：默认关闭（暴露协程栈/堆内存）。开启后需 x-token + system:debug:pprof 权限。
+[Pprof]
+Enabled = false
 
 [MessageQueue]
 Protocol = 'tcp'

@@ -30,6 +30,10 @@ dist/
 # ===== 前端编译产物里的 source map（体积大且仅调试用，源码在 iotserver-ui/）=====
 iotserver/cmd/iotserver-ui/build/**/*.map
 
+# ===== 打包产物（本地导出用，不入库）=====
+*.zip
+*.tar.gz
+
 # ===== 本地端到端测试工具与产物（不入库）=====
 .preview/
 *.png.tmp

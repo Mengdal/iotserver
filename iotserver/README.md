@@ -35,11 +35,72 @@ iotserver 是 Golang 语言实现的超轻量级物联网开发平台，他的�
 
 # 快速启动
 
-git clone <你的仓库地址> iotserver
+前置：Docker（含 buildx）、Node 18+、Go 1.24（本机开发用）。
 
-cd iotserver/manifest/docker 
+## 1. 构建镜像（从本仓库源码构建）
 
-docker-compose up -d
+```bash
+# 前端产物：Dockerfile 会把 iotserver/cmd/iotserver-ui/build 打进镜像，必须先构建
+make ui
+
+# 构建并推送镜像（IMAGE 换成自己的仓库地址；只本地用可去掉 --push）
+make docker IMAGE=<你的仓库>/iotserver-core:v1.0
+
+# 仅本地构建、不推送：
+docker buildx build --platform linux/amd64 -t iotserver-core:v1.0 \
+  -f cmd/iotserver-core/Dockerfile --load .
+```
+
+## 2. 启动
+
+```bash
+cd manifest/docker
+cp ../../.env.shaper.example ../../.env.shaper   # Shaper 的 Key/看板 ID（compose 会挂载该文件；不建会挂成空目录）
+docker compose up -d
+# 镜像名不同时用环境变量覆盖（compose 默认 iotserver-core:v1.0）
+IOTSERVER_IMAGE=<你的仓库>/iotserver-core:v1.0 docker compose up -d
+```
+
+## 3. 访问
+
+| 入口 | 地址 | 说明 |
+| --- | --- | --- |
+| 平台（前端 + API） | `http://<host>:3000` | 默认账号 `admin` / `admin123` |
+| 内部 API | `http://<host>:58081` | eKuiper 规则回调平台用；容器内走 `http://iotserver-core:58081` |
+| eKuiper REST | `http://127.0.0.1:9081` | compose 只绑定本机回环 |
+| eKuiper Manager | `http://<host>:9082` | 规则/流可视化管理 |
+
+## 4. 数据与持久化
+
+| 数据 | 位置 | 说明 |
+| --- | --- | --- |
+| 元数据（用户/菜单/设备/规则/场景…） | `manifest/docker/db-data/core-data/core.db` | SQLite（已开 WAL） |
+| 历史数据（数据中心） | `manifest/docker/db-data/ducklake/` | DuckLake：SQLite catalog + Parquet 数据文件 |
+| eKuiper 数据 | `manifest/docker/kuiper/` | 规则、流与运行数据 |
+
+> ⚠️ DuckLake 首次启动需要联网安装 `ducklake` 扩展（装在 catalog 同目录的 `extensions/`，之后可离线）。
+> 纯离线环境请预热该目录，或把 `Databases.Data.Primary.Type` 改成 `leveldb` / `tstorage`。
+
+## 5. 常用运维命令
+
+```bash
+make test                                  # 后端全部测试
+go run ./tools/lakectl stats               # DuckLake 行数 / 快照数 / 数据文件数
+go run ./tools/lakectl flush|purge|compact # 刷盘 / 按保留期清理 / 压实（需先停服务）
+go run ./tools/gen-permissions             # 调整权限后重新生成前端权限常量
+make start-shaper                          # 读取本地 .env.shaper 后启动（本机开发）
+```
+
+## 6. 关键配置（`cmd/iotserver-core/res/configuration.toml`）
+
+| 配置项 | 说明 |
+| --- | --- |
+| `Databases.Data.Primary.Type` | 数据层：`ducklake`（默认）/ `leveldb` / `tstorage` / `tdengine` |
+| `Databases.Data.Primary.DataSource` / `Dsn` | DuckLake 的 catalog（SQLite）与 Parquet 数据目录 |
+| `Service.CallbackUrl` | eKuiper 规则动作回调平台的基地址；容器内用服务名，默认 `http://iotserver-core:58081` |
+| `Service.CallbackToken` | 回调共享密钥；非空时回调必须带 `x-callback-token`（规则动作自动携带）。改后重启服务会自动重下发运行中规则的动作 |
+| `Pprof.Enabled` | 调试端点 `/debug/pprof`，默认 `false`；开启后需 `x-token` + `system:debug:pprof` 权限 |
+| `Shaper.LocalEnvFile` | Shaper 的 API Key / 看板 ID 所在文件（由 compose 挂载，不入库） |
 
 # 主要功能
 
