@@ -30,7 +30,11 @@ const DefaultAdminPassword = "admin123"
 
 // MigrateSystemTables 自动创建系统管理相关表并写入初始化数据
 func (c *Client) MigrateSystemTables() error {
+	// 建表清单：系统管理 + 设备接入 + 运维监控 + 工具与文档 + 高级能力。
+	// 注意：全新库必须在这里建齐所有业务表——早期版本把业务表放在「连接时 InitTable」里，
+	// 那段代码被注释后新建库会缺表（产品/设备/驱动/物模型/告警等接口报 no such table）。
 	if err := c.Pool.AutoMigrate(
+		// ===== 系统管理 =====
 		&models.User{},
 		&models.Role{},
 		&models.Menu{},
@@ -39,7 +43,34 @@ func (c *Client) MigrateSystemTables() error {
 		&models.RoleMenu{},
 		&models.LoginLog{},
 		&models.SystemConfig{},
-		// 高级能力 - 资源管理 / 规则引擎 / 场景联动
+		// ===== 设备接入 =====
+		&models.DeviceLibrary{},
+		&models.DeviceService{},
+		&models.Device{},
+		&models.DockerConfig{},
+		&models.AdvanceConfig{},
+		&models.CategoryTemplate{},
+		&models.ThingModelTemplate{},
+		&models.DriverClassify{},
+		&models.Product{},
+		&models.Properties{},
+		&models.Actions{},
+		&models.Events{},
+		&models.Unit{},
+		&models.LanguageSdk{},
+		&models.MqttAuth{},
+		// ===== 运维监控（监控指标 + 告警）=====
+		&models.Metrics{},
+		&models.SystemMetrics{},
+		&models.ServiceStats{},
+		&models.AlertRule{},
+		&models.AlertList{},
+		&models.AlertContent{},
+		// ===== 工具与文档 / 首页 =====
+		&models.QuickNavigation{},
+		&models.Doc{},
+		&models.MsgGather{},
+		// ===== 高级能力：资源管理 / 规则引擎 / 场景联动 =====
 		&models.DataResource{},
 		&models.RuleEngine{},
 		&models.Scene{},
