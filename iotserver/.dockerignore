@@ -1,0 +1,26 @@
+# 宿主机构建产物：绝不能进入构建上下文。
+# 原因：Dockerfile 里是 `make build`，而 Makefile 的 build 目标依赖同名文件；
+# 若上下文里已存在宿主机（macOS/其它架构）编出来的二进制，make 会判定「已是最新」直接跳过，
+# 于是把宿主二进制打进镜像 —— 容器启动报 Exec format error。
+iotserver-core
+iotserver-core-linux-amd64
+cmd/iotserver-core/iotserver-core
+devseed
+mqttpub
+mqttsub
+
+# 运行时数据（数据库/日志/湖数据）
+manifest/docker/db-data/
+manifest/docker/kuiper/
+logs/
+*.log
+
+# 版本控制与本地文件
+.git
+.gitignore
+.env
+.env.*
+
+# 打包产物
+*.zip
+*.tar.gz

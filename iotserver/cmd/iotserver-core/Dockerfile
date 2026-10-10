@@ -31,7 +31,10 @@ WORKDIR /edge
 
 COPY . .
 
-RUN make build
+# 先删掉可能被 COPY 进来的宿主二进制：Makefile 的 build 目标是文件依赖，
+# 若该文件已存在会跳过编译，导致把宿主架构的二进制打进镜像（容器报 Exec format error）。
+# 同时 .dockerignore 已排除这些文件，这里是双保险。
+RUN rm -f iotserver-core iotserver-core-linux-amd64 cmd/iotserver-core/iotserver-core && make build
 
 #Next image - Copy built Go binary into new workspace
 FROM ${RUNTIME_BASE}
