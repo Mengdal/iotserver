@@ -29,6 +29,7 @@ import (
 	interfaces "iotserver/internal/iotserver/core/interface"
 	"iotserver/internal/pkg/di"
 	"iotserver/internal/pkg/logger"
+	"iotserver/internal/pkg/tenant"
 	"iotserver/internal/pkg/utils"
 	"runtime"
 	"strconv"
@@ -69,15 +70,20 @@ func NewSystemMonitor(dic *di.Container, lc logger.LoggingClient) *systemMonitor
 	return &m
 }
 
+// systemMetricsRetention 系统指标保留期：看板「近一周」的 CPU/内存趋势要靠它。
+// 每分钟采样一条，7 天约 1 万行，SQLite 毫无压力。
+const systemMetricsRetention = 7 * 24 * time.Hour
+
 func (m *systemMonitor) run() {
-	tick := time.Tick(time.Minute)         // 1 minute
-	tickClear := time.Tick(24 * time.Hour) // 每24小时删除一次数据
+	tick := time.Tick(time.Minute)              // 1 minute
+	tickClear := time.Tick(24 * time.Hour)      // 每24小时删除一次过期数据
 	go func() {
 		for {
 			select {
 			case <-tick:
 				metrics := m.collect()
-				if err := m.dbClient.UpdateSystemMetrics(metrics); err != nil {
+				// 平台作用域：系统路径，不按租户过滤
+				if err := m.dbClient.WithCtx(tenant.Platform(context.Background())).UpdateSystemMetrics(metrics); err != nil {
 					m.lc.Errorf("failed to UpdateSystemMetrics %v", err)
 				}
 
@@ -93,9 +99,10 @@ func (m *systemMonitor) run() {
 
 func (m *systemMonitor) clearMetrics() {
 	min := "0"
-	max := strconv.FormatInt(time.Now().Add(-24*time.Hour).UnixMilli(), 10)
+	max := strconv.FormatInt(time.Now().Add(-systemMetricsRetention).UnixMilli(), 10)
 	m.lc.Infof("remove system metrics data from %v to %v", min, max)
-	if err := m.dbClient.RemoveRangeSystemMetrics(min, max); err != nil {
+	// 平台作用域：系统路径，不按租户过滤
+	if err := m.dbClient.WithCtx(tenant.Platform(context.Background())).RemoveRangeSystemMetrics(min, max); err != nil {
 		m.lc.Error("failed to clearMetrics", err)
 	}
 }

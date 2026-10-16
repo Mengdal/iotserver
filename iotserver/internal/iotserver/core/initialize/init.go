@@ -22,12 +22,15 @@ import (
 	"iotserver/internal/dtos"
 	"iotserver/internal/iotserver/core/application"
 	"iotserver/internal/iotserver/core/application/alertcentreapp"
+	"iotserver/internal/iotserver/core/application/auditlogapp"
 	"iotserver/internal/iotserver/core/application/categorytemplate"
 	"iotserver/internal/iotserver/core/application/deviceapp"
 	"iotserver/internal/iotserver/core/application/dmi"
 	"iotserver/internal/iotserver/core/application/docapp"
 	"iotserver/internal/iotserver/core/application/driverapp"
 	"iotserver/internal/iotserver/core/application/driverserviceapp"
+	"iotserver/internal/iotserver/core/application/gatewayapp"
+	"iotserver/internal/iotserver/core/application/gatewayingest"
 	"iotserver/internal/iotserver/core/application/homepageapp"
 	"iotserver/internal/iotserver/core/application/languagesdkapp"
 	"iotserver/internal/iotserver/core/application/messageapp"
@@ -39,6 +42,8 @@ import (
 	"iotserver/internal/iotserver/core/application/resourceapp"
 	"iotserver/internal/iotserver/core/application/ruleengineapp"
 	"iotserver/internal/iotserver/core/application/sceneapp"
+	"iotserver/internal/iotserver/core/application/solutionapp"
+	"iotserver/internal/iotserver/core/application/tenantapp"
 	"iotserver/internal/iotserver/core/application/thingmodelapp"
 	"iotserver/internal/iotserver/core/application/thingmodeltemplate"
 	"iotserver/internal/iotserver/core/application/unittemplate"
@@ -57,8 +62,10 @@ import (
 	"iotserver/internal/pkg/logger"
 	"iotserver/internal/pkg/startup"
 	"iotserver/internal/tools/ekuiperclient"
+	"iotserver/internal/tools/gatewaymqtt"
 	"iotserver/internal/tools/hpcloudclient"
 	"iotserver/internal/tools/notify/sms"
+	tenantplugin "iotserver/internal/tools/sqldb/tenant"
 	"iotserver/internal/tools/streamclient"
 	"strings"
 	"sync"
@@ -80,6 +87,16 @@ func (b *Bootstrap) BootstrapHandler(ctx context.Context, wg *sync.WaitGroup, _ 
 
 	configuration := container.ConfigurationFrom(dic.Get)
 	lc := pkgContainer.LoggingClientFrom(dic.Get)
+
+	// 多租户隔离策略：Enforce=true 时缺少租户上下文的查询返回空集（fail-closed）。
+	// 必须在任何数据库访问之前设置。
+	if configuration.Tenant.Enforce {
+		tenantplugin.SetPolicy(tenantplugin.PolicyEnforce, lc)
+		lc.Infof("多租户隔离策略: enforce（缺少租户上下文的租户表查询将返回空集）")
+	} else {
+		tenantplugin.SetPolicy(tenantplugin.PolicyWarn, lc)
+		lc.Infof("多租户隔离策略: warn（迁移期：未带租户上下文的调用不过滤，仅告警）")
+	}
 
 	if !b.initClient(ctx, wg, dic, configuration, lc) {
 		return false
@@ -295,11 +312,43 @@ func (b *Bootstrap) initClient(ctx context.Context, wg *sync.WaitGroup, dic *di.
 		},
 	})
 
+	// 审查日志：异步批量写入（中间件/登录链路入队）+ 每 6 小时过期清理
+	auditLogApp := auditlogapp.New(dic)
+	dic.Update(di.ServiceConstructorMap{
+		container.AuditLogAppName: func(get di.Get) interface{} {
+			return auditLogApp
+		},
+	})
+
 	// 高级能力 - 资源管理
 	resourceItf := resourceapp.New(dic)
 	dic.Update(di.ServiceConstructorMap{
 		container.ResourceItfName: func(get di.Get) interface{} {
 			return resourceItf
+		},
+	})
+
+	// 平台管理 - 租户
+	tenantItf := tenantapp.New(dic)
+	dic.Update(di.ServiceConstructorMap{
+		container.TenantItfName: func(get di.Get) interface{} {
+			return tenantItf
+		},
+	})
+
+	// 设备接入 - 网关管理（第三方工业网关）
+	gatewayItf := gatewayapp.New(dic)
+	dic.Update(di.ServiceConstructorMap{
+		container.GatewayItfName: func(get di.Get) interface{} {
+			return gatewayItf
+		},
+	})
+
+	// 设备接入 - 方案（行业模板一键应用）
+	machineTemplateItf := solutionapp.New(dic)
+	dic.Update(di.ServiceConstructorMap{
+		container.SolutionItfName: func(get di.Get) interface{} {
+			return machineTemplateItf
 		},
 	})
 
@@ -342,6 +391,15 @@ func (b *Bootstrap) initClient(ctx context.Context, wg *sync.WaitGroup, dic *di.
 			return messageStoreItf
 		},
 	})
+
+	// 网关接入服务：订阅 iot/up/+/... 接收第三方工业网关的上行数据与心跳。
+	// MQTT 连接失败不阻断启动（网关接入属于可选能力，其余功能照常可用）。
+	gatewayIngest := gatewayingest.New(dic)
+	if err := gatewayIngest.Start(); err != nil {
+		lc.Errorf("网关接入服务启动失败（不影响其它功能）: %v", err)
+	} else {
+		lc.Infof("网关接入服务已启动，订阅主题: %s+/+", gatewaymqtt.TopicPrefixUp)
+	}
 	return true
 }
 

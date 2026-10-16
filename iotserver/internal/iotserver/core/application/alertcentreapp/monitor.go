@@ -19,6 +19,7 @@ import (
 	"iotserver/internal/dtos"
 	resourceContainer "iotserver/internal/iotserver/core/container"
 	"iotserver/internal/pkg/constants"
+	"iotserver/internal/pkg/tenant"
 	"time"
 )
 
@@ -34,7 +35,8 @@ func (p alertApp) monitor() {
 }
 
 func (p alertApp) checkRuleStatus() {
-	alerts, _, err := p.dbClient.AlertRuleSearch(0, -1, dtos.AlertRuleSearchQueryRequest{})
+	// 平台作用域：系统路径，不按租户过滤
+	alerts, _, err := p.dbClient.WithCtx(tenant.Platform(context.Background())).AlertRuleSearch(0, -1, dtos.AlertRuleSearchQueryRequest{})
 	if err != nil {
 		p.lc.Errorf("get alerts err:", err)
 	}
@@ -51,9 +53,9 @@ func (p alertApp) checkRuleStatus() {
 		if ok {
 			if status != string(alert.Status) {
 				if status == string(constants.RuleStop) {
-					p.dbClient.AlertRuleStop(alert.Id)
+					p.dbClient.WithCtx(tenant.Platform(context.Background())).AlertRuleStop(alert.Id)
 				} else if status == string(constants.RuleStart) {
-					p.dbClient.AlertRuleStart(alert.Id)
+					p.dbClient.WithCtx(tenant.Platform(context.Background())).AlertRuleStart(alert.Id)
 				}
 			}
 		}

@@ -1,0 +1,656 @@
+{
+  "key": "refrigeration",
+  "name": "冷库制冷机组",
+  "industry": "冷链仓储",
+  "version": 1,
+  "icon": "database",
+  "description": "冷库库温、化霜、门禁与机组能耗监控",
+  "thingModelJson": {
+    "properties": [
+      {
+        "name": "库温",
+        "identifier": "store_temp",
+        "dataType": "FLOAT",
+        "description": "冷库内实时温度",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "50",
+          "min": "-40",
+          "step": "0.1",
+          "unit": "℃",
+          "unitName": "摄氏度"
+        },
+        "dataSpecsList": null
+      },
+      {
+        "name": "回温",
+        "identifier": "return_temp",
+        "dataType": "FLOAT",
+        "description": "蒸发器回气温度",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "50",
+          "min": "-40",
+          "step": "0.1",
+          "unit": "℃",
+          "unitName": "摄氏度"
+        },
+        "dataSpecsList": null
+      },
+      {
+        "name": "设定温度",
+        "identifier": "set_temp",
+        "dataType": "FLOAT",
+        "description": "冷库目标温度，支持远程下发",
+        "required": false,
+        "rwFlag": "RW",
+        "dataSpecs": {
+          "max": "50",
+          "min": "-40",
+          "step": "0.1",
+          "unit": "℃",
+          "unitName": "摄氏度"
+        },
+        "dataSpecsList": null
+      },
+      {
+        "name": "温度偏差",
+        "identifier": "temp_deviation",
+        "dataType": "FLOAT",
+        "description": "库温与设定温度的偏差",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "20",
+          "min": "0",
+          "step": "0.1",
+          "unit": "℃",
+          "unitName": "摄氏度"
+        },
+        "dataSpecsList": null
+      },
+      {
+        "name": "压缩机状态",
+        "identifier": "compressor_status",
+        "dataType": "BOOL",
+        "description": "压缩机运行状态",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": null,
+        "dataSpecsList": [
+          {
+            "name": "停止",
+            "value": 0
+          },
+          {
+            "name": "运行",
+            "value": 1
+          }
+        ]
+      },
+      {
+        "name": "化霜状态",
+        "identifier": "defrost_status",
+        "dataType": "ENUM",
+        "description": "蒸发器化霜状态",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": null,
+        "dataSpecsList": [
+          {
+            "name": "停止",
+            "value": 0
+          },
+          {
+            "name": "化霜中",
+            "value": 1
+          },
+          {
+            "name": "滴水延时",
+            "value": 2
+          }
+        ]
+      },
+      {
+        "name": "门开关",
+        "identifier": "door_status",
+        "dataType": "BOOL",
+        "description": "库门开关状态",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": null,
+        "dataSpecsList": [
+          {
+            "name": "关闭",
+            "value": 0
+          },
+          {
+            "name": "打开",
+            "value": 1
+          }
+        ]
+      },
+      {
+        "name": "库门开启时长",
+        "identifier": "door_open_duration",
+        "dataType": "INT",
+        "description": "库门本次开启持续时长",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "600",
+          "min": "0",
+          "step": "1",
+          "unit": "s",
+          "unitName": "秒"
+        },
+        "dataSpecsList": null
+      },
+      {
+        "name": "能耗",
+        "identifier": "energy_consumption",
+        "dataType": "FLOAT",
+        "description": "机组累计能耗",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "9999.9",
+          "min": "0",
+          "step": "0.1",
+          "unit": "kW·h",
+          "unitName": "千瓦时"
+        },
+        "dataSpecsList": null
+      },
+      {
+        "name": "运行时长",
+        "identifier": "run_duration",
+        "dataType": "FLOAT",
+        "description": "压缩机累计运行时长",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "99999.9",
+          "min": "0",
+          "step": "0.1",
+          "unit": "h",
+          "unitName": "小时"
+        },
+        "dataSpecsList": null
+      },
+      {
+        "name": "运行状态",
+        "identifier": "run_status",
+        "dataType": "BOOL",
+        "description": "制冷机组整体运行状态",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": null,
+        "dataSpecsList": [
+          {
+            "name": "停止",
+            "value": 0
+          },
+          {
+            "name": "运行",
+            "value": 1
+          }
+        ]
+      },
+      {
+        "name": "化霜周期",
+        "identifier": "defrost_cycle",
+        "dataType": "INT",
+        "description": "两次化霜的间隔周期",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "1440",
+          "min": "0",
+          "step": "1",
+          "unit": "min",
+          "unitName": "分钟"
+        },
+        "dataSpecsList": null
+      },
+      {
+        "name": "冷凝压力",
+        "identifier": "condensing_pressure",
+        "dataType": "FLOAT",
+        "description": "冷凝器侧制冷剂压力",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "4.0",
+          "min": "0",
+          "step": "0.01",
+          "unit": "MPa",
+          "unitName": "兆帕"
+        },
+        "dataSpecsList": null
+      },
+      {
+        "name": "蒸发温度",
+        "identifier": "evaporator_temp",
+        "dataType": "FLOAT",
+        "description": "蒸发器出口温度",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "50",
+          "min": "-40",
+          "step": "0.1",
+          "unit": "℃",
+          "unitName": "摄氏度"
+        },
+        "dataSpecsList": null
+      }
+    ],
+    "events": [
+      {
+        "eventName": "高温报警",
+        "eventType": "ALERT",
+        "identifier": "high_temp",
+        "description": "库温超过上限",
+        "required": false,
+        "outputData": [
+          {
+            "name": "当前库温",
+            "identifier": "value",
+            "dataType": "FLOAT",
+            "required": false,
+            "dataSpecs": {
+              "max": "50",
+              "min": "-40",
+              "step": "0.1",
+              "unit": "℃",
+              "unitName": "摄氏度"
+            },
+            "dataSpecsList": null
+          },
+          {
+            "name": "设定温度",
+            "identifier": "target",
+            "dataType": "FLOAT",
+            "required": false,
+            "dataSpecs": {
+              "max": "50",
+              "min": "-40",
+              "step": "0.1",
+              "unit": "℃",
+              "unitName": "摄氏度"
+            },
+            "dataSpecsList": null
+          }
+        ]
+      },
+      {
+        "eventName": "低温报警",
+        "eventType": "ALERT",
+        "identifier": "low_temp",
+        "description": "库温低于下限",
+        "required": false,
+        "outputData": [
+          {
+            "name": "当前库温",
+            "identifier": "value",
+            "dataType": "FLOAT",
+            "required": false,
+            "dataSpecs": {
+              "max": "50",
+              "min": "-40",
+              "step": "0.1",
+              "unit": "℃",
+              "unitName": "摄氏度"
+            },
+            "dataSpecsList": null
+          },
+          {
+            "name": "下限温度",
+            "identifier": "threshold",
+            "dataType": "FLOAT",
+            "required": false,
+            "dataSpecs": {
+              "max": "50",
+              "min": "-40",
+              "step": "0.1",
+              "unit": "℃",
+              "unitName": "摄氏度"
+            },
+            "dataSpecsList": null
+          }
+        ]
+      },
+      {
+        "eventName": "开门超时",
+        "eventType": "ALERT",
+        "identifier": "door_timeout",
+        "description": "库门开启超时未关闭",
+        "required": false,
+        "outputData": [
+          {
+            "name": "已开启时长",
+            "identifier": "duration",
+            "dataType": "INT",
+            "required": false,
+            "dataSpecs": {
+              "max": "600",
+              "min": "0",
+              "step": "1",
+              "unit": "s",
+              "unitName": "秒"
+            },
+            "dataSpecsList": null
+          }
+        ]
+      },
+      {
+        "eventName": "化霜异常",
+        "eventType": "ERROR",
+        "identifier": "defrost_abnormal",
+        "description": "化霜超时或化霜温度异常",
+        "required": false,
+        "outputData": [
+          {
+            "name": "化霜状态",
+            "identifier": "status",
+            "dataType": "ENUM",
+            "required": false,
+            "dataSpecs": null,
+            "dataSpecsList": [
+              {
+                "name": "停止",
+                "value": 0
+              },
+              {
+                "name": "化霜中",
+                "value": 1
+              },
+              {
+                "name": "滴水延时",
+                "value": 2
+              }
+            ]
+          },
+          {
+            "name": "持续时长",
+            "identifier": "duration",
+            "dataType": "INT",
+            "required": false,
+            "dataSpecs": {
+              "max": "600",
+              "min": "0",
+              "step": "1",
+              "unit": "s",
+              "unitName": "秒"
+            },
+            "dataSpecsList": null
+          }
+        ]
+      },
+      {
+        "eventName": "断电恢复",
+        "eventType": "INFO",
+        "identifier": "power_recovery",
+        "description": "设备断电后恢复供电",
+        "required": false,
+        "outputData": [
+          {
+            "name": "恢复时间",
+            "identifier": "time",
+            "dataType": "DATE",
+            "required": false,
+            "dataSpecs": null,
+            "dataSpecsList": null
+          },
+          {
+            "name": "断电时长",
+            "identifier": "duration",
+            "dataType": "INT",
+            "required": false,
+            "dataSpecs": {
+              "max": "86400",
+              "min": "0",
+              "step": "1",
+              "unit": "s",
+              "unitName": "秒"
+            },
+            "dataSpecsList": null
+          }
+        ]
+      }
+    ],
+    "services": [
+      {
+        "serviceName": "启动",
+        "identifier": "start",
+        "description": "启动制冷机组",
+        "required": false,
+        "callType": "ASYNC",
+        "inputParams": [],
+        "outParams": []
+      },
+      {
+        "serviceName": "停止",
+        "identifier": "stop",
+        "description": "停止制冷机组",
+        "required": false,
+        "callType": "ASYNC",
+        "inputParams": [],
+        "outParams": []
+      },
+      {
+        "serviceName": "设定温度",
+        "identifier": "set_temp",
+        "description": "下发冷库目标温度",
+        "required": false,
+        "callType": "ASYNC",
+        "inputParams": [
+          {
+            "name": "目标温度",
+            "identifier": "target",
+            "dataType": "FLOAT",
+            "required": true,
+            "dataSpecs": {
+              "max": "50",
+              "min": "-40",
+              "step": "0.1",
+              "unit": "℃",
+              "unitName": "摄氏度"
+            },
+            "dataSpecsList": null
+          }
+        ],
+        "outParams": []
+      },
+      {
+        "serviceName": "强制化霜",
+        "identifier": "force_defrost",
+        "description": "手动触发一次化霜",
+        "required": false,
+        "callType": "ASYNC",
+        "inputParams": [
+          {
+            "name": "化霜时长",
+            "identifier": "duration",
+            "dataType": "INT",
+            "required": false,
+            "dataSpecs": {
+              "max": "120",
+              "min": "0",
+              "step": "1",
+              "unit": "min",
+              "unitName": "分钟"
+            },
+            "dataSpecsList": null
+          }
+        ],
+        "outParams": []
+      },
+      {
+        "serviceName": "查询运行状态",
+        "identifier": "query_status",
+        "description": "同步查询机组关键运行参数",
+        "required": false,
+        "callType": "SYNC",
+        "inputParams": [],
+        "outParams": [
+          {
+            "name": "库温",
+            "identifier": "store_temp",
+            "dataType": "FLOAT",
+            "required": false,
+            "dataSpecs": {
+              "max": "50",
+              "min": "-40",
+              "step": "0.1",
+              "unit": "℃",
+              "unitName": "摄氏度"
+            },
+            "dataSpecsList": null
+          },
+          {
+            "name": "回温",
+            "identifier": "return_temp",
+            "dataType": "FLOAT",
+            "required": false,
+            "dataSpecs": {
+              "max": "50",
+              "min": "-40",
+              "step": "0.1",
+              "unit": "℃",
+              "unitName": "摄氏度"
+            },
+            "dataSpecsList": null
+          },
+          {
+            "name": "压缩机状态",
+            "identifier": "compressor_status",
+            "dataType": "BOOL",
+            "required": false,
+            "dataSpecs": null,
+            "dataSpecsList": [
+              {
+                "name": "停止",
+                "value": 0
+              },
+              {
+                "name": "运行",
+                "value": 1
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "alarmRules": [
+    {
+      "name": "库温高报警",
+      "propertyCode": "store_temp",
+      "operator": ">",
+      "value": "8",
+      "alertLevel": 1,
+      "alertType": 1,
+      "silenceTime": 300,
+      "description": "库温超过 8℃"
+    },
+    {
+      "name": "库温低报警",
+      "propertyCode": "store_temp",
+      "operator": "<",
+      "value": "-25",
+      "alertLevel": 1,
+      "alertType": 1,
+      "silenceTime": 300,
+      "description": "库温低于 -25℃"
+    },
+    {
+      "name": "开门超时",
+      "propertyCode": "door_open_duration",
+      "operator": ">",
+      "value": "300",
+      "alertLevel": 2,
+      "alertType": 1,
+      "silenceTime": 600,
+      "description": "库门开启超过 300 秒"
+    },
+    {
+      "name": "压缩机停机",
+      "propertyCode": "compressor_status",
+      "operator": "=",
+      "value": "0",
+      "alertLevel": 2,
+      "alertType": 1,
+      "silenceTime": 600,
+      "description": "压缩机非计划停机"
+    },
+    {
+      "name": "能耗异常",
+      "propertyCode": "energy_consumption",
+      "operator": ">",
+      "value": "500",
+      "alertLevel": 3,
+      "alertType": 1,
+      "silenceTime": 1800,
+      "description": "单日能耗超过 500 kW·h"
+    }
+  ],
+  "dashboard": {
+    "name": "冷库制冷机组看板",
+    "widgets": [
+      {
+        "title": "库温趋势",
+        "type": "line",
+        "propertyCode": "store_temp",
+        "timeRange": "1h",
+        "aggInterval": 60,
+        "aggMethod": "avg"
+      },
+      {
+        "title": "回温趋势",
+        "type": "line",
+        "propertyCode": "return_temp",
+        "timeRange": "1h",
+        "aggInterval": 60,
+        "aggMethod": "avg"
+      },
+      {
+        "title": "当前库温",
+        "type": "kpi",
+        "propertyCode": "store_temp",
+        "unit": "℃",
+        "decimals": 1
+      },
+      {
+        "title": "库温",
+        "type": "gauge",
+        "propertyCode": "store_temp",
+        "unit": "℃",
+        "min": -40,
+        "max": 50
+      },
+      {
+        "title": "累计能耗",
+        "type": "kpi",
+        "propertyCode": "energy_consumption",
+        "unit": "kW·h",
+        "decimals": 1
+      },
+      {
+        "title": "制冷机组运行总览",
+        "type": "text",
+        "text": "冷库温度、化霜、门禁与能耗综合监控"
+      }
+    ]
+  },
+  "metrics": {
+    "running": "run_status",
+    "output": null,
+    "good": null,
+    "reject": null,
+    "cycleTime": null
+  }
+}

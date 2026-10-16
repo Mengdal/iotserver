@@ -90,6 +90,13 @@ type LoginUserResponse struct {
 	RoleIds     []string          `json:"roleIds"`
 	Permissions []string          `json:"permissions"`
 	Menus       []SysMenuResponse `json:"menus"`
+	// ===== 多租户 =====
+	TenantId   string `json:"tenantId"`
+	TenantName string `json:"tenantName"`
+	// DataScope 数据范围：1全部 2本部门 3本部门及以下 4仅本人
+	DataScope string `json:"dataScope"`
+	// PlatformAdmin 平台（ROBX）管理员：前端据此显示租户切换器
+	PlatformAdmin bool `json:"platformAdmin"`
 }
 
 // SysUserProfileResponse 个人中心信息

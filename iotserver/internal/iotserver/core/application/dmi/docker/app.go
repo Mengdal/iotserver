@@ -13,6 +13,7 @@ import (
 	"iotserver/internal/pkg/di"
 	"iotserver/internal/pkg/errort"
 	"iotserver/internal/pkg/logger"
+	"iotserver/internal/pkg/tenant"
 	"iotserver/internal/pkg/utils"
 	"path"
 	"strings"
@@ -48,7 +49,8 @@ func New(dic *di.Container, ctx context.Context, wg *sync.WaitGroup, dcm dtos.Dr
 func (d *dockerImpl) StopAllInstance() {
 	dbClient := resourceContainer.DBClientFrom(d.dic.Get)
 
-	deviceService, _, err := dbClient.DeviceServicesSearch(0, -1, dtos.DeviceServiceSearchQueryRequest{})
+	// 平台作用域：系统路径，不按租户过滤
+	deviceService, _, err := dbClient.WithCtx(tenant.Platform(context.Background())).DeviceServicesSearch(0, -1, dtos.DeviceServiceSearchQueryRequest{})
 	if err != nil {
 		d.lc.Errorf("search service error :", err.Error())
 	}
@@ -135,7 +137,7 @@ func (d *dockerImpl) setDcmRootDir() {
 	}
 
 	for _, v := range res.Mounts {
-		if v.Destination == constants.DockerHummingbirdRootDir {
+		if v.Destination == constants.DockerIotServerRootDir {
 			d.dcm.SetHostRootDir(v.Source)
 			break
 		}
@@ -151,7 +153,7 @@ func (d *dockerImpl) genRunServiceConfig(name string, cfgContent string, instanc
 
 	} else if instanceType == constants.DriverInstance {
 		filePath = d.dcm.GetRunConfigPath(name)
-		err = utils.CreateDirIfNotExist(constants.DockerHummingbirdRootDir + "/" + constants.DriverRunConfigDir)
+		err = utils.CreateDirIfNotExist(constants.DockerIotServerRootDir + "/" + constants.DriverRunConfigDir)
 		if err != nil {
 			return "", err
 		}

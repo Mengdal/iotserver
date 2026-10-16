@@ -15,7 +15,7 @@
 package constants
 
 import (
-	"github.com/winc-link/edge-driver-proto/driverdevice"
+	"github.com/LMgateways/iotserver-driver-proto/driverdevice"
 )
 
 type DeviceStatus string

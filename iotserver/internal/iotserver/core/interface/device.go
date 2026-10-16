@@ -2,7 +2,7 @@ package interfaces
 
 import (
 	"context"
-	"github.com/winc-link/edge-driver-proto/driverdevice"
+	"github.com/LMgateways/iotserver-driver-proto/driverdevice"
 	"iotserver/internal/dtos"
 	"iotserver/internal/models"
 )
@@ -58,7 +58,7 @@ type DeviceCtlItf interface {
 
 	DeviceAction(jobAction dtos.JobAction) dtos.DeviceExecRes
 
-	DeviceInvokeThingService(invokeDeviceServiceReq dtos.InvokeDeviceServiceReq) (map[string]interface{}, error)
+	DeviceInvokeThingService(ctx context.Context, invokeDeviceServiceReq dtos.InvokeDeviceServiceReq) (map[string]interface{}, error)
 
 	SetDeviceProperty(req dtos.OpenApiSetDeviceThingModel) error
 

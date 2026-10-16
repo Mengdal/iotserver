@@ -1,0 +1,87 @@
+{
+  "id": "builtin-home",
+  "name": "首页看板",
+  "icon": "dashboard",
+  "scope": "all",
+  "isHome": true,
+  "canvas": {
+    "cols": 12,
+    "rowHeight": 40,
+    "widgets": [
+      {
+        "id": "home-stat-overview",
+        "title": "平台概述",
+        "showTitle": true,
+        "type": "stats",
+        "layout": { "x": 0, "y": 0, "w": 12, "h": 5 },
+        "config": {
+          "tiles": [
+            {
+              "label": "产品数",
+              "metric": "product.total",
+              "icon": "appstore",
+              "tone": "blue",
+              "tags": [
+                { "label": "本地", "metric": "product.self" },
+                { "label": "第三方", "metric": "product.other" }
+              ]
+            },
+            {
+              "label": "设备数",
+              "metric": "device.total",
+              "icon": "devices",
+              "tone": "cyan",
+              "tags": [
+                { "label": "本地", "metric": "device.self" },
+                { "label": "第三方", "metric": "device.other" }
+              ]
+            },
+            {
+              "label": "网关数",
+              "metric": "gateway.total",
+              "icon": "gateway",
+              "tone": "green",
+              "tags": [
+                { "label": "在线", "metric": "gateway.online" },
+                { "label": "离线", "metric": "gateway.offline" }
+              ]
+            },
+            {
+              "label": "告警数",
+              "metric": "alarm.pending",
+              "icon": "alert",
+              "tone": "orange",
+              "note": "未处理告警（实时）"
+            }
+          ]
+        }
+      },
+      {
+        "id": "home-msg-trend",
+        "title": "设备消息总数",
+        "showTitle": true,
+        "type": "line",
+        "layout": { "x": 0, "y": 5, "w": 8, "h": 8 },
+        "config": {
+          "series": [],
+          "metrics": ["report.daily"],
+          "timeRange": "7d",
+          "aggInterval": 0,
+          "aggMethod": "avg",
+          "showLegend": false,
+          "smooth": true,
+          "fill": true,
+          "stacked": false
+        }
+      },
+      {
+        "id": "home-msg-rank",
+        "title": "设备消息量排名",
+        "showTitle": true,
+        "type": "text",
+        "layout": { "x": 8, "y": 5, "w": 4, "h": 8 },
+        "text": "暂无设备消息排名数据。\n\n后端还没有按设备统计消息量的接口（topMessage），接口就绪后这里是排行榜组件。"
+      }
+    ]
+  }
+}

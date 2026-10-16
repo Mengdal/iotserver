@@ -99,7 +99,7 @@ func (ctl *controller) OpenApiInvokeThingService(c *gin.Context) {
 		httphelper.RenderFail(c, errort.NewCommonErr(errort.DefaultReqParamsError, err), c.Writer, lc)
 		return
 	}
-	data, err := ctl.getDeviceApp().DeviceInvokeThingService(req)
+	data, err := ctl.getDeviceApp().DeviceInvokeThingService(c.Request.Context(), req)
 	if err != nil {
 		httphelper.RenderFail(c, err, c.Writer, lc)
 		return
@@ -112,7 +112,7 @@ func (ctl *controller) OpenApiQueryDevicePropertyData(c *gin.Context) {
 	var req dtos.ThingModelPropertyDataRequest
 	urlDecodeParam(&req, c.Request, lc)
 	dtos.CorrectionPageParam(&req.BaseSearchConditionQuery)
-	data, total, edgeXErr := ctl.getPersistApp().SearchDeviceThingModelHistoryPropertyData(req)
+	data, total, edgeXErr := ctl.getPersistApp().SearchDeviceThingModelHistoryPropertyData(c.Request.Context(), req)
 	if edgeXErr != nil {
 		httphelper.RenderFail(c, edgeXErr, c.Writer, lc)
 		return
@@ -126,7 +126,7 @@ func (ctl *controller) OpenApiQueryDeviceEventData(c *gin.Context) {
 	var req dtos.ThingModelEventDataRequest
 	urlDecodeParam(&req, c.Request, lc)
 	dtos.CorrectionPageParam(&req.BaseSearchConditionQuery)
-	data, total, edgeXErr := ctl.getPersistApp().SearchDeviceThingModelEventData(req)
+	data, total, edgeXErr := ctl.getPersistApp().SearchDeviceThingModelEventData(c.Request.Context(), req)
 	if edgeXErr != nil {
 		httphelper.RenderFail(c, edgeXErr, c.Writer, lc)
 		return
@@ -141,7 +141,7 @@ func (ctl *controller) OpenApiQueryDeviceServiceData(c *gin.Context) {
 	urlDecodeParam(&req, c.Request, lc)
 	dtos.CorrectionPageParam(&req.BaseSearchConditionQuery)
 
-	data, total, edgeXErr := ctl.getPersistApp().SearchDeviceThingModelServiceData(req)
+	data, total, edgeXErr := ctl.getPersistApp().SearchDeviceThingModelServiceData(c.Request.Context(), req)
 	if edgeXErr != nil {
 		httphelper.RenderFail(c, edgeXErr, c.Writer, lc)
 		return

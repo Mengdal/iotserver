@@ -78,7 +78,14 @@ type ContainerInfo struct {
 
 // NewDockerManager 创建
 func NewDockerManager(ctx context.Context, dic *di.Container, dcm *dtos.DriverConfigManage) (*DockerManager, error) {
-	cli, err := client.NewClientWithOpts(client.WithVersion(dcm.DockerApiVersion))
+	// FromEnv：先读 DOCKER_HOST / DOCKER_API_VERSION 等环境变量，再被下面的
+	// WithVersion 覆盖 API 版本。
+	//
+	// 为什么必须读：macOS 上 Docker Desktop 的 socket 在 ~/.docker/run/docker.sock，
+	// 而 SDK 默认连 /var/run/docker.sock（该路径在 macOS 上不存在），
+	// 不读环境变量就会报 "Cannot connect to the Docker daemon"。
+	// 未设置 DOCKER_HOST 时读到空值，退回 SDK 默认行为，不影响 Linux/容器内运行。
+	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithVersion(dcm.DockerApiVersion))
 	if err != nil {
 		return nil, err
 	}

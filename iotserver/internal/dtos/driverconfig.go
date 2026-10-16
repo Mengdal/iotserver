@@ -57,7 +57,7 @@ func (m *DriverConfigManage) GetBinPath(serverName string) string {
 }
 
 func (m *DriverConfigManage) GetRunConfigPath(serviceName string) string {
-	return constants.DockerHummingbirdRootDir + "/" + constants.DriverRunConfigDir + "/" + serviceName + constants.ConfigSuffix
+	return constants.DockerIotServerRootDir + "/" + constants.DriverRunConfigDir + "/" + serviceName + constants.ConfigSuffix
 }
 
 func (m *DriverConfigManage) GetHostRunConfigPath(serviceName string) string {
@@ -65,7 +65,7 @@ func (m *DriverConfigManage) GetHostRunConfigPath(serviceName string) string {
 }
 
 func (m *DriverConfigManage) GetMntDir(serviceName string) string {
-	return constants.DockerHummingbirdRootDir + "/" + constants.DriverMntDir + "/" + serviceName
+	return constants.DockerIotServerRootDir + "/" + constants.DriverMntDir + "/" + serviceName
 }
 
 func (m *DriverConfigManage) GetHostMntDir(serviceName string) string {
@@ -77,5 +77,5 @@ func (m *DriverConfigManage) GetLogFilePath(serviceName string) string {
 }
 
 func (m *DriverConfigManage) GetHostLogFilePath(serviceName string) string {
-	return constants.DockerHummingbirdRootDir + "/" + constants.DriverMntDir + "/" + serviceName + "/" + constants.DriverDefaultLogPath
+	return constants.DockerIotServerRootDir + "/" + constants.DriverMntDir + "/" + serviceName + "/" + constants.DriverDefaultLogPath
 }

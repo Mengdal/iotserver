@@ -46,7 +46,7 @@ func NewHomePageApp(ctx context.Context, dic *di.Container) interfaces.HomePageI
 
 func (h homePageApp) HomePageInfo(ctx context.Context, req dtos.HomePageRequest) (response dtos.HomePageResponse, err error) {
 	var responseResponse dtos.HomePageResponse
-	devices, deviceTotal, err := h.dbClient.DevicesSearch(0, -1, dtos.DeviceSearchQueryRequest{})
+	devices, deviceTotal, err := h.dbClient.WithCtx(ctx).DevicesSearch(0, -1, dtos.DeviceSearchQueryRequest{})
 	var selfDeviceTotal uint32
 	for _, device := range devices {
 		if device.Platform == constants.IotPlatform_LocalIot {
@@ -61,7 +61,7 @@ func (h homePageApp) HomePageInfo(ctx context.Context, req dtos.HomePageRequest)
 		responseResponse.PageInfo.Device.Other = deviceTotal - selfDeviceTotal
 	}
 
-	products, productTotal, err := h.dbClient.ProductsSearch(0, -1, false, dtos.ProductSearchQueryRequest{})
+	products, productTotal, err := h.dbClient.WithCtx(ctx).ProductsSearch(0, -1, false, dtos.ProductSearchQueryRequest{})
 	var selfProductTotal uint32
 	for _, product := range products {
 		if product.Platform == constants.IotPlatform_LocalIot {
@@ -76,13 +76,30 @@ func (h homePageApp) HomePageInfo(ctx context.Context, req dtos.HomePageRequest)
 		responseResponse.PageInfo.Product.Other = productTotal - selfProductTotal
 	}
 
+	// 网关数：与产品/设备同层级的接入资源，走 WithCtx 让租户/平台作用域自动生效
+	gateways, gatewayTotal, err := h.dbClient.WithCtx(ctx).GatewaySearch(0, -1, dtos.GatewaySearchQueryRequest{})
+	if err != nil {
+		return responseResponse, err
+	}
+	responseResponse.PageInfo.Gateway.Total = gatewayTotal
+	for _, gateway := range gateways {
+		switch gateway.Status {
+		case models.GatewayStatusOnline:
+			responseResponse.PageInfo.Gateway.Online++
+		case models.GatewayStatusOffline:
+			responseResponse.PageInfo.Gateway.Offline++
+		case models.GatewayStatusNever:
+			responseResponse.PageInfo.Gateway.Never++
+		}
+	}
+
 	responseResponse.PageInfo.CloudInstance.StopCount = responseResponse.PageInfo.CloudInstance.Count - responseResponse.PageInfo.CloudInstance.RunCount
 	if responseResponse.PageInfo.CloudInstance.StopCount < 0 {
 		responseResponse.PageInfo.CloudInstance.StopCount = 0
 	}
 	var searchQuickNavigationReq dtos.QuickNavigationSearchQueryRequest
 	searchQuickNavigationReq.OrderBy = "sort"
-	quickNavigations, _, _ := h.dbClient.QuickNavigationSearch(0, -1, searchQuickNavigationReq)
+	quickNavigations, _, _ := h.dbClient.WithCtx(ctx).QuickNavigationSearch(0, -1, searchQuickNavigationReq)
 	navigations := make([]dtos.QuickNavigation, 0)
 	for _, navigation := range quickNavigations {
 		navigations = append(navigations, dtos.QuickNavigation{
@@ -96,7 +113,7 @@ func (h homePageApp) HomePageInfo(ctx context.Context, req dtos.HomePageRequest)
 
 	var searchDocsReq dtos.DocsSearchQueryRequest
 	searchDocsReq.OrderBy = "sort"
-	dbDocs, _, _ := h.dbClient.DocsSearch(0, -1, searchDocsReq)
+	dbDocs, _, _ := h.dbClient.WithCtx(ctx).DocsSearch(0, -1, searchDocsReq)
 	docs := make([]dtos.Doc, 0)
 	for _, doc := range dbDocs {
 		docs = append(docs, dtos.Doc{
@@ -127,7 +144,7 @@ func (h homePageApp) HomePageInfo(ctx context.Context, req dtos.HomePageRequest)
 		time.Now().AddDate(0, 0, -5).Format("2006-01-02")),
 		time.Now().AddDate(0, 0, -6).Format("2006-01-02"))
 
-	msgGather, _, err := h.dbClient.MsgGatherSearch(0, -1, msgGatherReq)
+	msgGather, _, err := h.dbClient.WithCtx(ctx).MsgGatherSearch(0, -1, msgGatherReq)
 	responseResponse.MsgGather = append(append(append(append(append(append(responseResponse.MsgGather, dtos.MsgGather{
 		Date:  time.Now().AddDate(0, 0, -1).Format("2006-01-02"),
 		Count: getMsgGatherCountByDate(msgGather, time.Now().AddDate(0, 0, -1).Format("2006-01-02")),

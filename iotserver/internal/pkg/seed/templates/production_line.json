@@ -1,0 +1,711 @@
+{
+  "key": "production_line",
+  "name": "生产线",
+  "industry": "离散制造",
+  "version": 1,
+  "icon": "database",
+  "description": "生产线节拍、产量、停机与稼动率监控",
+  "thingModelJson": {
+    "properties": [
+      {
+        "name": "运行状态",
+        "identifier": "run_status",
+        "dataType": "BOOL",
+        "description": "产线运行状态",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": null,
+        "dataSpecsList": [
+          {
+            "name": "停止",
+            "value": 0
+          },
+          {
+            "name": "运行",
+            "value": 1
+          }
+        ]
+      },
+      {
+        "name": "节拍",
+        "identifier": "cycle_time",
+        "dataType": "FLOAT",
+        "description": "产线实际节拍",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "120",
+          "min": "0",
+          "step": "0.1",
+          "unit": "s",
+          "unitName": "秒"
+        },
+        "dataSpecsList": null
+      },
+      {
+        "name": "产量",
+        "identifier": "output_count",
+        "dataType": "INT",
+        "description": "累计产量",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "999999",
+          "min": "0",
+          "step": "1",
+          "unit": "件",
+          "unitName": "件"
+        },
+        "dataSpecsList": null
+      },
+      {
+        "name": "良品数",
+        "identifier": "good_count",
+        "dataType": "INT",
+        "description": "累计良品数",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "999999",
+          "min": "0",
+          "step": "1",
+          "unit": "件",
+          "unitName": "件"
+        },
+        "dataSpecsList": null
+      },
+      {
+        "name": "不良品数",
+        "identifier": "reject_count",
+        "dataType": "INT",
+        "description": "累计不良品数",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "999999",
+          "min": "0",
+          "step": "1",
+          "unit": "件",
+          "unitName": "件"
+        },
+        "dataSpecsList": null
+      },
+      {
+        "name": "合格率",
+        "identifier": "good_rate",
+        "dataType": "FLOAT",
+        "description": "良品率百分比",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "100",
+          "min": "0",
+          "step": "0.1",
+          "unit": "%",
+          "unitName": "百分比"
+        },
+        "dataSpecsList": null
+      },
+      {
+        "name": "停机时长",
+        "identifier": "stop_duration",
+        "dataType": "FLOAT",
+        "description": "当日累计停机时长",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "1440",
+          "min": "0",
+          "step": "0.1",
+          "unit": "min",
+          "unitName": "分钟"
+        },
+        "dataSpecsList": null
+      },
+      {
+        "name": "停机原因码",
+        "identifier": "stop_reason",
+        "dataType": "ENUM",
+        "description": "最近一次停机原因代码",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": null,
+        "dataSpecsList": [
+          {
+            "name": "无停机",
+            "value": 0
+          },
+          {
+            "name": "缺料",
+            "value": 1
+          },
+          {
+            "name": "设备故障",
+            "value": 2
+          },
+          {
+            "name": "换型",
+            "value": 3
+          },
+          {
+            "name": "计划保养",
+            "value": 4
+          },
+          {
+            "name": "质量异常",
+            "value": 5
+          }
+        ]
+      },
+      {
+        "name": "稼动率",
+        "identifier": "utilization_rate",
+        "dataType": "FLOAT",
+        "description": "设备稼动率百分比",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "100",
+          "min": "0",
+          "step": "0.1",
+          "unit": "%",
+          "unitName": "百分比"
+        },
+        "dataSpecsList": null
+      },
+      {
+        "name": "运行时长",
+        "identifier": "run_duration",
+        "dataType": "FLOAT",
+        "description": "设备累计运行时长",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "99999.9",
+          "min": "0",
+          "step": "0.1",
+          "unit": "h",
+          "unitName": "小时"
+        },
+        "dataSpecsList": null
+      },
+      {
+        "name": "工位状态",
+        "identifier": "station_status",
+        "dataType": "ENUM",
+        "description": "关键工位状态",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": null,
+        "dataSpecsList": [
+          {
+            "name": "停止",
+            "value": 0
+          },
+          {
+            "name": "运行",
+            "value": 1
+          },
+          {
+            "name": "待料",
+            "value": 2
+          },
+          {
+            "name": "故障",
+            "value": 3
+          }
+        ]
+      },
+      {
+        "name": "报警次数",
+        "identifier": "alarm_count",
+        "dataType": "INT",
+        "description": "当日累计报警次数",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "9999",
+          "min": "0",
+          "step": "1",
+          "unit": "次",
+          "unitName": "次"
+        },
+        "dataSpecsList": null
+      },
+      {
+        "name": "在制品数量",
+        "identifier": "wip_count",
+        "dataType": "INT",
+        "description": "线体在制品数量",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "99999",
+          "min": "0",
+          "step": "1",
+          "unit": "件",
+          "unitName": "件"
+        },
+        "dataSpecsList": null
+      }
+    ],
+    "events": [
+      {
+        "eventName": "停机事件",
+        "eventType": "ALERT",
+        "identifier": "line_stop",
+        "description": "产线发生停机",
+        "required": false,
+        "outputData": [
+          {
+            "name": "停机原因",
+            "identifier": "reason",
+            "dataType": "ENUM",
+            "required": false,
+            "dataSpecs": null,
+            "dataSpecsList": [
+              {
+                "name": "无停机",
+                "value": 0
+              },
+              {
+                "name": "缺料",
+                "value": 1
+              },
+              {
+                "name": "设备故障",
+                "value": 2
+              },
+              {
+                "name": "换型",
+                "value": 3
+              },
+              {
+                "name": "计划保养",
+                "value": 4
+              },
+              {
+                "name": "质量异常",
+                "value": 5
+              }
+            ]
+          },
+          {
+            "name": "停机时间",
+            "identifier": "time",
+            "dataType": "DATE",
+            "required": false,
+            "dataSpecs": null,
+            "dataSpecsList": null
+          }
+        ]
+      },
+      {
+        "eventName": "节拍超限",
+        "eventType": "ALERT",
+        "identifier": "cycle_over_limit",
+        "description": "产线节拍超过标准值",
+        "required": false,
+        "outputData": [
+          {
+            "name": "当前节拍",
+            "identifier": "value",
+            "dataType": "FLOAT",
+            "required": false,
+            "dataSpecs": {
+              "max": "120",
+              "min": "0",
+              "step": "0.1",
+              "unit": "s",
+              "unitName": "秒"
+            },
+            "dataSpecsList": null
+          },
+          {
+            "name": "标准节拍",
+            "identifier": "standard",
+            "dataType": "FLOAT",
+            "required": false,
+            "dataSpecs": {
+              "max": "120",
+              "min": "0",
+              "step": "0.1",
+              "unit": "s",
+              "unitName": "秒"
+            },
+            "dataSpecsList": null
+          }
+        ]
+      },
+      {
+        "eventName": "不良率超限",
+        "eventType": "ALERT",
+        "identifier": "reject_rate_high",
+        "description": "不良率超过允许上限",
+        "required": false,
+        "outputData": [
+          {
+            "name": "不良率",
+            "identifier": "rate",
+            "dataType": "FLOAT",
+            "required": false,
+            "dataSpecs": {
+              "max": "100",
+              "min": "0",
+              "step": "0.01",
+              "unit": "%",
+              "unitName": "百分比"
+            },
+            "dataSpecsList": null
+          },
+          {
+            "name": "不良品数",
+            "identifier": "count",
+            "dataType": "INT",
+            "required": false,
+            "dataSpecs": {
+              "max": "999999",
+              "min": "0",
+              "step": "1",
+              "unit": "件",
+              "unitName": "件"
+            },
+            "dataSpecsList": null
+          }
+        ]
+      },
+      {
+        "eventName": "产线启动",
+        "eventType": "INFO",
+        "identifier": "line_start",
+        "description": "产线启动",
+        "required": false,
+        "outputData": [
+          {
+            "name": "启动时间",
+            "identifier": "time",
+            "dataType": "DATE",
+            "required": false,
+            "dataSpecs": null,
+            "dataSpecsList": null
+          },
+          {
+            "name": "班次",
+            "identifier": "shift",
+            "dataType": "ENUM",
+            "required": false,
+            "dataSpecs": null,
+            "dataSpecsList": [
+              {
+                "name": "早班",
+                "value": 1
+              },
+              {
+                "name": "中班",
+                "value": 2
+              },
+              {
+                "name": "晚班",
+                "value": 3
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "eventName": "工位故障",
+        "eventType": "ERROR",
+        "identifier": "station_fault",
+        "description": "关键工位发生故障",
+        "required": false,
+        "outputData": [
+          {
+            "name": "工位号",
+            "identifier": "station_no",
+            "dataType": "INT",
+            "required": false,
+            "dataSpecs": {
+              "max": "50",
+              "min": "1",
+              "step": "1",
+              "unit": "#",
+              "unitName": "号"
+            },
+            "dataSpecsList": null
+          },
+          {
+            "name": "故障码",
+            "identifier": "code",
+            "dataType": "INT",
+            "required": false,
+            "dataSpecs": {
+              "max": "9999",
+              "min": "0",
+              "step": "1",
+              "unit": "",
+              "unitName": "故障码"
+            },
+            "dataSpecsList": null
+          }
+        ]
+      }
+    ],
+    "services": [
+      {
+        "serviceName": "启动",
+        "identifier": "start",
+        "description": "启动产线",
+        "required": false,
+        "callType": "ASYNC",
+        "inputParams": [],
+        "outParams": []
+      },
+      {
+        "serviceName": "停止",
+        "identifier": "stop",
+        "description": "停止产线",
+        "required": false,
+        "callType": "ASYNC",
+        "inputParams": [],
+        "outParams": []
+      },
+      {
+        "serviceName": "复位",
+        "identifier": "reset",
+        "description": "复位产线与计数器",
+        "required": false,
+        "callType": "ASYNC",
+        "inputParams": [],
+        "outParams": []
+      },
+      {
+        "serviceName": "登记停机原因",
+        "identifier": "register_stop_reason",
+        "description": "人工登记停机原因与时长",
+        "required": false,
+        "callType": "ASYNC",
+        "inputParams": [
+          {
+            "name": "停机原因码",
+            "identifier": "reason",
+            "dataType": "ENUM",
+            "required": true,
+            "dataSpecs": null,
+            "dataSpecsList": [
+              {
+                "name": "无停机",
+                "value": 0
+              },
+              {
+                "name": "缺料",
+                "value": 1
+              },
+              {
+                "name": "设备故障",
+                "value": 2
+              },
+              {
+                "name": "换型",
+                "value": 3
+              },
+              {
+                "name": "计划保养",
+                "value": 4
+              },
+              {
+                "name": "质量异常",
+                "value": 5
+              }
+            ]
+          },
+          {
+            "name": "停机时长",
+            "identifier": "duration",
+            "dataType": "FLOAT",
+            "required": false,
+            "dataSpecs": {
+              "max": "1440",
+              "min": "0",
+              "step": "1",
+              "unit": "min",
+              "unitName": "分钟"
+            },
+            "dataSpecsList": null
+          }
+        ],
+        "outParams": []
+      },
+      {
+        "serviceName": "查询生产统计",
+        "identifier": "query_statistics",
+        "description": "同步查询当班生产统计",
+        "required": false,
+        "callType": "SYNC",
+        "inputParams": [],
+        "outParams": [
+          {
+            "name": "产量",
+            "identifier": "output_count",
+            "dataType": "INT",
+            "required": false,
+            "dataSpecs": {
+              "max": "999999",
+              "min": "0",
+              "step": "1",
+              "unit": "件",
+              "unitName": "件"
+            },
+            "dataSpecsList": null
+          },
+          {
+            "name": "良品数",
+            "identifier": "good_count",
+            "dataType": "INT",
+            "required": false,
+            "dataSpecs": {
+              "max": "999999",
+              "min": "0",
+              "step": "1",
+              "unit": "件",
+              "unitName": "件"
+            },
+            "dataSpecsList": null
+          },
+          {
+            "name": "不良品数",
+            "identifier": "reject_count",
+            "dataType": "INT",
+            "required": false,
+            "dataSpecs": {
+              "max": "999999",
+              "min": "0",
+              "step": "1",
+              "unit": "件",
+              "unitName": "件"
+            },
+            "dataSpecsList": null
+          },
+          {
+            "name": "稼动率",
+            "identifier": "utilization_rate",
+            "dataType": "FLOAT",
+            "required": false,
+            "dataSpecs": {
+              "max": "100",
+              "min": "0",
+              "step": "0.1",
+              "unit": "%",
+              "unitName": "百分比"
+            },
+            "dataSpecsList": null
+          }
+        ]
+      }
+    ]
+  },
+  "alarmRules": [
+    {
+      "name": "停机时长超限",
+      "propertyCode": "stop_duration",
+      "operator": ">",
+      "value": "30",
+      "alertLevel": 2,
+      "alertType": 1,
+      "silenceTime": 600,
+      "description": "当日累计停机超过 30 分钟"
+    },
+    {
+      "name": "节拍超限",
+      "propertyCode": "cycle_time",
+      "operator": ">",
+      "value": "60",
+      "alertLevel": 2,
+      "alertType": 1,
+      "silenceTime": 600,
+      "description": "产线节拍超过 60 秒"
+    },
+    {
+      "name": "不良品数超限",
+      "propertyCode": "reject_count",
+      "operator": ">",
+      "value": "100",
+      "alertLevel": 2,
+      "alertType": 1,
+      "silenceTime": 1800,
+      "description": "累计不良品超过 100 件"
+    },
+    {
+      "name": "稼动率偏低",
+      "propertyCode": "utilization_rate",
+      "operator": "<",
+      "value": "60",
+      "alertLevel": 3,
+      "alertType": 1,
+      "silenceTime": 1800,
+      "description": "稼动率低于 60%"
+    },
+    {
+      "name": "工位故障",
+      "propertyCode": "station_status",
+      "operator": "=",
+      "value": "3",
+      "alertLevel": 1,
+      "alertType": 1,
+      "silenceTime": 300,
+      "description": "关键工位故障停机"
+    }
+  ],
+  "dashboard": {
+    "name": "生产线看板",
+    "widgets": [
+      {
+        "title": "节拍趋势",
+        "type": "line",
+        "propertyCode": "cycle_time",
+        "timeRange": "1h",
+        "aggInterval": 60,
+        "aggMethod": "avg"
+      },
+      {
+        "title": "产量",
+        "type": "kpi",
+        "propertyCode": "output_count",
+        "unit": "件",
+        "decimals": 0
+      },
+      {
+        "title": "稼动率",
+        "type": "kpi",
+        "propertyCode": "utilization_rate",
+        "unit": "%",
+        "decimals": 1
+      },
+      {
+        "title": "稼动率",
+        "type": "gauge",
+        "propertyCode": "utilization_rate",
+        "unit": "%",
+        "min": 0,
+        "max": 100
+      },
+      {
+        "title": "停机记录",
+        "type": "table",
+        "propertyCode": "stop_reason",
+        "timeRange": "24h"
+      },
+      {
+        "title": "产线运行总览",
+        "type": "text",
+        "text": "节拍、产量、停机与稼动率综合监控"
+      }
+    ]
+  },
+  "metrics": {
+    "running": "run_status",
+    "output": "output_count",
+    "good": "good_count",
+    "reject": "reject_count",
+    "cycleTime": "cycle_time"
+  }
+}

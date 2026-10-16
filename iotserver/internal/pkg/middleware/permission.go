@@ -51,6 +51,9 @@ const (
 	PermMenuAdd    = permissions.MenuAdd
 	PermMenuEdit   = permissions.MenuEdit
 	PermMenuRemove = permissions.MenuRemove
+	// 租户菜单展示层覆盖（隐藏/改名/图标/排序）与平台重置租户菜单定制
+	PermMenuCustomPref  = permissions.MenuCustomPref
+	PermMenuCustomReset = permissions.MenuCustomReset
 
 	PermDeptList   = permissions.DeptList
 	PermDeptQuery  = permissions.DeptQuery
@@ -58,6 +61,11 @@ const (
 	PermDeptEdit   = permissions.DeptEdit
 	PermDeptRemove = permissions.DeptRemove
 
+	// 审查日志（登录 + 操作）
+	PermAuditLogList   = permissions.AuditLogList
+	PermAuditLogRemove = permissions.AuditLogRemove
+
+	// 兼容别名：旧权限码保留一版，下版本删除
 	PermLoginLogList   = permissions.LoginLogList
 	PermLoginLogRemove = permissions.LoginLogRemove
 
@@ -130,6 +138,40 @@ const (
 	PermSceneRemove = permissions.AdvancedSceneRemove
 	PermSceneStart  = permissions.AdvancedSceneStart
 	PermSceneStop   = permissions.AdvancedSceneStop
+
+	// 可视化看板
+	PermVizBoardList   = permissions.VizBoardList
+	PermVizBoardQuery  = permissions.VizBoardQuery
+	PermVizBoardAdd    = permissions.VizBoardAdd
+	PermVizBoardEdit   = permissions.VizBoardEdit
+	PermVizBoardRemove = permissions.VizBoardRemove
+	PermVizDataQuery   = permissions.VizDataQuery
+
+	// 平台管理 - 租户
+	PermPlatformTenantList   = permissions.PlatformTenantList
+	PermPlatformTenantQuery  = permissions.PlatformTenantQuery
+	PermPlatformTenantAdd    = permissions.PlatformTenantAdd
+	PermPlatformTenantEdit   = permissions.PlatformTenantEdit
+	PermPlatformTenantRemove = permissions.PlatformTenantRemove
+	PermPlatformTenantSwitch = permissions.PlatformTenantSwitch
+
+	// 网关（第三方工业网关接入）
+	PermGatewayList    = permissions.GatewayList
+	PermGatewayQuery   = permissions.GatewayQuery
+	PermGatewayAdd     = permissions.GatewayAdd
+	PermGatewayEdit    = permissions.GatewayEdit
+	PermGatewayRemove  = permissions.GatewayRemove
+	PermGatewayConfig  = permissions.GatewayConfig
+	PermGatewayCommand = permissions.GatewayCommand
+
+	// 方案（行业模板一键应用）
+	PermSolutionList  = permissions.SolutionList
+	PermSolutionQuery = permissions.SolutionQuery
+	PermSolutionApply = permissions.SolutionApply
+	// 方案物模型条目维护
+	PermSolutionTslAdd    = permissions.SolutionTslAdd
+	PermSolutionTslEdit   = permissions.SolutionTslEdit
+	PermSolutionTslRemove = permissions.SolutionTslRemove
 )
 
 // PermRequired 生成权限校验中间件

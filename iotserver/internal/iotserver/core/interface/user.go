@@ -52,6 +52,10 @@ type UserItf interface {
 	SysMenuAdd(ctx context.Context, req dtos.SysMenuAddRequest) error
 	SysMenuUpdate(ctx context.Context, req dtos.SysMenuUpdateRequest) error
 	SysMenuDelete(ctx context.Context, ids []string) error
+	// 租户菜单展示层覆盖（隐藏/改名/图标/排序）+ 平台重置租户菜单定制
+	SysMenuPrefSave(ctx context.Context, req dtos.SysMenuPrefSaveRequest) error
+	SysMenuPrefs(ctx context.Context) ([]dtos.SysMenuPrefResponse, error)
+	SysMenuTenantReset(ctx context.Context, tenantId string) error
 	MenuRoutesByUsername(username string) ([]dtos.SysMenuResponse, error)
 
 	/*********** 部门管理 ***********/
@@ -62,10 +66,10 @@ type UserItf interface {
 	SysDeptUpdate(ctx context.Context, req dtos.SysDeptUpdateRequest) error
 	SysDeptDelete(ctx context.Context, ids []string) error
 
-	/*********** 登入日志 ***********/
-	SysLoginLogSearch(ctx context.Context, req dtos.SysLoginLogSearchRequest) ([]dtos.SysLoginLogResponse, uint32, error)
-	SysLoginLogDelete(ctx context.Context, ids []string) error
-	SysLoginLogClear(ctx context.Context) error
+	/*********** 审查日志（登录 + 操作） ***********/
+	SysAuditLogSearch(ctx context.Context, req dtos.SysAuditLogSearchRequest) ([]dtos.SysAuditLogResponse, uint32, error)
+	SysAuditLogDelete(ctx context.Context, ids []string) error
+	SysAuditLogClear(ctx context.Context) error
 
 	/*********** 系统配置 ***********/
 	SysConfigSearch(ctx context.Context, req dtos.SysConfigSearchRequest) ([]dtos.SysConfigResponse, uint32, error)

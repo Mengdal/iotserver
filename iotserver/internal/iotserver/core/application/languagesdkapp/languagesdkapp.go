@@ -35,7 +35,7 @@ type languageSDKApp struct {
 func (m languageSDKApp) LanguageSDKSearch(ctx context.Context, req dtos.LanguageSDKSearchQueryRequest) ([]dtos.LanguageSDKSearchResponse, uint32, error) {
 	offset, limit := req.BaseSearchConditionQuery.GetPage()
 	req.BaseSearchConditionQuery.OrderBy = "sort:asc"
-	languages, total, err := m.dbClient.LanguageSearch(offset, limit, req)
+	languages, total, err := m.dbClient.WithCtx(ctx).LanguageSearch(offset, limit, req)
 
 	if err != nil {
 		return nil, 0, err
@@ -67,7 +67,7 @@ func (m languageSDKApp) Sync(ctx context.Context, versionName string) error {
 	}
 
 	for _, sdk := range cosLanguageSdkResp {
-		if languageSdk, err := m.dbClient.LanguageSdkByName(sdk.Name); err != nil {
+		if languageSdk, err := m.dbClient.WithCtx(ctx).LanguageSdkByName(sdk.Name); err != nil {
 			createModel := models.LanguageSdk{
 				Name:        sdk.Name,
 				Icon:        sdk.Icon,
@@ -75,7 +75,7 @@ func (m languageSDKApp) Sync(ctx context.Context, versionName string) error {
 				Addr:        sdk.Addr,
 				Description: sdk.Description,
 			}
-			_, err := m.dbClient.AddLanguageSdk(createModel)
+			_, err := m.dbClient.WithCtx(ctx).AddLanguageSdk(createModel)
 			if err != nil {
 				return err
 			}
@@ -88,7 +88,7 @@ func (m languageSDKApp) Sync(ctx context.Context, versionName string) error {
 				Addr:        sdk.Addr,
 				Description: sdk.Description,
 			}
-			err = m.dbClient.UpdateLanguageSdk(updateModel)
+			err = m.dbClient.WithCtx(ctx).UpdateLanguageSdk(updateModel)
 			if err != nil {
 				return err
 			}

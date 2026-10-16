@@ -19,12 +19,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/docker/distribution/uuid"
-	"github.com/winc-link/edge-driver-proto/thingmodel"
+	"github.com/LMgateways/iotserver-driver-proto/thingmodel"
 	"iotserver/internal/dtos"
 	"iotserver/internal/iotserver/core/container"
 	"iotserver/internal/pkg/constants"
 	"iotserver/internal/pkg/di"
 	"iotserver/internal/pkg/errort"
+	"iotserver/internal/pkg/tenant"
 	"iotserver/internal/tools/rpcclient"
 	"time"
 )
@@ -37,14 +38,15 @@ func (p *deviceApp) DeviceAction(jobAction dtos.JobAction) dtos.DeviceExecRes {
 		}
 	}()
 
-	device, err := p.dbClient.DeviceById(jobAction.DeviceId)
+	// 平台作用域：系统路径，不按租户过滤
+	device, err := p.dbClient.WithCtx(tenant.Platform(context.Background())).DeviceById(jobAction.DeviceId)
 	if err != nil {
 		return dtos.DeviceExecRes{
 			Result:  false,
 			Message: "device not found",
 		}
 	}
-	deviceService, err := p.dbClient.DeviceServiceById(device.DriveInstanceId)
+	deviceService, err := p.dbClient.WithCtx(tenant.Platform(context.Background())).DeviceServiceById(device.DriveInstanceId)
 	if err != nil {
 		return dtos.DeviceExecRes{
 			Result:  false,
@@ -126,17 +128,18 @@ func (p *deviceApp) SetDeviceProperty(req dtos.OpenApiSetDeviceThingModel) (err 
 		}
 	}()
 
-	device, err := p.dbClient.DeviceById(req.DeviceId)
+	// 平台作用域：系统路径，不按租户过滤
+	device, err := p.dbClient.WithCtx(tenant.Platform(context.Background())).DeviceById(req.DeviceId)
 	if err != nil {
 		return err
 	}
 
-	_, err = p.dbClient.ProductById(device.ProductId)
+	_, err = p.dbClient.WithCtx(tenant.Platform(context.Background())).ProductById(device.ProductId)
 	if err != nil {
 		return err
 	}
 
-	deviceService, err := p.dbClient.DeviceServiceById(device.DriveInstanceId)
+	deviceService, err := p.dbClient.WithCtx(tenant.Platform(context.Background())).DeviceServiceById(device.DriveInstanceId)
 	if err != nil {
 		return err
 	}
@@ -199,17 +202,18 @@ func (p *deviceApp) DeviceEffectivePropertyData(deviceEffectivePropertyDataReq d
 		}
 	}()
 
-	device, err := p.dbClient.DeviceById(deviceEffectivePropertyDataReq.DeviceId)
+	// 平台作用域：系统路径，不按租户过滤
+	device, err := p.dbClient.WithCtx(tenant.Platform(context.Background())).DeviceById(deviceEffectivePropertyDataReq.DeviceId)
 	if err != nil {
 		return dtos.DeviceEffectivePropertyDataResponse{}, err
 	}
 
-	_, err = p.dbClient.ProductById(device.ProductId)
+	_, err = p.dbClient.WithCtx(tenant.Platform(context.Background())).ProductById(device.ProductId)
 	if err != nil {
 		return dtos.DeviceEffectivePropertyDataResponse{}, err
 	}
 
-	deviceService, err := p.dbClient.DeviceServiceById(device.DriveInstanceId)
+	deviceService, err := p.dbClient.WithCtx(tenant.Platform(context.Background())).DeviceServiceById(device.DriveInstanceId)
 	if err != nil {
 		return dtos.DeviceEffectivePropertyDataResponse{}, err
 	}
@@ -261,24 +265,25 @@ func (p *deviceApp) DeviceEffectivePropertyData(deviceEffectivePropertyDataReq d
 	return dtos.DeviceEffectivePropertyDataResponse{}, errort.NewCommonErr(errort.DeviceServiceNotStarted, fmt.Errorf("driver id(%s) not start", deviceService.Id))
 }
 
-func (p *deviceApp) DeviceInvokeThingService(invokeDeviceServiceReq dtos.InvokeDeviceServiceReq) (map[string]interface{}, error) {
+func (p *deviceApp) DeviceInvokeThingService(ctx context.Context, invokeDeviceServiceReq dtos.InvokeDeviceServiceReq) (map[string]interface{}, error) {
 	defer func() {
 		if err := recover(); err != nil {
 			p.lc.Error("Panic:", err)
 		}
 	}()
 
-	device, err := p.dbClient.DeviceById(invokeDeviceServiceReq.DeviceId)
+	// 平台作用域：系统路径，不按租户过滤
+	device, err := p.dbClient.WithCtx(tenant.Platform(context.Background())).DeviceById(invokeDeviceServiceReq.DeviceId)
 	if err != nil {
 		return nil, err
 	}
 
-	_, err = p.dbClient.ProductById(device.ProductId)
+	_, err = p.dbClient.WithCtx(tenant.Platform(context.Background())).ProductById(device.ProductId)
 	if err != nil {
 		return nil, err
 
 	}
-	deviceService, err := p.dbClient.DeviceServiceById(device.DriveInstanceId)
+	deviceService, err := p.dbClient.WithCtx(tenant.Platform(context.Background())).DeviceServiceById(device.DriveInstanceId)
 	if err != nil {
 		return nil, err
 
@@ -336,7 +341,7 @@ func (p *deviceApp) DeviceInvokeThingService(invokeDeviceServiceReq dtos.InvokeD
 			}
 			s, _ := json.Marshal(saveData)
 			saveServiceInfo.Data = string(s)
-			_ = persistItf.SaveDeviceThingModelData(saveServiceInfo)
+			_ = persistItf.SaveDeviceThingModelData(ctx, saveServiceInfo)
 			return nil, errort.NewCommonErr(errort.DeviceLibraryResponseTimeOut, fmt.Errorf("driver id(%s) time out", deviceService.Id))
 		case <-ctx.Done():
 			saveData.OutputParams = map[string]interface{}{
@@ -345,14 +350,14 @@ func (p *deviceApp) DeviceInvokeThingService(invokeDeviceServiceReq dtos.InvokeD
 			}
 			s, _ := json.Marshal(saveData)
 			saveServiceInfo.Data = string(s)
-			_ = persistItf.SaveDeviceThingModelData(saveServiceInfo)
+			_ = persistItf.SaveDeviceThingModelData(ctx, saveServiceInfo)
 			return nil, errort.NewCommonErr(errort.DeviceLibraryResponseTimeOut, fmt.Errorf("driver id(%s) time out", deviceService.Id))
 		case resp := <-ch.DataChan:
 			if v, ok := resp.(map[string]interface{}); ok {
 				saveData.OutputParams = v
 				s, _ := json.Marshal(saveData)
 				saveServiceInfo.Data = string(s)
-				_ = persistItf.SaveDeviceThingModelData(saveServiceInfo)
+				_ = persistItf.SaveDeviceThingModelData(ctx, saveServiceInfo)
 
 				return v, nil
 			}

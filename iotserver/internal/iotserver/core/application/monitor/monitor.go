@@ -78,7 +78,7 @@ func (m *monitor) GetSystemMetrics(ctx context.Context, query dtos.SystemMetrics
 	dbClient := container.DBClientFrom(m.dic.Get)
 
 	start, end := systemMetricsTypeToTime(query.MetricsType)
-	metrics, err := dbClient.GetSystemMetrics(start.UnixMilli(), end.UnixMilli())
+	metrics, err := dbClient.WithCtx(ctx).GetSystemMetrics(start.UnixMilli(), end.UnixMilli())
 	if err != nil {
 		return dtos.SystemMetricsResponse{}, err
 	}

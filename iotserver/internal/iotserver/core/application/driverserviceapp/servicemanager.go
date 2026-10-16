@@ -16,6 +16,7 @@ import (
 	"iotserver/internal/pkg/di"
 	"iotserver/internal/pkg/errort"
 	"iotserver/internal/pkg/logger"
+	"iotserver/internal/pkg/tenant"
 	"iotserver/internal/pkg/utils"
 	"net"
 	"strconv"
@@ -128,7 +129,8 @@ func (m *driverServiceAppM) Start(id string) error {
 	ds.BaseAddress = ds.ContainerName + ":" + strconv.Itoa(driverRunPort)
 	// 更新监控ds 如果不更新ping 定时检测会失效
 	if oldBaseAddress != ds.BaseAddress {
-		err = m.dbClient.UpdateDeviceService(ds)
+		// 平台作用域：系统路径，不按租户过滤
+		err = m.dbClient.WithCtx(tenant.Platform(context.Background())).UpdateDeviceService(ds)
 		if err != nil {
 			return err
 		}
@@ -187,7 +189,7 @@ func (m *driverServiceAppM) Add(ctx context.Context, ds models.DeviceService) er
 		ds.Config[constants.ConfigKeyDriver] = tmpKv
 	}
 
-	ds, err := m.dbClient.AddDeviceService(ds)
+	ds, err := m.dbClient.WithCtx(ctx).AddDeviceService(ds)
 	if err != nil {
 		return err
 	}
@@ -214,7 +216,7 @@ func (m *driverServiceAppM) Update(ctx context.Context, dto dtos.DeviceServiceUp
 		return errort.NewCommonErr(errort.DeviceServiceMustStopService, fmt.Errorf("service(%v) is running not update", deviceService.Id))
 	}
 	dtos.ReplaceDeviceServiceModelFieldsWithDTO(&deviceService, dto)
-	edgeXErr = m.dbClient.UpdateDeviceService(deviceService)
+	edgeXErr = m.dbClient.WithCtx(ctx).UpdateDeviceService(deviceService)
 	if edgeXErr != nil {
 		return edgeXErr
 	}
@@ -273,7 +275,7 @@ func (m *driverServiceAppM) Upgrade(dl models.DeviceLibrary) error {
 func (m *driverServiceAppM) Search(ctx context.Context, req dtos.DeviceServiceSearchQueryRequest) ([]models.DeviceService, uint32, error) {
 	offset, limit := req.BaseSearchConditionQuery.GetPage()
 
-	deviceServices, total, err := m.dbClient.DeviceServicesSearch(offset, limit, req)
+	deviceServices, total, err := m.dbClient.WithCtx(ctx).DeviceServicesSearch(offset, limit, req)
 	if err != nil {
 		return deviceServices, 0, err
 	}
@@ -306,7 +308,7 @@ func (m *driverServiceAppM) Search(ctx context.Context, req dtos.DeviceServiceSe
 }
 
 func (m *driverServiceAppM) Del(ctx context.Context, id string) error {
-	ds, edgeXErr := m.dbClient.DeviceServiceById(id)
+	ds, edgeXErr := m.dbClient.WithCtx(ctx).DeviceServiceById(id)
 	if edgeXErr != nil {
 		return edgeXErr
 	}
@@ -315,7 +317,7 @@ func (m *driverServiceAppM) Del(ctx context.Context, id string) error {
 	if m.GetState(id) != constants.RunStatusStopped {
 		return errort.NewCommonErr(errort.DeviceServiceMustStopService, fmt.Errorf("must stop service"))
 	}
-	m.dbClient.GetDBInstance().Transaction(func(tx *gorm.DB) error {
+	m.dbClient.WithCtx(ctx).GetDBInstance().Transaction(func(tx *gorm.DB) error {
 		err := tx.Model(&models.DeviceService{}).Where("id =?", id).Delete(&models.DeviceService{}).Error
 		if err != nil {
 			return err
@@ -345,7 +347,7 @@ func (m *driverServiceAppM) Get(ctx context.Context, id string) (models.DeviceSe
 	if id == "" {
 		return models.DeviceService{}, errort.NewCommonErr(errort.DefaultReqParamsError, fmt.Errorf("id(%s) is empty", id))
 	}
-	deviceService, err := m.dbClient.DeviceServiceById(id)
+	deviceService, err := m.dbClient.WithCtx(ctx).DeviceServiceById(id)
 	if err != nil {
 		return deviceService, err
 	}
@@ -371,7 +373,8 @@ func (m *driverServiceAppM) InProgress(id string) bool {
 func (m *driverServiceAppM) initMonitor() {
 	dbClient := container.DBClientFrom(m.dic.Get)
 	lc := bootstrapContainer.LoggingClientFrom(m.dic.Get)
-	ds, _, err := dbClient.DeviceServicesSearch(0, -1, dtos.DeviceServiceSearchQueryRequest{})
+	// 平台作用域：系统路径，不按租户过滤
+	ds, _, err := dbClient.WithCtx(tenant.Platform(context.Background())).DeviceServicesSearch(0, -1, dtos.DeviceServiceSearchQueryRequest{})
 	if err != nil {
 		lc.Errorf("DeviceServicesSearch err %v", err)
 		return

@@ -5,7 +5,7 @@
 //
 // 用法（在 iotserver 目录下）：
 //
-//	go run ./tools/devseed -api http://127.0.0.1:3000 -db manifest/docker/db-data/leveldb-core-data/ -days 7
+//	go run ./tools/devseed -api http://127.0.0.1:3000 -db manifest/docker/db-data/duckdb/core-data.duckdb -days 7
 package main
 
 import (
@@ -23,13 +23,13 @@ import (
 	"iotserver/internal/dtos"
 	"iotserver/internal/pkg/constants"
 	"iotserver/internal/pkg/logger"
+	"iotserver/internal/tools/datadb/duckdb"
 	"iotserver/internal/tools/datadb/ducklake"
-	"iotserver/internal/tools/datadb/leveldb"
 )
 
 var (
 	apiBase  = flag.String("api", "http://127.0.0.1:3000", "后端地址")
-	dbPath   = flag.String("db", "manifest/docker/db-data/leveldb-core-data/", "leveldb 数据目录")
+	dbPath   = flag.String("db", "manifest/docker/db-data/duckdb/core-data.duckdb", "DuckDB 数据库文件路径")
 	user     = flag.String("user", "admin", "登录账号")
 	pass     = flag.String("pass", "admin123", "登录密码")
 	days     = flag.Int("days", 7, "生成最近多少天的数据")
@@ -37,7 +37,7 @@ var (
 	clean    = flag.Bool("clean", false, "仅清理，不生成")
 	skipDB   = flag.Bool("skip-db", false, "只通过接口建产品/设备，不写数据层（服务在跑时用）")
 	deviceF  = flag.String("device", "", "离线模式：直接对指定 deviceId 写历史数据（不需要服务在跑）")
-	backend  = flag.String("backend", "leveldb", "数据层类型：leveldb | ducklake")
+	backend  = flag.String("backend", "duckdb", "数据层类型：duckdb | ducklake")
 	lakeCat  = flag.String("lake-catalog", "manifest/docker/db-data/ducklake/catalog.db", "ducklake catalog 路径")
 	lakeData = flag.String("lake-data", "manifest/docker/db-data/ducklake/data", "ducklake Parquet 目录")
 )
@@ -213,7 +213,7 @@ func writeHistory(lc logger.LoggingClient, deviceId string) int {
 	if *backend == "ducklake" {
 		return writeHistoryDuckLake(lc, deviceId)
 	}
-	cli, err := leveldb.NewClient(dtos.Configuration{DataSource: *dbPath}, lc)
+	cli, err := duckdb.NewClient(dtos.Configuration{DataSource: *dbPath}, lc)
 	if err != nil {
 		panic(err)
 	}

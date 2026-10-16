@@ -1,0 +1,632 @@
+{
+  "key": "packaging_machine",
+  "name": "包装机",
+  "industry": "包装印刷",
+  "version": 1,
+  "icon": "database",
+  "description": "包装机封口温度、膜余量与停机次数监控",
+  "thingModelJson": {
+    "properties": [
+      {
+        "name": "产量",
+        "identifier": "output_count",
+        "dataType": "INT",
+        "description": "累计包装产量",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "999999",
+          "min": "0",
+          "step": "1",
+          "unit": "件",
+          "unitName": "件"
+        },
+        "dataSpecsList": null
+      },
+      {
+        "name": "包装速度",
+        "identifier": "pack_speed",
+        "dataType": "FLOAT",
+        "description": "实时包装速度",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "300",
+          "min": "0",
+          "step": "0.1",
+          "unit": "件/min",
+          "unitName": "件每分钟"
+        },
+        "dataSpecsList": null
+      },
+      {
+        "name": "封口温度",
+        "identifier": "seal_temp",
+        "dataType": "FLOAT",
+        "description": "热封刀实测温度",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "300",
+          "min": "0",
+          "step": "0.1",
+          "unit": "℃",
+          "unitName": "摄氏度"
+        },
+        "dataSpecsList": null
+      },
+      {
+        "name": "设定封口温度",
+        "identifier": "set_seal_temp",
+        "dataType": "FLOAT",
+        "description": "目标封口温度，支持远程下发",
+        "required": false,
+        "rwFlag": "RW",
+        "dataSpecs": {
+          "max": "300",
+          "min": "0",
+          "step": "0.1",
+          "unit": "℃",
+          "unitName": "摄氏度"
+        },
+        "dataSpecsList": null
+      },
+      {
+        "name": "膜余量",
+        "identifier": "film_remain",
+        "dataType": "FLOAT",
+        "description": "包装膜剩余百分比",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "100",
+          "min": "0",
+          "step": "0.1",
+          "unit": "%",
+          "unitName": "百分比"
+        },
+        "dataSpecsList": null
+      },
+      {
+        "name": "节拍",
+        "identifier": "cycle_time",
+        "dataType": "FLOAT",
+        "description": "单件包装节拍",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "20",
+          "min": "0",
+          "step": "0.1",
+          "unit": "s",
+          "unitName": "秒"
+        },
+        "dataSpecsList": null
+      },
+      {
+        "name": "停机次数",
+        "identifier": "stop_count",
+        "dataType": "INT",
+        "description": "当日累计停机次数",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "9999",
+          "min": "0",
+          "step": "1",
+          "unit": "次",
+          "unitName": "次"
+        },
+        "dataSpecsList": null
+      },
+      {
+        "name": "合格数",
+        "identifier": "good_count",
+        "dataType": "INT",
+        "description": "累计合格件数",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "999999",
+          "min": "0",
+          "step": "1",
+          "unit": "件",
+          "unitName": "件"
+        },
+        "dataSpecsList": null
+      },
+      {
+        "name": "不合格数",
+        "identifier": "reject_count",
+        "dataType": "INT",
+        "description": "累计不合格件数",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "999999",
+          "min": "0",
+          "step": "1",
+          "unit": "件",
+          "unitName": "件"
+        },
+        "dataSpecsList": null
+      },
+      {
+        "name": "运行状态",
+        "identifier": "run_status",
+        "dataType": "BOOL",
+        "description": "包装机运行状态",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": null,
+        "dataSpecsList": [
+          {
+            "name": "停止",
+            "value": 0
+          },
+          {
+            "name": "运行",
+            "value": 1
+          }
+        ]
+      },
+      {
+        "name": "卡料状态",
+        "identifier": "jam_status",
+        "dataType": "BOOL",
+        "description": "进料通道卡料状态",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": null,
+        "dataSpecsList": [
+          {
+            "name": "正常",
+            "value": 0
+          },
+          {
+            "name": "卡料",
+            "value": 1
+          }
+        ]
+      },
+      {
+        "name": "输送带速度",
+        "identifier": "conveyor_speed",
+        "dataType": "FLOAT",
+        "description": "输送带线速度",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "100",
+          "min": "0",
+          "step": "0.1",
+          "unit": "m/min",
+          "unitName": "米每分钟"
+        },
+        "dataSpecsList": null
+      },
+      {
+        "name": "运行时长",
+        "identifier": "run_duration",
+        "dataType": "FLOAT",
+        "description": "设备累计运行时长",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "99999.9",
+          "min": "0",
+          "step": "0.1",
+          "unit": "h",
+          "unitName": "小时"
+        },
+        "dataSpecsList": null
+      },
+      {
+        "name": "气压",
+        "identifier": "air_pressure",
+        "dataType": "FLOAT",
+        "description": "气动系统压力",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "1.0",
+          "min": "0",
+          "step": "0.01",
+          "unit": "MPa",
+          "unitName": "兆帕"
+        },
+        "dataSpecsList": null
+      }
+    ],
+    "events": [
+      {
+        "eventName": "封口温度异常",
+        "eventType": "ALERT",
+        "identifier": "seal_temp_abnormal",
+        "description": "封口温度偏离设定范围",
+        "required": false,
+        "outputData": [
+          {
+            "name": "当前温度",
+            "identifier": "value",
+            "dataType": "FLOAT",
+            "required": false,
+            "dataSpecs": {
+              "max": "300",
+              "min": "0",
+              "step": "0.1",
+              "unit": "℃",
+              "unitName": "摄氏度"
+            },
+            "dataSpecsList": null
+          },
+          {
+            "name": "设定温度",
+            "identifier": "target",
+            "dataType": "FLOAT",
+            "required": false,
+            "dataSpecs": {
+              "max": "300",
+              "min": "0",
+              "step": "0.1",
+              "unit": "℃",
+              "unitName": "摄氏度"
+            },
+            "dataSpecsList": null
+          }
+        ]
+      },
+      {
+        "eventName": "膜尽报警",
+        "eventType": "ALERT",
+        "identifier": "film_end",
+        "description": "包装膜即将用尽",
+        "required": false,
+        "outputData": [
+          {
+            "name": "膜余量",
+            "identifier": "value",
+            "dataType": "FLOAT",
+            "required": false,
+            "dataSpecs": {
+              "max": "100",
+              "min": "0",
+              "step": "0.1",
+              "unit": "%",
+              "unitName": "百分比"
+            },
+            "dataSpecsList": null
+          }
+        ]
+      },
+      {
+        "eventName": "卡料报警",
+        "eventType": "ERROR",
+        "identifier": "material_jam",
+        "description": "进料通道卡料导致停机",
+        "required": false,
+        "outputData": [
+          {
+            "name": "停机时长",
+            "identifier": "duration",
+            "dataType": "INT",
+            "required": false,
+            "dataSpecs": {
+              "max": "3600",
+              "min": "0",
+              "step": "1",
+              "unit": "s",
+              "unitName": "秒"
+            },
+            "dataSpecsList": null
+          },
+          {
+            "name": "卡料次数",
+            "identifier": "count",
+            "dataType": "INT",
+            "required": false,
+            "dataSpecs": {
+              "max": "9999",
+              "min": "0",
+              "step": "1",
+              "unit": "次",
+              "unitName": "次"
+            },
+            "dataSpecsList": null
+          }
+        ]
+      },
+      {
+        "eventName": "设备停机",
+        "eventType": "INFO",
+        "identifier": "machine_stop",
+        "description": "包装机停机",
+        "required": false,
+        "outputData": [
+          {
+            "name": "停机时间",
+            "identifier": "time",
+            "dataType": "DATE",
+            "required": false,
+            "dataSpecs": null,
+            "dataSpecsList": null
+          },
+          {
+            "name": "停机原因",
+            "identifier": "reason",
+            "dataType": "ENUM",
+            "required": false,
+            "dataSpecs": null,
+            "dataSpecsList": [
+              {
+                "name": "缺料",
+                "value": 1
+              },
+              {
+                "name": "卡料",
+                "value": 2
+              },
+              {
+                "name": "换膜",
+                "value": 3
+              },
+              {
+                "name": "计划停机",
+                "value": 4
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "eventName": "产量达标",
+        "eventType": "INFO",
+        "identifier": "output_reached",
+        "description": "班次产量达到目标",
+        "required": false,
+        "outputData": [
+          {
+            "name": "产量",
+            "identifier": "value",
+            "dataType": "INT",
+            "required": false,
+            "dataSpecs": {
+              "max": "999999",
+              "min": "0",
+              "step": "1",
+              "unit": "件",
+              "unitName": "件"
+            },
+            "dataSpecsList": null
+          },
+          {
+            "name": "目标产量",
+            "identifier": "target",
+            "dataType": "INT",
+            "required": false,
+            "dataSpecs": {
+              "max": "999999",
+              "min": "0",
+              "step": "1",
+              "unit": "件",
+              "unitName": "件"
+            },
+            "dataSpecsList": null
+          }
+        ]
+      }
+    ],
+    "services": [
+      {
+        "serviceName": "启动",
+        "identifier": "start",
+        "description": "启动包装机",
+        "required": false,
+        "callType": "ASYNC",
+        "inputParams": [],
+        "outParams": []
+      },
+      {
+        "serviceName": "停止",
+        "identifier": "stop",
+        "description": "停止包装机",
+        "required": false,
+        "callType": "ASYNC",
+        "inputParams": [],
+        "outParams": []
+      },
+      {
+        "serviceName": "复位",
+        "identifier": "reset",
+        "description": "复位设备与计数器",
+        "required": false,
+        "callType": "ASYNC",
+        "inputParams": [],
+        "outParams": []
+      },
+      {
+        "serviceName": "设定封口温度",
+        "identifier": "set_seal_temp",
+        "description": "下发目标封口温度",
+        "required": false,
+        "callType": "ASYNC",
+        "inputParams": [
+          {
+            "name": "目标温度",
+            "identifier": "target",
+            "dataType": "FLOAT",
+            "required": true,
+            "dataSpecs": {
+              "max": "300",
+              "min": "0",
+              "step": "0.1",
+              "unit": "℃",
+              "unitName": "摄氏度"
+            },
+            "dataSpecsList": null
+          }
+        ],
+        "outParams": []
+      },
+      {
+        "serviceName": "查询产量",
+        "identifier": "query_output",
+        "description": "同步查询生产计数",
+        "required": false,
+        "callType": "SYNC",
+        "inputParams": [],
+        "outParams": [
+          {
+            "name": "产量",
+            "identifier": "output_count",
+            "dataType": "INT",
+            "required": false,
+            "dataSpecs": {
+              "max": "999999",
+              "min": "0",
+              "step": "1",
+              "unit": "件",
+              "unitName": "件"
+            },
+            "dataSpecsList": null
+          },
+          {
+            "name": "合格数",
+            "identifier": "good_count",
+            "dataType": "INT",
+            "required": false,
+            "dataSpecs": {
+              "max": "999999",
+              "min": "0",
+              "step": "1",
+              "unit": "件",
+              "unitName": "件"
+            },
+            "dataSpecsList": null
+          },
+          {
+            "name": "不合格数",
+            "identifier": "reject_count",
+            "dataType": "INT",
+            "required": false,
+            "dataSpecs": {
+              "max": "999999",
+              "min": "0",
+              "step": "1",
+              "unit": "件",
+              "unitName": "件"
+            },
+            "dataSpecsList": null
+          }
+        ]
+      }
+    ]
+  },
+  "alarmRules": [
+    {
+      "name": "封口温度高",
+      "propertyCode": "seal_temp",
+      "operator": ">",
+      "value": "180",
+      "alertLevel": 1,
+      "alertType": 1,
+      "silenceTime": 300,
+      "description": "封口温度超过 180℃"
+    },
+    {
+      "name": "封口温度低",
+      "propertyCode": "seal_temp",
+      "operator": "<",
+      "value": "120",
+      "alertLevel": 1,
+      "alertType": 1,
+      "silenceTime": 300,
+      "description": "封口温度低于 120℃"
+    },
+    {
+      "name": "膜余量低",
+      "propertyCode": "film_remain",
+      "operator": "<",
+      "value": "10",
+      "alertLevel": 2,
+      "alertType": 1,
+      "silenceTime": 600,
+      "description": "包装膜余量低于 10%"
+    },
+    {
+      "name": "停机次数偏多",
+      "propertyCode": "stop_count",
+      "operator": ">",
+      "value": "10",
+      "alertLevel": 3,
+      "alertType": 1,
+      "silenceTime": 1800,
+      "description": "当日停机次数超过 10 次"
+    },
+    {
+      "name": "卡料",
+      "propertyCode": "jam_status",
+      "operator": "=",
+      "value": "1",
+      "alertLevel": 1,
+      "alertType": 1,
+      "silenceTime": 300,
+      "description": "进料通道卡料"
+    }
+  ],
+  "dashboard": {
+    "name": "包装机看板",
+    "widgets": [
+      {
+        "title": "封口温度趋势",
+        "type": "line",
+        "propertyCode": "seal_temp",
+        "timeRange": "1h",
+        "aggInterval": 60,
+        "aggMethod": "avg"
+      },
+      {
+        "title": "包装速度趋势",
+        "type": "line",
+        "propertyCode": "pack_speed",
+        "timeRange": "1h",
+        "aggInterval": 60,
+        "aggMethod": "avg"
+      },
+      {
+        "title": "产量",
+        "type": "kpi",
+        "propertyCode": "output_count",
+        "unit": "件",
+        "decimals": 0
+      },
+      {
+        "title": "封口温度",
+        "type": "gauge",
+        "propertyCode": "seal_temp",
+        "unit": "℃",
+        "min": 0,
+        "max": 300
+      },
+      {
+        "title": "膜余量",
+        "type": "kpi",
+        "propertyCode": "film_remain",
+        "unit": "%",
+        "decimals": 1
+      },
+      {
+        "title": "包装机运行总览",
+        "type": "text",
+        "text": "封口温度、膜余量与停机情况综合监控"
+      }
+    ]
+  },
+  "metrics": {
+    "running": "run_status",
+    "output": "output_count",
+    "good": "good_count",
+    "reject": "reject_count",
+    "cycleTime": "cycle_time"
+  }
+}

@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"iotserver/internal/dtos"
+	"iotserver/internal/iotserver/core/application/tenantquota"
 	resourceContainer "iotserver/internal/iotserver/core/container"
 	interfaces "iotserver/internal/iotserver/core/interface"
 	"iotserver/internal/models"
@@ -26,6 +27,7 @@ import (
 	"iotserver/internal/pkg/di"
 	"iotserver/internal/pkg/errort"
 	"iotserver/internal/pkg/logger"
+	"iotserver/internal/pkg/tenant"
 	"iotserver/internal/pkg/utils"
 	"time"
 )
@@ -49,13 +51,13 @@ func NewDeviceApp(ctx context.Context, dic *di.Container) interfaces.DeviceItf {
 }
 
 func (p deviceApp) DeviceById(ctx context.Context, id string) (dtos.DeviceInfoResponse, error) {
-	device, err := p.dbClient.DeviceById(id)
+	device, err := p.dbClient.WithCtx(ctx).DeviceById(id)
 	var response dtos.DeviceInfoResponse
 	if err != nil {
 		return response, err
 	}
 	var deviceServiceName string
-	deviceService, err := p.dbClient.DeviceServiceById(device.DriveInstanceId)
+	deviceService, err := p.dbClient.WithCtx(ctx).DeviceServiceById(device.DriveInstanceId)
 	if err != nil {
 		deviceServiceName = deviceService.Name
 	}
@@ -65,7 +67,7 @@ func (p deviceApp) DeviceById(ctx context.Context, id string) (dtos.DeviceInfoRe
 }
 
 func (p deviceApp) OpenApiDeviceById(ctx context.Context, id string) (dtos.OpenApiDeviceInfoResponse, error) {
-	device, err := p.dbClient.DeviceById(id)
+	device, err := p.dbClient.WithCtx(ctx).DeviceById(id)
 	var response dtos.OpenApiDeviceInfoResponse
 	if err != nil {
 		return response, err
@@ -75,7 +77,7 @@ func (p deviceApp) OpenApiDeviceById(ctx context.Context, id string) (dtos.OpenA
 }
 
 func (p deviceApp) OpenApiDeviceStatusById(ctx context.Context, id string) (dtos.OpenApiDeviceStatus, error) {
-	device, err := p.dbClient.DeviceById(id)
+	device, err := p.dbClient.WithCtx(ctx).DeviceById(id)
 	var response dtos.OpenApiDeviceStatus
 	if err != nil {
 		return response, err
@@ -85,22 +87,22 @@ func (p deviceApp) OpenApiDeviceStatusById(ctx context.Context, id string) (dtos
 }
 
 func (p deviceApp) DeviceByCloudId(ctx context.Context, id string) (models.Device, error) {
-	return p.dbClient.DeviceByCloudId(id)
+	return p.dbClient.WithCtx(ctx).DeviceByCloudId(id)
 }
 
 func (p deviceApp) DeviceModelById(ctx context.Context, id string) (models.Device, error) {
-	return p.dbClient.DeviceById(id)
+	return p.dbClient.WithCtx(ctx).DeviceById(id)
 }
 
 func (p *deviceApp) DevicesSearch(ctx context.Context, req dtos.DeviceSearchQueryRequest) ([]dtos.DeviceSearchQueryResponse, uint32, error) {
 	offset, limit := req.BaseSearchConditionQuery.GetPage()
-	resp, total, err := p.dbClient.DevicesSearch(offset, limit, req)
+	resp, total, err := p.dbClient.WithCtx(ctx).DevicesSearch(offset, limit, req)
 	if err != nil {
 		return []dtos.DeviceSearchQueryResponse{}, 0, err
 	}
 	devices := make([]dtos.DeviceSearchQueryResponse, len(resp))
 	for i, dev := range resp {
-		deviceService, _ := p.dbClient.DeviceServiceById(dev.DriveInstanceId)
+		deviceService, _ := p.dbClient.WithCtx(ctx).DeviceServiceById(dev.DriveInstanceId)
 		devices[i] = dtos.DeviceResponseFromModel(dev, deviceService.Name)
 	}
 	return devices, total, nil
@@ -108,7 +110,7 @@ func (p *deviceApp) DevicesSearch(ctx context.Context, req dtos.DeviceSearchQuer
 
 func (p *deviceApp) OpenApiDevicesSearch(ctx context.Context, req dtos.DeviceSearchQueryRequest) ([]dtos.OpenApiDeviceInfoResponse, uint32, error) {
 	offset, limit := req.BaseSearchConditionQuery.GetPage()
-	resp, total, err := p.dbClient.DevicesSearch(offset, limit, req)
+	resp, total, err := p.dbClient.WithCtx(ctx).DevicesSearch(offset, limit, req)
 	if err != nil {
 		return []dtos.OpenApiDeviceInfoResponse{}, 0, err
 	}
@@ -121,12 +123,16 @@ func (p *deviceApp) OpenApiDevicesSearch(ctx context.Context, req dtos.DeviceSea
 
 func (p *deviceApp) DevicesModelSearch(ctx context.Context, req dtos.DeviceSearchQueryRequest) ([]models.Device, uint32, error) {
 	offset, limit := req.BaseSearchConditionQuery.GetPage()
-	return p.dbClient.DevicesSearch(offset, limit, req)
+	return p.dbClient.WithCtx(ctx).DevicesSearch(offset, limit, req)
 }
 
 func (p *deviceApp) AddDevice(ctx context.Context, req dtos.DeviceAddRequest) (string, error) {
+	// 配额校验：目标租户的设备数 + 1 是否超过 max_devices（0=不限；平台视图不校验）
+	if err := tenantquota.Ensure(ctx, p.dbClient, p.lc, tenantquota.Devices); err != nil {
+		return "", err
+	}
 	if req.DriverInstanceId != "" {
-		driverInstance, err := p.dbClient.DeviceServiceById(req.DriverInstanceId)
+		driverInstance, err := p.dbClient.WithCtx(ctx).DeviceServiceById(req.DriverInstanceId)
 		if err != nil {
 			return "", err
 		}
@@ -135,7 +141,7 @@ func (p *deviceApp) AddDevice(ctx context.Context, req dtos.DeviceAddRequest) (s
 		}
 	}
 
-	productInfo, err := p.dbClient.ProductById(req.ProductId)
+	productInfo, err := p.dbClient.WithCtx(ctx).ProductById(req.ProductId)
 
 	if productInfo.Status == constants.ProductUnRelease {
 		return "", errort.NewCommonEdgeX(errort.ProductUnRelease, "The product has not been released yet. Please release the product before adding devices", nil)
@@ -159,7 +165,7 @@ func (p *deviceApp) AddDevice(ctx context.Context, req dtos.DeviceAddRequest) (s
 	insertDevice.Status = constants.DeviceStatusOffline
 	insertDevice.Secret = utils.GenerateDeviceSecret(12)
 	insertDevice.Description = req.Description
-	id, err := p.dbClient.AddDevice(insertDevice)
+	id, err := p.dbClient.WithCtx(ctx).AddDevice(insertDevice)
 	if err != nil {
 		return "", err
 	}
@@ -172,7 +178,7 @@ func (p *deviceApp) AddDevice(ctx context.Context, req dtos.DeviceAddRequest) (s
 func (p *deviceApp) BatchDeleteDevice(ctx context.Context, ids []string) error {
 	var searchReq dtos.DeviceSearchQueryRequest
 	searchReq.BaseSearchConditionQuery.Ids = dtos.ApiParamsArrayToString(ids)
-	devices, _, err := p.dbClient.DevicesSearch(0, -1, searchReq)
+	devices, _, err := p.dbClient.WithCtx(ctx).DevicesSearch(0, -1, searchReq)
 	if err != nil {
 		return err
 	}
@@ -183,7 +189,7 @@ func (p *deviceApp) BatchDeleteDevice(ctx context.Context, ids []string) error {
 			return edgeXErr
 		}
 	}
-	err = p.dbClient.BatchDeleteDevice(ids)
+	err = p.dbClient.WithCtx(ctx).BatchDeleteDevice(ids)
 	if err != nil {
 		return err
 	}
@@ -197,7 +203,7 @@ func (p *deviceApp) BatchDeleteDevice(ctx context.Context, ids []string) error {
 }
 
 func (p *deviceApp) DeviceMqttAuthInfo(ctx context.Context, id string) (dtos.DeviceAuthInfoResponse, error) {
-	mqttAuth, err := p.dbClient.DeviceMqttAuthInfo(id)
+	mqttAuth, err := p.dbClient.WithCtx(ctx).DeviceMqttAuthInfo(id)
 	var response dtos.DeviceAuthInfoResponse
 	if err != nil {
 		return response, err
@@ -213,11 +219,11 @@ func (p *deviceApp) AddMqttAuth(ctx context.Context, req dtos.AddMqttAuthInfoReq
 	mqttAuth.Password = req.Password
 	mqttAuth.ResourceId = req.ResourceId
 	mqttAuth.ResourceType = constants.ResourceType(req.ResourceType)
-	return p.dbClient.AddMqttAuthInfo(mqttAuth)
+	return p.dbClient.WithCtx(ctx).AddMqttAuthInfo(mqttAuth)
 }
 
 func (p *deviceApp) DeleteDeviceById(ctx context.Context, id string) error {
-	deviceInfo, err := p.dbClient.DeviceById(id)
+	deviceInfo, err := p.dbClient.WithCtx(ctx).DeviceById(id)
 	if err != nil {
 		return err
 	}
@@ -226,11 +232,17 @@ func (p *deviceApp) DeleteDeviceById(ctx context.Context, id string) error {
 	if edgeXErr != nil {
 		return edgeXErr
 	}
-	err = p.dbClient.DeleteDeviceById(id)
+	// 先清理时序数据，再删元数据：
+	// 顺序反过来时，一旦元数据已删而时序清理失败，这些行就再也无法归属到
+	// 任何设备/租户（设备记录已不存在），只能等保留期自然过期，属于静默泄漏。
+	if err = resourceContainer.DataDBClientFrom(p.dic.Get).DropTable(ctx, id); err != nil {
+		return errort.NewCommonEdgeX(errort.KindDatabaseError,
+			"清理设备时序数据失败，已中止删除（可稍后重试）", err)
+	}
+	err = p.dbClient.WithCtx(ctx).DeleteDeviceById(id)
 	if err != nil {
 		return err
 	}
-	_ = resourceContainer.DataDBClientFrom(p.dic.Get).DropTable(ctx, id)
 
 	go func() {
 		p.DeleteDeviceCallBack(models.Device{
@@ -246,7 +258,7 @@ func (p *deviceApp) DeviceUpdate(ctx context.Context, req dtos.DeviceUpdateReque
 		return errort.NewCommonEdgeX(errort.DefaultReqParamsError, "update req id is required", nil)
 
 	}
-	device, edgeXErr := p.dbClient.DeviceById(req.Id)
+	device, edgeXErr := p.dbClient.WithCtx(ctx).DeviceById(req.Id)
 	if edgeXErr != nil {
 		return edgeXErr
 	}
@@ -261,7 +273,7 @@ func (p *deviceApp) DeviceUpdate(ctx context.Context, req dtos.DeviceUpdateReque
 	}
 
 	dtos.ReplaceDeviceModelFields(&device, req)
-	edgeXErr = p.dbClient.UpdateDevice(device)
+	edgeXErr = p.dbClient.WithCtx(ctx).UpdateDevice(device)
 	if edgeXErr != nil {
 		return edgeXErr
 	}
@@ -277,7 +289,7 @@ func (p *deviceApp) DevicesUnBindDriver(ctx context.Context, req dtos.DevicesUnB
 	var devices []models.Device
 	var err error
 	var total uint32
-	devices, total, err = p.dbClient.DevicesSearch(0, -1, searchReq)
+	devices, total, err = p.dbClient.WithCtx(ctx).DevicesSearch(0, -1, searchReq)
 	if err != nil {
 		return err
 	}
@@ -285,7 +297,7 @@ func (p *deviceApp) DevicesUnBindDriver(ctx context.Context, req dtos.DevicesUnB
 		return errort.NewCommonErr(errort.DeviceNotExist, fmt.Errorf("devices not found"))
 	}
 
-	err = p.dbClient.BatchUnBindDevice(req.DeviceIds)
+	err = p.dbClient.WithCtx(ctx).BatchUnBindDevice(req.DeviceIds)
 	if err != nil {
 		return err
 	}
@@ -308,7 +320,7 @@ func (p *deviceApp) DevicesBindProductId(ctx context.Context, req dtos.DevicesBi
 	var devices []models.Device
 	var err error
 	var total uint32
-	devices, total, err = p.dbClient.DevicesSearch(0, -1, searchReq)
+	devices, total, err = p.dbClient.WithCtx(ctx).DevicesSearch(0, -1, searchReq)
 	if err != nil {
 		return err
 	}
@@ -319,7 +331,7 @@ func (p *deviceApp) DevicesBindProductId(ctx context.Context, req dtos.DevicesBi
 	for _, device := range devices {
 		deviceIds = append(deviceIds, device.Id)
 	}
-	err = p.dbClient.BatchBindDevice(deviceIds, req.DriverInstanceId)
+	err = p.dbClient.WithCtx(ctx).BatchBindDevice(deviceIds, req.DriverInstanceId)
 	if err != nil {
 		return err
 	}
@@ -333,14 +345,14 @@ func (p *deviceApp) DevicesBindDriver(ctx context.Context, req dtos.DevicesBindD
 	var devices []models.Device
 	var err error
 	var total uint32
-	devices, total, err = p.dbClient.DevicesSearch(0, -1, searchReq)
+	devices, total, err = p.dbClient.WithCtx(ctx).DevicesSearch(0, -1, searchReq)
 	if err != nil {
 		return err
 	}
 	if total == 0 {
 		return errort.NewCommonErr(errort.DeviceNotExist, fmt.Errorf("devices not found"))
 	}
-	driverInstance, err := p.dbClient.DeviceServiceById(req.DriverInstanceId)
+	driverInstance, err := p.dbClient.WithCtx(ctx).DeviceServiceById(req.DriverInstanceId)
 	if err != nil {
 		return err
 	}
@@ -357,7 +369,7 @@ func (p *deviceApp) DevicesBindDriver(ctx context.Context, req dtos.DevicesBindD
 		}
 	}
 
-	err = p.dbClient.BatchBindDevice(req.DeviceIds, req.DriverInstanceId)
+	err = p.dbClient.WithCtx(ctx).BatchBindDevice(req.DeviceIds, req.DriverInstanceId)
 	if err != nil {
 		return err
 	}
@@ -373,7 +385,8 @@ func (p *deviceApp) DevicesBindDriver(ctx context.Context, req dtos.DevicesBindD
 }
 
 func (p *deviceApp) DeviceUpdateConnectStatus(id string, status constants.DeviceStatus) error {
-	device, edgeXErr := p.dbClient.DeviceById(id)
+	// 平台作用域：系统路径，不按租户过滤
+	device, edgeXErr := p.dbClient.WithCtx(tenant.Platform(context.Background())).DeviceById(id)
 	if edgeXErr != nil {
 		return edgeXErr
 	}
@@ -381,7 +394,7 @@ func (p *deviceApp) DeviceUpdateConnectStatus(id string, status constants.Device
 	if status == constants.DeviceStatusOnline {
 		device.LastOnlineTime = utils.MakeTimestamp()
 	}
-	edgeXErr = p.dbClient.UpdateDevice(device)
+	edgeXErr = p.dbClient.WithCtx(tenant.Platform(context.Background())).UpdateDevice(device)
 	if edgeXErr != nil {
 		return edgeXErr
 	}
@@ -522,7 +535,7 @@ func (p *deviceApp) DevicesImport(ctx context.Context, file *dtos.ImportFile, pr
 		}
 	}
 
-	total, err := p.dbClient.BatchUpsertDevice(devices)
+	total, err := p.dbClient.WithCtx(ctx).BatchUpsertDevice(devices)
 	if err != nil {
 		return 0, err
 	}
@@ -541,14 +554,14 @@ func (p *deviceApp) DevicesReportMsgGather(ctx context.Context) error {
 	var err error
 	startTime, endTime := GetYesterdayStartTimeAndEndTime()
 	persistApp := resourceContainer.PersistItfFrom(p.dic.Get)
-	count, err = persistApp.SearchDeviceMsgCount(startTime, endTime)
+	count, err = persistApp.SearchDeviceMsgCount(ctx, startTime, endTime)
 	if err != nil {
 		return err
 	}
 	var msgGather models.MsgGather
 	msgGather.Count = count
 	msgGather.Date = time.Now().AddDate(0, 0, -1).Format("2006-01-02")
-	return p.dbClient.AddMsgGather(msgGather)
+	return p.dbClient.WithCtx(ctx).AddMsgGather(msgGather)
 }
 
 func GetYesterdayStartTimeAndEndTime() (int64, int64) {

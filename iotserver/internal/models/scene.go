@@ -53,6 +53,7 @@ func (a *SceneActions) Scan(value interface{}) error {
 // Scene 场景联动
 type Scene struct {
 	Timestamps
+	TenantField
 	Id       string `json:"id" gorm:"column:id;primaryKey;type:string;size:64;comment:主键"`
 	Name     string `json:"name" gorm:"column:name;type:string;size:64;index;comment:场景名称"`
 	Describe string `json:"description" gorm:"column:description;type:string;size:255;comment:场景描述"`
@@ -69,6 +70,7 @@ func (s *Scene) TableName() string {
 // SceneLog 场景联动日志
 type SceneLog struct {
 	Timestamps
+	TenantField
 	Id string `json:"id" gorm:"column:id;primaryKey;type:string;size:64;comment:主键"`
 	// Name 场景名称（日志页「联动规则名称」列）
 	Name string `json:"name" gorm:"column:name;type:string;size:64;index;comment:场景名称"`

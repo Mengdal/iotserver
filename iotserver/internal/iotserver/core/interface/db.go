@@ -6,6 +6,8 @@
 package interfaces
 
 import (
+	"context"
+
 	"gorm.io/gorm"
 	"iotserver/internal/dtos"
 	"iotserver/internal/models"
@@ -14,6 +16,66 @@ import (
 type DBClient interface {
 	CloseSession()
 	GetDBInstance() *gorm.DB
+
+	// WithCtx 返回一个把 ctx 绑定到数据库会话的客户端副本。
+	// 租户隔离依赖它：GORM 租户插件从 Statement.Context 读取租户上下文
+	// （internal/pkg/tenant）。业务方法应使用 app.dbClient.WithCtx(ctx) 得到的实例，
+	// 后台任务与系统路径使用 tenant.Platform(ctx) 构造的平台作用域上下文。
+	WithCtx(ctx context.Context) DBClient
+
+	// ===== 租户=====
+	AddTenant(t models.Tenant) (models.Tenant, error)
+	TenantById(id string) (models.Tenant, error)
+	TenantByCode(code string) (models.Tenant, error)
+	TenantSearch(offset int, limit int, req dtos.TenantSearchQueryRequest) ([]models.Tenant, uint32, error)
+	UpdateTenant(t models.Tenant) error
+	DeleteTenant(id string) error
+
+	// ===== 租户资源统计（配额校验 / 删租户保护）=====
+	//
+	// 计数一律显式带 tenant_id 条件（平台作用域下 GORM 租户插件不过滤），
+	// 调用方需用 WithCtx 把作用域切到目标租户，避免插件叠加出互斥条件。
+	TenantUserCount(tenantId string) (int64, error)
+	TenantDeviceCount(tenantId string) (int64, error)
+	TenantGatewayCount(tenantId string) (int64, error)
+	TenantProductCount(tenantId string) (int64, error)
+	TenantVizBoardCount(tenantId string) (int64, error)
+	// CleanupTenantMenuRecords 清理某租户的菜单定制数据（tenant_menu / tenant_menu_pref）。
+	// 菜单定制表由菜单任务引入，表不存在时静默跳过，不报错。
+	CleanupTenantMenuRecords(tenantId string) error
+
+	// ===== 网关（第三方工业网关接入）=====
+	AddGateway(g models.Gateway) (models.Gateway, error)
+	GatewayById(id string) (models.Gateway, error)
+	GatewayBySn(sn string) (models.Gateway, error)
+	GatewaySearch(offset int, limit int, req dtos.GatewaySearchQueryRequest) ([]models.Gateway, uint32, error)
+	UpdateGateway(g models.Gateway) error
+	DeleteGateway(id string) error
+	UpdateGatewayStatus(id string, status int, ip string, onlineAt int64) error
+	// MarkStaleGatewaysOffline 把「最后在线时间早于 beforeMs」的在线网关批量置为离线，返回影响行数
+	MarkStaleGatewaysOffline(beforeMs int64) (int64, error)
+	TouchGatewayReport(id string, ts int64) error
+	UpdateGatewayConfig(id, config string, version int) error
+	GatewayIngestLogExists(gatewayId string, seq int64) (bool, error)
+	AddGatewayIngestLog(log models.GatewayIngestLog) error
+	GatewayDeviceCount(gatewayId string) (int64, error)
+
+	// ===== 网关接入：设备定位 =====
+	DeviceByGatewayAndKey(gatewayId, deviceKey string) (models.Device, error)
+	DeviceBySn(deviceSn string) (models.Device, error)
+
+	// ===== 画布看板（落库，按租户隔离）=====
+	VizBoards() ([]models.VizBoard, error)
+	VizBoardsReplace(list []models.VizBoard) error
+
+	// ===== 方案（行业方案包）=====
+	BatchUpsertSolution(list []models.Solution) (int64, error)
+	SolutionSearch(tenantId, industry string) ([]models.Solution, error)
+	SolutionByKey(tenantId, key string) (models.Solution, error)
+	// AddSolution 新增一条方案记录（租户副本克隆用，id 由调用方给出新随机值）
+	AddSolution(s models.Solution) error
+	// UpdateSolutionThingModel 只更新指定记录的物模型 JSON（按主键定位，内置行不受影响）
+	UpdateSolutionThingModel(id, thingModelJson string) error
 
 	QuickNavigationSearch(offset int, limit int, req dtos.QuickNavigationSearchQueryRequest) ([]models.QuickNavigation, uint32, error)
 	DocsSearch(offset int, limit int, req dtos.DocsSearchQueryRequest) (docs []models.Doc, total uint32, edgeXErr error)
@@ -79,6 +141,8 @@ type DBClient interface {
 	DeviceOnlineById(id string) (edgeXErr error)
 	DeviceOfflineById(id string) (edgeXxErr error)
 	DeviceOfflineByCloudInstanceId(id string) (edgeXErr error)
+	// MarkStaleDevicesOffline 把「最后在线时间早于 beforeMs」的在线设备批量置为离线，返回影响行数
+	MarkStaleDevicesOffline(beforeMs int64) (int64, error)
 	MsgReportDeviceById(id string) (device models.Device, edgeXErr error)
 	DeviceByCloudId(id string) (models.Device, error)
 	DevicesSearch(offset int, limit int, req dtos.DeviceSearchQueryRequest) ([]models.Device, uint32, error)
@@ -108,11 +172,6 @@ type DBClient interface {
 	DockerConfigsSearch(offset int, limit int, req dtos.DockerConfigSearchQueryRequest) ([]models.DockerConfig, uint32, error)
 
 	AbilityByCode(model interface{}, code, productId string) (interface{}, error)
-
-	//// 获取高级配置信息
-	GetAdvanceConfig() (models.AdvanceConfig, error)
-	// 更新高级配置信息
-	UpdateAdvanceConfig(config models.AdvanceConfig) error
 
 	AddMsgGather(msgGather models.MsgGather) error
 	MsgGatherSearch(offset int, limit int, req dtos.MsgGatherSearchQueryRequest) (msgGather []models.MsgGather, count uint32, edgeXErr error)

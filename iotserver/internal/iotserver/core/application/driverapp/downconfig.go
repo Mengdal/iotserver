@@ -7,6 +7,7 @@ import (
 	"iotserver/internal/iotserver/core/container"
 	"iotserver/internal/models"
 	"iotserver/internal/pkg/errort"
+	"iotserver/internal/pkg/tenant"
 	"iotserver/internal/pkg/utils"
 	//"gitlab.com/tedge/edgex/internal/pkg/utils"
 	//
@@ -40,7 +41,8 @@ func (app *driverLibApp) DownConfigAdd(ctx context.Context, req dtos.DockerConfi
 }
 
 func (app *driverLibApp) DownConfigInternalAdd(dc models.DockerConfig) error {
-	_, err := app.dbClient.DockerConfigAdd(dc)
+	// 平台作用域：系统路径，不按租户过滤
+	_, err := app.dbClient.WithCtx(tenant.Platform(context.Background())).DockerConfigAdd(dc)
 	if err != nil {
 		return err
 	}
@@ -54,7 +56,7 @@ func (app *driverLibApp) DownConfigUpdate(ctx context.Context, req dtos.DockerCo
 		return errort.NewCommonEdgeX(errort.DefaultReqParamsError, "update req id is required", nil)
 	}
 
-	dc, edgeXErr := dbClient.DockerConfigById(req.Id)
+	dc, edgeXErr := dbClient.WithCtx(ctx).DockerConfigById(req.Id)
 	if edgeXErr != nil {
 		return edgeXErr
 	}
@@ -69,7 +71,7 @@ func (app *driverLibApp) DownConfigUpdate(ctx context.Context, req dtos.DockerCo
 			return err
 		}
 	}
-	edgeXErr = dbClient.DockerConfigUpdate(dc)
+	edgeXErr = dbClient.WithCtx(ctx).DockerConfigUpdate(dc)
 	if edgeXErr != nil {
 		return edgeXErr
 	}
@@ -79,7 +81,7 @@ func (app *driverLibApp) DownConfigUpdate(ctx context.Context, req dtos.DockerCo
 func (app *driverLibApp) DownConfigSearch(ctx context.Context, req dtos.DockerConfigSearchQueryRequest) ([]models.DockerConfig, uint32, error) {
 	offset, limit := req.BaseSearchConditionQuery.GetPage()
 
-	dcs, total, err := app.dbClient.DockerConfigsSearch(offset, limit, req)
+	dcs, total, err := app.dbClient.WithCtx(ctx).DockerConfigsSearch(offset, limit, req)
 	if err != nil {
 		return dcs, 0, err
 	}
@@ -88,7 +90,7 @@ func (app *driverLibApp) DownConfigSearch(ctx context.Context, req dtos.DockerCo
 }
 
 func (app *driverLibApp) DownConfigDel(ctx context.Context, id string) error {
-	dc, edgeXErr := app.dbClient.DockerConfigById(id)
+	dc, edgeXErr := app.dbClient.WithCtx(ctx).DockerConfigById(id)
 	if edgeXErr != nil {
 		return edgeXErr
 	}
@@ -105,7 +107,7 @@ func (app *driverLibApp) DownConfigDel(ctx context.Context, id string) error {
 		return errort.NewCommonEdgeX(errort.DockerConfigMustDeleteDeviceLibrary, "请先删除绑定此配置的驱动", nil)
 	}
 
-	err = app.dbClient.DockerConfigDelete(dc.Id)
+	err = app.dbClient.WithCtx(ctx).DockerConfigDelete(dc.Id)
 	if err != nil {
 		return err
 	}

@@ -37,7 +37,9 @@ func DockerConfigFromModel(dc models.DockerConfig) DockerConfig {
 	}
 }
 
-func WincLinkDockerConfig() DockerConfig {
+// MarketDockerConfig 驱动市场（内置驱动）使用的镜像仓库配置：
+// 地址固定（见 constants.Address），账号密码为空 → 匿名拉取，要求镜像包公开。
+func MarketDockerConfig() DockerConfig {
 	return DockerConfig{
 		Address:  constants.Address,
 		Password: constants.Password,

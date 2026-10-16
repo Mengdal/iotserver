@@ -16,6 +16,8 @@ type SysDeptSearchRequest struct {
 type SysDeptAddRequest struct {
 	ParentId string `json:"parentId"`
 	Name     string `json:"name" binding:"required"`
+	// DeptType 组织节点类型：1公司 2工厂 3车间 4产线（0 表示未指定，按公司处理）
+	DeptType int    `json:"deptType"`
 	Sort     int    `json:"sort"`
 	Leader   string `json:"leader"`
 	Phone    string `json:"phone"`
@@ -28,6 +30,8 @@ type SysDeptUpdateRequest struct {
 	Id       string `json:"id" binding:"required"`
 	ParentId string `json:"parentId"`
 	Name     string `json:"name" binding:"required"`
+	// DeptType 组织节点类型：1公司 2工厂 3车间 4产线（0 表示不修改）
+	DeptType int    `json:"deptType"`
 	Sort     int    `json:"sort"`
 	Leader   string `json:"leader"`
 	Phone    string `json:"phone"`
@@ -48,6 +52,7 @@ type SysDeptResponse struct {
 	ParentId  string            `json:"parentId"`
 	Ancestors string            `json:"ancestors"`
 	Name      string            `json:"name"`
+	DeptType  int               `json:"deptType"`
 	Sort      int               `json:"sort"`
 	Leader    string            `json:"leader"`
 	Phone     string            `json:"phone"`

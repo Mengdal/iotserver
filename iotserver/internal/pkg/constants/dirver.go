@@ -14,7 +14,7 @@ const (
 	DriverRunConfigDir       = DriverBaseDir + "/run-config"
 	DriverMntDir             = DriverBaseDir + "/mnt"
 	DriverDefaultLogPath     = "logs/driver.log"
-	DockerHummingbirdRootDir = "/var/bin/iotserver"
+	DockerIotServerRootDir = "/var/bin/iotserver"
 )
 
 const (

@@ -52,7 +52,7 @@ func (m quickNavigationApp) SyncQuickNavigation(ctx context.Context, versionName
 		IsAll: true,
 	}
 	dbreq := dtos.QuickNavigationSearchQueryRequest{BaseSearchConditionQuery: baseQuery}
-	quickNavigations, _, err := m.dbClient.QuickNavigationSearch(0, -1, dbreq)
+	quickNavigations, _, err := m.dbClient.WithCtx(ctx).QuickNavigationSearch(0, -1, dbreq)
 	if err != nil {
 		return 0, err
 	}
@@ -85,14 +85,14 @@ func (m quickNavigationApp) SyncQuickNavigation(ctx context.Context, versionName
 			})
 		}
 	}
-	rows, err := m.dbClient.BatchUpsertQuickNavigationTemplate(upsertQuickNavigationTemplate)
+	rows, err := m.dbClient.WithCtx(ctx).BatchUpsertQuickNavigationTemplate(upsertQuickNavigationTemplate)
 	if err != nil {
 		return 0, err
 	}
 
 	for _, navigation := range quickNavigations {
 		if !utils.InStringSlice(navigation.Name, cosQuickNavigationName) {
-			err = m.dbClient.DeleteQuickNavigation(navigation.Id)
+			err = m.dbClient.WithCtx(ctx).DeleteQuickNavigation(navigation.Id)
 			if err != nil {
 				return 0, err
 			}

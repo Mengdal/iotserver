@@ -1,0 +1,648 @@
+{
+  "key": "filling_machine",
+  "name": "灌装机",
+  "industry": "食品饮料",
+  "version": 1,
+  "icon": "database",
+  "description": "灌装机产量、速度、液位与计量精度监控",
+  "thingModelJson": {
+    "properties": [
+      {
+        "name": "产量",
+        "identifier": "output_count",
+        "dataType": "INT",
+        "description": "累计灌装产量",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "999999",
+          "min": "0",
+          "step": "1",
+          "unit": "瓶",
+          "unitName": "瓶"
+        },
+        "dataSpecsList": null
+      },
+      {
+        "name": "灌装速度",
+        "identifier": "filling_speed",
+        "dataType": "FLOAT",
+        "description": "实时灌装速度",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "600",
+          "min": "0",
+          "step": "0.1",
+          "unit": "瓶/min",
+          "unitName": "瓶每分钟"
+        },
+        "dataSpecsList": null
+      },
+      {
+        "name": "液位",
+        "identifier": "liquid_level",
+        "dataType": "FLOAT",
+        "description": "料缸液位百分比",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "100",
+          "min": "0",
+          "step": "0.1",
+          "unit": "%",
+          "unitName": "百分比"
+        },
+        "dataSpecsList": null
+      },
+      {
+        "name": "节拍",
+        "identifier": "cycle_time",
+        "dataType": "FLOAT",
+        "description": "单瓶灌装节拍",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "60",
+          "min": "0",
+          "step": "0.1",
+          "unit": "s",
+          "unitName": "秒"
+        },
+        "dataSpecsList": null
+      },
+      {
+        "name": "灌装量",
+        "identifier": "fill_volume",
+        "dataType": "FLOAT",
+        "description": "实际单瓶灌装量",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "5000",
+          "min": "0",
+          "step": "0.1",
+          "unit": "mL",
+          "unitName": "毫升"
+        },
+        "dataSpecsList": null
+      },
+      {
+        "name": "设定灌装量",
+        "identifier": "set_fill_volume",
+        "dataType": "FLOAT",
+        "description": "目标单瓶灌装量，支持远程下发",
+        "required": false,
+        "rwFlag": "RW",
+        "dataSpecs": {
+          "max": "5000",
+          "min": "0",
+          "step": "0.1",
+          "unit": "mL",
+          "unitName": "毫升"
+        },
+        "dataSpecsList": null
+      },
+      {
+        "name": "合格数",
+        "identifier": "good_count",
+        "dataType": "INT",
+        "description": "累计合格瓶数",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "999999",
+          "min": "0",
+          "step": "1",
+          "unit": "瓶",
+          "unitName": "瓶"
+        },
+        "dataSpecsList": null
+      },
+      {
+        "name": "不合格数",
+        "identifier": "reject_count",
+        "dataType": "INT",
+        "description": "累计不合格瓶数",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "999999",
+          "min": "0",
+          "step": "1",
+          "unit": "瓶",
+          "unitName": "瓶"
+        },
+        "dataSpecsList": null
+      },
+      {
+        "name": "运行状态",
+        "identifier": "run_status",
+        "dataType": "BOOL",
+        "description": "灌装机运行状态",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": null,
+        "dataSpecsList": [
+          {
+            "name": "停止",
+            "value": 0
+          },
+          {
+            "name": "运行",
+            "value": 1
+          }
+        ]
+      },
+      {
+        "name": "灌装阀状态",
+        "identifier": "valve_status",
+        "dataType": "ENUM",
+        "description": "灌装阀当前状态",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": null,
+        "dataSpecsList": [
+          {
+            "name": "关闭",
+            "value": 0
+          },
+          {
+            "name": "开启",
+            "value": 1
+          },
+          {
+            "name": "故障",
+            "value": 2
+          }
+        ]
+      },
+      {
+        "name": "料缸压力",
+        "identifier": "tank_pressure",
+        "dataType": "FLOAT",
+        "description": "料缸供料压力",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "0.6",
+          "min": "0",
+          "step": "0.01",
+          "unit": "MPa",
+          "unitName": "兆帕"
+        },
+        "dataSpecsList": null
+      },
+      {
+        "name": "灌装精度",
+        "identifier": "filling_accuracy",
+        "dataType": "FLOAT",
+        "description": "计量偏差百分比",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "5",
+          "min": "0",
+          "step": "0.01",
+          "unit": "%",
+          "unitName": "百分比"
+        },
+        "dataSpecsList": null
+      },
+      {
+        "name": "运行时长",
+        "identifier": "run_duration",
+        "dataType": "FLOAT",
+        "description": "设备累计运行时长",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "99999.9",
+          "min": "0",
+          "step": "0.1",
+          "unit": "h",
+          "unitName": "小时"
+        },
+        "dataSpecsList": null
+      },
+      {
+        "name": "缺料状态",
+        "identifier": "material_status",
+        "dataType": "BOOL",
+        "description": "料缸供料状态",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": null,
+        "dataSpecsList": [
+          {
+            "name": "充足",
+            "value": 0
+          },
+          {
+            "name": "缺料",
+            "value": 1
+          }
+        ]
+      }
+    ],
+    "events": [
+      {
+        "eventName": "缺料报警",
+        "eventType": "ALERT",
+        "identifier": "material_lack",
+        "description": "料缸缺料",
+        "required": false,
+        "outputData": [
+          {
+            "name": "液位",
+            "identifier": "value",
+            "dataType": "FLOAT",
+            "required": false,
+            "dataSpecs": {
+              "max": "100",
+              "min": "0",
+              "step": "0.1",
+              "unit": "%",
+              "unitName": "百分比"
+            },
+            "dataSpecsList": null
+          },
+          {
+            "name": "缺料状态",
+            "identifier": "status",
+            "dataType": "BOOL",
+            "required": false,
+            "dataSpecs": null,
+            "dataSpecsList": [
+              {
+                "name": "充足",
+                "value": 0
+              },
+              {
+                "name": "缺料",
+                "value": 1
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "eventName": "液位低报警",
+        "eventType": "ALERT",
+        "identifier": "low_level",
+        "description": "料缸液位低于下限",
+        "required": false,
+        "outputData": [
+          {
+            "name": "当前液位",
+            "identifier": "value",
+            "dataType": "FLOAT",
+            "required": false,
+            "dataSpecs": {
+              "max": "100",
+              "min": "0",
+              "step": "0.1",
+              "unit": "%",
+              "unitName": "百分比"
+            },
+            "dataSpecsList": null
+          },
+          {
+            "name": "液位下限",
+            "identifier": "threshold",
+            "dataType": "FLOAT",
+            "required": false,
+            "dataSpecs": {
+              "max": "100",
+              "min": "0",
+              "step": "0.1",
+              "unit": "%",
+              "unitName": "百分比"
+            },
+            "dataSpecsList": null
+          }
+        ]
+      },
+      {
+        "eventName": "计量偏差超限",
+        "eventType": "ALERT",
+        "identifier": "filling_deviation",
+        "description": "灌装量偏差超过允许范围",
+        "required": false,
+        "outputData": [
+          {
+            "name": "偏差值",
+            "identifier": "value",
+            "dataType": "FLOAT",
+            "required": false,
+            "dataSpecs": {
+              "max": "5",
+              "min": "0",
+              "step": "0.01",
+              "unit": "%",
+              "unitName": "百分比"
+            },
+            "dataSpecsList": null
+          },
+          {
+            "name": "设定灌装量",
+            "identifier": "target",
+            "dataType": "FLOAT",
+            "required": false,
+            "dataSpecs": {
+              "max": "5000",
+              "min": "0",
+              "step": "0.1",
+              "unit": "mL",
+              "unitName": "毫升"
+            },
+            "dataSpecsList": null
+          }
+        ]
+      },
+      {
+        "eventName": "灌装阀故障",
+        "eventType": "ERROR",
+        "identifier": "valve_fault",
+        "description": "灌装阀动作异常",
+        "required": false,
+        "outputData": [
+          {
+            "name": "阀号",
+            "identifier": "valve_no",
+            "dataType": "INT",
+            "required": false,
+            "dataSpecs": {
+              "max": "120",
+              "min": "1",
+              "step": "1",
+              "unit": "#",
+              "unitName": "号"
+            },
+            "dataSpecsList": null
+          },
+          {
+            "name": "故障码",
+            "identifier": "code",
+            "dataType": "INT",
+            "required": false,
+            "dataSpecs": {
+              "max": "9999",
+              "min": "0",
+              "step": "1",
+              "unit": "",
+              "unitName": "故障码"
+            },
+            "dataSpecsList": null
+          }
+        ]
+      },
+      {
+        "eventName": "设备启动",
+        "eventType": "INFO",
+        "identifier": "machine_start",
+        "description": "灌装机启动",
+        "required": false,
+        "outputData": [
+          {
+            "name": "启动时间",
+            "identifier": "time",
+            "dataType": "DATE",
+            "required": false,
+            "dataSpecs": null,
+            "dataSpecsList": null
+          },
+          {
+            "name": "启动方式",
+            "identifier": "mode",
+            "dataType": "ENUM",
+            "required": false,
+            "dataSpecs": null,
+            "dataSpecsList": [
+              {
+                "name": "手动",
+                "value": 0
+              },
+              {
+                "name": "自动",
+                "value": 1
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "services": [
+      {
+        "serviceName": "启动",
+        "identifier": "start",
+        "description": "启动灌装机",
+        "required": false,
+        "callType": "ASYNC",
+        "inputParams": [],
+        "outParams": []
+      },
+      {
+        "serviceName": "停止",
+        "identifier": "stop",
+        "description": "停止灌装机",
+        "required": false,
+        "callType": "ASYNC",
+        "inputParams": [],
+        "outParams": []
+      },
+      {
+        "serviceName": "复位",
+        "identifier": "reset",
+        "description": "复位设备与计数器",
+        "required": false,
+        "callType": "ASYNC",
+        "inputParams": [],
+        "outParams": []
+      },
+      {
+        "serviceName": "设定灌装量",
+        "identifier": "set_fill_volume",
+        "description": "下发目标灌装量",
+        "required": false,
+        "callType": "ASYNC",
+        "inputParams": [
+          {
+            "name": "目标灌装量",
+            "identifier": "target",
+            "dataType": "FLOAT",
+            "required": true,
+            "dataSpecs": {
+              "max": "5000",
+              "min": "0",
+              "step": "0.1",
+              "unit": "mL",
+              "unitName": "毫升"
+            },
+            "dataSpecsList": null
+          }
+        ],
+        "outParams": []
+      },
+      {
+        "serviceName": "查询产量",
+        "identifier": "query_output",
+        "description": "同步查询生产计数",
+        "required": false,
+        "callType": "SYNC",
+        "inputParams": [],
+        "outParams": [
+          {
+            "name": "产量",
+            "identifier": "output_count",
+            "dataType": "INT",
+            "required": false,
+            "dataSpecs": {
+              "max": "999999",
+              "min": "0",
+              "step": "1",
+              "unit": "瓶",
+              "unitName": "瓶"
+            },
+            "dataSpecsList": null
+          },
+          {
+            "name": "合格数",
+            "identifier": "good_count",
+            "dataType": "INT",
+            "required": false,
+            "dataSpecs": {
+              "max": "999999",
+              "min": "0",
+              "step": "1",
+              "unit": "瓶",
+              "unitName": "瓶"
+            },
+            "dataSpecsList": null
+          },
+          {
+            "name": "不合格数",
+            "identifier": "reject_count",
+            "dataType": "INT",
+            "required": false,
+            "dataSpecs": {
+              "max": "999999",
+              "min": "0",
+              "step": "1",
+              "unit": "瓶",
+              "unitName": "瓶"
+            },
+            "dataSpecsList": null
+          }
+        ]
+      }
+    ]
+  },
+  "alarmRules": [
+    {
+      "name": "液位低",
+      "propertyCode": "liquid_level",
+      "operator": "<",
+      "value": "20",
+      "alertLevel": 2,
+      "alertType": 1,
+      "silenceTime": 300,
+      "description": "料缸液位低于 20%"
+    },
+    {
+      "name": "计量偏差超限",
+      "propertyCode": "filling_accuracy",
+      "operator": ">",
+      "value": "2",
+      "alertLevel": 2,
+      "alertType": 1,
+      "silenceTime": 600,
+      "description": "灌装计量偏差超过 2%"
+    },
+    {
+      "name": "不合格数偏高",
+      "propertyCode": "reject_count",
+      "operator": ">",
+      "value": "50",
+      "alertLevel": 3,
+      "alertType": 1,
+      "silenceTime": 1800,
+      "description": "累计不合格瓶数超过 50"
+    },
+    {
+      "name": "节拍超限",
+      "propertyCode": "cycle_time",
+      "operator": ">",
+      "value": "30",
+      "alertLevel": 3,
+      "alertType": 1,
+      "silenceTime": 900,
+      "description": "灌装节拍超过 30 秒"
+    },
+    {
+      "name": "缺料",
+      "propertyCode": "material_status",
+      "operator": "=",
+      "value": "1",
+      "alertLevel": 1,
+      "alertType": 1,
+      "silenceTime": 300,
+      "description": "料缸缺料"
+    }
+  ],
+  "dashboard": {
+    "name": "灌装机看板",
+    "widgets": [
+      {
+        "title": "灌装速度趋势",
+        "type": "line",
+        "propertyCode": "filling_speed",
+        "timeRange": "1h",
+        "aggInterval": 60,
+        "aggMethod": "avg"
+      },
+      {
+        "title": "节拍趋势",
+        "type": "line",
+        "propertyCode": "cycle_time",
+        "timeRange": "1h",
+        "aggInterval": 60,
+        "aggMethod": "avg"
+      },
+      {
+        "title": "产量",
+        "type": "kpi",
+        "propertyCode": "output_count",
+        "unit": "瓶",
+        "decimals": 0
+      },
+      {
+        "title": "节拍",
+        "type": "gauge",
+        "propertyCode": "cycle_time",
+        "unit": "s",
+        "min": 0,
+        "max": 60
+      },
+      {
+        "title": "不合格数",
+        "type": "kpi",
+        "propertyCode": "reject_count",
+        "unit": "瓶",
+        "decimals": 0
+      },
+      {
+        "title": "灌装机运行总览",
+        "type": "text",
+        "text": "产量、速度、液位与计量精度综合监控"
+      }
+    ]
+  },
+  "metrics": {
+    "running": "run_status",
+    "output": "output_count",
+    "good": "good_count",
+    "reject": "reject_count",
+    "cycleTime": "cycle_time"
+  }
+}

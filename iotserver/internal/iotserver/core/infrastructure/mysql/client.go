@@ -45,7 +45,6 @@ func NewClient(config dtos.Configuration, lc logger.LoggingClient) (c *Client, e
 	//	&models.DeviceService{},
 	//	&models.Device{},
 	//	&models.DockerConfig{},
-	//	&models.AdvanceConfig{},
 	//	&models.SystemMetrics{},
 	//	&models.CategoryTemplate{},
 	//	&models.ThingModelTemplate{},
@@ -293,6 +292,9 @@ func (c *Client) DeviceOfflineById(id string) (edgeXErr error) {
 
 func (c *Client) DeviceOfflineByCloudInstanceId(id string) (edgeXErr error) {
 	return deviceOfflineByCloudInstanceId(c, id)
+}
+func (c *Client) MarkStaleDevicesOffline(beforeMs int64) (int64, error) {
+	return markStaleDevicesOffline(c, beforeMs)
 }
 
 func (c *Client) MsgReportDeviceById(id string) (device models.Device, edgeXErr error) {
@@ -547,14 +549,6 @@ func (c *Client) BatchUpsertQuickNavigationTemplate(ds []models.QuickNavigation)
 
 func (c *Client) DeleteQuickNavigation(id string) error {
 	return deleteQuickNavigation(c, id)
-}
-
-func (c *Client) GetAdvanceConfig() (models.AdvanceConfig, error) {
-	return getAdvanceConfig(c)
-}
-
-func (c *Client) UpdateAdvanceConfig(config models.AdvanceConfig) error {
-	return updateAdvanceConfig(c, config)
 }
 
 func (c *Client) AddMsgGather(msgGather models.MsgGather) error {

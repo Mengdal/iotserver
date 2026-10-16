@@ -14,22 +14,23 @@ const (
 	MenuAdminRole     = "9000000000000000003"
 	MenuAdminMenu     = "9000000000000000004"
 	MenuAdminDept     = "9000000000000000005"
-	MenuAdminLoginLog = "9000000000000000006"
+	MenuAdminAuditLog = "9000000000000000006"
 	MenuAdminConfig   = "9000000000000000007"
-	MenuAdminProfile  = "9000000000000000008"
 )
 
 // 其它模块菜单 ID
 const (
-	MenuHomeId           = "9000000000000000010"
-	MenuDocsId           = "9000000000000000011"
-	MenuGatewayId        = "9001000000000000001"
-	MenuProduct          = "9001000000000000002"
-	MenuDevice           = "9001000000000000003"
-	MenuImage            = "9001000000000000004"
-	MenuDrive            = "9001000000000000005"
-	MenuDataId           = "9003000000000000001"
-	MenuDataHistory      = "9003000000000000002"
+	MenuHomeId      = "9000000000000000010"
+	MenuDocsId      = "9000000000000000011"
+	MenuGatewayId   = "9001000000000000001"
+	MenuProduct     = "9001000000000000002"
+	MenuDevice      = "9001000000000000003"
+	MenuImage       = "9001000000000000004"
+	MenuDrive       = "9001000000000000005"
+	MenuDataId      = "9003000000000000001"
+	MenuDataHistory = "9003000000000000002"
+	// MenuVizGroupId 可视化目录（数据看板 / 看板管理 的分组）
+	MenuVizGroupId       = "9004000000000000000"
 	MenuVizId            = "9004000000000000001"
 	MenuVizBoardId       = "9004000000000000002"
 	MenuAdvancedId       = "9005000000000000001"
@@ -47,6 +48,28 @@ const (
 	RoleAdminKey = "admin"
 )
 
+// 平台级菜单（platform_only=1，不下发给租户用户）
+const (
+	MenuPlatformTenant = "9000000000000000101"
+	// MenuPlatformId 平台管理目录（平台管理员专属功能的分组）
+	MenuPlatformId = "9000000000000000100"
+)
+
+// 设备接入 - 网关管理菜单
+const (
+	MenuGatewayManage = "9001000000000000010"
+)
+
+// 设备接入 - 方案中心菜单
+const (
+	MenuSolution = "9001000000000000011"
+)
+
+// 设备接入 - 驱动管理目录（把驱动相关菜单收进去）
+const (
+	MenuDriveGroup = "9001000000000000006"
+)
+
 // 内置部门
 const (
 	DeptRootId = "7000000000000000001"
@@ -57,6 +80,9 @@ const (
 	ConfigKeyPasswordMinLength = "security.passwordMinLength"
 	ConfigKeySessionTimeout    = "security.sessionTimeout"
 	ConfigKeyRetentionDays     = "data.retentionDays"
+	// ConfigKeyOfflineTimeout 设备/网关离线判定超时（分钟）：最后活跃时间早于
+	// now - 该值，即由后台扫描置为离线。设备与网关共用同一个值，避免两套语义。
+	ConfigKeyOfflineTimeout = "data.offlineTimeout"
 )
 
 // 内置管理员
@@ -94,17 +120,27 @@ func withActions(base []permAction, extra ...permAction) []permAction {
 }
 
 var buttonGroups = []buttonGroup{
+	// 平台级：租户管理，只授予 ROBX 运营账号
+	{MenuPlatformTenant, "租户管理", "platform:tenant", []permAction{
+		{"add", "新增"}, {"edit", "修改"}, {"remove", "删除"}, {"switch", "切换"}}},
 	{MenuAdminUser, "用户管理", "system:user", crudActions},
 	{MenuAdminRole, "角色管理", "system:role", crudActions},
 	{MenuAdminMenu, "菜单管理", "system:menu", crudActions},
 	{MenuAdminDept, "部门管理", "system:dept", crudActions},
-	{MenuAdminLoginLog, "登入日志", "system:loginlog", []permAction{{"list", "查询"}, {"remove", "删除"}}},
+	{MenuAdminAuditLog, "审查日志", "system:auditlog", []permAction{{"list", "查询"}, {"remove", "删除"}}},
 	{MenuAdminConfig, "系统配置", "system:config", crudActions},
 	{MenuProduct, "产品管理", "gateway:product", crudActions},
 	{MenuDevice, "设备管理", "gateway:device", withActions(crudActions,
 		permAction{"import", "导入"}, permAction{"bind", "绑定"})},
 	{MenuImage, "驱动镜像", "gateway:image", []permAction{{"list", "查询"}, {"add", "新增"}, {"edit", "修改"}, {"remove", "删除"}}},
 	{MenuDrive, "我的驱动", "gateway:drive", crudActions},
+	{MenuGatewayManage, "网关管理", "gateway:gateway", withActions(crudActions,
+		permAction{"config", "下发配置"}, permAction{"command", "下发命令"})},
+	// 方案中心：list 权限已挂在菜单上，按钮组只补「应用」与物模型条目的增/改/删
+	{MenuSolution, "方案中心", "solution", []permAction{
+		{"query", "详情"},
+		{"apply", "应用"},
+		{"tsl:add", "添加物模型"}, {"tsl:edit", "编辑物模型"}, {"tsl:remove", "删除物模型"}}},
 	{MenuAlarm, "告警中心", "monitor:alert", withActions(crudActions, permAction{"handle", "处理"})},
 	// 资源管理没有独立详情接口（列表即用于编辑回填），因此按钮组不含 query
 	{MenuAdvancedResource, "资源管理", "advanced:resource", []permAction{
@@ -113,6 +149,13 @@ var buttonGroups = []buttonGroup{
 		permAction{"start", "启动"}, permAction{"stop", "停止"})},
 	{MenuAdvancedScene, "场景联动", "advanced:scene", withActions(crudActions,
 		permAction{"start", "启动"}, permAction{"stop", "停止"})},
+	// 菜单定制的按钮权限（system:menu:custom:pref / :reset）。
+	// 必须追加在最后：按钮菜单 ID 是按声明顺序生成的（9100000000000%05d），
+	// 插在中间会让其后所有按钮 ID 整体位移 —— 升级时旧 ID 被当「遗留菜单」清理重建，
+	// 租户角色已授权的按钮会全部失效。prefix 拆到 system:menu:custom，
+	// 后缀 pref/reset 拼出与 permissions 常量一致的权限码。
+	{MenuAdminMenu, "菜单管理", "system:menu:custom", []permAction{
+		{"pref", "菜单定制"}, {"reset", "重置菜单定制"}}},
 }
 
 // DefaultMenus 返回平台默认菜单树（扁平列表，含目录 / 菜单 / 按钮）
@@ -123,6 +166,19 @@ func DefaultMenus() []models.Menu {
 			Id: MenuHomeId, ParentId: "0", Name: "首页", Path: "/home/dashboard",
 			Icon: "dashboard", MenuType: models.MenuTypeMenu, Perms: permissions.HomeView,
 			Sort: 1, Visible: 1, Status: 1, IsFrame: 1,
+		},
+		// ===== 平台管理（仅 ROBX 运营账号可见）=====
+		{
+			// 平台管理：平台管理员专属功能的分组（租户管理、系统配置）。
+			// 整组标记 platform_only：租户用户侧边栏不出现该目录，也不会出现"空目录"。
+			Id: MenuPlatformId, ParentId: "0", Name: "平台管理", Path: "/platform",
+			Icon: "safety", MenuType: models.MenuTypeDir,
+			Sort: 5, Visible: 1, Status: 1, IsFrame: 1, PlatformOnly: 1,
+		},
+		{
+			Id: MenuPlatformTenant, ParentId: MenuPlatformId, Name: "租户管理", Path: "/platform/tenant",
+			Icon: "team", MenuType: models.MenuTypeMenu, Perms: permissions.PlatformTenantList,
+			Sort: 1, Visible: 1, Status: 1, IsFrame: 1, PlatformOnly: 1,
 		},
 		// ===== 设备接入 =====
 		{
@@ -141,14 +197,32 @@ func DefaultMenus() []models.Menu {
 			Sort: 2, Visible: 1, Status: 1, IsFrame: 1,
 		},
 		{
-			Id: MenuImage, ParentId: MenuGatewayId, Name: "驱动镜像", Path: "/gateway/drive/image",
+			Id: MenuImage, ParentId: MenuDriveGroup, Name: "驱动镜像", Path: "/gateway/drive/image",
 			Icon: "cloud-server", MenuType: models.MenuTypeMenu, Perms: permissions.ImageList,
+			Sort: 1, Visible: 1, Status: 1, IsFrame: 1,
+		},
+		{
+			Id: MenuDrive, ParentId: MenuDriveGroup, Name: "我的驱动", Path: "/gateway/my/drive",
+			Icon: "deployment-unit", MenuType: models.MenuTypeMenu, Perms: permissions.DriveList,
+			Sort: 2, Visible: 1, Status: 1, IsFrame: 1,
+		},
+		{
+			// 网关管理：第三方工业网关的注册、MQTT 接入信息、配置下发与在线状态
+			Id: MenuGatewayManage, ParentId: MenuGatewayId, Name: "网关管理", Path: "/gateway/gateway/manage",
+			Icon: "cloud-server", MenuType: models.MenuTypeMenu, Perms: permissions.GatewayList,
 			Sort: 3, Visible: 1, Status: 1, IsFrame: 1,
 		},
 		{
-			Id: MenuDrive, ParentId: MenuGatewayId, Name: "我的驱动", Path: "/gateway/my/drive",
-			Icon: "deployment-unit", MenuType: models.MenuTypeMenu, Perms: permissions.DriveList,
+			// 方案中心：行业方案（物模型 + 告警预设 + 看板预设）一键生成产品与告警规则
+			Id: MenuSolution, ParentId: MenuGatewayId, Name: "方案中心", Path: "/solution/center",
+			Icon: "appstore", MenuType: models.MenuTypeMenu, Perms: permissions.SolutionList,
 			Sort: 4, Visible: 1, Status: 1, IsFrame: 1,
+		},
+		{
+			// 驱动管理：与「设备接入」同级的顶层目录（镜像仓库 + 驱动实例）
+			Id: MenuDriveGroup, ParentId: "0", Name: "驱动管理", Path: "/drive",
+			Icon: "cloud-server", MenuType: models.MenuTypeDir,
+			Sort: 12, Visible: 1, Status: 1, IsFrame: 1,
 		},
 		// ===== 数据中心 =====
 		{
@@ -163,16 +237,26 @@ func DefaultMenus() []models.Menu {
 		},
 		// ===== 可视化 =====
 		{
-			// Shaper 看板：前端用 React SDK 直嵌（不走 iframe），看板内容在 Shaper 里用 SQL 维护
-			Id: MenuVizId, ParentId: "0", Name: "数据看板", Path: "/viz/dashboard",
-			Icon: "bar-chart", MenuType: models.MenuTypeMenu,
-			Sort: 93, Visible: 1, Status: 1, IsFrame: 1,
+			// 可视化：数据看板与看板管理的分组目录（放在「数据中心」之上）
+			Id: MenuVizGroupId, ParentId: "0", Name: "可视化", Path: "/viz",
+			Icon: "area-chart", MenuType: models.MenuTypeDir,
+			Sort: 14, Visible: 1, Status: 1, IsFrame: 1,
 		},
 		{
-			// 看板管理：新建/编辑/删除 Shaper 看板，并指定首页卡片与整页用哪一块
-			Id: MenuVizBoardId, ParentId: "0", Name: "看板管理", Path: "/viz/boards",
+			// 数据看板：把「看板管理」里设为整页/默认的那块画布看板渲染出来（只读）
+			// 查看 + 取数权限：没有 viz:data:query 的角色能看排版，但取不到设备数据
+			Id: MenuVizId, ParentId: MenuVizGroupId, Name: "数据看板", Path: "/viz/dashboard",
+			Icon: "bar-chart", MenuType: models.MenuTypeMenu,
+			Perms: permissions.VizBoardList + "," + permissions.VizBoardQuery + "," + permissions.VizDataQuery,
+			Sort:  1, Visible: 1, Status: 1, IsFrame: 1,
+		},
+		{
+			// 看板管理：新建/编辑/删除画布看板，并指定首页卡片与整页用哪一块
+			Id: MenuVizBoardId, ParentId: MenuVizGroupId, Name: "看板管理", Path: "/viz/boards",
 			Icon: "setting", MenuType: models.MenuTypeMenu,
-			Sort: 94, Visible: 1, Status: 1, IsFrame: 1,
+			Perms: permissions.VizBoardList + "," + permissions.VizBoardQuery + "," + permissions.VizDataQuery +
+				"," + permissions.VizBoardAdd + "," + permissions.VizBoardEdit + "," + permissions.VizBoardRemove,
+			Sort: 2, Visible: 1, Status: 1, IsFrame: 1,
 		},
 		// ===== 高级能力 =====
 		{
@@ -239,21 +323,19 @@ func DefaultMenus() []models.Menu {
 			Sort: 4, Visible: 1, Status: 1, IsFrame: 1,
 		},
 		{
-			Id: MenuAdminLoginLog, ParentId: MenuAdminId, Name: "登入日志", Path: "/admin/sysLoginLog",
-			Icon: "file-search", MenuType: models.MenuTypeMenu, Perms: permissions.LoginLogList,
+			Id: MenuAdminAuditLog, ParentId: MenuAdminId, Name: "审查日志", Path: "/admin/sysAuditLog",
+			Icon: "file-search", MenuType: models.MenuTypeMenu, Perms: permissions.AuditLogList,
 			Sort: 5, Visible: 1, Status: 1, IsFrame: 1,
 		},
 		{
-			Id: MenuAdminConfig, ParentId: MenuAdminId, Name: "系统配置", Path: "/admin/sysSet",
+			// 系统配置：全局唯一一份（sys_config 无 tenant_id），写接口为平台管理员专属，
+			// 因此菜单标记为平台级，不下发给租户用户（读接口仍保留给租户页面）
+			Id: MenuAdminConfig, ParentId: MenuPlatformId, Name: "系统配置", Path: "/platform/sysSet",
 			Icon: "tool", MenuType: models.MenuTypeMenu, Perms: permissions.ConfigList,
-			Sort: 6, Visible: 1, Status: 1, IsFrame: 1,
+			Sort: 2, Visible: 1, Status: 1, IsFrame: 1, PlatformOnly: 1,
 		},
-		// ===== 个人中心（不在侧边栏，由头像菜单进入）=====
-		{
-			Id: MenuAdminProfile, ParentId: "0", Name: "个人中心", Path: "/common/userProfile",
-			Icon: "profile", MenuType: models.MenuTypeMenu, Perms: permissions.UserQuery,
-			Sort: 91, Visible: 1, Status: 1, IsFrame: 1,
-		},
+		// 个人中心不再建菜单：它此前是 ParentId=0 的顶层菜单，因此会出现在侧边栏。
+		// 入口固定在顶栏头像下拉里，页面路由 /common/userProfile 保持不变。
 		// ===== 工具与文档 =====
 		{
 			Id: MenuDocsId, ParentId: "0", Name: "工具与文档", Path: "/documents/documents",
@@ -339,6 +421,7 @@ func DefaultConfigs() []ConfigItem {
 		{"security.sessionTimeout", "会话超时时间(分钟)", "180", "security", "number", 6},
 		{"security.passwordMinLength", "密码最小长度", "6", "security", "number", 7},
 		{"data.retentionDays", "数据保留天数", "30", "data", "number", 8},
+		{"data.offlineTimeout", "离线判定超时(分钟)", "5", "data", "number", 9},
 	}
 }
 

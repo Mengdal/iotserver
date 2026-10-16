@@ -32,6 +32,8 @@ const (
 	UrlDataResourceId       = "dataResourceId"
 	RuleEngineId            = "ruleEngineId"
 	SceneId                 = "sceneId"
+	// UrlParamSolutionKey 方案 key（/solution/:key/apply）
+	UrlParamSolutionKey = "key"
 )
 
 // checkCallbackToken 校验 eKuiper 回调共享密钥。

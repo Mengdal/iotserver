@@ -14,6 +14,7 @@ import (
 	"iotserver/internal/pkg/di"
 	"iotserver/internal/pkg/errort"
 	"iotserver/internal/pkg/logger"
+	"iotserver/internal/pkg/tenant"
 	"iotserver/internal/pkg/valid"
 	"iotserver/internal/tools/healthcheck"
 )
@@ -58,7 +59,7 @@ func New(dic *di.Container) *resourceApp {
 // DataResourceSearch 按类型分页查询资源实例
 func (app *resourceApp) DataResourceSearch(ctx context.Context, req dtos.DataResourceSearchRequest) ([]dtos.DataResourceResponse, uint32, error) {
 	offset, limit := dtos.OffsetLimit(req.BaseSearchConditionQuery)
-	list, total, err := app.dbClient.DataResourceSearch(offset, limit, req)
+	list, total, err := app.dbClient.WithCtx(ctx).DataResourceSearch(offset, limit, req)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -82,7 +83,7 @@ func (app *resourceApp) DataResourceAdd(ctx context.Context, req dtos.DataResour
 		return err
 	}
 	option := models.DataResourceOption(normalizeOption(req.Option))
-	if _, err := app.dbClient.AddDataResource(models.DataResource{
+	if _, err := app.dbClient.WithCtx(ctx).AddDataResource(models.DataResource{
 		Name:   req.Name,
 		Type:   req.Type,
 		Option: option,
@@ -105,7 +106,7 @@ func (app *resourceApp) DataResourceUpdate(ctx context.Context, req dtos.DataRes
 	if err != nil {
 		return err
 	}
-	return app.dbClient.UpdateDataResource(models.DataResource{
+	return app.dbClient.WithCtx(ctx).UpdateDataResource(models.DataResource{
 		Id:     req.Id,
 		Name:   req.Name,
 		Type:   req.Type,
@@ -118,7 +119,7 @@ func (app *resourceApp) DataResourceDelete(ctx context.Context, id string) error
 	if strings.TrimSpace(id) == "" {
 		return errort.NewCommonErr(errort.DefaultIdEmpty, fmt.Errorf("id is empty"))
 	}
-	return app.dbClient.DeleteDataResource(id)
+	return app.dbClient.WithCtx(ctx).DeleteDataResource(id)
 }
 
 /** ***************************** 验证 ***************************** **/
@@ -137,7 +138,8 @@ func (app *resourceApp) keepMaskedSecrets(id string, option map[string]interface
 	if !needKeep {
 		return models.DataResourceOption(option), nil
 	}
-	old, err := app.dbClient.DataResourceById(id)
+	// 平台作用域：系统路径，不按租户过滤
+	old, err := app.dbClient.WithCtx(tenant.Platform(context.Background())).DataResourceById(id)
 	if err != nil {
 		return nil, err
 	}
@@ -176,14 +178,14 @@ func maskSecrets(option models.DataResourceOption) map[string]interface{} {
 
 // DataResourceVerify 对资源实例做连通性验证，并把结果写回 health
 func (app *resourceApp) DataResourceVerify(ctx context.Context, id string) (dtos.DataResourceVerifyResponse, error) {
-	resource, err := app.dbClient.DataResourceById(id)
+	resource, err := app.dbClient.WithCtx(ctx).DataResourceById(id)
 	if err != nil {
 		return dtos.DataResourceVerifyResponse{}, err
 	}
 
 	checkErr := healthcheck.Check(resource.Type, map[string]interface{}(resource.Option))
 	health := checkErr == nil
-	if err := app.dbClient.UpdateDataResourceHealth(id, health); err != nil {
+	if err := app.dbClient.WithCtx(ctx).UpdateDataResourceHealth(id, health); err != nil {
 		return dtos.DataResourceVerifyResponse{}, err
 	}
 

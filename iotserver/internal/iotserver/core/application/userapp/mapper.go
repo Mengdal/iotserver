@@ -1,11 +1,13 @@
 package userapp
 
 import (
+	"context"
 	"sort"
 	"time"
 
 	"iotserver/internal/dtos"
 	"iotserver/internal/models"
+	"iotserver/internal/pkg/tenant"
 )
 
 func nowMilli() int64 {
@@ -31,14 +33,15 @@ func (uapp *userApp) toSysUserResponse(u models.User) dtos.SysUserResponse {
 		Modified:  u.Modified,
 	}
 	if u.DeptId != "" {
-		if dept, err := uapp.dbClient.SysDeptById(u.DeptId); err == nil {
+		// 平台作用域：系统路径，不按租户过滤
+		if dept, err := uapp.dbClient.WithCtx(tenant.Platform(context.Background())).SysDeptById(u.DeptId); err == nil {
 			res.DeptName = dept.Name
 		}
 	}
-	if roleIds, err := uapp.dbClient.GetUserRoleIds(u.Id); err == nil {
+	if roleIds, err := uapp.dbClient.WithCtx(tenant.Platform(context.Background())).GetUserRoleIds(u.Id); err == nil {
 		res.RoleIds = roleIds
 		if len(roleIds) > 0 {
-			if roles, rErr := uapp.dbClient.SysRolesByIds(roleIds); rErr == nil {
+			if roles, rErr := uapp.dbClient.WithCtx(tenant.Platform(context.Background())).SysRolesByIds(roleIds); rErr == nil {
 				for _, r := range roles {
 					res.RoleNames = append(res.RoleNames, r.Name)
 					if r.RoleKey == "admin" {
@@ -83,6 +86,7 @@ func toMenuResponse(m models.Menu) dtos.SysMenuResponse {
 		Visible:   m.Visible,
 		Status:    m.Status,
 		IsFrame:   m.IsFrame,
+		TenantId:  m.TenantId,
 		Remark:    m.Remark,
 		Created:   m.Created,
 		Modified:  m.Modified,
@@ -96,6 +100,7 @@ func toDeptResponse(d models.Dept) dtos.SysDeptResponse {
 		ParentId:  d.ParentId,
 		Ancestors: d.Ancestors,
 		Name:      d.Name,
+		DeptType:  normalizeDeptType(d.DeptType),
 		Sort:      d.Sort,
 		Leader:    d.Leader,
 		Phone:     d.Phone,
@@ -107,16 +112,26 @@ func toDeptResponse(d models.Dept) dtos.SysDeptResponse {
 	}
 }
 
-func toLoginLogResponse(l models.LoginLog) dtos.SysLoginLogResponse {
-	return dtos.SysLoginLogResponse{
-		Id:        l.Id,
-		Username:  l.Username,
-		Ip:        l.Ip,
-		Browser:   l.Browser,
-		Os:        l.Os,
-		Status:    l.Status,
-		Message:   l.Message,
-		LoginTime: l.LoginTime,
+func toAuditLogResponse(l models.AuditLog) dtos.SysAuditLogResponse {
+	return dtos.SysAuditLogResponse{
+		Id:         l.Id,
+		Type:       l.Type,
+		Username:   l.Username,
+		Module:     l.Module,
+		Action:     l.Action,
+		Target:     l.Target,
+		Method:     l.Method,
+		Path:       l.Path,
+		Ip:         l.Ip,
+		Browser:    l.Browser,
+		Os:         l.Os,
+		Status:     l.Status,
+		ErrorCode:  l.ErrorCode,
+		Message:    l.Message,
+		Params:     l.Params,
+		DurationMs: l.DurationMs,
+		LoginTime:  l.LoginTime,
+		Created:    l.Created,
 	}
 }
 

@@ -15,6 +15,7 @@ import (
 	"iotserver/internal/pkg/di"
 	"iotserver/internal/pkg/errort"
 	"iotserver/internal/pkg/logger"
+	"iotserver/internal/pkg/tenant"
 	"iotserver/internal/pkg/utils"
 	"iotserver/internal/pkg/valid"
 	"iotserver/internal/tools/ekuiperclient"
@@ -73,7 +74,7 @@ func NewWithoutMonitor(dic *di.Container) *ruleEngineApp {
 // RuleEngineSearch 规则列表
 func (app *ruleEngineApp) RuleEngineSearch(ctx context.Context, req dtos.RuleEngineSearchQueryRequest) ([]dtos.RuleEngineSearchQueryResponse, uint32, error) {
 	offset, limit := dtos.OffsetLimit(req.BaseSearchConditionQuery)
-	list, total, err := app.dbClient.RuleEngineSearch(offset, limit, req)
+	list, total, err := app.dbClient.WithCtx(ctx).RuleEngineSearch(offset, limit, req)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -86,7 +87,7 @@ func (app *ruleEngineApp) RuleEngineSearch(ctx context.Context, req dtos.RuleEng
 
 // RuleEngineById 规则详情（含绑定的数据资源）
 func (app *ruleEngineApp) RuleEngineById(ctx context.Context, id string) (dtos.RuleEngineSearchQueryResponse, error) {
-	rule, err := app.dbClient.RuleEngineById(id)
+	rule, err := app.dbClient.WithCtx(ctx).RuleEngineById(id)
 	if err != nil {
 		return dtos.RuleEngineSearchQueryResponse{}, err
 	}
@@ -99,7 +100,7 @@ func (app *ruleEngineApp) RuleEngineById(ctx context.Context, id string) (dtos.R
 
 // RuleEngineStatus 规则运行状态（直接返回 eKuiper 的规则指标，前端以 JSON 展示）
 func (app *ruleEngineApp) RuleEngineStatus(ctx context.Context, id string) (map[string]interface{}, error) {
-	if _, err := app.dbClient.RuleEngineById(id); err != nil {
+	if _, err := app.dbClient.WithCtx(ctx).RuleEngineById(id); err != nil {
 		return nil, err
 	}
 	stats, err := app.ekuiper().GetRuleStats(ctx, id)
@@ -155,7 +156,7 @@ func (app *ruleEngineApp) RuleEngineAdd(ctx context.Context, req dtos.RuleEngine
 		return err
 	}
 
-	if _, err = app.dbClient.AddRuleEngine(rule); err != nil {
+	if _, err = app.dbClient.WithCtx(ctx).AddRuleEngine(rule); err != nil {
 		// eKuiper 已创建但入库失败：回滚 eKuiper 规则。
 		// 只有「本次新建」的规则才能回滚——ID 碰撞时会命中已存在的同名规则，
 		// 无条件删除会把别人的规则删掉，导致其静默失效
@@ -177,7 +178,7 @@ func (app *ruleEngineApp) RuleEngineUpdate(ctx context.Context, req dtos.RuleEng
 	if err := checkTextLen(req.Description, req.Filter.Sql); err != nil {
 		return err
 	}
-	old, err := app.dbClient.RuleEngineById(req.Id)
+	old, err := app.dbClient.WithCtx(ctx).RuleEngineById(req.Id)
 	if err != nil {
 		return err
 	}
@@ -210,7 +211,7 @@ func (app *ruleEngineApp) RuleEngineUpdate(ctx context.Context, req dtos.RuleEng
 
 	filter := req.Filter
 	filter.Sql = sql
-	return app.dbClient.UpdateRuleEngine(models.RuleEngine{
+	return app.dbClient.WithCtx(ctx).UpdateRuleEngine(models.RuleEngine{
 		Id:             old.Id,
 		Name:           req.Name,
 		Describe:       req.Description,
@@ -222,7 +223,7 @@ func (app *ruleEngineApp) RuleEngineUpdate(ctx context.Context, req dtos.RuleEng
 
 // RuleEngineDelete 删除规则：先删 eKuiper 规则（不存在则忽略），再删库
 func (app *ruleEngineApp) RuleEngineDelete(ctx context.Context, id string) error {
-	rule, err := app.dbClient.RuleEngineById(id)
+	rule, err := app.dbClient.WithCtx(ctx).RuleEngineById(id)
 	if err != nil {
 		return err
 	}
@@ -236,14 +237,14 @@ func (app *ruleEngineApp) RuleEngineDelete(ctx context.Context, id string) error
 			return err
 		}
 	}
-	return app.dbClient.DeleteRuleEngine(id)
+	return app.dbClient.WithCtx(ctx).DeleteRuleEngine(id)
 }
 
 /** ***************************** 启停 ***************************** **/
 
 // RuleEngineStart 启动规则
 func (app *ruleEngineApp) RuleEngineStart(ctx context.Context, id string) error {
-	rule, err := app.dbClient.RuleEngineById(id)
+	rule, err := app.dbClient.WithCtx(ctx).RuleEngineById(id)
 	if err != nil {
 		return err
 	}
@@ -275,12 +276,12 @@ func (app *ruleEngineApp) RuleEngineStart(ctx context.Context, id string) error 
 	if err = ekuiper.StartRule(ctx, rule.Id); err != nil {
 		return err
 	}
-	return app.dbClient.UpdateRuleEngineStatus(rule.Id, string(constants.RuleEngineStart))
+	return app.dbClient.WithCtx(ctx).UpdateRuleEngineStatus(rule.Id, string(constants.RuleEngineStart))
 }
 
 // RuleEngineStop 停止规则
 func (app *ruleEngineApp) RuleEngineStop(ctx context.Context, id string) error {
-	rule, err := app.dbClient.RuleEngineById(id)
+	rule, err := app.dbClient.WithCtx(ctx).RuleEngineById(id)
 	if err != nil {
 		return err
 	}
@@ -294,7 +295,7 @@ func (app *ruleEngineApp) RuleEngineStop(ctx context.Context, id string) error {
 			return err
 		}
 	}
-	return app.dbClient.UpdateRuleEngineStatus(rule.Id, string(constants.RuleEngineStop))
+	return app.dbClient.WithCtx(ctx).UpdateRuleEngineStatus(rule.Id, string(constants.RuleEngineStop))
 }
 
 /** ***************************** 内部 ***************************** **/
@@ -312,7 +313,8 @@ func (app *ruleEngineApp) checkParam(name, dataResourceId, resourceType string) 
 		return models.DataResource{}, errort.NewCommonErr(errort.DefaultReqParamsError,
 			fmt.Errorf("请选择数据资源"))
 	}
-	resource, err := app.dbClient.DataResourceById(dataResourceId)
+	// 平台作用域：系统路径，不按租户过滤
+	resource, err := app.dbClient.WithCtx(tenant.Platform(context.Background())).DataResourceById(dataResourceId)
 	if err != nil {
 		return models.DataResource{}, errort.NewCommonErr(errort.InvalidSource,
 			fmt.Errorf("数据资源 %s 不存在或已被删除", dataResourceId))
@@ -336,7 +338,8 @@ func (app *ruleEngineApp) toResponses(list []models.RuleEngine) ([]dtos.RuleEngi
 			ids = append(ids, list[i].DataResourceId)
 		}
 	}
-	resources, err := app.dbClient.DataResourceByIds(ids)
+	// 平台作用域：系统路径，不按租户过滤
+	resources, err := app.dbClient.WithCtx(tenant.Platform(context.Background())).DataResourceByIds(ids)
 	if err != nil {
 		return nil, err
 	}
@@ -404,7 +407,8 @@ func (app *ruleEngineApp) syncStatus() {
 	ctx, cancel := context.WithTimeout(context.Background(), monitorTimeout)
 	defer cancel()
 
-	list, _, err := app.dbClient.RuleEngineSearch(0, monitorBatchSize, dtos.RuleEngineSearchQueryRequest{})
+	// 平台作用域：系统路径，不按租户过滤
+	list, _, err := app.dbClient.WithCtx(tenant.Platform(context.Background())).RuleEngineSearch(0, monitorBatchSize, dtos.RuleEngineSearchQueryRequest{})
 	if err != nil {
 		app.lc.Warnf("rule engine status sync: query failed: %v", err)
 		return
@@ -428,7 +432,7 @@ func (app *ruleEngineApp) syncStatus() {
 		if status != string(constants.RuleEngineStart) && status != string(constants.RuleEngineStop) {
 			continue
 		}
-		if err = app.dbClient.UpdateRuleEngineStatus(rule.Id, status); err != nil {
+		if err = app.dbClient.WithCtx(tenant.Platform(context.Background())).UpdateRuleEngineStatus(rule.Id, status); err != nil {
 			app.lc.Warnf("rule engine status sync: update %s failed: %v", rule.Id, err)
 			continue
 		}
@@ -460,7 +464,8 @@ func (app *ruleEngineApp) resyncRunningRuleActions() {
 	ctx, cancel := context.WithTimeout(context.Background(), resyncTimeout)
 	defer cancel()
 
-	list, _, err := app.dbClient.RuleEngineSearch(0, monitorBatchSize,
+	// 平台作用域：系统路径，不按租户过滤
+	list, _, err := app.dbClient.WithCtx(tenant.Platform(context.Background())).RuleEngineSearch(0, monitorBatchSize,
 		dtos.RuleEngineSearchQueryRequest{Status: string(constants.RuleEngineStart)})
 	if err != nil {
 		app.lc.Warnf("resync rule actions: query failed: %v", err)
@@ -469,7 +474,7 @@ func (app *ruleEngineApp) resyncRunningRuleActions() {
 	ekuiper := app.ekuiper()
 	for i := range list {
 		rule := list[i]
-		resource, err := app.dbClient.DataResourceById(rule.DataResourceId)
+		resource, err := app.dbClient.WithCtx(tenant.Platform(context.Background())).DataResourceById(rule.DataResourceId)
 		if err != nil {
 			app.lc.Warnf("resync rule %s: data resource %s not found", rule.Id, rule.DataResourceId)
 			continue

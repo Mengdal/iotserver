@@ -146,6 +146,15 @@ type Database struct {
 	Cluster    []string
 	Username   string
 	Password   string
+	// OverrideDataPath 仅 ducklake 用：attach 时把 catalog 里记录的数据目录强制改成 Dsn。
+	//
+	// 同一个 catalog 可能被不同路径字符串访问（容器里工作目录是 /var/bin，数据目录写成
+	// iotserver/db-data/ducklake/data；宿主机本地从 iotserver/ 启动则写成
+	// manifest/docker/db-data/ducklake/data），物理目录相同但字符串不同，ducklake 会拒绝
+	// attach 并报 "DATA_PATH does not match existing data path in the catalog"。
+	//
+	// ⚠️ 打开前请确认两种写法指向**同一个物理目录**，否则会把湖指到别的空目录上。
+	OverrideDataPath bool
 }
 
 // Credentials encapsulates username-password attributes.

@@ -16,7 +16,7 @@ package driverserver
 
 import (
 	"context"
-	"github.com/winc-link/edge-driver-proto/gateway"
+	"github.com/LMgateways/iotserver-driver-proto/gateway"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"iotserver/internal/pkg/di"

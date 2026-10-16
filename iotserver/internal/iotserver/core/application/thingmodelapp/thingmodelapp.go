@@ -48,7 +48,7 @@ type thingModelApp struct {
 
 func (t thingModelApp) AddThingModel(ctx context.Context, req dtos.ThingModelAddOrUpdateReq) (string, error) {
 
-	product, err := t.dbClient.ProductById(req.ProductId)
+	product, err := t.dbClient.WithCtx(ctx).ProductById(req.ProductId)
 	if err != nil {
 		return "", err
 	}
@@ -80,7 +80,7 @@ func (t thingModelApp) AddThingModel(ctx context.Context, req dtos.ThingModelAdd
 		if err != nil {
 			return "", err
 		}
-		ds, err := t.dbClient.AddThingModelProperty(property)
+		ds, err := t.dbClient.WithCtx(ctx).AddThingModelProperty(property)
 		if err != nil {
 			return "", err
 		}
@@ -113,7 +113,7 @@ func (t thingModelApp) AddThingModel(ctx context.Context, req dtos.ThingModelAdd
 		if err != nil {
 			return "", err
 		}
-		ds, err := t.dbClient.AddThingModelEvent(event)
+		ds, err := t.dbClient.WithCtx(ctx).AddThingModelEvent(event)
 		if err != nil {
 			return "", err
 		}
@@ -160,7 +160,7 @@ func (t thingModelApp) AddThingModel(ctx context.Context, req dtos.ThingModelAdd
 		if err != nil {
 			return "", err
 		}
-		ds, err := t.dbClient.AddThingModelAction(action)
+		ds, err := t.dbClient.WithCtx(ctx).AddThingModelAction(action)
 		if err != nil {
 			return "", err
 		}
@@ -172,7 +172,7 @@ func (t thingModelApp) AddThingModel(ctx context.Context, req dtos.ThingModelAdd
 }
 
 func (t thingModelApp) UpdateThingModel(ctx context.Context, req dtos.ThingModelAddOrUpdateReq) error {
-	product, err := t.dbClient.ProductById(req.ProductId)
+	product, err := t.dbClient.WithCtx(ctx).ProductById(req.ProductId)
 	if err != nil {
 		return err
 	}
@@ -205,7 +205,7 @@ func (t thingModelApp) UpdateThingModel(ctx context.Context, req dtos.ThingModel
 			return err
 		}
 
-		err = t.dbClient.UpdateThingModelProperty(property)
+		err = t.dbClient.WithCtx(ctx).UpdateThingModelProperty(property)
 		if err != nil {
 			return err
 		}
@@ -239,7 +239,7 @@ func (t thingModelApp) UpdateThingModel(ctx context.Context, req dtos.ThingModel
 		if err != nil {
 			return err
 		}
-		err = t.dbClient.UpdateThingModelEvent(event)
+		err = t.dbClient.WithCtx(ctx).UpdateThingModelEvent(event)
 		if err != nil {
 			return err
 		}
@@ -287,7 +287,7 @@ func (t thingModelApp) UpdateThingModel(ctx context.Context, req dtos.ThingModel
 		if err != nil {
 			return err
 		}
-		err = t.dbClient.UpdateThingModelAction(action)
+		err = t.dbClient.WithCtx(ctx).UpdateThingModelAction(action)
 		if err != nil {
 			return err
 		}
@@ -341,7 +341,7 @@ func NewThingModelApp(ctx context.Context, dic *di.Container) interfaces.ThingMo
 func (t thingModelApp) ThingModelDelete(ctx context.Context, id string, thingModelType string) error {
 	switch thingModelType {
 	case Property:
-		propertyInfo, err := t.dbClient.ThingModelPropertyById(id)
+		propertyInfo, err := t.dbClient.WithCtx(ctx).ThingModelPropertyById(id)
 		if err != nil {
 			return err
 		}
@@ -349,13 +349,13 @@ func (t thingModelApp) ThingModelDelete(ctx context.Context, id string, thingMod
 		if err != nil {
 			return err
 		}
-		err = t.dbClient.ThingModelDeleteProperty(id)
+		err = t.dbClient.WithCtx(ctx).ThingModelDeleteProperty(id)
 		if err != nil {
 			return err
 		}
 		t.ProductUpdateCallback(propertyInfo.ProductId)
 	case Event:
-		eventInfo, err := t.dbClient.ThingModelEventById(id)
+		eventInfo, err := t.dbClient.WithCtx(ctx).ThingModelEventById(id)
 		if err != nil {
 			return err
 		}
@@ -363,13 +363,13 @@ func (t thingModelApp) ThingModelDelete(ctx context.Context, id string, thingMod
 		if err != nil {
 			return err
 		}
-		err = t.dbClient.ThingModelDeleteEvent(id)
+		err = t.dbClient.WithCtx(ctx).ThingModelDeleteEvent(id)
 		if err != nil {
 			return err
 		}
 		t.ProductUpdateCallback(eventInfo.ProductId)
 	case Action:
-		actionInfo, err := t.dbClient.ThingModelActionsById(id)
+		actionInfo, err := t.dbClient.WithCtx(ctx).ThingModelActionsById(id)
 		if err != nil {
 			return err
 		}
@@ -377,7 +377,7 @@ func (t thingModelApp) ThingModelDelete(ctx context.Context, id string, thingMod
 		if err != nil {
 			return err
 		}
-		err = t.dbClient.ThingModelDeleteAction(id)
+		err = t.dbClient.WithCtx(ctx).ThingModelDeleteAction(id)
 		if err != nil {
 			return err
 		}
@@ -401,11 +401,11 @@ func (t thingModelApp) ProductUpdateCallback(productId string) {
 }
 
 func (t thingModelApp) SystemThingModelSearch(ctx context.Context, req dtos.SystemThingModelSearchReq) (interface{}, error) {
-	return t.dbClient.SystemThingModelSearch(req.ThingModelType, req.ModelName)
+	return t.dbClient.WithCtx(ctx).SystemThingModelSearch(req.ThingModelType, req.ModelName)
 }
 
 func (t thingModelApp) OpenApiQueryThingModel(ctx context.Context, productId string) (dtos.OpenApiQueryThingModel, error) {
-	product, err := t.dbClient.ProductById(productId)
+	product, err := t.dbClient.WithCtx(ctx).ProductById(productId)
 	if err != nil {
 		return dtos.OpenApiQueryThingModel{}, err
 	}
@@ -467,7 +467,7 @@ func (t thingModelApp) OpenApiQueryThingModel(ctx context.Context, productId str
 
 func (t thingModelApp) OpenApiAddThingModel(ctx context.Context, req dtos.OpenApiThingModelAddOrUpdateReq) error {
 
-	_, err := t.dbClient.ProductById(req.ProductId)
+	_, err := t.dbClient.WithCtx(ctx).ProductById(req.ProductId)
 	if err != nil {
 		return err
 	}
@@ -535,7 +535,7 @@ func (t thingModelApp) OpenApiAddThingModel(ctx context.Context, req dtos.OpenAp
 		})
 	}
 
-	//t.dbClient.ThingModelActionsById()
+	//t.dbClient.WithCtx(ctx).ThingModelActionsById()
 
 	var shouldCallBack bool
 	updateFunc := func(source interface{}, db *gorm.DB) error {
@@ -545,7 +545,7 @@ func (t thingModelApp) OpenApiAddThingModel(ctx context.Context, req dtos.OpenAp
 		//return tx
 	}
 
-	db := t.dbClient.GetDBInstance()
+	db := t.dbClient.WithCtx(ctx).GetDBInstance()
 	//db.Begin()
 	if len(properties) > 0 {
 		shouldCallBack = true
@@ -583,7 +583,7 @@ func (t thingModelApp) OpenApiAddThingModel(ctx context.Context, req dtos.OpenAp
 }
 
 func (t thingModelApp) OpenApiDeleteThingModel(ctx context.Context, req dtos.OpenApiThingModelDeleteReq) error {
-	product, err := t.dbClient.ProductById(req.ProductId)
+	product, err := t.dbClient.WithCtx(ctx).ProductById(req.ProductId)
 	if err != nil {
 		return err
 	}
@@ -606,7 +606,7 @@ func (t thingModelApp) OpenApiDeleteThingModel(ctx context.Context, req dtos.Ope
 
 	for _, id := range req.PropertyIds {
 		if utils.InStringSlice(id, productPropertyIds) {
-			if err = t.dbClient.ThingModelDeleteProperty(id); err != nil {
+			if err = t.dbClient.WithCtx(ctx).ThingModelDeleteProperty(id); err != nil {
 				return err
 			}
 		}
@@ -614,7 +614,7 @@ func (t thingModelApp) OpenApiDeleteThingModel(ctx context.Context, req dtos.Ope
 
 	for _, id := range req.EventIds {
 		if utils.InStringSlice(id, productEventIds) {
-			if err = t.dbClient.ThingModelDeleteEvent(id); err != nil {
+			if err = t.dbClient.WithCtx(ctx).ThingModelDeleteEvent(id); err != nil {
 				return err
 			}
 		}
@@ -622,7 +622,7 @@ func (t thingModelApp) OpenApiDeleteThingModel(ctx context.Context, req dtos.Ope
 
 	for _, id := range req.ServiceIds {
 		if utils.InStringSlice(id, productService) {
-			if err = t.dbClient.ThingModelDeleteAction(id); err != nil {
+			if err = t.dbClient.WithCtx(ctx).ThingModelDeleteAction(id); err != nil {
 				return err
 			}
 		}

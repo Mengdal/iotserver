@@ -15,12 +15,13 @@
 package models
 
 import (
-	"github.com/winc-link/edge-driver-proto/driverproduct"
+	"github.com/LMgateways/iotserver-driver-proto/driverproduct"
 	"iotserver/internal/pkg/constants"
 )
 
 type Product struct {
 	Timestamps      `gorm:"embedded"`
+	TenantField     `gorm:"embedded"`
 	Id              string                    `gorm:"id;primaryKey;not null;type:string;size:255;comment:主键"`
 	Name            string                    `gorm:"type:string;size:255;comment:名字"`
 	Key             string                    `gorm:"type:string;size:255;comment:产品标识"`

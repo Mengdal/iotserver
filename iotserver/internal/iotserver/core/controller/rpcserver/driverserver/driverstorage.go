@@ -16,7 +16,7 @@ package driverserver
 
 import (
 	"context"
-	driverstorage "github.com/winc-link/edge-driver-proto/driverstorge"
+	driverstorage "github.com/LMgateways/iotserver-driver-proto/driverstorge"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"

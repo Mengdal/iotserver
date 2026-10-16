@@ -44,3 +44,34 @@ type DataDBClient interface {
 	GetDeviceEventCount(req dtos.ThingModelEventDataRequest) (int, error)
 	GetDeviceMsgCountByGiveTime(deviceId string, startTime, endTime int64) (int, error)
 }
+
+// MsgCounter 可选能力：数据层能用**一条 SQL** 统计时间段内的消息总数。
+//
+// 时间序列消息量按设备数线性增长，按设备逐台汇总会退化成 N+1 查询，
+// 因此支持该能力的数据层走快路径；未实现的形态退回按设备汇总
+// （设备列表本身已由仓储层做租户过滤，语义仍然正确）。
+type MsgCounter interface {
+	// CountAllMsgByTimeRange 统计消息总数；tenantID 为空表示不限租户（平台作用域）
+	CountAllMsgByTimeRange(tenantID string, startTime, endTime int64) (int, error)
+}
+
+// DataPurger 可选能力：数据层支持按时间清理时序数据。
+//
+// 保留策略由应用层驱动（见 application/retention.go）：按租户读取各自的保留天数，
+// 逐租户调用 PurgeTenantBefore，这样改配置不必重启，也才能做到分级保留。
+// 未实现该能力的数据层（如 ducklake）保留自带的全局维护逻辑。
+type DataPurger interface {
+	// PurgeBefore 清理所有租户 cutoff（毫秒）之前的数据
+	PurgeBefore(ctx context.Context, cutoffMillis int64) (int64, error)
+	// PurgeTenantBefore 只清理指定租户 cutoff（毫秒）之前的数据
+	PurgeTenantBefore(ctx context.Context, tenantID string, cutoffMillis int64) (int64, error)
+}
+
+// DatabaseExporter 可选能力：数据层支持导出**一致的在线快照**用于备份。
+//
+// 数据库文件被运行中的进程独占，直接拷贝不安全；实现该能力的数据层
+// 会在导出前先 CHECKPOINT，由引擎自身保证快照一致。
+type DatabaseExporter interface {
+	// ExportDatabase 把当前库导出到 dir
+	ExportDatabase(ctx context.Context, dir string) error
+}

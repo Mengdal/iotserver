@@ -16,11 +16,12 @@ package deviceapp
 
 import (
 	"context"
-	"github.com/winc-link/edge-driver-proto/devicecallback"
+	"github.com/LMgateways/iotserver-driver-proto/devicecallback"
 	"iotserver/internal/iotserver/core/container"
 	"iotserver/internal/models"
 	"iotserver/internal/pkg/constants"
 	"iotserver/internal/pkg/di"
+	"iotserver/internal/pkg/tenant"
 	"iotserver/internal/tools/rpcclient"
 	"time"
 )
@@ -31,7 +32,8 @@ func (p *deviceApp) CreateDeviceCallBack(createDevice models.Device) {
 			p.lc.Error("CreateDeviceCallBack Panic:", err)
 		}
 	}()
-	deviceService, err := p.dbClient.DeviceServiceById(createDevice.DriveInstanceId)
+	// 平台作用域：系统路径，不按租户过滤
+	deviceService, err := p.dbClient.WithCtx(tenant.Platform(context.Background())).DeviceServiceById(createDevice.DriveInstanceId)
 	if err != nil {
 		return
 	}
@@ -59,7 +61,8 @@ func (p *deviceApp) UpdateDeviceCallBack(updateDevice models.Device) {
 			p.lc.Error("UpdateDeviceCallBack Panic:", err)
 		}
 	}()
-	deviceService, err := p.dbClient.DeviceServiceById(updateDevice.DriveInstanceId)
+	// 平台作用域：系统路径，不按租户过滤
+	deviceService, err := p.dbClient.WithCtx(tenant.Platform(context.Background())).DeviceServiceById(updateDevice.DriveInstanceId)
 	if err != nil {
 		return
 	}
@@ -89,7 +92,8 @@ func (p *deviceApp) DeleteDeviceCallBack(deleteDevice models.Device) {
 			p.lc.Error("DeleteDeviceCallBack Panic:", err)
 		}
 	}()
-	deviceService, err := p.dbClient.DeviceServiceById(deleteDevice.DriveInstanceId)
+	// 平台作用域：系统路径，不按租户过滤
+	deviceService, err := p.dbClient.WithCtx(tenant.Platform(context.Background())).DeviceServiceById(deleteDevice.DriveInstanceId)
 	if err != nil {
 		return
 	}

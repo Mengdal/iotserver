@@ -329,7 +329,7 @@ func (ctl *controller) DeviceThingModelPropertyDataSearch(c *gin.Context) {
 	urlDecodeParam(&req, c.Request, lc)
 	deviceId := c.Param(UrlParamDeviceId)
 	req.DeviceId = deviceId
-	data, edgeXErr := ctl.getPersistApp().SearchDeviceThingModelPropertyData(req)
+	data, edgeXErr := ctl.getPersistApp().SearchDeviceThingModelPropertyData(c.Request.Context(), req)
 	if edgeXErr != nil {
 		httphelper.RenderFail(c, edgeXErr, c.Writer, lc)
 		return
@@ -344,7 +344,7 @@ func (ctl *controller) DeviceThingModelHistoryPropertyDataSearch(c *gin.Context)
 	dtos.CorrectionPageParam(&req.BaseSearchConditionQuery)
 	deviceId := c.Param(UrlParamDeviceId)
 	req.DeviceId = deviceId
-	data, total, edgeXErr := ctl.getPersistApp().SearchDeviceThingModelHistoryPropertyData(req)
+	data, total, edgeXErr := ctl.getPersistApp().SearchDeviceThingModelHistoryPropertyData(c.Request.Context(), req)
 	if edgeXErr != nil {
 		httphelper.RenderFail(c, edgeXErr, c.Writer, lc)
 		return
@@ -366,7 +366,7 @@ func (ctl *controller) DeviceThingModelEventDataSearch(c *gin.Context) {
 	deviceId := c.Param(UrlParamDeviceId)
 	dtos.CorrectionPageParam(&req.BaseSearchConditionQuery)
 	req.DeviceId = deviceId
-	data, total, edgeXErr := ctl.getPersistApp().SearchDeviceThingModelEventData(req)
+	data, total, edgeXErr := ctl.getPersistApp().SearchDeviceThingModelEventData(c.Request.Context(), req)
 	if edgeXErr != nil {
 		httphelper.RenderFail(c, edgeXErr, c.Writer, lc)
 		return
@@ -388,7 +388,7 @@ func (ctl *controller) DeviceThingModelServiceDataSearch(c *gin.Context) {
 	deviceId := c.Param(UrlParamDeviceId)
 	dtos.CorrectionPageParam(&req.BaseSearchConditionQuery)
 	req.DeviceId = deviceId
-	data, total, edgeXErr := ctl.getPersistApp().SearchDeviceThingModelServiceData(req)
+	data, total, edgeXErr := ctl.getPersistApp().SearchDeviceThingModelServiceData(c.Request.Context(), req)
 	if edgeXErr != nil {
 		httphelper.RenderFail(c, edgeXErr, c.Writer, lc)
 		return

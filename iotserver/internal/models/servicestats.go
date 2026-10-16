@@ -19,6 +19,7 @@ const (
 // 使用 redis hash 存储，name 做 field
 
 type ServiceStats struct {
+	TenantField
 	Id          string `gorm:"column:id" json:"id"`        // 服务标识
 	Name        string `gorm:"column:name;pk" json:"name"` // 容器名称
 	LogPath     string `json:"log_path"`                   // 日志地址, 宿主主机日志路径

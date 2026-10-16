@@ -14,16 +14,14 @@ import (
 	"iotserver/internal/iotserver/core/infrastructure/mysql"
 	"iotserver/internal/iotserver/core/infrastructure/sqlite"
 	"iotserver/internal/pkg/constants"
+	"iotserver/internal/tools/datadb/duckdb"
 	"iotserver/internal/tools/datadb/ducklake"
-	"iotserver/internal/tools/datadb/tdengine"
-	"iotserver/internal/tools/datadb/tstorage"
 	"strconv"
 	"strings"
 
 	"iotserver/internal/pkg/di"
 	"iotserver/internal/pkg/logger"
 	"iotserver/internal/pkg/startup"
-	"iotserver/internal/tools/datadb/leveldb"
 	"sync"
 
 	interfaces "iotserver/internal/iotserver/core/interface"
@@ -69,29 +67,24 @@ func (d Database) newDataDBClient(
 	dataDbInfo := d.database.GetDataDatabaseInfo()["Primary"]
 
 	switch dataDbInfo.Type {
-	case string(constants.LevelDB):
-		return leveldb.NewClient(dtos.Configuration{
-			DataSource: dataDbInfo.DataSource,
-		}, lc)
-	case string(constants.Tstorage):
-		return tstorage.NewClient(dtos.Configuration{
-			DataSource: dataDbInfo.DataSource,
-		}, lc)
-	case string(constants.TDengine):
-		return tdengine.NewClient(dtos.Configuration{
-			Dsn: dataDbInfo.Dsn,
-		}, lc)
-	case string(constants.DuckLake):
-		// DataSource = catalog（元数据）路径；Dsn = Parquet 数据目录
-		// 保留天数来自「系统配置 → 数据配置 → 数据保留天数」，让该配置项真实生效
-		return ducklake.NewClient(dtos.Configuration{
+	case string(constants.DuckDB):
+		// 单文件列存（默认）：DataSource = DuckDB 数据库文件路径
+		// 保留天数来自「系统配置 → 数据配置 → 数据保留天数」
+		return duckdb.NewClient(dtos.Configuration{
 			DataSource:    dataDbInfo.DataSource,
-			Dsn:           dataDbInfo.Dsn,
 			RetentionDays: retentionDays(dbClient, lc),
 		}, lc)
+	case string(constants.DuckLake):
+		// 湖仓形态：DataSource = catalog（元数据）路径；Dsn = Parquet 数据目录
+		// 保留天数同样来自「系统配置 → 数据配置 → 数据保留天数」
+		return ducklake.NewClient(dtos.Configuration{
+			DataSource:       dataDbInfo.DataSource,
+			Dsn:              dataDbInfo.Dsn,
+			RetentionDays:    retentionDays(dbClient, lc),
+			OverrideDataPath: dataDbInfo.OverrideDataPath,
+		}, lc)
 	default:
-		panic(errors.New("database configuration error"))
-
+		panic(errors.New("database configuration error: 仅支持 duckdb / ducklake"))
 	}
 }
 

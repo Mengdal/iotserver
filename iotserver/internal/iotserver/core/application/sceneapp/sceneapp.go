@@ -18,6 +18,7 @@ import (
 	"iotserver/internal/pkg/di"
 	"iotserver/internal/pkg/errort"
 	"iotserver/internal/pkg/logger"
+	"iotserver/internal/pkg/tenant"
 	"iotserver/internal/pkg/timer/jobs"
 	"iotserver/internal/pkg/valid"
 	"iotserver/internal/tools/ekuiperclient"
@@ -78,7 +79,7 @@ func NewWithoutScheduler(dic *di.Container) *sceneApp {
 // SceneSearch 场景列表（前端编辑抽屉直接吃列表行数据，这里必须返回完整的 conditions/actions）
 func (app *sceneApp) SceneSearch(ctx context.Context, req dtos.SceneSearchQueryRequest) ([]dtos.SceneSearchQueryResponse, uint32, error) {
 	offset, limit := dtos.OffsetLimit(req.BaseSearchConditionQuery)
-	list, total, err := app.dbClient.SceneSearch(offset, limit, req)
+	list, total, err := app.dbClient.WithCtx(ctx).SceneSearch(offset, limit, req)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -91,12 +92,12 @@ func (app *sceneApp) SceneSearch(ctx context.Context, req dtos.SceneSearchQueryR
 
 // SceneLog 场景联动日志（按场景 + 时间范围分页，倒序）
 func (app *sceneApp) SceneLog(ctx context.Context, sceneId string, req dtos.SceneLogSearchQueryRequest) ([]dtos.SceneLogResponse, uint32, error) {
-	if _, err := app.dbClient.SceneById(sceneId); err != nil {
+	if _, err := app.dbClient.WithCtx(ctx).SceneById(sceneId); err != nil {
 		return nil, 0, err
 	}
 	offset, limit := dtos.OffsetLimit(req.BaseSearchConditionQuery)
 	req.SceneId = sceneId
-	logs, total, err := app.dbClient.SceneLogSearch(offset, limit, req)
+	logs, total, err := app.dbClient.WithCtx(ctx).SceneLogSearch(offset, limit, req)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -125,7 +126,7 @@ func (app *sceneApp) SceneAdd(ctx context.Context, req dtos.SceneAddRequest) err
 	if err := checkDescription(req.Description); err != nil {
 		return err
 	}
-	if _, err := app.dbClient.AddScene(models.Scene{
+	if _, err := app.dbClient.WithCtx(ctx).AddScene(models.Scene{
 		Name:     req.Name,
 		Describe: req.Description,
 		Status:   string(constants.SceneStop),
@@ -140,7 +141,7 @@ func (app *sceneApp) SceneUpdate(ctx context.Context, req dtos.SceneUpdateReques
 	if strings.TrimSpace(req.Id) == "" {
 		return errort.NewCommonErr(errort.DefaultIdEmpty, fmt.Errorf("id is empty"))
 	}
-	old, err := app.dbClient.SceneById(req.Id)
+	old, err := app.dbClient.WithCtx(ctx).SceneById(req.Id)
 	if err != nil {
 		return err
 	}
@@ -173,7 +174,7 @@ func (app *sceneApp) SceneUpdate(ctx context.Context, req dtos.SceneUpdateReques
 		}
 	}
 
-	return app.dbClient.UpdateScene(models.Scene{
+	return app.dbClient.WithCtx(ctx).UpdateScene(models.Scene{
 		Id:         old.Id,
 		Name:       req.Name,
 		Describe:   req.Description,
@@ -184,7 +185,7 @@ func (app *sceneApp) SceneUpdate(ctx context.Context, req dtos.SceneUpdateReques
 
 // SceneDelete 删除场景：清理 eKuiper 规则、定时任务与日志
 func (app *sceneApp) SceneDelete(ctx context.Context, id string) error {
-	scene, err := app.dbClient.SceneById(id)
+	scene, err := app.dbClient.WithCtx(ctx).SceneById(id)
 	if err != nil {
 		return err
 	}
@@ -192,11 +193,11 @@ func (app *sceneApp) SceneDelete(ctx context.Context, id string) error {
 		return err
 	}
 	app.unregisterTimer(scene.Id)
-	if err = app.dbClient.DeleteScene(id); err != nil {
+	if err = app.dbClient.WithCtx(ctx).DeleteScene(id); err != nil {
 		return err
 	}
 	// 日志随场景一起清理，避免残留孤儿数据
-	if err = app.dbClient.DeleteSceneLogsBySceneId(id); err != nil {
+	if err = app.dbClient.WithCtx(ctx).DeleteSceneLogsBySceneId(id); err != nil {
 		app.lc.Warnf("delete scene %s logs failed: %v", id, err)
 	}
 	return nil
@@ -206,7 +207,7 @@ func (app *sceneApp) SceneDelete(ctx context.Context, id string) error {
 
 // SceneStart 启动场景
 func (app *sceneApp) SceneStart(ctx context.Context, id string) error {
-	scene, err := app.dbClient.SceneById(id)
+	scene, err := app.dbClient.WithCtx(ctx).SceneById(id)
 	if err != nil {
 		return err
 	}
@@ -237,12 +238,12 @@ func (app *sceneApp) SceneStart(ctx context.Context, id string) error {
 			return err
 		}
 	}
-	return app.dbClient.UpdateSceneStatus(scene.Id, string(constants.SceneStart))
+	return app.dbClient.WithCtx(ctx).UpdateSceneStatus(scene.Id, string(constants.SceneStart))
 }
 
 // SceneStop 停止场景
 func (app *sceneApp) SceneStop(ctx context.Context, id string) error {
-	scene, err := app.dbClient.SceneById(id)
+	scene, err := app.dbClient.WithCtx(ctx).SceneById(id)
 	if err != nil {
 		return err
 	}
@@ -250,7 +251,7 @@ func (app *sceneApp) SceneStop(ctx context.Context, id string) error {
 	if err = app.stopEkuiperRuleIfExist(ctx, scene.Id); err != nil {
 		return err
 	}
-	return app.dbClient.UpdateSceneStatus(scene.Id, string(constants.SceneStop))
+	return app.dbClient.WithCtx(ctx).UpdateSceneStatus(scene.Id, string(constants.SceneStop))
 }
 
 /** ***************************** 触发执行 ***************************** **/
@@ -264,7 +265,7 @@ func (app *sceneApp) ExecuteSceneByRule(ctx context.Context, payload map[string]
 	if ruleId == "" {
 		return errort.NewCommonErr(errort.DefaultReqParamsError, fmt.Errorf("缺少 rule_id"))
 	}
-	scene, err := app.dbClient.SceneById(ruleId)
+	scene, err := app.dbClient.WithCtx(ctx).SceneById(ruleId)
 	if err != nil {
 		return err
 	}
@@ -281,7 +282,7 @@ func (app *sceneApp) ExecuteSceneByRule(ctx context.Context, payload map[string]
 // ExecuteScene 定时触发：按场景ID执行动作（并在执行前复核启用状态，
 // 避免「已到期但在途被停止」的场景仍然写设备）
 func (app *sceneApp) ExecuteScene(ctx context.Context, sceneId string) {
-	scene, err := app.dbClient.SceneById(sceneId)
+	scene, err := app.dbClient.WithCtx(ctx).SceneById(sceneId)
 	if err != nil {
 		app.lc.Warnf("timer scene %s not found: %v", sceneId, err)
 		return
@@ -332,7 +333,7 @@ func (app *sceneApp) runSceneActions(ctx context.Context, scene *models.Scene) {
 	if len([]rune(execRes)) > maxExecResLen {
 		execRes = string([]rune(execRes)[:maxExecResLen]) + "..."
 	}
-	if err := app.dbClient.AddSceneLog(models.SceneLog{
+	if err := app.dbClient.WithCtx(ctx).AddSceneLog(models.SceneLog{
 		Name:        scene.Name,
 		SceneId:     scene.Id,
 		ExecRes:     execRes,
@@ -347,7 +348,8 @@ func (app *sceneApp) runSceneActions(ctx context.Context, scene *models.Scene) {
 
 func (app *sceneApp) startTimerScheduler() {
 	// 服务重启后恢复运行中的定时场景
-	scenes, err := app.dbClient.SceneRunningTimers()
+	// 平台作用域：系统路径，不按租户过滤
+	scenes, err := app.dbClient.WithCtx(tenant.Platform(context.Background())).SceneRunningTimers()
 	if err != nil {
 		app.lc.Warnf("load running scenes failed: %v", err)
 	} else {
@@ -502,7 +504,8 @@ func (app *sceneApp) resyncRunningSceneActions() {
 	ctx, cancel := context.WithTimeout(context.Background(), resyncTimeout)
 	defer cancel()
 
-	scenes, err := app.dbClient.SceneRunningTimers()
+	// 平台作用域：系统路径，不按租户过滤
+	scenes, err := app.dbClient.WithCtx(tenant.Platform(context.Background())).SceneRunningTimers()
 	if err != nil {
 		app.lc.Warnf("resync scene actions: query failed: %v", err)
 		return
