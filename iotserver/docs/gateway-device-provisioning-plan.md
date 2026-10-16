@@ -239,3 +239,70 @@ MQTT 只保证 QoS1 的至少一次投递，**不保证 `devices` 一定先于 `
 2. **`full` 模式下清单外的设备怎么处理？** 本文推荐标记摘除而非删除；若产品语义里"网关清单即权威、删了就是没了"，可以做成配置项。
 3. **网关凭据是否统一进 `mqtt_auth`？** 本文推荐统一，但那会让本次改动多碰一块共享表。
 4. **网关是否需要软删除？** 取决于你们对 SN 复用和历史数据归属的要求。
+5. **对齐参考系统还是保留本文方案？** 见第 11 节的对照表，尤其「匹配键」和「逐点时间」两行——它们决定上报协议要不要改、网关固件要不要跟着动。
+
+## 11. 与参考系统（iotddc / things）的对照（含实测）
+
+参考项目 `iotddc`（Java）的 `/edge/...` 协议是一套跑在生产上的同类实现，本次抓到了它的一台在线网关的真实报文，因此这部分不是推断。
+
+> 为避免把生产接入信息写进仓库，本节样例与地址一律用占位符（实测原始报文只在对话里）。
+
+### 11.1 主题地图
+
+| 方向 | 主题 | 说明 |
+| --- | --- | --- |
+| 上行 | `/edge/connect/{pk}/{sn}` | **网关接入**：`ip`/`model`/`gwType` + **`tags[]`（设备清单）** + 各协议版本 |
+| 上行 | `/edge/property/{pk}/{sn}/post` | 实时数据 |
+| 上行 | `/edge/property/history/{pk}/{sn}/post` | 历史补传（topic 含 `history` 即历史） |
+| 上行 | `/edge/property/{pk}/{sn}/set` \| `/get`（+ `/reply`） | 读写属性 |
+| 上行 | `/edge/lastwill/{pk}/{sn}` | 遗嘱 → 离线 |
+| 上行 | `/edge/4g/{pk}/{sn}/post` | 4G 通道数据 |
+| 下行 | `/edge/db/{key}/{sn}/update`（+ `/reply`） | 工程/组态下发（`url` + `crc`） |
+| 下行 | `/edge/upgrade/{pk}/{sn}/notify`（+ `/reply`） | OTA |
+| 下行 | `/edge/realInquire` \| `scadaHistory` \| `scadaGetTagsTree` \| `alarm` `/{sn}/{sn}/get`（+ `/reply`） | 组态/告警查询 |
+
+平台侧一律用 EMQX 共享订阅 `$share/group/...`（`GatewayConnectProcessor`、`PropertyPostProcessor` 等都是）。
+
+### 11.2 实测数据报文格式
+
+`/edge/property/260112xxx/260112xxx/post`，QoS 0，**上报周期整 60 秒**：
+
+```json
+[{"dn":"THmeter",
+  "properties":{"AirRoomTemp1":"30.0000","CoilHumidity":"18.0000","Energy":"139164.0000",
+                "DRoom Temp":"0.0000","Spare3":"-19108","Switch1":"0"},
+  "time":1792122130},
+ {"dn":"system","properties":{"TIME_MINUTE":"42","TIME_SECOND":"10"},"time":1792122130}]
+```
+
+| 事实 | 影响 |
+| --- | --- |
+| payload 是 **JSON 数组** | 一个报文可带多台设备；数组每项一台 |
+| `dn` = 设备标识，平台按 **`Device.name`** 匹配 | 与本文的 `deviceKey` 不同（见 11.4） |
+| `properties` 是**扁平字符串 map** | 值全是字符串（`"30.0000"`/`"0"`/`"-19108"`），落库时 `new BigDecimal()` 转换，转不动则按字符串存 |
+| `time` 是 **Unix 秒**，整包一个 | 无逐测点时间 |
+| 测点名**可含空格**（实测 `DRoom Temp`） | 解析与白名单不能假设无空格 |
+| `Energy` 是累计量 | 60 秒涨 46，不是瞬时值 |
+
+### 11.3 鉴权（EMQX exhook，`exhook/service/HookService.java`）
+
+- username 形如 `{pk}|{sn}`；`THINGSIOTWEBMQTT|` 前缀是 Web 端。
+- gateway 侧 password：`HMAC-SHA256(secret, "clientId{sub}devicename{sn}productkey{pk}timestamp{ts}")`，小写 hex（`MD5Utils.hmacsha256`）；clientId 必须匹配 `^(.+)\|securemode=[2-3],signmethod=(\w+),timestamp=(\d+)\|$`。
+- 另一路 `userAuth`：`HMAC-MD5(key="12345", msg=password)` 与 Redis `mosquitto` 哈希比对（`hmacMD5` 的 key 是常量盐，不是空）。
+- ACL（`onClientAuthorize`）：`{pk}|{sn}` 只能读写 `/things/{username}` 前缀；非 SN 用户名则把 **username 当**主题正则**匹配。**
+- 这与本文第 7 节「网关凭据统一进 `mqtt_auth`」的判断一致：参考系统也是**独立凭据源 + Broker 侧回调校验**，不是把密码塞在网关表里。
+
+### 11.4 与本文方案的差异（需要拍板）
+
+| 维度 | 参考系统 | 本文方案 | 取舍要点 |
+| --- | --- | --- | --- |
+| 数据报文 | 扁平数组、整包一个 `time`、值全字符串 | `properties[code]={value,time}` 逐点带时间 | 逐点时间对**断点续传补传**更准确，但要求网关固件支持 |
+| 设备匹配键 | `dn` ↔ `Device.name` | `deviceKey` ↔ `device.key` | 名字会被人改，键更稳；参考系统用名字，因为它的设备表没有独立键 |
+| 清单外设备 | **物理删除**（`delete from build_device`） | 标记摘除、保留历史 | 参考系统是硬删；元数据删了时序历史仍在，但**告警规则引用会断** |
+| 测点白名单 | 有：只有登记过的 `DeviceProperty` 才落库（`{gwSn}.{dn}.{tag}`） | 无：报什么存什么 | 白名单是参考系统数据质量好的原因，代价是**新增测点必须先同步，否则静默丢数** |
+| 清单粒度 | 设备 + 测点（`tags[]` 同时含两者） | 只有设备 | 参考系统是**设备级测点表**，本平台物模型是**产品级**，粒度不同，不能直接照搬 |
+| 事务 | 增/改/删比对在**一个 `Db.tx`** 内批量提交 | 同（本文 5.1 要求） | 一致 |
+
+`/edge/connect` 报文里 `tags[]` 的字段全集（`DeviceServiceImpl.compareDevice`/`compareTags`）：`deviceCode`、`deviceDescription`、`tagCode`、`description`、`objectType`。`objectType` 按结尾字母推读写权限：`I`→`r`（AI/DI）、`O`→`w`（AO/DO）、`V`→`rw`、其他→`r`，缺省 `AI`。
+
+**未能实测的部分**：`/edge/connect` 与 `/edge/lastwill` 只在网关启动/掉线时各发一次，本次连续观测 7 分钟（5 条数据报文，60 秒周期稳定）期间该网关一直在线，两者均未出现。上述 connect 报文结构来自参考代码，**未经线上报文验证**。要拿到真实样本，需在平台上对网关下发一次 `sync` 或重启。
