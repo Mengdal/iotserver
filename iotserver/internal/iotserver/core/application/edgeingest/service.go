@@ -309,9 +309,16 @@ func (s *Service) handleProperty(ctx context.Context, g models.Gateway, payload 
 		// 唯一索引冲突说明并发下已被处理过，属正常
 		s.debugf("参考系统接入：写上报日志失败(可能重复): %v", err)
 	}
-	_ = s.dbClient.WithCtx(ctx).TouchGatewayReport(g.Id, seq)
+	// 存活信号用**接收时间**，不能用报文里的采集时间 seq：
+	// /edge/property/history/... 这条通道正是为断点续传存在的——网关掉线几小时后
+	// 重连，补传的是几小时前的数据，时间戳自然是旧的。若拿它写 last_online_at，
+	// 离线扫描会立刻把这个**正在积极上报**的网关判为离线。
+	// （实测：发一条 1 小时前时间戳的报文，网关当场从「在线」变「离线」。）
+	// 采集时间仍然用于数据行本身（见 ingestReport），两件事必须分开。
+	receivedAt := time.Now().UnixMilli()
+	_ = s.dbClient.WithCtx(ctx).TouchGatewayReport(g.Id, receivedAt)
 	// 收到数据即视为在线
-	_ = s.gatewayItf.GatewayOnline(ctx, g.Sn, "", seq)
+	_ = s.gatewayItf.GatewayOnline(ctx, g.Sn, "", receivedAt)
 
 	if firstErr != nil {
 		return firstErr

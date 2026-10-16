@@ -3,8 +3,10 @@ package edgeingest
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/LMgateways/iotserver-driver-proto/drivercommon"
 	"github.com/LMgateways/iotserver-driver-proto/thingmodel"
@@ -35,11 +37,14 @@ type fakeGatewayItf struct {
 	online  int
 	offline int
 	lastIp  string
+	// lastTs 最近一次置在线传入的时间戳（用于验证存活信号用的是接收时间）
+	lastTs int64
 }
 
-func (f *fakeGatewayItf) GatewayOnline(_ context.Context, _, ip string, _ int64) error {
+func (f *fakeGatewayItf) GatewayOnline(_ context.Context, _, ip string, ts int64) error {
 	f.online++
 	f.lastIp = ip
+	f.lastTs = ts
 	return nil
 }
 
@@ -530,5 +535,45 @@ func TestHandleMessage_RejectsBadTopics(t *testing.T) {
 		if err := f.svc.HandleMessage(topic, []byte(`[]`)); err == nil {
 			t.Errorf("主题 %q 应被拒绝", topic)
 		}
+	}
+}
+
+// TestHandleProperty_BackfillDoesNotMarkGatewayOffline 锁定「历史补传不能把网关判成离线」。
+//
+// 存活信号（gateway.last_online_at / last_report_at）必须用**接收时间**，不能用报文里的
+// 采集时间：`/edge/property/history/...` 就是断点续传通道——网关掉线几小时后重连，
+// 补传的是几小时前的数据，时间戳必然是旧的。拿它写 last_online_at 的后果实测过：
+// 发一条 1 小时前时间戳的报文，网关当场从「在线」变「离线」，而它其实正在积极上报。
+//
+// 数据行本身仍要按采集时间落库（补传的历史要出现在正确的历史位置），
+// 那部分由 TestHandleProperty_IngestsRealPayload 锁定；这里锁两件事必须分开。
+func TestHandleProperty_BackfillDoesNotMarkGatewayOffline(t *testing.T) {
+	f := newEdgeFixture(t)
+
+	oldSec := time.Now().Add(-1 * time.Hour).Unix()
+	payload := fmt.Sprintf(
+		`[{"dn":"THmeter","properties":{"AirRoomTemp1":"30.0000"},"time":%d}]`, oldSec)
+
+	before := time.Now().UnixMilli()
+	if err := f.svc.HandleMessage("/edge/property/260112801/260112801/post", []byte(payload)); err != nil {
+		t.Fatalf("property: %v", err)
+	}
+	after := time.Now().UnixMilli()
+
+	// 1) 置在线用的必须是接收时间，而不是报文里一小时前的采集时间
+	if f.gateways.lastTs < before || f.gateways.lastTs > after {
+		t.Errorf("置在线传入 %d（报文采集时间），应为接收时间（%d~%d）——"+
+			"否则补传历史数据会把正在上报的网关判成离线",
+			f.gateways.lastTs, before, after)
+	}
+
+	// 2) 库里的 last_report_at 是离线扫描的依据，同样必须是接收时间
+	gw, err := f.db.WithCtx(f.tenantCtx()).GatewayById(f.gateway.Id)
+	if err != nil {
+		t.Fatalf("reload gateway: %v", err)
+	}
+	if gw.LastReportAt < before || gw.LastReportAt > after {
+		t.Errorf("last_report_at = %d（应为接收时间 %d~%d）：旧时间戳会让离线扫描误判",
+			gw.LastReportAt, before, after)
 	}
 }
