@@ -27,12 +27,20 @@ import (
 	"time"
 )
 
+// deviceById 按主键查询设备。
+//
+// 注意：这里必须写成 `Where("id = ?", id)`，**不能**用 GORM 的内联主键简写
+// `First(&device, id)`。GORM v1.23 的 BuildCondition 会先做 `strconv.Atoi(id)`：
+// 只有能解析成整数的字符串才被当作主键值参数化；解析失败时它把整个值当**原始 SQL**
+// 拼进 WHERE（`clause.Expr{SQL: s}`），于是非纯数字的 ID（如 uuid）会拼出
+// `WHERE a604a540-af9b-4a4f-...` 这种语法错误——SQLite 报 unrecognized token。
+// 该写法过去"能用"只是因为所有主键恰好都是 8 位数字（utils.RandomNum）。
 func deviceById(c *Client, id string) (device models.Device, edgeXErr error) {
 	if id == "" {
 		return device, errort.NewCommonEdgeX(errort.DefaultIdEmpty, "device id is empty", nil)
 	}
 	//err := c.client.GetObject(&models.Device{Id: id}, &device)
-	err := c.Pool.Table(device.TableName()).Preload("Product").First(&device, id).Error
+	err := c.Pool.Table(device.TableName()).Preload("Product").Where("id = ?", id).First(&device).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return device, errort.NewCommonErr(errort.DeviceNotExist, fmt.Errorf("device id(%s) not found", id))
@@ -77,7 +85,7 @@ func msgReportDeviceById(c *Client, id string) (device models.Device, edgeXErr e
 		return device, errort.NewCommonEdgeX(errort.DefaultIdEmpty, "device id is empty", nil)
 	}
 	//err := c.client.GetObject(&models.Device{Id: id}, &device)
-	err := c.Pool.Table(device.TableName()).Preload("Product").First(&device, id).Error
+	err := c.Pool.Table(device.TableName()).Preload("Product").Where("id = ?", id).First(&device).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return device, errort.NewCommonErr(errort.DeviceNotExist, fmt.Errorf("device id(%s) not found", id))

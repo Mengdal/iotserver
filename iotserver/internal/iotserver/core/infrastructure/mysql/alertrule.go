@@ -67,7 +67,8 @@ func alertRuleById(c *Client, id string) (alertRule models.AlertRule, edgeXErr e
 	if id == "" {
 		return alertRule, errort.NewCommonEdgeX(errort.DefaultIdEmpty, "alert rule id is empty", nil)
 	}
-	err := c.Pool.Table(alertRule.TableName()).First(&alertRule, id).Error
+	// 同 deviceById：内联主键简写 `First(&alertRule, id)` 对非纯数字 ID 会拼出非法 SQL
+	err := c.Pool.Table(alertRule.TableName()).Where("id = ?", id).First(&alertRule).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return alertRule, errort.NewCommonErr(errort.AlertRuleNotExist, fmt.Errorf("alert rule id(%s) not found", id))
