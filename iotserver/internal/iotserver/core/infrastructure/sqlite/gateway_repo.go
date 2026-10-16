@@ -84,8 +84,18 @@ func gatewaySearch(c *Client, offset, limit int, req dtos.GatewaySearchQueryRequ
 	if req.DeptId != "" {
 		query = query.Where("dept_id = ?", req.DeptId)
 	}
+	// status 只认 0/1/2；其它值表示「不过滤」——契约见 dtos.GatewaySearchQueryRequest.Status
+	// 的注释（"nil（不传）或其它值都表示不过滤"）。
+	//
+	// 必须这么写的原因：网关管理页在「未选择状态」时会**显式传 -1**
+	// （iotserver-ui/src/pages/gateway/GatewayManage/index.tsx）。若照 -1 去过滤，
+	// 该页面对任何人、任何时候都返回空列表（实测：不带 status 返回 4 条，
+	// 带 status=-1 返回 0 条），页面永远显示 No data。
 	if req.Status != nil {
-		query = query.Where("status = ?", *req.Status)
+		switch *req.Status {
+		case models.GatewayStatusOffline, models.GatewayStatusOnline, models.GatewayStatusNever:
+			query = query.Where("status = ?", *req.Status)
+		}
 	}
 	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, errort.NewCommonEdgeX(errort.DefaultSystemError, "gateway count failed", err)
