@@ -130,6 +130,51 @@ func TestHandleConnect_AutoProvisionDefaultIsOn(t *testing.T) {
 	}
 }
 
+// TestMigrate_PartialUniqueIndexOnDeviceGatewayKey 验证迁移确实建出了部分唯一索引。
+//
+// 单独验证的原因：ensurePartialUniqueIndexes 建索引失败时只打警告、不返回错误，
+// 因此「其它测试全绿」并不能证明索引存在——而它是 (gateway_id, device_key)
+// 幂等的兜底（应用层是先查后写，并发下需要它兜住）。
+func TestMigrate_PartialUniqueIndexOnDeviceGatewayKey(t *testing.T) {
+	f := newEdgeFixture(t)
+
+	var n int64
+	if err := f.db.Pool.Raw(
+		"SELECT COUNT(*) FROM sqlite_master WHERE type='index' AND name='uk_device_gateway_key'").
+		Scan(&n).Error; err != nil {
+		t.Fatalf("查询 sqlite_master: %v", err)
+	}
+	if n != 1 {
+		t.Fatal("部分唯一索引 uk_device_gateway_key 未建立")
+	}
+
+	// 索引必须真的拦得住重复：同一网关同一 device_key 插第二条要失败
+	dup := models.Device{
+		Id:        "dup-1",
+		GatewayId: f.gateway.Id,
+		DeviceKey: "dup-key",
+		Name:      "dup",
+	}
+	if err := f.db.Pool.Table(models.TableDevice).Create(&dup).Error; err != nil {
+		t.Fatalf("插入第一条: %v", err)
+	}
+	dup2 := dup
+	dup2.Id = "dup-2"
+	if err := f.db.Pool.Table(models.TableDevice).Create(&dup2).Error; err == nil {
+		t.Error("重复的 (gateway_id, device_key) 应被唯一索引拒绝，但插入成功了")
+	}
+
+	// 但手工创建/驱动接入的设备（两列均为空串）不受该索引约束，可以有多条
+	for i, id := range []string{"plain-1", "plain-2"} {
+		d := models.Device{Id: id, Name: "手工设备"}
+		// 内嵌提升字段不能在字面量里赋值（go.mod 语言版本为 1.24）
+		d.TenantId = f.tenantID
+		if err := f.db.Pool.Table(models.TableDevice).Create(&d).Error; err != nil {
+			t.Fatalf("插入第 %d 条无网关设备: %v（部分索引的 WHERE 条件未生效）", i+1, err)
+		}
+	}
+}
+
 func TestHandleConnect_RegistersDevicesAndTags(t *testing.T) {
 	f := newEdgeFixture(t)
 	topic := "/edge/connect/260112801/260112801"
