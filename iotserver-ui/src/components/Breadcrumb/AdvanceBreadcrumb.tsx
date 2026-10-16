@@ -20,9 +20,13 @@ export interface AdvanceBreadcrumbProps {
   breadcrumb?: BreadcrumbItem[]
   /** 附加类名。Layout 统一渲染的标题条会带 page-banner，用于统一它下方的间距 */
   className?: string
+  /** 标题条右侧的插槽（例如页面自己的搜索框），由 Layout 提供挂载点 */
+  extra?: React.ReactNode
+  /** 居中版式：不显示标题，插槽与描述在标题条内居中堆叠（搜索框在上、文案在下） */
+  centered?: boolean
 }
 
-const AdvanceBreadcrumb: React.FC<AdvanceBreadcrumbProps> = ({ title, describe, background, breadcrumb, hasBack = false, className }) => {
+const AdvanceBreadcrumb: React.FC<AdvanceBreadcrumbProps> = ({ title, describe, background, breadcrumb, hasBack = false, className, extra, centered = false }) => {
   const location = useLocation()
   const navigate = useNavigate()
 
@@ -43,6 +47,36 @@ const AdvanceBreadcrumb: React.FC<AdvanceBreadcrumbProps> = ({ title, describe, 
       .filter(item => item.label !== '首页')
   }, [location])
 
+  // 默认版式：左侧标题 + 描述，右侧插槽
+  const defaultRow = (
+    <div className="flex">
+      {hasBack && (
+        <div style={{ paddingTop: 22, paddingLeft: 10 }}>
+          {/* <span className="square"></span> */}
+          <LeftOutlined
+            className="back-icon"
+            onClick={() => {
+              navigate(-1)
+            }}
+          />
+        </div>
+      )}
+      <div style={{ flex: '1 1 auto' }}>
+        <Title className="title" level={4}>{title}</Title>
+        <Paragraph className="paragraph">{describe}</Paragraph>
+      </div>
+      {extra && <div className="advance-breadcrumb-extra">{extra}</div>}
+    </div>
+  )
+
+  // 居中版式：不显示标题（菜单/面包屑已有），插槽（搜索框）在上、描述在下，整体居中
+  const centeredRow = (
+    <div className="advance-breadcrumb-centered">
+      {extra && <div className="advance-breadcrumb-centered-slot">{extra}</div>}
+      {describe && <Paragraph className="paragraph">{describe}</Paragraph>}
+    </div>
+  )
+
   return (
     <div className={`advance-breadcrumb-title${className ? ` ${className}` : ''}`} style={{ backgroundImage }}>
       <Breadcrumb>
@@ -61,23 +95,7 @@ const AdvanceBreadcrumb: React.FC<AdvanceBreadcrumbProps> = ({ title, describe, 
           </Breadcrumb.Item>
         ))}
       </Breadcrumb>
-      <div className="flex">
-        {hasBack && (
-          <div style={{ paddingTop: 22, paddingLeft: 10 }}>
-            {/* <span className="square"></span> */}
-            <LeftOutlined
-              className="back-icon"
-              onClick={() => {
-                navigate(-1)
-              }}
-            />
-          </div>
-        )}
-        <div style={{ flex: '1 1 auto' }}>
-          <Title className="title" level={4}>{title}</Title>
-          <Paragraph className="paragraph">{describe}</Paragraph>
-        </div>
-      </div>
+      {centered ? centeredRow : defaultRow}
     </div>
   )
 }

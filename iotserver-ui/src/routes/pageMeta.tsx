@@ -21,14 +21,20 @@ export interface PageMeta {
   banner?: BannerMode
   /** 带动态段的路由用：标题取这条菜单路径的菜单名 */
   menuPath?: string
+  /**
+   * 标题条版式：
+   * - default：左侧标题 + 描述，右侧插槽；
+   * - centered：不显示标题（菜单/面包屑已有），插槽（如搜索框）与描述在标题条内居中堆叠。
+   */
+  bannerLayout?: 'default' | 'centered'
 }
 
 const pageMetas: Record<string, PageMeta> = {
   // ===== 首页 =====
   '/home/dashboard': {
-    // 首页是看板式布局，不要标题条（标题仍会体现在浏览器标签上）
+    // 首页整页渲染「首页看板」，不要标题条（标题仍会体现在浏览器标签上）
     banner: 'none',
-    describe: '罗米物联网平台提供设备接入、数据查询、运维监控与告警处理等能力，本页汇总平台的产品、设备、云插件与告警概况，可快速进入常用功能。',
+    describe: '首页看板：内容由「看板管理」里设为首页看板的那块看板决定（新装自带内置首页看板，汇总产品/设备/网关/告警概况与消息量趋势），布局与指标都可以在看板编辑器里调整。',
   },
   // ===== 设备接入 =====
   '/gateway/product/manage': {
@@ -37,11 +43,20 @@ const pageMetas: Record<string, PageMeta> = {
   '/gateway/device/manage': {
     describe: '物理设备要连接到平台，需要先在平台创建设备(支持单个或批量导入创建)。设备列表包含自主创建的设备和云平台同步的设备，同时支持灵活的搜索。',
   },
+  '/gateway/gateway/manage': {
+    describe: '第三方工业网关的注册、MQTT 接入信息、配置下发与在线状态。',
+  },
   '/gateway/drive/image': {
     describe: '驱动镜像是用户编写程序最终打包成可下载的docker镜像，它是实体设备与物联网平台通讯的桥梁，所有的设备数据由驱动上报到物联网平台，所有的设备控制指令由物联网平台下发给驱动。',
   },
   '/gateway/my/drive': {
     describe: '我的驱动用于管理已安装到本地的设备驱动实例，支持查看驱动运行状态、配置参数与实时日志，是设备接入平台的运行载体。',
+  },
+  // ===== 方案中心 =====
+  '/solution/center': {
+    // 版式对齐参考站：标题条内只放「居中搜索框 + 下方说明文案」，标题不重复显示（菜单/面包屑已有）
+    bannerLayout: 'centered',
+    describe: '方案中心内置海量产品模板，快速一键创建专属产品。',
   },
   // ===== 数据中心 =====
   '/data/history': {
@@ -67,11 +82,15 @@ const pageMetas: Record<string, PageMeta> = {
   '/admin/sysDept': {
     describe: '部门管理维护平台的组织结构树，用户可归属到具体部门，用于划分数据范围与职责。',
   },
-  '/admin/sysLoginLog': {
-    describe: '登入日志记录账号的登录时间、IP、浏览器与登录结果，便于排查异常登录与安全审计。',
+  '/admin/sysAuditLog': {
+    describe: '审查日志：记录登录与关键操作（谁、何时、对哪个模块做了什么、结果与耗时）。',
   },
-  '/admin/sysSet': {
+  '/platform/sysSet': {
     describe: '系统配置维护平台品牌与安全策略，包括系统名称、Logo、浏览器标签、登录页背景、会话超时时间与密码强度等。',
+  },
+  // ===== 平台管理（菜单由后端只下发给平台管理员） =====
+  '/platform/tenant': {
+    describe: '平台级：维护租户租户、配额与到期时间。',
   },
   // ===== 个人中心 / 工具与文档 / 数据看板 =====
   '/common/userProfile': {

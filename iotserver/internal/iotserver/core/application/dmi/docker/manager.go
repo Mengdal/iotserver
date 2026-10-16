@@ -78,7 +78,14 @@ type ContainerInfo struct {
 
 // NewDockerManager 创建
 func NewDockerManager(ctx context.Context, dic *di.Container, dcm *dtos.DriverConfigManage) (*DockerManager, error) {
-	cli, err := client.NewClientWithOpts(client.WithVersion(dcm.DockerApiVersion))
+	// FromEnv：先读 DOCKER_HOST / DOCKER_API_VERSION 等环境变量，再被下面的
+	// WithVersion 覆盖 API 版本。
+	//
+	// 为什么必须读：macOS 上 Docker Desktop 的 socket 在 ~/.docker/run/docker.sock，
+	// 而 SDK 默认连 /var/run/docker.sock（该路径在 macOS 上不存在），
+	// 不读环境变量就会报 "Cannot connect to the Docker daemon"。
+	// 未设置 DOCKER_HOST 时读到空值，退回 SDK 默认行为，不影响 Linux/容器内运行。
+	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithVersion(dcm.DockerApiVersion))
 	if err != nil {
 		return nil, err
 	}
@@ -176,7 +183,9 @@ func (dm *DockerManager) flushContainerMap() {
 }
 
 // 启动容器,这里为强制重启 先删除容器在启动新容器 containerId 可为空
-func (dm *DockerManager) ContainerStart(imageRepo string, containerName string, runConfigPath string, mountDevices []string, customParams string, instanceType constants.InstanceType) (ip string, err error) {
+//
+// driverPort > 0 时把该端口发布到宿主机（本机进程模式下平台要靠它连回驱动容器）。
+func (dm *DockerManager) ContainerStart(imageRepo string, containerName string, runConfigPath string, mountDevices []string, customParams string, instanceType constants.InstanceType, driverPort int) (ip string, err error) {
 	dm.flushImageMap()
 	dm.flushContainerMap()
 	if !dm.ExistImageById(imageRepo) {
@@ -214,6 +223,15 @@ func (dm *DockerManager) ContainerStart(imageRepo string, containerName string, 
 	dm.lc.Infof("thisRunMode:%+v", string(thisRunMode))
 
 	portMap := generateExposedPorts(dockerCustomParams.port)
+	// 本机进程模式：驱动容器不在平台所在的 docker 网络里，平台连不到它的容器名/IP，
+	// 所以把驱动的 gRPC 端口发布到宿主机（只绑本地回环，不对外暴露），
+	// 平台改用 127.0.0.1:<port> 作为 BaseAddress（见 driverserviceapp.Start）。
+	if driverPort > 0 && dm.dcm.IsLocalMode() {
+		p, perr := nat.NewPort("tcp", strconv.Itoa(driverPort))
+		if perr == nil {
+			portMap[p] = []nat.PortBinding{{HostIP: "127.0.0.1", HostPort: strconv.Itoa(driverPort)}}
+		}
+	}
 	restartPolicy := generateRestartPolicy(dockerCustomParams.restart)
 	resources := generateResources(dockerCustomParams.cpuShares, dockerCustomParams.memory, dockerCustomParams.memorySwap)
 
@@ -232,6 +250,10 @@ func (dm *DockerManager) ContainerStart(imageRepo string, containerName string, 
 		NetworkMode:   thisRunMode,
 		RestartPolicy: restartPolicy,
 		Runtime:       dockerCustomParams.runtime,
+		// 让容器内能用 host.docker.internal 指到宿主机。
+		// macOS/Windows 的 Docker Desktop 原生支持；Linux 需要显式注入 host-gateway，
+		// 否则平台以本机进程运行时，驱动容器连不回平台（见 GetSelfIp）。
+		ExtraHosts: []string{constants.HostDockerInternal + ":host-gateway"},
 	}, &network.NetworkingConfig{}, nil, containerName)
 	if cErr != nil {
 		return "", cErr

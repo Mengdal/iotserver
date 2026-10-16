@@ -19,6 +19,7 @@ type AlertType int
 type AlertLevel int
 
 type AlertContent struct {
+	TenantField
 	ServiceName string     `json:"name"`                        // 服务名
 	Type        AlertType  `json:"type" binding:"oneof=1 2"`    // 告警类型
 	Level       AlertLevel `json:"level" binding:"oneof=1 2 3"` // 告警级别

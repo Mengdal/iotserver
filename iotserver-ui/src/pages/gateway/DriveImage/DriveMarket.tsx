@@ -64,7 +64,7 @@ const CardItem = ({ id, params }: { id: string; params: { name?: string } }) => 
   }, [params.name])
 
   return (
-    <div className="my-service p20 ">
+    <div className="drive-market p20">
       <Card loading={loading} bordered>
         <div className="responsive-layout">
           {items.map((item) => {
@@ -94,24 +94,34 @@ const CardItem = ({ id, params }: { id: string; params: { name?: string } }) => 
                       <Button
                         type="link"
                         loading={item.operate_status === 'installing'}
-                        onClick={() => {
-                          messageApi.open({ duration: 0, key, type: 'loading', content: '下载中..' })
+                        onClick={async () => {
+                          // loading 用 duration:0（不自动关），成功/失败时用同一个 key 替换掉它；
+                          // 所以下面每条路径都必须 settle，否则会一直转
+                          messageApi.open({ duration: 0, key, type: 'loading', content: '正在下载镜像，请稍候…' })
                           updateItemStatus(item.id, 'installing')
 
-                          ws
-                            ?.send({
+                          try {
+                            // ws 未就绪时 send 会 reject（见 utils/web-socket.ts），
+                            // 这里不能用 ws?.send(...).then，那样 ws 为空会静默什么都不做
+                            if (!ws) throw new Error('WebSocket 未连接，请刷新页面后重试')
+
+                            const resp = await ws.send({
                               code: 10001,
                               data: { id: item.id, version: item.version },
                             })
-                            .then((resp) => {
-                              if (resp.data.success) {
-                                messageApi.open({ key, type: 'success', content: resp.data.successMsg })
-                              } else {
-                                messageApi.open({ key, type: 'error', content: resp.data.errorMsg })
-                              }
 
-                              updateItemStatus(item.id, resp.data.result?.operate_status)
-                            })
+                            if (resp.data.success) {
+                              messageApi.open({ key, type: 'success', content: resp.data.successMsg || '下载成功' })
+                            } else {
+                              messageApi.open({ key, type: 'error', content: resp.data.errorMsg || '下载失败' })
+                            }
+                            // 后端没回状态时退回 default，避免按钮卡在 loading
+                            updateItemStatus(item.id, resp.data.result?.operate_status || 'default')
+                          } catch (e: any) {
+                            // 把真实原因显示出来（原来是静默失败，只能翻服务端日志）
+                            messageApi.open({ key, type: 'error', content: `下载失败：${e?.message || '未知错误'}` })
+                            updateItemStatus(item.id, 'default')
+                          }
                         }}
                       >
                         下载

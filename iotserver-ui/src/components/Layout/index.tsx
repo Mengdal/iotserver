@@ -1,15 +1,15 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { UserOutlined } from '@ant-design/icons'
-import { Layout, Space, Menu, Avatar, Dropdown, Modal, Form, Input, MenuProps, message } from 'antd'
+import { Layout, Space, Menu, Avatar, Dropdown, Modal, Form, Input, Select, MenuProps, message } from 'antd'
 import { buildMenus, buildMenusFromBackend, isExternalLink } from '@/routes/menus'
 import { resolvePageMeta, resolvePageTitle } from '@/routes/pageMeta'
 import { AdvanceBreadcrumb } from '@/components/Breadcrumb'
 import { useBrand } from '@/components/Brand'
 import type { BackendMenuItem, SubMenuType } from '@/routes/menus'
 import './style.less'
-import { clearUser, getUser, setUser } from '@/utils/auth'
-import { changePassword, getUserGetInfo, updateUserProfile } from '@/api'
+import { clearUser, getCurrentTenantId, getUser, setCurrentTenantId, setUser } from '@/utils/auth'
+import { changePassword, getTenants, getUserGetInfo, updateUserProfile, Tenant } from '@/api'
 
 const { Header, Content, Sider } = Layout
 const { useForm } = Form
@@ -43,6 +43,10 @@ const MainLayout: React.FC = () => {
   const user = auth
   const userInfo = user?.user
   const admin = userInfo?.admin === true || user?.admin === true
+  // 平台（ROBX）管理员：显示租户切换器（登录接口返回 platformAdmin）
+  const platformAdmin = userInfo?.platformAdmin === true || user?.platformAdmin === true
+  const [tenants, setTenants] = useState<Tenant[]>([])
+  const [currentTenantId, setCurrentTenantIdState] = useState<string>(() => getCurrentTenantId())
   const permissions: string[] = useMemo(() => {
     const direct = user?.permissions
     if (Array.isArray(direct) && direct.length > 0) return direct
@@ -90,6 +94,39 @@ const MainLayout: React.FC = () => {
     }).catch(() => { /* 忽略：保持既有登录态，下次刷新再试 */ })
     return () => { alive = false }
   }, [])
+
+  // 租户切换器数据：仅平台管理员拉取（后端只会把「租户管理」菜单下发给平台管理员）
+  useEffect(() => {
+    if (!platformAdmin) {
+      setTenants([])
+      return
+    }
+    let alive = true
+    // 注意：/api/v1/tenant 返回的是分页对象 { list, total, page, pageSize }，
+    // 不能直接塞进数组 state（否则 tenants.map 会抛 “map is not a function” 整页白屏）。
+    // 这里同时兼容数组形态，避免后端将来改成直接返回数组时又踩一次。
+    getTenants({ isAll: true, status: -1 })
+      .then(resp => {
+        if (!alive || !resp.success) return
+        const raw: unknown = resp.result
+        const list: Tenant[] = Array.isArray(raw)
+          ? (raw as Tenant[])
+          : Array.isArray((raw as { list?: Tenant[] } | null)?.list)
+            ? ((raw as { list: Tenant[] }).list)
+            : []
+        setTenants(list)
+      })
+      .catch(() => { /* 忽略：切换器拉不到列表不影响主流程 */ })
+    return () => { alive = false }
+  }, [platformAdmin])
+
+  /** 切换「当前租户」：写入 localStorage 后整页刷新，确保所有页面数据都按新租户重新拉取 */
+  const handleTenantChange = (tenantId?: string) => {
+    const next = tenantId || ''
+    setCurrentTenantId(next)
+    setCurrentTenantIdState(next)
+    window.location.reload()
+  }
 
   const [sliderMenuOpenKeys, setSliderMenuOpenKeys] = useState<string[]>([])
 
@@ -211,6 +248,16 @@ const MainLayout: React.FC = () => {
   const bannerTitle = resolvePageTitle(location.pathname)
   const showBanner = (pageMeta.banner || 'layout') === 'layout' && !!bannerTitle
 
+  // 租户切换器选项：空值 = 平台视图（不带 x-tenant-id，查看全部租户）
+  // 兜底再判一次数组：这个 useMemo 一旦抛错会整页白屏（曾因接口返回分页对象踩过）
+  const tenantOptions = useMemo(() => [
+    { value: '', label: '全部租户（平台视图）' },
+    ...(Array.isArray(tenants) ? tenants : []).map(item => ({
+      value: item.id,
+      label: `${item.name}（${item.code}）${item.status === 1 ? '' : ' 已停用'}`,
+    })),
+  ], [tenants])
+
   return (
     <Layout className="main-layout">
       {contextHolder}
@@ -231,6 +278,21 @@ const MainLayout: React.FC = () => {
             </div>
           </div>
           <div></div>
+          {platformAdmin && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: '13px', color: 'rgba(0, 0, 0, 0.65)' }}>当前租户</span>
+              <Select
+                size="small"
+                showSearch
+                optionFilterProp="label"
+                style={{ width: 220 }}
+                value={currentTenantId}
+                placeholder="全部租户（平台视图）"
+                options={tenantOptions}
+                onChange={handleTenantChange}
+              />
+            </div>
+          )}
           <Dropdown
             menu={{ items }}
             placement="bottom"
@@ -280,6 +342,9 @@ const MainLayout: React.FC = () => {
                 className="page-banner"
                 title={bannerTitle}
                 describe={pageMeta.describe}
+                centered={pageMeta.bannerLayout === 'centered'}
+                // 页面可通过 createPortal 把内容（如搜索框）投到这个挂载点上
+                extra={<div id="page-banner-extra" />}
               />
             )}
             <Outlet></Outlet>

@@ -26,6 +26,12 @@ type HomePageResponse struct {
 			Self  uint32 `json:"self"`
 			Other uint32 `json:"other"`
 		} `json:"device"`
+		Gateway struct {
+			Total   uint32 `json:"total"`
+			Online  uint32 `json:"online"`
+			Offline uint32 `json:"offline"`
+			Never   uint32 `json:"never"`
+		} `json:"gateway"`
 		CloudInstance struct {
 			Count     uint32 `json:"count"`
 			RunCount  uint32 `json:"run_count"`

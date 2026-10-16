@@ -32,6 +32,10 @@ const (
 	MenuAdd    = "system:menu:add"
 	MenuEdit   = "system:menu:edit"
 	MenuRemove = "system:menu:remove"
+	// MenuCustomPref 写租户菜单展示层覆盖（隐藏/改名/图标/排序，tenant_menu_pref）
+	MenuCustomPref = "system:menu:custom:pref"
+	// MenuCustomReset 平台重置某个租户的菜单定制（清空自建菜单 + 覆盖记录）
+	MenuCustomReset = "system:menu:custom:reset"
 )
 
 // 系统管理 - 部门
@@ -43,7 +47,13 @@ const (
 	DeptRemove = "system:dept:remove"
 )
 
-// 系统管理 - 登入日志
+// 系统管理 - 审查日志（登录 + 操作，单表 sys_audit_log）
+const (
+	AuditLogList   = "system:auditlog:list"
+	AuditLogRemove = "system:auditlog:remove"
+)
+
+// 系统管理 - 登入日志（已并入审查日志）：兼容别名，保留一版，下版本删除
 const (
 	LoginLogList   = "system:loginlog:list"
 	LoginLogRemove = "system:loginlog:remove"
@@ -162,16 +172,77 @@ const (
 	SystemDebugPprof = "system:debug:pprof"
 )
 
+// 可视化看板
+//
+// 查看类（list/query/data）给「数据看板」页用；管理类（add/edit/remove）给「看板管理」页用。
+// 看板上的数据类组件要查设备属性，所以 data 单独一个权限，便于只让部分角色看数据。
+const (
+	VizBoardList   = "viz:board:list"
+	VizBoardQuery  = "viz:board:query"
+	VizBoardAdd    = "viz:board:add"
+	VizBoardEdit   = "viz:board:edit"
+	VizBoardRemove = "viz:board:remove"
+	VizDataQuery   = "viz:data:query"
+)
+
+// 租户管理：**平台级**权限，只授予 ROBX 运营账号。
+// 租户用户即使拥有同名前缀的菜单也不会生效（菜单带 platform_only，不下发给租户）。
+const (
+	PlatformTenantList   = "platform:tenant:list"
+	PlatformTenantQuery  = "platform:tenant:query"
+	PlatformTenantAdd    = "platform:tenant:add"
+	PlatformTenantEdit   = "platform:tenant:edit"
+	PlatformTenantRemove = "platform:tenant:remove"
+	PlatformTenantSwitch = "platform:tenant:switch"
+)
+
+// 网关（第三方工业网关接入）：设备接入下的子模块
+const (
+	GatewayList    = "gateway:gateway:list"
+	GatewayQuery   = "gateway:gateway:query"
+	GatewayAdd     = "gateway:gateway:add"
+	GatewayEdit    = "gateway:gateway:edit"
+	GatewayRemove  = "gateway:gateway:remove"
+	GatewayConfig  = "gateway:gateway:config"
+	GatewayCommand = "gateway:gateway:command"
+)
+
+// 方案（行业模板一键应用）：设备接入下的子模块
+const (
+	SolutionList  = "solution:list"
+	SolutionQuery = "solution:query"
+	SolutionApply = "solution:apply"
+	// 方案物模型（TSL）条目维护：内置方案只读，首次修改会克隆出当前租户的副本
+	SolutionTslAdd    = "solution:tsl:add"
+	SolutionTslEdit   = "solution:tsl:edit"
+	SolutionTslRemove = "solution:tsl:remove"
+)
+
 // NamedGroups 按模块分组的全部权限，顺序稳定
 func NamedGroups() [][]NamedPerm {
 	return [][]NamedPerm{
+		{{"PlatformTenantList", PlatformTenantList}, {"PlatformTenantQuery", PlatformTenantQuery},
+			{"PlatformTenantAdd", PlatformTenantAdd}, {"PlatformTenantEdit", PlatformTenantEdit},
+			{"PlatformTenantRemove", PlatformTenantRemove}, {"PlatformTenantSwitch", PlatformTenantSwitch}},
 		{{"UserList", UserList}, {"UserQuery", UserQuery}, {"UserAdd", UserAdd}, {"UserEdit", UserEdit}, {"UserRemove", UserRemove}},
+		{{"GatewayList", GatewayList}, {"GatewayQuery", GatewayQuery}, {"GatewayAdd", GatewayAdd},
+			{"GatewayEdit", GatewayEdit}, {"GatewayRemove", GatewayRemove},
+			{"GatewayConfig", GatewayConfig}, {"GatewayCommand", GatewayCommand}},
+		{{"SolutionList", SolutionList}, {"SolutionQuery", SolutionQuery},
+			{"SolutionApply", SolutionApply},
+			{"SolutionTslAdd", SolutionTslAdd}, {"SolutionTslEdit", SolutionTslEdit},
+			{"SolutionTslRemove", SolutionTslRemove}},
 		{{"RoleList", RoleList}, {"RoleQuery", RoleQuery}, {"RoleAdd", RoleAdd}, {"RoleEdit", RoleEdit}, {"RoleRemove", RoleRemove}},
-		{{"MenuList", MenuList}, {"MenuQuery", MenuQuery}, {"MenuAdd", MenuAdd}, {"MenuEdit", MenuEdit}, {"MenuRemove", MenuRemove}},
+		{{"MenuList", MenuList}, {"MenuQuery", MenuQuery}, {"MenuAdd", MenuAdd}, {"MenuEdit", MenuEdit}, {"MenuRemove", MenuRemove},
+			{"MenuCustomPref", MenuCustomPref}, {"MenuCustomReset", MenuCustomReset}},
 		{{"DeptList", DeptList}, {"DeptQuery", DeptQuery}, {"DeptAdd", DeptAdd}, {"DeptEdit", DeptEdit}, {"DeptRemove", DeptRemove}},
+		{{"AuditLogList", AuditLogList}, {"AuditLogRemove", AuditLogRemove}},
+		// 兼容别名（旧登入日志权限码，保留一版）
 		{{"LoginLogList", LoginLogList}, {"LoginLogRemove", LoginLogRemove}},
 		{{"ConfigList", ConfigList}, {"ConfigQuery", ConfigQuery}, {"ConfigAdd", ConfigAdd}, {"ConfigEdit", ConfigEdit}, {"ConfigRemove", ConfigRemove}},
 		{{"HomeView", HomeView}},
+		{{"VizBoardList", VizBoardList}, {"VizBoardQuery", VizBoardQuery}, {"VizBoardAdd", VizBoardAdd},
+			{"VizBoardEdit", VizBoardEdit}, {"VizBoardRemove", VizBoardRemove}, {"VizDataQuery", VizDataQuery}},
 		{{"ProductList", ProductList}, {"ProductQuery", ProductQuery}, {"ProductAdd", ProductAdd}, {"ProductEdit", ProductEdit}, {"ProductDel", ProductDel}},
 		{{"DeviceList", DeviceList}, {"DeviceQuery", DeviceQuery}, {"DeviceAdd", DeviceAdd}, {"DeviceEdit", DeviceEdit}, {"DeviceDel", DeviceDel}, {"DeviceImport", DeviceImport}, {"DeviceBind", DeviceBind}},
 		{{"ImageList", ImageList}, {"ImageAdd", ImageAdd}, {"ImageEdit", ImageEdit}, {"ImageRemove", ImageRemove}},

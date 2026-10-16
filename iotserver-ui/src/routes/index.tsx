@@ -8,6 +8,7 @@ import ProductManage from '@/pages/gateway/ProductManage'
 import ProductDetail from '@/pages/gateway/ProductManage/Detail'
 import DeviceManage from '@/pages/gateway/DeviceManage'
 import DeviceDetail from '@/pages/gateway/DeviceManage/Detail'
+import GatewayManage from '@/pages/gateway/GatewayManage'
 import MyDrive from '@/pages/gateway/MyDrive'
 import DriveImage from '@/pages/gateway/DriveImage'
 import Dashboard from '@/pages/home/Dashboard'
@@ -24,16 +25,19 @@ import SysUser from '@/pages/admin/SysUser'
 import SysRole from '@/pages/admin/SysRole'
 import SysMenu from '@/pages/admin/SysMenu'
 import SysDept from '@/pages/admin/SysDept'
-import SysLoginLog from '@/pages/admin/SysLoginLog'
+import SysAuditLog from '@/pages/admin/SysAuditLog'
 import SysSet from '@/pages/admin/SysSet'
+import PlatformTenant from '@/pages/platform/Tenant'
+import SolutionCenter from '@/pages/solution/Center'
 import DataHistoryQuery from '@/pages/data/HistoryQuery'
 import UserProfile from '@/pages/admin/UserProfile'
-import ShaperDashboard from '@/pages/viz/Dashboard'
+import VizDashboard from '@/pages/viz/Dashboard'
 import BoardManage from '@/pages/viz/BoardManage'
+import VizView from '@/pages/viz/View'
 
 import { Empty } from 'antd'
 
-// 看板编辑器用到 react-grid-layout（体积较大），按需加载
+// 看板编辑器用到 gridstack（体积较大），按需加载
 const BoardEdit = React.lazy(() => import('@/pages/viz/BoardEdit'))
 
 /** 旧地址 /viz/boards/:id/canvas → /viz/boards/:id/edit */
@@ -46,6 +50,11 @@ const router = createBrowserRouter([
   {
     path: '/auth/login',
     element: <Login />,
+  },
+  // 看板大屏 / 分享页：不套后台外壳，整页只有看板
+  {
+    path: '/viz/view/:id',
+    element: <VizView />,
   },
   {
     path: '/',
@@ -80,12 +89,21 @@ const router = createBrowserRouter([
         element: <DeviceDetail />,
       },
       {
+        path: '/gateway/gateway/manage',
+        element: <GatewayManage />,
+      },
+      {
         path: '/gateway/drive/image',
         element: <DriveImage />,
       },
       {
         path: '/gateway/my/drive',
         element: <MyDrive />,
+      },
+      // ===== 方案中心（按行业预置的整机方案，菜单由后端下发） =====
+      {
+        path: '/solution/center',
+        element: <SolutionCenter />,
       },
       {
         path: '/home/dashboard',
@@ -146,21 +164,31 @@ const router = createBrowserRouter([
         element: <SysDept />,
       },
       {
+        path: '/admin/sysAuditLog',
+        element: <SysAuditLog />,
+      },
+      // 旧地址 /admin/sysLoginLog → /admin/sysAuditLog，保证旧书签不 404
+      {
         path: '/admin/sysLoginLog',
-        element: <SysLoginLog />,
+        element: <Navigate to="/admin/sysAuditLog" replace />,
       },
       {
-        path: '/admin/sysSet',
+        path: '/platform/sysSet',
         element: <SysSet />,
       },
       {
         path: '/common/userProfile',
         element: <UserProfile />,
       },
+      // ===== 平台管理（平台管理员专属，入口由后端菜单下发） =====
+      {
+        path: '/platform/tenant',
+        element: <PlatformTenant />,
+      },
       // ===== 可视化 =====
       {
         path: '/viz/dashboard',
-        element: <ShaperDashboard />,
+        element: <VizDashboard />,
       },
       {
         path: '/viz/boards',

@@ -28,4 +28,6 @@ type Configuration struct {
 	Cluster []string
 	// RetentionDays 数据保留天数：>0 按天数、0 用默认值(30)、<0 永久保留；用于 ducklake 的定期清理
 	RetentionDays int
+	// OverrideDataPath 仅 ducklake 用：把 catalog 里记录的数据目录强制改成 Dsn
+	OverrideDataPath bool
 }

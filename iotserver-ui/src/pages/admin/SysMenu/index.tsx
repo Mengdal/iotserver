@@ -1,16 +1,19 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import {
+  Alert,
   Button,
   Card,
   Drawer,
   Form,
   Input,
   InputNumber,
+  Modal,
   Popconfirm,
   Radio,
   Select,
   Space,
   Table,
+  Tabs,
   Tag,
   message,
 } from 'antd'
@@ -19,19 +22,27 @@ import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
 import {
   getSysMenuTree,
+  getSysMenuPrefs,
+  saveSysMenuPref,
+  resetSysMenuTenant,
   addSysMenu,
   updateSysMenu,
   deleteSysMenu,
   SysMenu,
+  TenantMenuPref,
 } from '@/api'
-import { useAuth } from '@/utils/auth'
+import { getCurrentTenantId, isPlatformAdmin, useAuth } from '@/utils/auth'
+import { MenuAdd, MenuEdit, MenuRemove, MenuCustomPref, MenuCustomReset } from '@/routes/permissions'
 import IconSelect, { renderMenuIcon } from '@/components/IconSelect'
 import { useTreeTable } from '../utils/useTreeTable'
+import { collectNested } from '../utils/treeTable'
 import type { FlatMeta } from '../utils/treeTable'
 
 const { useMessage } = message
 
 type FlatMenu = SysMenu & FlatMeta
+
+type TabKey = 'tenant' | 'platform'
 
 const menuTypeOptions = [
   { label: '目录', value: 'M' },
@@ -65,49 +76,121 @@ function toParentOptions (list: SysMenu[]): ParentOption[] {
   return result
 }
 
+/**
+ * 按条件从菜单树中筛出节点并重建父子层级：
+ * 父节点被过滤掉时，该节点提升为顶级，避免整棵子树丢失。
+ */
+function pickMenuTree (tree: SysMenu[], keep: (item: SysMenu) => boolean): SysMenu[] {
+  const flat = collectNested<SysMenu>(tree, item => item.id).filter(keep)
+  const nodeMap = new Map<string, SysMenu>()
+  flat.forEach(item => {
+    nodeMap.set(item.id, { ...item, children: [] })
+  })
+  const roots: SysMenu[] = []
+  nodeMap.forEach(item => {
+    const parent = item.parentId && item.parentId !== '0' ? nodeMap.get(item.parentId) : undefined
+    if (parent) {
+      parent.children = [...(parent.children || []), item]
+    } else {
+      roots.push(item)
+    }
+  })
+  return roots
+}
+
 const SysMenuPage: React.FC = () => {
   const [messageApi, contextHolder] = useMessage()
   const [searchForm] = Form.useForm()
   const [editForm] = Form.useForm()
+  const [renameForm] = Form.useForm()
   const watchedMenuType: string | undefined = Form.useWatch('menuType', editForm)
 
+  // 编辑范围在租户切换时会整页刷新，因此挂载时读取一次即可
+  const [platformAdmin] = useState(() => isPlatformAdmin())
+  const [tenantId] = useState(() => getCurrentTenantId())
+  /** 租户视图：平台管理员已切换租户，或普通租户用户 */
+  const tenantView = !platformAdmin || Boolean(tenantId)
+
+  const [activeTab, setActiveTab] = useState<TabKey>(tenantView ? 'tenant' : 'platform')
   const [loading, setLoading] = useState(false)
   const [treeData, setTreeData] = useState<SysMenu[]>([])
+  const [prefMap, setPrefMap] = useState<Record<string, TenantMenuPref>>({})
   const [filters, setFilters] = useState<{ name?: string, status?: string }>({})
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<SysMenu | null>(null)
+  const [renameTarget, setRenameTarget] = useState<SysMenu | null>(null)
 
-  const canAdd = useAuth('system:menu:add')
-  const canEdit = useAuth('system:menu:edit')
-  const canRemove = useAuth('system:menu:remove')
+  const canAdd = useAuth(MenuAdd)
+  const canEdit = useAuth(MenuEdit)
+  const canRemove = useAuth(MenuRemove)
+  const canCustomPref = useAuth(MenuCustomPref)
+  const canCustomReset = useAuth(MenuCustomReset)
 
   const loadData = useCallback(async () => {
     try {
       setLoading(true)
-      const resp = await getSysMenuTree({ isAll: true })
-      if (resp.success) {
-        setTreeData(resp.result || [])
+      const menuResp = await getSysMenuTree({ isAll: true })
+      if (menuResp.success) {
+        setTreeData(menuResp.result || [])
       } else {
-        messageApi.open({ type: 'error', content: resp.errorMsg })
+        messageApi.open({ type: 'error', content: menuResp.errorMsg })
+      }
+      if (!tenantView) {
+        setPrefMap({})
+        return
+      }
+      const prefResp = await getSysMenuPrefs()
+      if (prefResp.success) {
+        const list = prefResp.result || []
+        const map: Record<string, TenantMenuPref> = {}
+        list.forEach(item => {
+          map[item.menuId] = item
+        })
+        setPrefMap(map)
+      } else {
+        messageApi.open({ type: 'error', content: prefResp.errorMsg })
       }
     } finally {
       setLoading(false)
     }
-  }, [messageApi])
+  }, [messageApi, tenantView])
 
   useEffect(() => {
     loadData()
   }, [loadData])
 
+  // 平台视图：接口本身只返回平台菜单；租户视图：按归属拆成两个页签的数据
+  const platformTree = useMemo(
+    () => (tenantView ? pickMenuTree(treeData, item => !item.tenantId) : treeData),
+    [treeData, tenantView],
+  )
+  const tenantTree = useMemo(
+    () => (tenantView ? pickMenuTree(treeData, item => Boolean(item.tenantId)) : []),
+    [treeData, tenantView],
+  )
+
+  /** 「平台菜单」页签在租户视图下为只读（只做隐藏/改名定制） */
+  const readonlyTab = tenantView && activeTab === 'platform'
+  const activeTree = activeTab === 'tenant' && tenantView ? tenantTree : platformTree
+
+  const filterKey = useMemo(
+    () => ({ ...filters, activeTab, tenantView }),
+    [filters, activeTab, tenantView],
+  )
+
   // 拍平 + 默认全部收起 + 整棵子树折叠
   const flatTable = useTreeTable<SysMenu>({
-    tree: treeData,
+    tree: activeTree,
     filtered: Boolean(filters.name || filters.status),
-    filterKey: filters,
+    filterKey,
     getId: item => item.id,
     getParentId: item => item.parentId || '0',
     match: item => {
-      const nameHit = !filters.name || item.name.includes(filters.name)
+      // 租户视图下列表展示的是覆盖后的名称，按展示名称与平台名称都能搜到
+      const displayName = prefMap[item.id]?.customName || item.name
+      const nameHit = !filters.name
+        || displayName.includes(filters.name)
+        || item.name.includes(filters.name)
       const statusHit = !filters.status || String(item.status) === filters.status
       return nameHit && statusHit
     },
@@ -115,6 +198,20 @@ const SysMenuPage: React.FC = () => {
   const rows = flatTable.rows as unknown as FlatMenu[]
 
   const parentOptions = useMemo(() => [{ value: '0', title: '顶级菜单' }, ...toParentOptions(treeData)], [treeData])
+
+  const scopeText = useMemo(() => {
+    if (!platformAdmin) return '当前编辑：本租户的自定义菜单与显示定制 —— 仅本租户可见'
+    if (tenantId) return '当前编辑：该租户的自定义菜单与显示定制 —— 仅该租户可见，不影响平台菜单'
+    return '当前编辑：平台原始菜单 —— 改动对所有租户生效'
+  }, [platformAdmin, tenantId])
+
+  const tabItems = useMemo(() => {
+    if (!tenantView) return [{ key: 'platform', label: '平台菜单' }]
+    return [
+      { key: 'tenant', label: '本租户自定义菜单' },
+      { key: 'platform', label: '平台菜单' },
+    ]
+  }, [tenantView])
 
   const openAdd = (parentId?: string) => {
     setEditing(null)
@@ -152,9 +249,14 @@ const SysMenuPage: React.FC = () => {
 
   const handleSubmit = async () => {
     const values = await editForm.validateFields()
+    const payload: Record<string, any> = { ...values }
+    if (tenantView) {
+      // 租户自建菜单不得携带权限标识（后端对非空 perms 直接报参数错误）
+      delete payload.perms
+    }
     const resp = editing
-      ? await updateSysMenu({ ...values, id: editing.id })
-      : await addSysMenu(values)
+      ? await updateSysMenu({ ...payload, id: editing.id })
+      : await addSysMenu(payload)
     if (resp.success) {
       messageApi.open({ type: 'success', content: editing ? '修改成功' : '新增成功' })
       setModalOpen(false)
@@ -170,11 +272,63 @@ const SysMenuPage: React.FC = () => {
       messageApi.open({ type: 'success', content: '删除成功' })
       loadData()
     } else {
+      // 后端会给出带数量的拒绝原因（如「有 N 个租户在它下面挂了自建菜单」），原样展示
       messageApi.open({ type: 'error', content: resp.errorMsg })
     }
   }
 
-  const columns: ColumnsType<FlatMenu> = [
+  /** 写入当前租户的展示层覆盖（隐藏/改名/图标/排序），只影响本租户 */
+  const applyPref = async (menuId: string, patch: Partial<TenantMenuPref>) => {
+    const current = prefMap[menuId]
+    const resp = await saveSysMenuPref({
+      menuId,
+      hidden: patch.hidden ?? current?.hidden ?? 0,
+      customName: patch.customName ?? current?.customName ?? '',
+      customIcon: patch.customIcon ?? current?.customIcon ?? '',
+      sort: patch.sort ?? current?.sort ?? 0,
+    })
+    if (resp.success) {
+      messageApi.open({ type: 'success', content: '菜单定制已保存' })
+      loadData()
+      return true
+    }
+    messageApi.open({ type: 'error', content: resp.errorMsg })
+    return false
+  }
+
+  const handleToggleHidden = (record: SysMenu) => {
+    const hidden = prefMap[record.id]?.hidden === 1
+    applyPref(record.id, { hidden: hidden ? 0 : 1 })
+  }
+
+  const openRename = (record: SysMenu) => {
+    setRenameTarget(record)
+    renameForm.resetFields()
+    renameForm.setFieldsValue({ customName: prefMap[record.id]?.customName || '' })
+  }
+
+  const handleRenameSubmit = async () => {
+    if (!renameTarget) return
+    const values = await renameForm.validateFields()
+    const ok = await applyPref(renameTarget.id, { customName: String(values.customName || '').trim() })
+    if (ok) setRenameTarget(null)
+  }
+
+  const handleRestoreDefault = (record: SysMenu) => {
+    applyPref(record.id, { hidden: 0, customName: '', customIcon: '', sort: 0 })
+  }
+
+  const handleTenantReset = async () => {
+    const resp = await resetSysMenuTenant(tenantId)
+    if (resp.success) {
+      messageApi.open({ type: 'success', content: '已重置该租户的菜单定制' })
+      loadData()
+    } else {
+      messageApi.open({ type: 'error', content: resp.errorMsg })
+    }
+  }
+
+  const baseColumns: ColumnsType<FlatMenu> = [
     {
       title: '',
       key: 'fold',
@@ -198,12 +352,24 @@ const SysMenuPage: React.FC = () => {
     {
       title: '菜单名称',
       dataIndex: 'name',
-      width: 260,
-      render: (value: string, record) => (
-        <span style={{ paddingLeft: record.level * 24 }}>
-          {value}
-        </span>
-      ),
+      width: 280,
+      render: (value: string, record) => {
+        const pref = prefMap[record.id]
+        const customName = pref?.customName || ''
+        const hidden = pref?.hidden === 1
+        return (
+          <span
+            style={{
+              paddingLeft: record.level * 24,
+              color: hidden ? 'rgba(0, 0, 0, 0.35)' : undefined,
+            }}
+          >
+            {customName || value}
+            {customName ? <Tag color="blue" style={{ marginLeft: 6 }}>已改名</Tag> : null}
+            {hidden ? <Tag style={{ marginLeft: 6 }}>已隐藏</Tag> : null}
+          </span>
+        )
+      },
     },
     {
       title: '按钮',
@@ -224,14 +390,17 @@ const SysMenuPage: React.FC = () => {
       title: '图标',
       dataIndex: 'icon',
       width: 140,
-      render: (value: string) => (value
-        ? (
-          <Space size={6}>
-            {renderMenuIcon(value)}
-            <span>{value}</span>
-          </Space>
-        )
-        : '-'),
+      render: (value: string, record) => {
+        const icon = prefMap[record.id]?.customIcon || value
+        return (icon
+          ? (
+            <Space size={6}>
+              {renderMenuIcon(icon)}
+              <span>{icon}</span>
+            </Space>
+          )
+          : '-')
+      },
     },
     { title: '路由地址', dataIndex: 'path', width: 200, render: (value: string) => value || '-' },
     { title: '权限标识', dataIndex: 'perms', width: 200, render: (value: string) => value || '-' },
@@ -254,7 +423,34 @@ const SysMenuPage: React.FC = () => {
       width: 180,
       render: (value: number) => (value ? dayjs(value).format('YYYY-MM-DD HH:mm:ss') : '-'),
     },
-    {
+  ]
+
+  const actionColumn: ColumnsType<FlatMenu>[number] = readonlyTab
+    ? {
+      title: '操作（仅本租户显示定制）',
+      key: 'action',
+      width: 260,
+      fixed: 'right',
+      render: (_, record) => (canCustomPref
+        ? (
+          <Space size={4}>
+            <Button type="link" size="small" onClick={() => handleToggleHidden(record)}>
+              {prefMap[record.id]?.hidden === 1 ? '显示' : '隐藏'}
+            </Button>
+            <Button type="link" size="small" onClick={() => openRename(record)}>改名</Button>
+            <Button
+              type="link"
+              size="small"
+              disabled={!prefMap[record.id]}
+              onClick={() => handleRestoreDefault(record)}
+            >
+              恢复默认
+            </Button>
+          </Space>
+        )
+        : <span style={{ color: 'rgba(0, 0, 0, 0.45)' }}>无定制权限</span>),
+    }
+    : {
       title: '操作',
       key: 'action',
       width: 200,
@@ -272,12 +468,27 @@ const SysMenuPage: React.FC = () => {
           )}
         </Space>
       ),
-    },
-  ]
+    }
+
+  const columns: ColumnsType<FlatMenu> = [...baseColumns, actionColumn]
 
   return (
     <Card className="admin-page">
       {contextHolder}
+      <Alert
+        type={tenantView ? 'warning' : 'info'}
+        showIcon
+        style={{ marginBottom: 12 }}
+        message={scopeText}
+      />
+
+      <Tabs
+        activeKey={activeTab}
+        onChange={key => setActiveTab(key as TabKey)}
+        items={tabItems}
+        style={{ marginBottom: 8 }}
+      />
+
       <Form
         form={searchForm}
         layout="inline"
@@ -310,7 +521,20 @@ const SysMenuPage: React.FC = () => {
       </Form>
 
       <Space style={{ marginBottom: 12 }}>
-        {canAdd && <Button type="primary" icon={<PlusOutlined />} onClick={() => openAdd()}>新增菜单</Button>}
+        {!readonlyTab && canAdd && (
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => openAdd()}>新增菜单</Button>
+        )}
+        <Button icon={<ReloadOutlined />} onClick={loadData}>刷新</Button>
+        {platformAdmin && Boolean(tenantId) && canCustomReset && (
+          <Popconfirm
+            title="将清空该租户的自建菜单与全部显示定制，恢复平台默认，是否继续？"
+            onConfirm={handleTenantReset}
+            okText="确定"
+            cancelText="取消"
+          >
+            <Button danger>重置该租户的菜单定制</Button>
+          </Popconfirm>
+        )}
       </Space>
 
       <Table<FlatMenu>
@@ -367,9 +591,19 @@ const SysMenuPage: React.FC = () => {
               </Form.Item>
             </>
           )}
-          <Form.Item label="权限标识" name="perms">
-            <Input placeholder="例如 system:user:list" />
-          </Form.Item>
+          {tenantView
+            ? (
+              <Form.Item label="权限标识">
+                <span style={{ color: 'rgba(0, 0, 0, 0.45)' }}>
+                  租户自建菜单只作为导航入口，不携带权限标识（权限由平台菜单与角色决定）
+                </span>
+              </Form.Item>
+            )
+            : (
+              <Form.Item label="权限标识" name="perms">
+                <Input placeholder="例如 system:user:list" />
+              </Form.Item>
+            )}
           <Form.Item label="显示排序" name="sort">
             <InputNumber min={0} style={{ width: '100%' }} />
           </Form.Item>
@@ -392,6 +626,25 @@ const SysMenuPage: React.FC = () => {
           </Form.Item>
         </Form>
       </Drawer>
+
+      <Modal
+        open={Boolean(renameTarget)}
+        title="修改本租户显示名称"
+        okText="确定"
+        cancelText="取消"
+        onCancel={() => setRenameTarget(null)}
+        onOk={handleRenameSubmit}
+      >
+        <Form form={renameForm} layout="vertical">
+          <Form.Item
+            label="租户自定义名称"
+            name="customName"
+            extra="留空表示恢复平台菜单名称；只影响本租户的显示，不修改平台菜单本体。"
+          >
+            <Input placeholder={`平台名称：${renameTarget?.name || ''}`} allowClear maxLength={64} />
+          </Form.Item>
+        </Form>
+      </Modal>
     </Card>
   )
 }

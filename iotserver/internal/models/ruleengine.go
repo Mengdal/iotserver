@@ -27,6 +27,7 @@ func (f *RuleEngineFilter) Scan(value interface{}) error {
 // RuleEngine 规则引擎规则：SQL 从 mqtt_stream 取数，动作转发到绑定的数据资源
 type RuleEngine struct {
 	Timestamps
+	TenantField
 	Id       string `json:"id" gorm:"column:id;primaryKey;type:string;size:64;comment:主键"`
 	Name     string `json:"name" gorm:"column:name;type:string;size:64;index;comment:规则名称"`
 	Describe string `json:"description" gorm:"column:description;type:string;size:255;comment:规则描述"`

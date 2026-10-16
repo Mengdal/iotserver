@@ -49,7 +49,7 @@ func NewCategoryTemplateApp(ctx context.Context, dic *di.Container) interfaces.C
 func (m *categoryApp) CategoryTemplateSearch(ctx context.Context, req dtos.CategoryTemplateRequest) ([]dtos.CategoryTemplateResponse, uint32, error) {
 	offset, limit := req.BaseSearchConditionQuery.GetPage()
 
-	categoryTemplates, total, err := m.dbClient.CategoryTemplateSearch(offset, limit, req)
+	categoryTemplates, total, err := m.dbClient.WithCtx(ctx).CategoryTemplateSearch(offset, limit, req)
 	if err != nil {
 		m.lc.Errorf("categoryTemplates Search err %v", err)
 		return []dtos.CategoryTemplateResponse{}, 0, err
@@ -113,7 +113,7 @@ func (m *categoryApp) Sync(ctx context.Context, versionName string) (int64, erro
 			})
 		}
 	}
-	rows, err := m.dbClient.BatchUpsertCategoryTemplate(upsertCategoryTemplate)
+	rows, err := m.dbClient.WithCtx(ctx).BatchUpsertCategoryTemplate(upsertCategoryTemplate)
 	m.lc.Infof("upsert category template rows %+v", rows)
 	if err != nil {
 		return 0, err

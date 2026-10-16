@@ -16,8 +16,8 @@ package dtos
 
 import (
 	"encoding/json"
-	"github.com/winc-link/edge-driver-proto/drivercommon"
-	"github.com/winc-link/edge-driver-proto/thingmodel"
+	"github.com/LMgateways/iotserver-driver-proto/drivercommon"
+	"github.com/LMgateways/iotserver-driver-proto/thingmodel"
 )
 
 type ThingModelMessage struct {
@@ -161,10 +161,13 @@ type BatchData struct {
 
 type BatchProperty struct {
 	Value interface{} `json:"value"`
-	//Time  int64       `json:"time"`
+	// Time 测点采集时间（毫秒）。断点续传补历史曲线时按测点带时间；
+	// 为 0 时回落到批次的 time。
+	Time int64 `json:"time"`
 }
 type BatchEvent struct {
-	//EventTime    int64                  `json:"eventTime"`
+	// EventTime 事件发生时间（毫秒），语义同 BatchProperty.Time
+	EventTime    int64                  `json:"eventTime"`
 	OutputParams map[string]interface{} `json:"outputParams"`
 }
 

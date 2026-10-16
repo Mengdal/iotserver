@@ -1,0 +1,48 @@
+/* 组件卡片（编辑态与只读态共用） */
+.widget-card {
+  height: 100%;
+
+  .ant-card-head {
+    min-height: 38px;
+    padding: 0 10px;
+    border-bottom: 1px solid #f2f3f5;
+  }
+
+  .ant-card-head-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1f2a44;
+  }
+
+  .ant-card-extra {
+    .ant-btn {
+      color: rgba(0, 0, 0, 0.45);
+    }
+  }
+
+  .ant-card-body {
+    height: calc(100% - 39px);
+    padding: 10px;
+    overflow: auto;
+  }
+}
+
+/* 文本组件卡片：内边距稍大 */
+.widget-card--text {
+  .ant-card-body {
+    padding: 12px 14px;
+    overflow: auto;
+  }
+
+  .ant-input {
+    background: transparent;
+  }
+}
+
+/* 数据类组件卡片（数值/仪表盘/折线/表格）：内容铺满，不要滚动条抢空间 */
+.widget-card--data {
+  .ant-card-body {
+    padding: 8px;
+    overflow: hidden;
+  }
+}

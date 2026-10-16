@@ -119,18 +119,18 @@ func alertListSearch(c *Client, offset int, limit int, req dtos.AlertSearchQuery
 		"alert_rule.name,alert_list.alert_result,alert_rule.alert_level,alert_list.trigger_time,alert_list.treated_time,alert_list.message,alert_list.is_send").Joins("left join alert_rule on alert_list.alert_rule_id = alert_rule.id")
 	//tx = sqlite.BuildCommonCondition(tx, dp, req.BaseSearchConditionQuery)
 	if req.Name != "" {
-		tx.Where("alert_rule.name LIKE ?", sqlite.MakeLikeParams(req.Name))
+		tx = tx.Where("alert_rule.name LIKE ?", sqlite.MakeLikeParams(req.Name))
 	}
 	if req.Status != "" {
-		tx.Where("alert_list.status = ?", req.Status)
+		tx = tx.Where("alert_list.status = ?", req.Status)
 
 	}
 	if req.AlertLevel != "" {
-		tx.Where("alert_rule.alert_level = ?", req.AlertLevel)
+		tx = tx.Where("alert_rule.alert_level = ?", req.AlertLevel)
 	}
 	if req.TriggerStartTime > 0 && req.TriggerEndTime > 0 && req.TriggerEndTime-req.TriggerStartTime > 0 {
-		tx.Where("alert_list.trigger_time >= ?", req.TriggerStartTime)
-		tx.Where("alert_list.trigger_time <= ?", req.TriggerEndTime)
+		tx = tx.Where("alert_list.trigger_time >= ?", req.TriggerStartTime)
+		tx = tx.Where("alert_list.trigger_time <= ?", req.TriggerEndTime)
 	}
 	edgeXErr = tx.Count(&total).Error
 	if edgeXErr != nil {

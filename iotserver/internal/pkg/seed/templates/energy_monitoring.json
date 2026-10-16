@@ -1,0 +1,725 @@
+{
+  "key": "energy_monitoring",
+  "name": "能源监测",
+  "industry": "能源电力",
+  "version": 1,
+  "icon": "database",
+  "description": "配电回路三相电压电流、功率、电能与需量监测",
+  "thingModelJson": {
+    "properties": [
+      {
+        "name": "A相电压",
+        "identifier": "voltage_a",
+        "dataType": "FLOAT",
+        "description": "A 相电压",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "500",
+          "min": "0",
+          "step": "0.1",
+          "unit": "V",
+          "unitName": "伏特"
+        },
+        "dataSpecsList": null
+      },
+      {
+        "name": "B相电压",
+        "identifier": "voltage_b",
+        "dataType": "FLOAT",
+        "description": "B 相电压",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "500",
+          "min": "0",
+          "step": "0.1",
+          "unit": "V",
+          "unitName": "伏特"
+        },
+        "dataSpecsList": null
+      },
+      {
+        "name": "C相电压",
+        "identifier": "voltage_c",
+        "dataType": "FLOAT",
+        "description": "C 相电压",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "500",
+          "min": "0",
+          "step": "0.1",
+          "unit": "V",
+          "unitName": "伏特"
+        },
+        "dataSpecsList": null
+      },
+      {
+        "name": "A相电流",
+        "identifier": "current_a",
+        "dataType": "FLOAT",
+        "description": "A 相电流",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "1000",
+          "min": "0",
+          "step": "0.1",
+          "unit": "A",
+          "unitName": "安培"
+        },
+        "dataSpecsList": null
+      },
+      {
+        "name": "B相电流",
+        "identifier": "current_b",
+        "dataType": "FLOAT",
+        "description": "B 相电流",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "1000",
+          "min": "0",
+          "step": "0.1",
+          "unit": "A",
+          "unitName": "安培"
+        },
+        "dataSpecsList": null
+      },
+      {
+        "name": "C相电流",
+        "identifier": "current_c",
+        "dataType": "FLOAT",
+        "description": "C 相电流",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "1000",
+          "min": "0",
+          "step": "0.1",
+          "unit": "A",
+          "unitName": "安培"
+        },
+        "dataSpecsList": null
+      },
+      {
+        "name": "有功功率",
+        "identifier": "active_power",
+        "dataType": "FLOAT",
+        "description": "总有功功率",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "1000",
+          "min": "0",
+          "step": "0.01",
+          "unit": "kW",
+          "unitName": "千瓦"
+        },
+        "dataSpecsList": null
+      },
+      {
+        "name": "无功功率",
+        "identifier": "reactive_power",
+        "dataType": "FLOAT",
+        "description": "总无功功率",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "1000",
+          "min": "0",
+          "step": "0.01",
+          "unit": "kvar",
+          "unitName": "千乏"
+        },
+        "dataSpecsList": null
+      },
+      {
+        "name": "功率因数",
+        "identifier": "power_factor",
+        "dataType": "FLOAT",
+        "description": "综合功率因数",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "1",
+          "min": "0",
+          "step": "0.01",
+          "unit": "",
+          "unitName": "功率因数"
+        },
+        "dataSpecsList": null
+      },
+      {
+        "name": "电能",
+        "identifier": "energy",
+        "dataType": "FLOAT",
+        "description": "累计有功电能",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "999999.99",
+          "min": "0",
+          "step": "0.01",
+          "unit": "kW·h",
+          "unitName": "千瓦时"
+        },
+        "dataSpecsList": null
+      },
+      {
+        "name": "需量",
+        "identifier": "demand",
+        "dataType": "FLOAT",
+        "description": "当前需量",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "1000",
+          "min": "0",
+          "step": "0.01",
+          "unit": "kW",
+          "unitName": "千瓦"
+        },
+        "dataSpecsList": null
+      },
+      {
+        "name": "频率",
+        "identifier": "frequency",
+        "dataType": "FLOAT",
+        "description": "电网频率",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "65",
+          "min": "45",
+          "step": "0.01",
+          "unit": "Hz",
+          "unitName": "赫兹"
+        },
+        "dataSpecsList": null
+      },
+      {
+        "name": "电能表状态",
+        "identifier": "meter_status",
+        "dataType": "ENUM",
+        "description": "电能表通讯与运行状态",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": null,
+        "dataSpecsList": [
+          {
+            "name": "正常",
+            "value": 0
+          },
+          {
+            "name": "通讯中断",
+            "value": 1
+          },
+          {
+            "name": "故障",
+            "value": 2
+          }
+        ]
+      }
+    ],
+    "events": [
+      {
+        "eventName": "过压报警",
+        "eventType": "ALERT",
+        "identifier": "over_voltage",
+        "description": "相电压超过上限",
+        "required": false,
+        "outputData": [
+          {
+            "name": "相别",
+            "identifier": "phase",
+            "dataType": "ENUM",
+            "required": false,
+            "dataSpecs": null,
+            "dataSpecsList": [
+              {
+                "name": "A相",
+                "value": 0
+              },
+              {
+                "name": "B相",
+                "value": 1
+              },
+              {
+                "name": "C相",
+                "value": 2
+              }
+            ]
+          },
+          {
+            "name": "电压",
+            "identifier": "value",
+            "dataType": "FLOAT",
+            "required": false,
+            "dataSpecs": {
+              "max": "500",
+              "min": "0",
+              "step": "0.1",
+              "unit": "V",
+              "unitName": "伏特"
+            },
+            "dataSpecsList": null
+          }
+        ]
+      },
+      {
+        "eventName": "欠压报警",
+        "eventType": "ALERT",
+        "identifier": "under_voltage",
+        "description": "相电压低于下限",
+        "required": false,
+        "outputData": [
+          {
+            "name": "相别",
+            "identifier": "phase",
+            "dataType": "ENUM",
+            "required": false,
+            "dataSpecs": null,
+            "dataSpecsList": [
+              {
+                "name": "A相",
+                "value": 0
+              },
+              {
+                "name": "B相",
+                "value": 1
+              },
+              {
+                "name": "C相",
+                "value": 2
+              }
+            ]
+          },
+          {
+            "name": "电压",
+            "identifier": "value",
+            "dataType": "FLOAT",
+            "required": false,
+            "dataSpecs": {
+              "max": "500",
+              "min": "0",
+              "step": "0.1",
+              "unit": "V",
+              "unitName": "伏特"
+            },
+            "dataSpecsList": null
+          }
+        ]
+      },
+      {
+        "eventName": "过流报警",
+        "eventType": "ALERT",
+        "identifier": "over_current",
+        "description": "相电流超过上限",
+        "required": false,
+        "outputData": [
+          {
+            "name": "相别",
+            "identifier": "phase",
+            "dataType": "ENUM",
+            "required": false,
+            "dataSpecs": null,
+            "dataSpecsList": [
+              {
+                "name": "A相",
+                "value": 0
+              },
+              {
+                "name": "B相",
+                "value": 1
+              },
+              {
+                "name": "C相",
+                "value": 2
+              }
+            ]
+          },
+          {
+            "name": "电流",
+            "identifier": "value",
+            "dataType": "FLOAT",
+            "required": false,
+            "dataSpecs": {
+              "max": "1000",
+              "min": "0",
+              "step": "0.1",
+              "unit": "A",
+              "unitName": "安培"
+            },
+            "dataSpecsList": null
+          }
+        ]
+      },
+      {
+        "eventName": "功率因数低",
+        "eventType": "ALERT",
+        "identifier": "low_power_factor",
+        "description": "功率因数低于下限",
+        "required": false,
+        "outputData": [
+          {
+            "name": "当前功率因数",
+            "identifier": "value",
+            "dataType": "FLOAT",
+            "required": false,
+            "dataSpecs": {
+              "max": "1",
+              "min": "0",
+              "step": "0.01",
+              "unit": "",
+              "unitName": "功率因数"
+            },
+            "dataSpecsList": null
+          },
+          {
+            "name": "下限",
+            "identifier": "threshold",
+            "dataType": "FLOAT",
+            "required": false,
+            "dataSpecs": {
+              "max": "1",
+              "min": "0",
+              "step": "0.01",
+              "unit": "",
+              "unitName": "功率因数"
+            },
+            "dataSpecsList": null
+          }
+        ]
+      },
+      {
+        "eventName": "通讯中断",
+        "eventType": "ERROR",
+        "identifier": "comm_lost",
+        "description": "电能表通讯中断",
+        "required": false,
+        "outputData": [
+          {
+            "name": "中断时间",
+            "identifier": "time",
+            "dataType": "DATE",
+            "required": false,
+            "dataSpecs": null,
+            "dataSpecsList": null
+          },
+          {
+            "name": "持续时长",
+            "identifier": "duration",
+            "dataType": "INT",
+            "required": false,
+            "dataSpecs": {
+              "max": "86400",
+              "min": "0",
+              "step": "1",
+              "unit": "s",
+              "unitName": "秒"
+            },
+            "dataSpecsList": null
+          }
+        ]
+      }
+    ],
+    "services": [
+      {
+        "serviceName": "复位电能",
+        "identifier": "reset_energy",
+        "description": "将累计电能清零重新计量",
+        "required": false,
+        "callType": "ASYNC",
+        "inputParams": [],
+        "outParams": []
+      },
+      {
+        "serviceName": "查询实时电气参数",
+        "identifier": "query_realtime",
+        "description": "同步查询三相电压电流",
+        "required": false,
+        "callType": "SYNC",
+        "inputParams": [],
+        "outParams": [
+          {
+            "name": "A相电压",
+            "identifier": "voltage_a",
+            "dataType": "FLOAT",
+            "required": false,
+            "dataSpecs": {
+              "max": "500",
+              "min": "0",
+              "step": "0.1",
+              "unit": "V",
+              "unitName": "伏特"
+            },
+            "dataSpecsList": null
+          },
+          {
+            "name": "B相电压",
+            "identifier": "voltage_b",
+            "dataType": "FLOAT",
+            "required": false,
+            "dataSpecs": {
+              "max": "500",
+              "min": "0",
+              "step": "0.1",
+              "unit": "V",
+              "unitName": "伏特"
+            },
+            "dataSpecsList": null
+          },
+          {
+            "name": "C相电压",
+            "identifier": "voltage_c",
+            "dataType": "FLOAT",
+            "required": false,
+            "dataSpecs": {
+              "max": "500",
+              "min": "0",
+              "step": "0.1",
+              "unit": "V",
+              "unitName": "伏特"
+            },
+            "dataSpecsList": null
+          },
+          {
+            "name": "A相电流",
+            "identifier": "current_a",
+            "dataType": "FLOAT",
+            "required": false,
+            "dataSpecs": {
+              "max": "1000",
+              "min": "0",
+              "step": "0.1",
+              "unit": "A",
+              "unitName": "安培"
+            },
+            "dataSpecsList": null
+          },
+          {
+            "name": "B相电流",
+            "identifier": "current_b",
+            "dataType": "FLOAT",
+            "required": false,
+            "dataSpecs": {
+              "max": "1000",
+              "min": "0",
+              "step": "0.1",
+              "unit": "A",
+              "unitName": "安培"
+            },
+            "dataSpecsList": null
+          },
+          {
+            "name": "C相电流",
+            "identifier": "current_c",
+            "dataType": "FLOAT",
+            "required": false,
+            "dataSpecs": {
+              "max": "1000",
+              "min": "0",
+              "step": "0.1",
+              "unit": "A",
+              "unitName": "安培"
+            },
+            "dataSpecsList": null
+          }
+        ]
+      },
+      {
+        "serviceName": "查询电能统计",
+        "identifier": "query_energy_stat",
+        "description": "同步查询电能、需量与频率",
+        "required": false,
+        "callType": "SYNC",
+        "inputParams": [],
+        "outParams": [
+          {
+            "name": "电能",
+            "identifier": "energy",
+            "dataType": "FLOAT",
+            "required": false,
+            "dataSpecs": {
+              "max": "999999.99",
+              "min": "0",
+              "step": "0.01",
+              "unit": "kW·h",
+              "unitName": "千瓦时"
+            },
+            "dataSpecsList": null
+          },
+          {
+            "name": "需量",
+            "identifier": "demand",
+            "dataType": "FLOAT",
+            "required": false,
+            "dataSpecs": {
+              "max": "1000",
+              "min": "0",
+              "step": "0.01",
+              "unit": "kW",
+              "unitName": "千瓦"
+            },
+            "dataSpecsList": null
+          },
+          {
+            "name": "频率",
+            "identifier": "frequency",
+            "dataType": "FLOAT",
+            "required": false,
+            "dataSpecs": {
+              "max": "65",
+              "min": "45",
+              "step": "0.01",
+              "unit": "Hz",
+              "unitName": "赫兹"
+            },
+            "dataSpecsList": null
+          }
+        ]
+      },
+      {
+        "serviceName": "查询告警记录",
+        "identifier": "query_alarm_records",
+        "description": "同步查询电能表告警记录",
+        "required": false,
+        "callType": "SYNC",
+        "inputParams": [],
+        "outParams": [
+          {
+            "name": "告警数量",
+            "identifier": "count",
+            "dataType": "INT",
+            "required": false,
+            "dataSpecs": {
+              "max": "9999",
+              "min": "0",
+              "step": "1",
+              "unit": "次",
+              "unitName": "次"
+            },
+            "dataSpecsList": null
+          },
+          {
+            "name": "最新告警时间",
+            "identifier": "time",
+            "dataType": "DATE",
+            "required": false,
+            "dataSpecs": null,
+            "dataSpecsList": null
+          }
+        ]
+      }
+    ]
+  },
+  "alarmRules": [
+    {
+      "name": "A相过压",
+      "propertyCode": "voltage_a",
+      "operator": ">",
+      "value": "250",
+      "alertLevel": 1,
+      "alertType": 1,
+      "silenceTime": 300,
+      "description": "A 相电压超过 250 V"
+    },
+    {
+      "name": "A相欠压",
+      "propertyCode": "voltage_a",
+      "operator": "<",
+      "value": "190",
+      "alertLevel": 1,
+      "alertType": 1,
+      "silenceTime": 300,
+      "description": "A 相电压低于 190 V"
+    },
+    {
+      "name": "A相过流",
+      "propertyCode": "current_a",
+      "operator": ">",
+      "value": "400",
+      "alertLevel": 1,
+      "alertType": 1,
+      "silenceTime": 300,
+      "description": "A 相电流超过 400 A"
+    },
+    {
+      "name": "功率因数低",
+      "propertyCode": "power_factor",
+      "operator": "<",
+      "value": "0.9",
+      "alertLevel": 3,
+      "alertType": 1,
+      "silenceTime": 1800,
+      "description": "功率因数低于 0.9"
+    },
+    {
+      "name": "需量超限",
+      "propertyCode": "demand",
+      "operator": ">",
+      "value": "800",
+      "alertLevel": 2,
+      "alertType": 1,
+      "silenceTime": 900,
+      "description": "需量超过 800 kW"
+    }
+  ],
+  "dashboard": {
+    "name": "能源监测看板",
+    "widgets": [
+      {
+        "title": "三相电压趋势",
+        "type": "line",
+        "propertyCode": "voltage_a",
+        "timeRange": "1h",
+        "aggInterval": 60,
+        "aggMethod": "avg"
+      },
+      {
+        "title": "有功功率趋势",
+        "type": "line",
+        "propertyCode": "active_power",
+        "timeRange": "1h",
+        "aggInterval": 60,
+        "aggMethod": "avg"
+      },
+      {
+        "title": "有功功率",
+        "type": "kpi",
+        "propertyCode": "active_power",
+        "unit": "kW",
+        "decimals": 2
+      },
+      {
+        "title": "功率因数",
+        "type": "gauge",
+        "propertyCode": "power_factor",
+        "unit": "",
+        "min": 0,
+        "max": 1
+      },
+      {
+        "title": "累计电能",
+        "type": "kpi",
+        "propertyCode": "energy",
+        "unit": "kW·h",
+        "decimals": 1
+      },
+      {
+        "title": "能源监测总览",
+        "type": "text",
+        "text": "配电回路电能质量与用能综合监控"
+      }
+    ]
+  },
+  "metrics": {
+    "running": null,
+    "output": null,
+    "good": null,
+    "reject": null,
+    "cycleTime": null
+  }
+}

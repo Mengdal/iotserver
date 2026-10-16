@@ -27,12 +27,23 @@ func (d *dockerImpl) RemoveApp(app dtos.DeviceLibrary) error {
 	return d.dm.ImageRemove(app.DockerImageId)
 }
 
+// GetSelfIp 返回驱动容器应该连的"平台地址"。
+//
+// 场景一：平台跑在容器里 → 返回该容器的网络 IP，驱动容器在同一 docker 网络内直连。
+// 场景二：平台跑在本机进程（inspect 不到自己）→ 返回 host.docker.internal，
+// 因为此时驱动容器要连的是宿主机；拿 127.0.0.1 会指向容器自己，连不上。
 func (d *dockerImpl) GetSelfIp() string {
 	ip, err := d.dm.GetContainerIp(d.dcm.DockerSelfName)
-	if err != nil {
-		d.lc.Errorf("GetContainerIp err:%v", err)
+	if err != nil || ip == "" {
+		d.lc.Infof("platform is not in a container, drivers will connect via %s", constants.HostDockerInternal)
+		return constants.HostDockerInternal
 	}
 	return ip
+}
+
+// IsLocalMode 平台是否以本机进程运行（见 setDcmRootDir 的降级分支）
+func (d *dockerImpl) IsLocalMode() bool {
+	return d.dcm.IsLocalMode()
 }
 
 // instance
@@ -70,7 +81,7 @@ func (d *dockerImpl) StartInstance(ins dtos.DeviceService, cfg dtos.RunServiceCf
 	if err != nil {
 		return "", err
 	}
-	ip, err := d.dm.ContainerStart(cfg.ImageRepo, ins.ContainerName, filePath, cfg.DockerMountDevices, cfg.DockerParams, constants.DriverInstance)
+	ip, err := d.dm.ContainerStart(cfg.ImageRepo, ins.ContainerName, filePath, cfg.DockerMountDevices, cfg.DockerParams, constants.DriverInstance, cfg.DriverPort)
 	return ip, err
 }
 

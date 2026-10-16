@@ -544,8 +544,14 @@ func NewClient(config dtos.Configuration, lc logger.LoggingClient) (c interfaces
 		return nil, fmt.Errorf("ducklake: LOAD ducklake failed (需要可访问的 ducklake 扩展): %w", err)
 	}
 
-	attach := fmt.Sprintf("ATTACH %s AS %s (DATA_PATH %s)",
-		quote("ducklake:"+catalogPath), lakeAlias, quote(dataPath))
+	// DATA_PATH 会被 ducklake 记进 catalog；同一个湖换个路径字符串访问（容器 vs 宿主机本地）
+	// 会被拒绝，这时用 OverrideDataPath 显式覆盖（两种写法必须指向同一个物理目录）
+	override := ""
+	if config.OverrideDataPath {
+		override = ", OVERRIDE_DATA_PATH true"
+	}
+	attach := fmt.Sprintf("ATTACH %s AS %s (DATA_PATH %s%s)",
+		quote("ducklake:"+catalogPath), lakeAlias, quote(dataPath), override)
 	if _, err = db.Exec(attach); err != nil {
 		_ = db.Close()
 		return nil, fmt.Errorf("ducklake: attach %s: %w", catalogPath, err)

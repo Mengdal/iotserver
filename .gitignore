@@ -1,5 +1,6 @@
 # ===== 工作区级本地缓存 =====
 .gocache/
+.gopath/
 .npm-cache/
 .pnpm-store/
 
@@ -11,6 +12,9 @@
 # ===== 操作系统 =====
 .DS_Store
 Thumbs.db
+
+# ===== AI 工具本地工作目录（内含 worktree 副本，体积大，不入库）=====
+.claude/
 
 # ===== 第三方 vendored 仓库（各自有独立 origin，不作为本项目内容）=====
 dash/

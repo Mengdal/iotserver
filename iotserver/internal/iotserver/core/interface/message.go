@@ -2,7 +2,7 @@ package interfaces
 
 import (
 	"context"
-	"github.com/winc-link/edge-driver-proto/drivercommon"
+	"github.com/LMgateways/iotserver-driver-proto/drivercommon"
 	"iotserver/internal/dtos"
 	"iotserver/internal/iotserver/core/application/messagestore"
 	//msgTypes "gitlab.com/tedge/edgex/internal/pkg/messaging/types"

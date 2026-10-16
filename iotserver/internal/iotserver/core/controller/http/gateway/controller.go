@@ -57,6 +57,18 @@ func (ctl *controller) getResourceApp() interfaces.ResourceItf {
 	return container.ResourceItfFrom(ctl.dic.Get)
 }
 
+func (ctl *controller) getTenantApp() interfaces.TenantItf {
+	return container.TenantItfFrom(ctl.dic.Get)
+}
+
+func (ctl *controller) getGatewayApp() interfaces.GatewayItf {
+	return container.GatewayItfFrom(ctl.dic.Get)
+}
+
+func (ctl *controller) getSolutionApp() interfaces.SolutionItf {
+	return container.SolutionItfFrom(ctl.dic.Get)
+}
+
 func (ctl *controller) getUserApp() interfaces.UserItf {
 	return container.UserItfFrom(ctl.dic.Get)
 }

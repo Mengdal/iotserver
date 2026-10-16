@@ -15,6 +15,7 @@
 package driverapp
 
 import (
+	"context"
 	"fmt"
 	"iotserver/internal/dtos"
 	"iotserver/internal/iotserver/core/container"
@@ -26,6 +27,7 @@ import (
 	"iotserver/internal/pkg/di"
 	"iotserver/internal/pkg/errort"
 	"iotserver/internal/pkg/logger"
+	"iotserver/internal/pkg/tenant"
 	"sync"
 )
 
@@ -87,13 +89,14 @@ func (m *deviceLibraryManager) FilterState(state string) []string {
 
 func (m *deviceLibraryManager) Remove(dlId string) error {
 	dbClient := container.DBClientFrom(m.dic.Get)
-	dl, err := dbClient.DeviceLibraryById(dlId)
+	// 平台作用域：系统路径，不按租户过滤
+	dl, err := dbClient.WithCtx(tenant.Platform(context.Background())).DeviceLibraryById(dlId)
 	if err != nil {
 		return err
 	}
 
 	// 删除自定义驱动
-	if err := dbClient.DeleteDeviceLibraryById(dlId); err != nil {
+	if err := dbClient.WithCtx(tenant.Platform(context.Background())).DeleteDeviceLibraryById(dlId); err != nil {
 		return err
 	}
 
@@ -133,7 +136,8 @@ func (m *deviceLibraryManager) updateDL(dlId, updateVersion string) error {
 	dl = m.updateDLDefaultVersion(dl, newVersionInfo)
 
 	dbClient := resourceContainer.DBClientFrom(m.dic.Get)
-	if err := dbClient.UpdateDeviceLibrary(dl); err != nil {
+	// 平台作用域：系统路径，不按租户过滤
+	if err := dbClient.WithCtx(tenant.Platform(context.Background())).UpdateDeviceLibrary(dl); err != nil {
 		m.lc.Errorf("updateDeviceLibrary %s fail %+v", dl.Id, err)
 		return err
 	}
@@ -181,7 +185,7 @@ func (m *deviceLibraryManager) downloadVersion(dl models.DeviceLibrary, dc model
 	// 3.下载应用
 	var cfg dtos.DockerConfig
 	if dl.IsInternal {
-		cfg = dtos.WincLinkDockerConfig()
+		cfg = dtos.MarketDockerConfig()
 	} else {
 		cfg = dtos.DockerConfigFromModel(dc)
 	}

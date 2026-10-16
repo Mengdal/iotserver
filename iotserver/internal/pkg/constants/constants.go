@@ -15,10 +15,15 @@ const (
 	//gateway
 	JwtParsedInfo          = "jwt-parsed-info"
 	DefaultAgentReqTimeout = 10
+
+	// 租户上下文：gin 上下文里的 key
+	TenantCtxInfo = "tenant-ctx-info"
+	// 平台管理员代管租户时使用的请求头
+	TenantHeader = "x-tenant-id"
 )
 
-// 默认高级配置ID
-const DefaultAdvanceConfigID = 1
+// 平台级（非租户）数据归属：内置模板、系统菜单、平台管理员角色等
+const PlatformTenantId = ""
 
 // 日志级别
 type LogLevel int32
@@ -47,7 +52,7 @@ const (
 	RunStatusStopping
 )
 
-//驱动实例日志
+// 驱动实例日志
 const (
 	StatusRead = iota + 1
 	StatusStop

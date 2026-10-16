@@ -48,9 +48,20 @@ export interface SysMenu {
   status: number
   isFrame: number
   remark: string
+  /** 菜单归属：'' = 平台原始菜单；非空 = 该租户的自建菜单 */
+  tenantId?: string
   created?: number
   modified?: number
   children?: SysMenu[]
+}
+
+/** 租户菜单展示层覆盖（隐藏/改名/图标/排序） */
+export interface TenantMenuPref {
+  menuId: string
+  hidden: number
+  customName: string
+  customIcon: string
+  sort: number
 }
 
 export interface SysDept {
@@ -58,6 +69,8 @@ export interface SysDept {
   parentId: string
   ancestors: string
   name: string
+  /** 节点类型 1公司 2工厂 3车间 4产线 */
+  deptType: number
   sort: number
   leader: string
   phone: string
@@ -68,16 +81,32 @@ export interface SysDept {
   children?: SysDept[]
 }
 
-export interface SysLoginLog {
+/** 审查日志：同时承载登录记录（type=login）与操作记录（type=operation） */
+export interface SysAuditLog {
   id: string
+  /** login 登录 / operation 操作 */
+  type: 'login' | 'operation' | string
   username: string
+  module: string
+  action: string
+  target: string
+  method: string
+  path: string
+  /** 1 成功 / 0 失败 */
+  status: number
+  errorCode: number
+  message: string
   ip: string
   browser: string
   os: string
-  status: number
-  message: string
+  params: string
+  durationMs: number
+  created: number
   loginTime: number
 }
+
+/** @deprecated 旧「登入日志」类型，兼容别名 → SysAuditLog */
+export type SysLoginLog = SysAuditLog
 
 export interface SysConfig {
   id: string
@@ -286,6 +315,41 @@ export function deleteSysMenu<T = void> (ids: string[]) {
   })
 }
 
+/** 当前租户的菜单展示层覆盖列表（平台视图返回空数组） */
+export function getSysMenuPrefs<T = TenantMenuPref[]> () {
+  return httpRequest<any, CommonResponse<T>>({
+    url: '/api/v1/menu/pref',
+    method: 'get',
+  })
+}
+
+/**
+ * 保存当前租户的菜单展示层覆盖（隐藏/改名/图标/排序）。
+ * 只写覆盖层，不改菜单本体；平台视图调用会被后端拒绝。
+ */
+export function saveSysMenuPref<T = void> (data: {
+  menuId: string
+  hidden?: number
+  customName?: string
+  customIcon?: string
+  sort?: number
+}) {
+  return httpRequest<any, CommonResponse<T>>({
+    url: '/api/v1/menu/pref',
+    method: 'put',
+    data,
+  })
+}
+
+/** 平台重置某租户的菜单定制：清空自建菜单与全部覆盖，恢复平台默认（仅平台管理员） */
+export function resetSysMenuTenant<T = void> (tenantId: string) {
+  return httpRequest<any, CommonResponse<T>>({
+    url: '/api/v1/menu/tenant-reset',
+    method: 'post',
+    data: { tenantId },
+  })
+}
+
 // ===== 部门管理 =====
 
 export function getSysDepts<T = TableReponseType<SysDept>> (params?: Record<string, any>) {
@@ -335,29 +399,43 @@ export function deleteSysDept<T = void> (ids: string[]) {
   })
 }
 
-// ===== 登入日志 =====
+// ===== 审查日志（登录 + 操作） =====
 
-export function getSysLoginLogs<T = TableReponseType<SysLoginLog>> (params?: Record<string, any>) {
+export function getSysAuditLogs<T = TableReponseType<SysAuditLog>> (params?: Record<string, any>) {
   return httpRequest<any, CommonResponse<T>>({
-    url: '/api/v1/sys-login-log',
+    url: '/api/v1/sys-audit-log',
     method: 'get',
     params,
   })
 }
 
-export function deleteSysLoginLog<T = void> (ids: string[]) {
+export function deleteSysAuditLogs<T = void> (ids: string[]) {
   return httpRequest<any, CommonResponse<T>>({
-    url: '/api/v1/sys-login-log',
+    url: '/api/v1/sys-audit-log',
     method: 'delete',
     data: { ids },
   })
 }
 
-export function clearSysLoginLog<T = void> () {
+export function clearSysAuditLogs<T = void> () {
   return httpRequest<any, CommonResponse<T>>({
-    url: '/api/v1/sys-login-log/clear',
+    url: '/api/v1/sys-audit-log/clear',
     method: 'delete',
   })
+}
+
+// ===== 登入日志（旧接口，兼容别名 → 审查日志；后端旧路由仍保留一版） =====
+
+export function getSysLoginLogs<T = TableReponseType<SysAuditLog>> (params?: Record<string, any>) {
+  return getSysAuditLogs<T>(params)
+}
+
+export function deleteSysLoginLog<T = void> (ids: string[]) {
+  return deleteSysAuditLogs<T>(ids)
+}
+
+export function clearSysLoginLog<T = void> () {
+  return clearSysAuditLogs<T>()
 }
 
 // ===== 系统配置 =====

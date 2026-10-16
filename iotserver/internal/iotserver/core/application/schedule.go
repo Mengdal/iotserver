@@ -25,5 +25,15 @@ func InitSchedule(dic *di.Container, lc logger.LoggingClient) {
 		}
 	})
 
+	// 每小时按租户执行时序数据保留策略（保留天数可按租户配置，每次运行重新读配置）
+	crontab.Schedule.AddFunc("0 * * * *", func() {
+		RunRetention(dic, lc)
+	})
+
+	// 每分钟把超时未活跃的设备/网关置为离线（超时值见配置 data.offlineTimeout）
+	crontab.Schedule.AddFunc("* * * * *", func() {
+		SweepOffline(dic, lc)
+	})
+
 	crontab.Start()
 }

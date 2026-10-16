@@ -1,0 +1,122 @@
+{
+  "boards": [
+    {
+      "id": "cv6d6f9d7902dc49fa9170",
+      "name": "组件演示看板",
+      "icon": "appstore",
+      "canvas": {
+        "cols": 12,
+        "rowHeight": 40,
+        "widgets": [
+          {
+            "id": "demo-t1",
+            "title": "文本 · 小卡",
+            "showTitle": true,
+            "type": "text",
+            "text": "文本组件\n标题栏可拖动、右下角可缩放；\n编辑态点正文直接改字，失焦即保存。",
+            "layout": {
+              "x": 0,
+              "y": 0,
+              "w": 3,
+              "h": 4
+            }
+          },
+          {
+            "id": "demo-t2",
+            "title": "文本 · 宽卡",
+            "showTitle": true,
+            "type": "text",
+            "text": "文本组件（12 列里占 9 列宽）——正文支持多行与换行。\n编辑态：点正文直接改，点空白处失焦保存；查看态：只看不编辑。\n卡片高度不够时，正文区域会自己滚动，标题栏和卡片尺寸不受影响。",
+            "layout": {
+              "x": 3,
+              "y": 0,
+              "w": 9,
+              "h": 4
+            }
+          },
+          {
+            "id": "demo-t3",
+            "title": "文本 · 长文（正文可滚动）",
+            "showTitle": true,
+            "type": "text",
+            "text": "这块是「长文本」示例：卡片固定 6×8，正文比卡片高，所以正文区域会出现滚动条。\n\n内容可以换成：数据口径说明、值班联系方式、变更记录……\n\n第二段：文本组件是当前平台唯一承载文字内容的组件，支持任意长度（后端上限 4000 字）。\n\n第三段：编辑态点一下正文就能改；右上角切到「查看」后是只读的。\n\n第四段：拖动标题栏移动、拖右下角改大小，布局改动会显示「未保存」。",
+            "layout": {
+              "x": 0,
+              "y": 4,
+              "w": 6,
+              "h": 8
+            }
+          },
+          {
+            "id": "demo-c1",
+            "title": "容器 · 含 3 个子组件",
+            "showTitle": true,
+            "type": "container",
+            "layout": {
+              "x": 6,
+              "y": 4,
+              "w": 6,
+              "h": 16
+            },
+            "children": [
+              {
+                "id": "demo-c1a",
+                "title": "容器内 · 左",
+                "showTitle": true,
+                "type": "text",
+                "text": "容器里的子组件 A（6×5）\n容器是排版用的，可以往里拖文本或空容器。",
+                "layout": {
+                  "x": 0,
+                  "y": 0,
+                  "w": 6,
+                  "h": 5
+                }
+              },
+              {
+                "id": "demo-c1b",
+                "title": "容器内 · 右",
+                "showTitle": true,
+                "type": "text",
+                "text": "容器里的子组件 B（6×5）\n容器自己的标题栏也能拖动，整块一起移动。",
+                "layout": {
+                  "x": 6,
+                  "y": 0,
+                  "w": 6,
+                  "h": 5
+                }
+              },
+              {
+                "id": "demo-c1c",
+                "title": "容器内 · 通栏",
+                "showTitle": true,
+                "type": "text",
+                "text": "容器里的子组件 C（12×5，通栏）\n容器内的坐标同样是 12 列，宽度跟随容器本身的格子。",
+                "layout": {
+                  "x": 0,
+                  "y": 5,
+                  "w": 12,
+                  "h": 5
+                }
+              }
+            ]
+          },
+          {
+            "id": "demo-c2",
+            "title": "容器 · 空的（往里拖组件）",
+            "showTitle": true,
+            "type": "container",
+            "layout": {
+              "x": 0,
+              "y": 12,
+              "w": 6,
+              "h": 8
+            }
+          }
+        ]
+      },
+      "isDefault": true,
+      "isHome": false,
+      "updateAt": 1791785210845
+    }
+  ]
+}

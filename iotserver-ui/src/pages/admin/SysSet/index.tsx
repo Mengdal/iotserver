@@ -1,9 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import {
+  Alert,
   Button,
   Card,
   Col,
   Divider,
+  Empty,
   Form,
   Input,
   InputNumber,
@@ -15,7 +17,7 @@ import {
 } from 'antd'
 import { ReloadOutlined } from '@ant-design/icons'
 import { getSysConfigs, saveSysConfigs, SysConfig } from '@/api'
-import { useAuth } from '@/utils/auth'
+import { isPlatformAdmin, useAuth } from '@/utils/auth'
 import { useBrand } from '@/components/Brand'
 import ImageUploader from '@/components/ImageUploader'
 
@@ -68,6 +70,8 @@ const SysSetPage: React.FC = () => {
   const [items, setItems] = useState<SysConfig[]>([])
 
   const canEdit = useAuth('system:config:edit')
+  // 系统配置为平台级功能：租户用户菜单已屏蔽，此处兜底 URL 直进
+  const [platformAdmin] = useState(() => isPlatformAdmin())
 
   const loadData = useCallback(async () => {
     try {
@@ -96,8 +100,11 @@ const SysSetPage: React.FC = () => {
   }, [form, messageApi])
 
   useEffect(() => {
+    if (!platformAdmin) {
+      return
+    }
     loadData()
-  }, [loadData])
+  }, [loadData, platformAdmin])
 
   const itemByKey = useMemo(() => {
     const map = new Map<string, SysConfig>()
@@ -169,9 +176,31 @@ const SysSetPage: React.FC = () => {
     )
   }
 
+  /** 平台级配置常驻提示 */
+  const platformNotice = (
+    <Alert
+      type="info"
+      showIcon
+      message="系统配置为平台级（全局唯一），保存后对所有租户生效；如需按租户区分，请使用各业务模块自己的配置。"
+      style={{ marginBottom: 16 }}
+    />
+  )
+
+  // 租户用户菜单已屏蔽本页，此处仅兜底 URL 直进：不请求数据
+  if (!platformAdmin) {
+    return (
+      <Card className="admin-page">
+        {contextHolder}
+        {platformNotice}
+        <Empty description="系统配置为平台级功能，仅平台管理员可访问" />
+      </Card>
+    )
+  }
+
   return (
     <Card className="admin-page">
       {contextHolder}
+      {platformNotice}
       <Spin spinning={loading}>
         <Title level={5} style={{ marginBottom: 4 }}>系统配置</Title>
         <Text type="secondary">

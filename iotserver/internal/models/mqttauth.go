@@ -21,6 +21,7 @@ import (
 
 type MqttAuth struct {
 	Timestamps   `gorm:"embedded"`
+	TenantField  `gorm:"embedded"`
 	Id           string                 `gorm:"id;primaryKey;not null;type:string;size:255;comment:主键"`
 	ResourceId   string                 `gorm:"type:string;size:255;comment:资源ID"`
 	ResourceType constants.ResourceType `gorm:"type:string;size:255;comment:资源类型"`

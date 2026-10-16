@@ -50,7 +50,7 @@ func NewProductApp(ctx context.Context, dic *di.Container) interfaces.ProductItf
 func (p *productApp) ProductsSearch(ctx context.Context, req dtos.ProductSearchQueryRequest) ([]dtos.ProductSearchQueryResponse, uint32, error) {
 	offset, limit := req.BaseSearchConditionQuery.GetPage()
 
-	resp, total, err := p.dbClient.ProductsSearch(offset, limit, false, req)
+	resp, total, err := p.dbClient.WithCtx(ctx).ProductsSearch(offset, limit, false, req)
 	if err != nil {
 		return []dtos.ProductSearchQueryResponse{}, 0, err
 	}
@@ -64,12 +64,12 @@ func (p *productApp) ProductsSearch(ctx context.Context, req dtos.ProductSearchQ
 func (p *productApp) ProductsModelSearch(ctx context.Context, req dtos.ProductSearchQueryRequest) ([]models.Product, uint32, error) {
 	offset, limit := req.BaseSearchConditionQuery.GetPage()
 
-	return p.dbClient.ProductsSearch(offset, limit, true, req)
+	return p.dbClient.WithCtx(ctx).ProductsSearch(offset, limit, true, req)
 
 }
 
 func (p *productApp) ProductById(ctx context.Context, id string) (dtos.ProductSearchByIdResponse, error) {
-	resp, err := p.dbClient.ProductById(id)
+	resp, err := p.dbClient.WithCtx(ctx).ProductById(id)
 	if err != nil {
 		return dtos.ProductSearchByIdResponse{}, err
 	}
@@ -77,7 +77,7 @@ func (p *productApp) ProductById(ctx context.Context, id string) (dtos.ProductSe
 }
 
 func (p *productApp) OpenApiProductById(ctx context.Context, id string) (dtos.ProductSearchByIdOpenApiResponse, error) {
-	resp, err := p.dbClient.ProductById(id)
+	resp, err := p.dbClient.WithCtx(ctx).ProductById(id)
 	if err != nil {
 		return dtos.ProductSearchByIdOpenApiResponse{}, err
 	}
@@ -87,7 +87,7 @@ func (p *productApp) OpenApiProductById(ctx context.Context, id string) (dtos.Pr
 func (p *productApp) OpenApiProductSearch(ctx context.Context, req dtos.ProductSearchQueryRequest) ([]dtos.ProductSearchOpenApiResponse, uint32, error) {
 	offset, limit := req.BaseSearchConditionQuery.GetPage()
 
-	resp, total, err := p.dbClient.ProductsSearch(offset, limit, false, req)
+	resp, total, err := p.dbClient.WithCtx(ctx).ProductsSearch(offset, limit, false, req)
 	if err != nil {
 		return []dtos.ProductSearchOpenApiResponse{}, 0, err
 	}
@@ -99,7 +99,7 @@ func (p *productApp) OpenApiProductSearch(ctx context.Context, req dtos.ProductS
 }
 
 func (p *productApp) ProductModelById(ctx context.Context, id string) (models.Product, error) {
-	resp, err := p.dbClient.ProductById(id)
+	resp, err := p.dbClient.WithCtx(ctx).ProductById(id)
 	if err != nil {
 		return models.Product{}, err
 	}
@@ -108,11 +108,11 @@ func (p *productApp) ProductModelById(ctx context.Context, id string) (models.Pr
 }
 
 func (p *productApp) ProductDelete(ctx context.Context, id string) error {
-	productInfo, err := p.dbClient.ProductById(id)
+	productInfo, err := p.dbClient.WithCtx(ctx).ProductById(id)
 	if err != nil {
 		return err
 	}
-	_, total, err := p.dbClient.DevicesSearch(0, -1, dtos.DeviceSearchQueryRequest{ProductId: productInfo.Id})
+	_, total, err := p.dbClient.WithCtx(ctx).DevicesSearch(0, -1, dtos.DeviceSearchQueryRequest{ProductId: productInfo.Id})
 
 	if err != nil {
 		return err
@@ -125,7 +125,7 @@ func (p *productApp) ProductDelete(ctx context.Context, id string) error {
 	if err != nil {
 		return err
 	}
-	if err = p.dbClient.AssociationsDeleteProductObject(productInfo); err != nil {
+	if err = p.dbClient.WithCtx(ctx).AssociationsDeleteProductObject(productInfo); err != nil {
 		return err
 	}
 	_ = resourceContainer.DataDBClientFrom(p.dic.Get).DropStable(ctx, productInfo.Id)
@@ -145,11 +145,11 @@ func (p *productApp) AddProduct(ctx context.Context, req dtos.ProductAddRequest)
 	var actions []models.Actions
 
 	if req.CategoryTemplateId != "1" {
-		categoryTempInfo, err := p.dbClient.CategoryTemplateById(req.CategoryTemplateId)
+		categoryTempInfo, err := p.dbClient.WithCtx(ctx).CategoryTemplateById(req.CategoryTemplateId)
 		if err != nil {
 			return "", err
 		}
-		thingModelTemplateInfo, err := p.dbClient.ThingModelTemplateByCategoryKey(categoryTempInfo.CategoryKey)
+		thingModelTemplateInfo, err := p.dbClient.WithCtx(ctx).ThingModelTemplateByCategoryKey(categoryTempInfo.CategoryKey)
 		if err != nil {
 			return "", err
 		}
@@ -175,7 +175,7 @@ func (p *productApp) AddProduct(ctx context.Context, req dtos.ProductAddRequest)
 	insertProduct.Events = events
 	insertProduct.Actions = actions
 
-	ps, err := p.dbClient.AddProduct(insertProduct)
+	ps, err := p.dbClient.WithCtx(ctx).AddProduct(insertProduct)
 	if err != nil {
 		return "", err
 	}
@@ -190,7 +190,7 @@ func (p *productApp) ProductRelease(ctx context.Context, productId string) error
 	var err error
 	var productInfo models.Product
 
-	productInfo, err = p.dbClient.ProductById(productId)
+	productInfo, err = p.dbClient.WithCtx(ctx).ProductById(productId)
 
 	if err != nil {
 		return err
@@ -204,14 +204,14 @@ func (p *productApp) ProductRelease(ctx context.Context, productId string) error
 		return err
 	}
 	productInfo.Status = constants.ProductRelease
-	return p.dbClient.UpdateProduct(productInfo)
+	return p.dbClient.WithCtx(ctx).UpdateProduct(productInfo)
 }
 
 func (p *productApp) ProductUnRelease(ctx context.Context, productId string) error {
 	var err error
 	var productInfo models.Product
 
-	productInfo, err = p.dbClient.ProductById(productId)
+	productInfo, err = p.dbClient.WithCtx(ctx).ProductById(productId)
 
 	if err != nil {
 		return err
@@ -220,7 +220,7 @@ func (p *productApp) ProductUnRelease(ctx context.Context, productId string) err
 		return errors.New("")
 	}
 	productInfo.Status = constants.ProductUnRelease
-	return p.dbClient.UpdateProduct(productInfo)
+	return p.dbClient.WithCtx(ctx).UpdateProduct(productInfo)
 }
 
 func (p *productApp) OpenApiAddProduct(ctx context.Context, req dtos.OpenApiAddProductRequest) (productId string, err error) {
@@ -254,7 +254,7 @@ func (p *productApp) OpenApiAddProduct(ctx context.Context, req dtos.OpenApiAddP
 	//insertProduct.Events = events
 	//insertProduct.Actions = actions
 
-	ps, err := p.dbClient.AddProduct(insertProduct)
+	ps, err := p.dbClient.WithCtx(ctx).AddProduct(insertProduct)
 	if err != nil {
 		return "", err
 	}
@@ -266,7 +266,7 @@ func (p *productApp) OpenApiAddProduct(ctx context.Context, req dtos.OpenApiAddP
 
 func (p *productApp) OpenApiUpdateProduct(ctx context.Context, req dtos.OpenApiUpdateProductRequest) error {
 
-	product, err := p.dbClient.ProductById(req.Id)
+	product, err := p.dbClient.WithCtx(ctx).ProductById(req.Id)
 	if err != nil {
 		return err
 	}
@@ -298,7 +298,7 @@ func (p *productApp) OpenApiUpdateProduct(ctx context.Context, req dtos.OpenApiU
 		product.Description = *req.Description
 	}
 
-	err = p.dbClient.UpdateProduct(product)
+	err = p.dbClient.WithCtx(ctx).UpdateProduct(product)
 	if err != nil {
 		return err
 	}

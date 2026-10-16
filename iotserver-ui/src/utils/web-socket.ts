@@ -127,14 +127,52 @@ export class WebSocketClass {
     }
   }
 
-  public send (message: SendMessage): Promise<BackPackage> {
-    return new Promise((resolve) => {
+  /**
+   * 发送请求并等待后端同 code 的响应。
+   *
+   * 修复了原实现的两个缺陷，否则调用方会「转圈转到天荒地老」：
+   *   1. socket 未 OPEN 时 websocket.send 会抛 InvalidStateError，
+   *      原实现没捕获、调用方也没 .catch，异常被静默吞掉；
+   *   2. 后端不响应时 Promise 永不 settle，调用方的 loading 永远结束不了。
+   *      这里加超时兜底（默认 120s，够拉一个镜像）。
+   */
+  public send (message: SendMessage, timeoutMs = 120 * 1000): Promise<BackPackage> {
+    return new Promise((resolve, reject) => {
+      // 1. 连接不可用时立即失败，而不是静默丢弃
+      if (this.websocket.readyState !== WebSocket.OPEN) {
+        reject(new Error('WebSocket 未连接，请刷新页面后重试'))
+        return
+      }
+
       const postMessage = typeof message === 'string' ? message : JSON.stringify(message)
       const callbackMapCopy = this.callbackMap.get(message?.code) || {}
       const oldResolveMap = callbackMapCopy.resolveMap || []
-      callbackMapCopy.resolveMap = [...oldResolveMap, resolve]
+
+      // 用函数声明（会提升）而不是 const：wrapped 与 timer 互相引用，
+      // 这样不会触发 TDZ（运行时机上 wrapped 只在 timer 赋值后才被调用）
+      function wrapped (data: BackPackage) {
+        clearTimeout(timer)
+        resolve(data)
+      }
+
+      const timer = setTimeout(() => {
+        // 超时后摘掉该 resolver，避免响应迟到时重复 resolve
+        const cur = this.callbackMap.get(message?.code)
+        if (cur?.resolveMap) {
+          cur.resolveMap = cur.resolveMap.filter(fn => fn !== wrapped)
+        }
+        reject(new Error('请求超时（后端未响应），请查看服务端日志'))
+      }, timeoutMs)
+
+      callbackMapCopy.resolveMap = [...oldResolveMap, wrapped]
       this.callbackMap.set(message?.code, callbackMapCopy)
-      this.websocket.send(postMessage)
+
+      try {
+        this.websocket.send(postMessage)
+      } catch (e) {
+        clearTimeout(timer)
+        reject(e instanceof Error ? e : new Error('消息发送失败'))
+      }
     })
   }
 

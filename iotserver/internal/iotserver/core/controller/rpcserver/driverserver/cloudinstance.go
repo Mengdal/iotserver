@@ -16,8 +16,8 @@ package driverserver
 
 import (
 	"context"
-	"github.com/winc-link/edge-driver-proto/cloudinstance"
-	"github.com/winc-link/edge-driver-proto/drivercommon"
+	"github.com/LMgateways/iotserver-driver-proto/cloudinstance"
+	"github.com/LMgateways/iotserver-driver-proto/drivercommon"
 	"google.golang.org/grpc"
 	"iotserver/internal/dtos"
 	"iotserver/internal/iotserver/core/container"

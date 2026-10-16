@@ -12,10 +12,21 @@
     padding: 10px 16px;
   }
 
-  &__body {
+  /* 左：组件库面板（可收起）  右：画布 */
+  &__main {
+    display: flex;
     flex: 1;
+    gap: 12px;
     min-height: 0;
-    margin: 0 16px 20px;
+    padding: 0 16px 20px;
+  }
+
+  &__body {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    padding: 12px;
     background: #f6f7f9;
     border: 1px solid #eff0f2;
     border-radius: 10px;
@@ -32,45 +43,56 @@
     }
   }
 
+  /* 空看板也要留出足够的可拖入区域 */
   &__grid {
     width: 100% !important;
+    min-height: 320px;
   }
 
-  /* 选中组件高亮（编辑态） */
-  &__item--selected {
-    .widget-card {
-      box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.35);
-      border-radius: 8px;
-    }
-  }
-
-  /* 缩放把手在只读/查看态由 react-grid-layout 自己隐藏；这里只保证卡片撑满格子 */
-  .react-grid-item > .widget-card {
-    height: 100%;
-  }
-}
-
-/* 「添加组件」面板（参考 Dash 的 Add widget 菜单） */
-.board-editor__add-panel {
-  width: 260px;
-
-  .ant-input {
-    margin-bottom: 10px;
+  /* 空看板提示：浮在画布上方，不挡拖入 */
+  &__empty {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
   }
 }
 
-.board-editor__add-group {
-  padding: 4px 0 6px;
+/* 选中组件高亮（编辑态） */
+.widget-card--selected {
+  box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.35);
+  border-radius: 8px;
+}
+
+/* 组件库面板 */
+.board-editor__palette {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 200px;
+  width: 200px;
+  padding: 10px;
+  overflow: auto;
+  background: #fff;
+  border: 1px solid #eff0f2;
+  border-radius: 10px;
+}
+
+.board-editor__palette-group {
+  padding: 8px 2px 6px;
   font-size: 12px;
   color: rgba(0, 0, 0, 0.45);
 }
 
-.board-editor__add-list {
-  max-height: 240px;
-  overflow: auto;
+.board-editor__palette-list {
+  min-height: 0;
 }
 
-.board-editor__add-item {
+.board-editor__palette-item {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -88,30 +110,110 @@
     color: #1677ff;
     background: #f5f8ff;
   }
+
+  /* 可拖入画布的模板项：给个抓手的光标 */
+  &--draggable {
+    cursor: grab;
+
+    &:active {
+      cursor: grabbing;
+    }
+  }
 }
 
-.board-editor__add-empty {
+.board-editor__palette-empty {
   padding: 10px 8px;
   font-size: 12px;
   color: rgba(0, 0, 0, 0.35);
 }
 
-/* 组件卡片：标题栏即拖动手柄 */
-.board-editor__grid {
-  .widget-card > .ant-card-head {
-    cursor: move;
-    user-select: none;
-  }
+/* 容器组件：自己的标题栏（拖拽把手）+ 里面的子网格 */
+.board-editor__container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid #eceef1;
+  border-radius: 8px;
+}
 
-  .widget-card > .ant-card-head button,
-  .widget-card > .ant-card-head .ant-dropdown-trigger {
+.board-editor__container-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 34px;
+  padding: 0 6px 0 10px;
+  border-bottom: 1px dashed #e6e8ec;
+  cursor: move;
+  user-select: none;
+
+  .ant-btn {
     cursor: pointer;
   }
+}
 
-  /* 拖动中：整块跟着走 */
-  .react-grid-item.react-draggable-dragging {
-    z-index: 20;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
-    opacity: 0.92;
+.board-editor__container-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1f2a44;
+}
+
+.board-editor__container-body {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 4px;
+}
+
+.board-editor__container-empty {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+}
+
+/* 子网格：里面没有可拖入区域时也要留出高度 */
+.board-editor__subgrid {
+  min-height: 80px;
+}
+
+/* 配置抽屉：分组卡片之间留一致的间距（组内间距由 SettingGroup 负责） */
+.board-editor__settings {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* 抽屉标题：组件图标 + 类型名 + 当前标题（次要色、过长截断） */
+.board-editor__settings-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-size: 14px;
+
+  > .anticon {
+    color: rgba(0, 0, 0, 0.45);
   }
+}
+
+.board-editor__settings-title-sub {
+  min-width: 0;
+  max-width: 180px;
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 400;
+  color: rgba(0, 0, 0, 0.45);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

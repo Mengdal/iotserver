@@ -16,11 +16,12 @@ package productapp
 
 import (
 	"context"
-	"github.com/winc-link/edge-driver-proto/productcallback"
+	"github.com/LMgateways/iotserver-driver-proto/productcallback"
 	"iotserver/internal/dtos"
 	"iotserver/internal/models"
 	"iotserver/internal/pkg/constants"
 	"iotserver/internal/pkg/di"
+	"iotserver/internal/pkg/tenant"
 	"time"
 
 	//"iotserver/internal/iotserver/core/application/driverapp"
@@ -29,7 +30,8 @@ import (
 )
 
 func (p *productApp) CreateProductCallBack(productInfo models.Product) {
-	deviceServices, total, err := p.dbClient.DeviceServicesSearch(0, -1, dtos.DeviceServiceSearchQueryRequest{})
+	// 平台作用域：系统路径，不按租户过滤
+	deviceServices, total, err := p.dbClient.WithCtx(tenant.Platform(context.Background())).DeviceServicesSearch(0, -1, dtos.DeviceServiceSearchQueryRequest{})
 	if err != nil {
 		return
 	}
@@ -59,7 +61,8 @@ func (p *productApp) CreateProductCallBack(productInfo models.Product) {
 
 func (p *productApp) UpdateProductCallBack(productInfo models.Product) {
 	//p.lc.Infof("UpdateProductCallBack Platform :%s name :%s id :%s", productInfo.Platform, productInfo.Name, productInfo.Id)
-	deviceServices, total, err := p.dbClient.DeviceServicesSearch(0, -1, dtos.DeviceServiceSearchQueryRequest{})
+	// 平台作用域：系统路径，不按租户过滤
+	deviceServices, total, err := p.dbClient.WithCtx(tenant.Platform(context.Background())).DeviceServicesSearch(0, -1, dtos.DeviceServiceSearchQueryRequest{})
 	if err != nil {
 		return
 	}
@@ -89,7 +92,8 @@ func (p *productApp) UpdateProductCallBack(productInfo models.Product) {
 
 func (p *productApp) DeleteProductCallBack(productInfo models.Product) {
 	//p.lc.Infof("DeleteProductCallBack Platform :%s name :%s id :%s", productInfo.Platform, productInfo.Name, productInfo.Id)
-	deviceServices, total, err := p.dbClient.DeviceServicesSearch(0, -1, dtos.DeviceServiceSearchQueryRequest{})
+	// 平台作用域：系统路径，不按租户过滤
+	deviceServices, total, err := p.dbClient.WithCtx(tenant.Platform(context.Background())).DeviceServicesSearch(0, -1, dtos.DeviceServiceSearchQueryRequest{})
 	if total == 0 {
 		return
 	}

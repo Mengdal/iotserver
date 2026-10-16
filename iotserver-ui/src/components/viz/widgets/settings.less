@@ -1,0 +1,140 @@
+/* 看板组件配置面板（SettingGroup / SettingRow / 数据绑定条目）的结构样式。
+ *
+ * 分工：结构尺寸（内边距 / 间距 / 圆角 / 边框 / 底色）写在这里；
+ * 随主题变化的文字色由 SettingsLayout.tsx 用 token 内联（见该文件顶部约定）。
+ * 色值沿用看板编辑器的中性色（与 BoardEdit/index.less、WidgetCard 同一套）。
+ */
+
+/* 分组卡片：白底 + 细边，卡头浅底 + 一条分隔线（全卡唯一的分隔线，行之间不画线） */
+.viz-settings__group {
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid #e7eaef;
+  border-radius: 8px;
+}
+
+.viz-settings__group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 30px;
+  padding: 5px 12px;
+  background: #f7f8fa;
+  border-bottom: 1px solid #eef0f3;
+}
+
+.viz-settings__group-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #1f2a44;
+}
+
+.viz-settings__group-extra {
+  display: flex;
+  align-items: center;
+  font-size: 12px;
+}
+
+.viz-settings__group-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+}
+
+/* 配置行：标签左对齐成列，控件列撑满剩余宽度 */
+.viz-settings__row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+/* 短项行（开关等）：标签在左、控件右对齐，同一行可并排多个控件 */
+.viz-settings__row--inline {
+  flex-wrap: wrap;
+  align-items: center;
+  row-gap: 4px;
+}
+
+.viz-settings__label {
+  flex: 0 0 auto;
+  line-height: 32px;
+  white-space: nowrap;
+}
+
+.viz-settings__row--inline .viz-settings__label {
+  line-height: 22px;
+}
+
+.viz-settings__control {
+  flex: 1;
+  min-width: 0;
+}
+
+.viz-settings__control-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.viz-settings__control--inline {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+}
+
+.viz-settings__hint {
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.viz-settings__row--inline .viz-settings__hint {
+  flex: 0 0 100%;
+  margin-top: 2px;
+}
+
+/* 数据绑定：每条数据一块浅底条目（灰底无边框，和白色分组卡片区分层级） */
+.viz-settings__items {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.viz-settings__item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 10px;
+  background: #f7f8fa;
+  border-radius: 6px;
+}
+
+/* 「添加数据」一行：按钮在左、计数在右 */
+.viz-settings__add-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 阈值取色器：抹平浏览器默认外观，和 InputNumber 同高 */
+.viz-settings__color {
+  width: 32px;
+  height: 32px;
+  padding: 2px;
+  background: #fff;
+  border: 1px solid #e7eaef;
+  border-radius: 4px;
+  cursor: pointer;
+
+  &::-webkit-color-swatch-wrapper {
+    padding: 0;
+  }
+
+  &::-webkit-color-swatch {
+    border: none;
+    border-radius: 2px;
+  }
+}

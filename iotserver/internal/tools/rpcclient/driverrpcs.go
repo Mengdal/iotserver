@@ -16,13 +16,13 @@ package rpcclient
 
 import (
 	"errors"
-	"github.com/winc-link/edge-driver-proto/productcallback"
-	"github.com/winc-link/edge-driver-proto/thingmodel"
+	"github.com/LMgateways/iotserver-driver-proto/productcallback"
+	"github.com/LMgateways/iotserver-driver-proto/thingmodel"
 
-	//"github.com/winc-link/edge-driver-proto/productcallback"
+	//"github.com/LMgateways/iotserver-driver-proto/productcallback"
 
-	"github.com/winc-link/edge-driver-proto/cloudinstancecallback"
-	"github.com/winc-link/edge-driver-proto/devicecallback"
+	"github.com/LMgateways/iotserver-driver-proto/cloudinstancecallback"
+	"github.com/LMgateways/iotserver-driver-proto/devicecallback"
 
 	"google.golang.org/grpc"
 	"iotserver/internal/pkg/logger"

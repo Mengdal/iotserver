@@ -13,6 +13,7 @@ import (
 	"iotserver/internal/pkg/di"
 	"iotserver/internal/pkg/errort"
 	"iotserver/internal/pkg/logger"
+	"iotserver/internal/pkg/tenant"
 	"iotserver/internal/pkg/utils"
 	"path"
 	"strings"
@@ -48,7 +49,8 @@ func New(dic *di.Container, ctx context.Context, wg *sync.WaitGroup, dcm dtos.Dr
 func (d *dockerImpl) StopAllInstance() {
 	dbClient := resourceContainer.DBClientFrom(d.dic.Get)
 
-	deviceService, _, err := dbClient.DeviceServicesSearch(0, -1, dtos.DeviceServiceSearchQueryRequest{})
+	// 平台作用域：系统路径，不按租户过滤
+	deviceService, _, err := dbClient.WithCtx(tenant.Platform(context.Background())).DeviceServicesSearch(0, -1, dtos.DeviceServiceSearchQueryRequest{})
 	if err != nil {
 		d.lc.Errorf("search service error :", err.Error())
 	}
@@ -130,12 +132,21 @@ func (d *dockerImpl) GetAllApp() []string {
 func (d *dockerImpl) setDcmRootDir() {
 	res, err := d.dm.GetContainerInspect(d.dcm.DockerSelfName)
 	if err != nil {
-		d.lc.Errorf("GetContainerInspect:%v", err)
+		// 平台没跑在容器里（本机进程模式，如 macOS 上 make run / make start）：
+		// inspect 不到自己，容器路径 /var/bin/iotserver 既不存在也没权限创建
+		// （报 mkdir /var/bin: permission denied），退回本地工作目录。
+		// 此时"平台视角"与"宿主视角"是同一个目录，两个 root 取同值，
+		// 驱动容器的 bind mount 源就是本地这个绝对路径。
+		local := utils.GetPwdDir()
+		d.lc.Infof("platform is not running in a container, use local driver dir: %s", local)
+		d.dcm.SetContainerRootDir(local)
+		d.dcm.SetHostRootDir(local)
+		d.dcm.SetLocalMode(true)
 		return
 	}
 
 	for _, v := range res.Mounts {
-		if v.Destination == constants.DockerHummingbirdRootDir {
+		if v.Destination == constants.DockerIotServerRootDir {
 			d.dcm.SetHostRootDir(v.Source)
 			break
 		}
@@ -151,7 +162,7 @@ func (d *dockerImpl) genRunServiceConfig(name string, cfgContent string, instanc
 
 	} else if instanceType == constants.DriverInstance {
 		filePath = d.dcm.GetRunConfigPath(name)
-		err = utils.CreateDirIfNotExist(constants.DockerHummingbirdRootDir + "/" + constants.DriverRunConfigDir)
+		err = utils.CreateDirIfNotExist(d.dcm.GetRunConfigDir())
 		if err != nil {
 			return "", err
 		}

@@ -53,4 +53,8 @@ type DriverInInstanceDMI interface {
 	GetDriverInstanceLogPath(serviceName string) string
 	// GetSelfIp 获取当前服务运行的内网ip
 	GetSelfIp() string
+	// IsLocalMode 平台是否以本机进程运行（不在容器里）。
+	// 本机模式下驱动容器与平台不在同一 docker 网络，
+	// 需要把驱动端口发布到宿主机、用 127.0.0.1 连回。
+	IsLocalMode() bool
 }

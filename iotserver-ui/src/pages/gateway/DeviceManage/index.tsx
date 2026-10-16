@@ -4,6 +4,7 @@ import { Table, Card, Form, Input, Select, Button, Space, message, Typography, P
 import { PlusOutlined, DeleteOutlined, LockOutlined, UnlockOutlined, SyncOutlined, ReloadOutlined } from '@ant-design/icons'
 import { getDevice, deleteDevice, deleteDevices, unBindDriver, useGetDeviceServers, useGetDeviceStatusTemplate, useGetIotPlatform, useGetProductList } from '@/api'
 import { useTableRequest } from '@/hooks'
+import { confirmPlatformViewAdd } from '@/utils/platformViewGuard'
 import { AddModal, AddModalRef } from './AddModal'
 import { EditModal, EditModalRef } from './EditModal'
 import { BatchBindModal, BatchBindModalRef } from './BatchBindModal'
@@ -128,7 +129,8 @@ const DevicesManage: React.FC<DevicesManageProps> = () => {
           <div>
             <Button
               type="primary"
-              onClick={() => {
+              onClick={async () => {
+                if (!await confirmPlatformViewAdd()) return
                 addModalRef.current?.open()
               }}
             ><PlusOutlined />添加设备</Button>

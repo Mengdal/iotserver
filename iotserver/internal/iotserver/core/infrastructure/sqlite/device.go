@@ -24,6 +24,7 @@ import (
 	"iotserver/internal/pkg/errort"
 	"iotserver/internal/pkg/utils"
 	"iotserver/internal/tools/sqldb/sqlite"
+	"time"
 )
 
 func deviceById(c *Client, id string) (device models.Device, edgeXErr error) {
@@ -304,4 +305,26 @@ func deviceMqttAuthInfo(c *Client, id string) (mqttAuth models.MqttAuth, edgeXEr
 		return mqttAuth, errort.NewCommonErr(errort.DefaultSystemError, fmt.Errorf("query mqtt auth fail (resoureId:%s), %s", id, err))
 	}
 	return
+}
+
+// markStaleDevicesOffline 把「最后在线时间早于 beforeMs」的在线设备批量置为离线。
+//
+// 只动「当前在线」且「有最后在线时间」的行：从未上过线的设备保持原状，
+// 已离线的行不重复写（避免每分钟无谓地刷新 modified）。
+func markStaleDevicesOffline(c *Client, beforeMs int64) (int64, error) {
+	if beforeMs <= 0 {
+		return 0, nil
+	}
+	d := models.Device{}
+	tx := c.Pool.Table(d.TableName()).
+		Where("status = ? AND last_online_time > 0 AND last_online_time < ?",
+			constants.DeviceStatusOnline, beforeMs).
+		Updates(map[string]interface{}{
+			"status":   constants.DeviceStatusOffline,
+			"modified": time.Now().UnixMilli(),
+		})
+	if tx.Error != nil {
+		return 0, errort.NewCommonEdgeX(errort.DefaultSystemError, "mark stale devices offline failed", tx.Error)
+	}
+	return tx.RowsAffected, nil
 }

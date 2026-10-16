@@ -1,7 +1,7 @@
-import React, { useImperativeHandle, forwardRef, useState, useCallback, useRef } from 'react'
+import React, { useImperativeHandle, forwardRef, useState, useCallback, useRef, useEffect } from 'react'
 import { Form, Drawer, Input, Radio, Typography, Select, message, Button, Space } from 'antd'
 import { CloseOutlined } from '@ant-design/icons'
-import { CategorySelect } from './CategorySelect'
+import { CategorySelect, CategoryPresetOption } from './CategorySelect'
 import { addProduct } from '@/api'
 import { StandardFuncModal, StandardFuncModalRef } from './StandardFuncModal'
 
@@ -12,28 +12,53 @@ export interface AddModalProps {
   onFinish: () => void
 }
 
+/** 外部跳转（如方案中心）创建产品时的预选品类 */
+export interface AddModalPreset {
+  categoryTemplateId?: string
+  categoryName?: string
+}
+
 export interface AddModalRef {
-  open: () => void
+  /** 不传 preset 时行为与原来完全一致 */
+  open: (preset?: AddModalPreset) => void
 }
 
 export const AddModal = forwardRef<AddModalRef, AddModalProps>(({ onFinish }, ref) => {
   const [form] = useForm()
   const [submitting, setSubmitting] = useState<boolean>(false)
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false)
+  /** 预选的标准品类：同时驱动表单值与选择器展示 */
+  const [presetOption, setPresetOption] = useState<CategoryPresetOption>()
 
   const standardFuncModalRef = useRef<StandardFuncModalRef>(null)
   const categoryKeyRef = useRef('')
 
   useImperativeHandle(ref, () => {
     return {
-      open () {
+      open (preset) {
+        setPresetOption(preset?.categoryTemplateId
+          ? {
+            id: preset.categoryTemplateId,
+            category_name: preset.categoryName || preset.categoryTemplateId,
+          }
+          : undefined)
         setIsModalOpen(true)
       },
     }
   }, [form])
 
+  /** 抽屉挂载后再写回表单，保证「标准品类」单选框与品类选择器都被预选上 */
+  useEffect(() => {
+    if (!isModalOpen || !presetOption) return
+    form.setFieldsValue({
+      category_template_id: '0',
+      category_template_id2: presetOption.id,
+    })
+  }, [isModalOpen, presetOption, form])
+
   const handleClose = useCallback(() => {
     form.resetFields()
+    setPresetOption(undefined)
     setIsModalOpen(false)
   }, [form])
 
@@ -140,9 +165,12 @@ export const AddModal = forwardRef<AddModalRef, AddModalProps>(({ onFinish }, re
                     </div>
                   }
                 >
-                  <CategorySelect onCategoryKeyChange={(category_key) => {
-                    categoryKeyRef.current = category_key
-                  }} />
+                  <CategorySelect
+                    presetOption={presetOption}
+                    onCategoryKeyChange={(category_key) => {
+                      categoryKeyRef.current = category_key
+                    }}
+                  />
                   {/* <DebounceSelect
                     placeholder="请选择品类"
                     fetchOptions={async (category_name: string) => {

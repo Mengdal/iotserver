@@ -21,7 +21,7 @@ import (
 
 func (app *driverLibApp) GetDriverClassify(ctx context.Context, req dtos.DriverClassifyQueryRequest) ([]dtos.DriverClassifyResponse, uint32, error) {
 	offset, limit := req.BaseSearchConditionQuery.GetPage()
-	dcs, total, err := app.dbClient.DriverClassifySearch(offset, limit, req)
+	dcs, total, err := app.dbClient.WithCtx(ctx).DriverClassifySearch(offset, limit, req)
 
 	res := make([]dtos.DriverClassifyResponse, len(dcs))
 	if err != nil {

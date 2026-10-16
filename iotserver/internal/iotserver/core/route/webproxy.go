@@ -99,6 +99,6 @@ func (b *WebBootstrap) BootstrapHandler(ctx context.Context, wg *sync.WaitGroup,
 }
 
 func tip() {
-	usageStr := `欢迎使用 ` + color.Green(`Hummingbird物联网平台（社区版） `+"版本：v1.0")
+	usageStr := `欢迎使用 ` + color.Green(`iotserver 物联网平台 `+"版本：v1.0")
 	fmt.Printf("%s \n\n", usageStr)
 }

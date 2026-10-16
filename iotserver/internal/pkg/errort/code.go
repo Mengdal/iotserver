@@ -35,6 +35,16 @@ const (
 	AppAdminNotAllowOperate uint32 = 21707
 	AppPermissionDenied     uint32 = 21708
 	AppConfigKeyRepeat      uint32 = 21709
+	// AppSolutionBuiltInReadOnly 平台内置方案只读：租户首次修改会自动生成该租户的副本
+	AppSolutionBuiltInReadOnly uint32 = 21710
+	// AppTenantExpired 租户已到期：登录与请求中间件都会拦截
+	AppTenantExpired uint32 = 21711
+	// AppTenantQuotaExceeded 租户资源配额（设备/网关/用户）已达上限
+	AppTenantQuotaExceeded uint32 = 21712
+	// AppTenantNotEmpty 租户下仍有业务数据，不允许删除
+	AppTenantNotEmpty uint32 = 21713
+	// AppMenuHasTenantChildren 平台菜单下仍挂着租户自建菜单，不允许删除（避免产生孤儿菜单）
+	AppMenuHasTenantChildren uint32 = 21714
 
 	DeviceLibraryMustDeleteDeviceService uint32 = 20201
 	DeviceLibraryUpgradeIng              uint32 = 20204

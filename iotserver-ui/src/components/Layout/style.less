@@ -4,6 +4,9 @@
   .main-header {
     height: 50px;
     line-height: 50px;
+    /* 左内边距对齐左侧菜单「首页」项的图标（菜单项 4px 外边距 + 24px 内边距 = 28px），
+       antd Header 默认是 50px，会让 logo 前面空出一截、和下方菜单对不齐 */
+    padding-left: 28px;
     padding-right: 20px;
     position: sticky;
     top: 0;

@@ -87,6 +87,14 @@ func (c *Client) SysRoleById(id string) (models.Role, error) {
 	return sysRoleById(c, id)
 }
 
+func (c *Client) SysRoleByNameInTenant(name, tenantId string) (models.Role, error) {
+	return sysRoleByNameInTenant(c, name, tenantId)
+}
+
+func (c *Client) SysRoleByKeyInTenant(roleKey, tenantId string) (models.Role, error) {
+	return sysRoleByKeyInTenant(c, roleKey, tenantId)
+}
+
 func (c *Client) SysRoleByName(name string) (models.Role, error) {
 	return sysRoleByName(c, name)
 }
@@ -131,8 +139,8 @@ func (c *Client) RoleNamesByUserId(userId string) ([]string, error) {
 	return roleNamesByUserId(c, userId)
 }
 
-func (c *Client) RoleMenusByUserId(userId string) ([]models.Menu, error) {
-	return roleMenusByUserId(c, userId)
+func (c *Client) RoleMenusByUserId(userId, tenantId string) ([]models.Menu, error) {
+	return roleMenusByUserId(c, userId, tenantId)
 }
 
 /******************************* 菜单 *******************************/
@@ -153,20 +161,48 @@ func (c *Client) DeleteSysMenuByIds(ids []string) error {
 	return deleteSysMenuByIds(c, ids)
 }
 
-func (c *Client) SysMenuSearch(offset, limit int, req dtos.SysMenuSearchRequest) ([]models.Menu, uint32, error) {
-	return sysMenuSearch(c, offset, limit, req)
+func (c *Client) SysMenuSearch(offset, limit int, tenantId string, req dtos.SysMenuSearchRequest) ([]models.Menu, uint32, error) {
+	return sysMenuSearch(c, offset, limit, tenantId, req)
 }
 
-func (c *Client) SysMenuAll() ([]models.Menu, error) {
-	return sysMenuAll(c)
+func (c *Client) SysMenuAll(tenantId string) ([]models.Menu, error) {
+	return sysMenuAll(c, tenantId)
 }
 
 func (c *Client) SysMenusByIds(ids []string) ([]models.Menu, error) {
 	return sysMenusByIds(c, ids)
 }
 
+func (c *Client) SysMenusByTenant(tenantId string) ([]models.Menu, error) {
+	return sysMenusByTenant(c, tenantId)
+}
+
 func (c *Client) SysMenuCountByParentIds(parentIds []string) (int64, error) {
 	return sysMenuCountByParentIds(c, parentIds)
+}
+
+func (c *Client) SysMenuCountTenantChildrenByParentIds(parentIds []string) (int64, error) {
+	return sysMenuCountTenantChildrenByParentIds(c, parentIds)
+}
+
+func (c *Client) SysMenuPrefsByTenant(tenantId string) ([]models.TenantMenuPref, error) {
+	return sysMenuPrefsByTenant(c, tenantId)
+}
+
+func (c *Client) UpsertSysMenuPref(p models.TenantMenuPref) (models.TenantMenuPref, error) {
+	return upsertSysMenuPref(c, p)
+}
+
+func (c *Client) DeleteSysMenuPref(tenantId, menuId string) error {
+	return deleteSysMenuPref(c, tenantId, menuId)
+}
+
+func (c *Client) DeleteSysMenuPrefsByTenant(tenantId string) (int64, error) {
+	return deleteSysMenuPrefsByTenant(c, tenantId)
+}
+
+func (c *Client) DeleteSysMenuPrefsByMenuIds(menuIds []string) error {
+	return deleteSysMenuPrefsByMenuIds(c, menuIds)
 }
 
 /******************************* 部门 *******************************/
@@ -199,22 +235,30 @@ func (c *Client) SysDeptCountByParentIds(parentIds []string) (int64, error) {
 	return sysDeptCountByParentIds(c, parentIds)
 }
 
-/******************************* 登入日志 *******************************/
+/******************************* 审查日志（登录 + 操作） *******************************/
 
-func (c *Client) AddSysLoginLog(l models.LoginLog) error {
-	return addSysLoginLog(c, l)
+func (c *Client) AddSysAuditLog(l models.AuditLog) error {
+	return addSysAuditLog(c, l)
 }
 
-func (c *Client) SysLoginLogSearch(offset, limit int, req dtos.SysLoginLogSearchRequest) ([]models.LoginLog, uint32, error) {
-	return sysLoginLogSearch(c, offset, limit, req)
+func (c *Client) AddSysAuditLogs(list []models.AuditLog) error {
+	return addSysAuditLogs(c, list)
 }
 
-func (c *Client) DeleteSysLoginLogByIds(ids []string) error {
-	return deleteSysLoginLogByIds(c, ids)
+func (c *Client) SysAuditLogSearch(offset, limit int, req dtos.SysAuditLogSearchRequest) ([]models.AuditLog, uint32, error) {
+	return sysAuditLogSearch(c, offset, limit, req)
 }
 
-func (c *Client) ClearSysLoginLog() error {
-	return clearSysLoginLog(c)
+func (c *Client) DeleteSysAuditLogByIds(ids []string) error {
+	return deleteSysAuditLogByIds(c, ids)
+}
+
+func (c *Client) ClearSysAuditLog() error {
+	return clearSysAuditLog(c)
+}
+
+func (c *Client) DeleteSysAuditLogBefore(ts int64) (int64, error) {
+	return deleteSysAuditLogBefore(c, ts)
 }
 
 /******************************* 系统配置 *******************************/

@@ -16,6 +16,7 @@ package mysql
 
 import (
 	"fmt"
+	"time"
 
 	"gorm.io/gorm"
 	"iotserver/internal/dtos"
@@ -238,6 +239,34 @@ func sysRoleById(c *Client, id string) (models.Role, error) {
 	return r, nil
 }
 
+// sysRoleByNameInTenant / sysRoleByKeyInTenant 显式按租户查重：
+// 平台视图下 GORM 租户插件不过滤，用 WithCtx 会跨租户误判，这里直接带上 tenant_id。
+func sysRoleByNameInTenant(c *Client, name, tenantId string) (models.Role, error) {
+	var r models.Role
+	err := c.Pool.Table(r.TableName()).Where("name = ? AND tenant_id = ?", name, tenantId).First(&r).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return r, errort.NewCommonEdgeX(errort.DefaultResourcesNotFound,
+				fmt.Sprintf("role %s not found in tenant %q", name, tenantId), err)
+		}
+		return r, errort.NewCommonEdgeX(errort.DefaultSystemError, "role query failed", err)
+	}
+	return r, nil
+}
+
+func sysRoleByKeyInTenant(c *Client, roleKey, tenantId string) (models.Role, error) {
+	var r models.Role
+	err := c.Pool.Table(r.TableName()).Where("role_key = ? AND tenant_id = ?", roleKey, tenantId).First(&r).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return r, errort.NewCommonEdgeX(errort.DefaultResourcesNotFound,
+				fmt.Sprintf("role key %s not found in tenant %q", roleKey, tenantId), err)
+		}
+		return r, errort.NewCommonEdgeX(errort.DefaultSystemError, "role query failed", err)
+	}
+	return r, nil
+}
+
 func sysRoleByName(c *Client, name string) (models.Role, error) {
 	var r models.Role
 	err := c.Pool.Table(r.TableName()).Where("name = ?", name).First(&r).Error
@@ -390,17 +419,34 @@ func roleListByUserId(c *Client, userId string) ([]models.Role, error) {
 	return list, nil
 }
 
-func roleMenusByUserId(c *Client, userId string) ([]models.Menu, error) {
+func roleMenusByUserId(c *Client, userId, tenantId string) ([]models.Menu, error) {
 	var list []models.Menu
-	sql := fmt.Sprintf("SELECT DISTINCT m.* FROM %s m INNER JOIN %s rm ON rm.menu_id = m.id INNER JOIN %s ur ON ur.role_id = rm.role_id WHERE ur.user_id = ? AND m.status = 1 ORDER BY m.sort ASC",
-		models.TableMenu, models.TableRoleMenu, models.TableUserRole)
-	if err := c.Pool.Raw(sql, userId).Scan(&list).Error; err != nil {
+	// 菜单不是行级隔离表（未登记进 tenantScopedModels），原生 SQL 又绕过 GORM 插件，
+	// 所以作用域条件必须手写在这里：平台视图只看 ''，租户视图看 '' + 本租户。
+	tenantCond := "AND m.tenant_id = ''"
+	args := []interface{}{userId}
+	if tenantId != "" {
+		tenantCond = "AND m.tenant_id IN ('', ?)"
+		args = append(args, tenantId)
+	}
+	sql := fmt.Sprintf("SELECT DISTINCT m.* FROM %s m INNER JOIN %s rm ON rm.menu_id = m.id INNER JOIN %s ur ON ur.role_id = rm.role_id WHERE ur.user_id = ? AND m.status = 1 %s ORDER BY m.sort ASC",
+		models.TableMenu, models.TableRoleMenu, models.TableUserRole, tenantCond)
+	if err := c.Pool.Raw(sql, args...).Scan(&list).Error; err != nil {
 		return nil, errort.NewCommonEdgeX(errort.DefaultSystemError, "menu query failed", err)
 	}
 	return list, nil
 }
 
 /******************************* 菜单 *******************************/
+
+// menuScopeWhere 菜单作用域过滤：菜单是「全局默认 + 租户自建」表，由应用层显式拼接。
+// tenantId 为空 = 平台视图，只看平台菜单；非空 = 平台菜单 + 该租户自建菜单。
+func menuScopeWhere(tx *gorm.DB, tenantId string) *gorm.DB {
+	if tenantId == "" {
+		return tx.Where("tenant_id = ''")
+	}
+	return tx.Where("tenant_id IN ?", []string{"", tenantId})
+}
 
 func addSysMenu(c *Client, m models.Menu) (models.Menu, error) {
 	if len(m.Id) == 0 {
@@ -448,12 +494,12 @@ func deleteSysMenuByIds(c *Client, ids []string) error {
 	return nil
 }
 
-func sysMenuSearch(c *Client, offset, limit int, req dtos.SysMenuSearchRequest) ([]models.Menu, uint32, error) {
+func sysMenuSearch(c *Client, offset, limit int, tenantId string, req dtos.SysMenuSearchRequest) ([]models.Menu, uint32, error) {
 	var (
 		list  []models.Menu
 		total int64
 	)
-	tx := c.Pool.Table(models.TableMenu)
+	tx := menuScopeWhere(c.Pool.Table(models.TableMenu), tenantId)
 	if req.Name != "" {
 		tx = tx.Where("name = ?", req.Name)
 	}
@@ -479,9 +525,10 @@ func sysMenuSearch(c *Client, offset, limit int, req dtos.SysMenuSearchRequest) 
 	return list, uint32(total), nil
 }
 
-func sysMenuAll(c *Client) ([]models.Menu, error) {
+func sysMenuAll(c *Client, tenantId string) ([]models.Menu, error) {
 	var list []models.Menu
-	if err := c.Pool.Table(models.TableMenu).Order("sort ASC, created ASC").Find(&list).Error; err != nil {
+	if err := menuScopeWhere(c.Pool.Table(models.TableMenu), tenantId).
+		Order("sort ASC, created ASC").Find(&list).Error; err != nil {
 		return nil, errort.NewCommonEdgeX(errort.DefaultSystemError, "menu query failed", err)
 	}
 	return list, nil
@@ -498,6 +545,18 @@ func sysMenusByIds(c *Client, ids []string) ([]models.Menu, error) {
 	return list, nil
 }
 
+func sysMenusByTenant(c *Client, tenantId string) ([]models.Menu, error) {
+	var list []models.Menu
+	if tenantId == "" {
+		return list, nil
+	}
+	if err := c.Pool.Table(models.TableMenu).Where("tenant_id = ?", tenantId).
+		Order("sort ASC, created ASC").Find(&list).Error; err != nil {
+		return nil, errort.NewCommonEdgeX(errort.DefaultSystemError, "menu query failed", err)
+	}
+	return list, nil
+}
+
 func sysMenuCountByParentIds(c *Client, parentIds []string) (int64, error) {
 	if len(parentIds) == 0 {
 		return 0, nil
@@ -507,6 +566,101 @@ func sysMenuCountByParentIds(c *Client, parentIds []string) (int64, error) {
 		return 0, errort.NewCommonEdgeX(errort.DefaultSystemError, "menu query failed", err)
 	}
 	return total, nil
+}
+
+// sysMenuCountTenantChildrenByParentIds 统计挂在给定菜单（通常是平台菜单）下的租户自建子菜单数量
+func sysMenuCountTenantChildrenByParentIds(c *Client, parentIds []string) (int64, error) {
+	if len(parentIds) == 0 {
+		return 0, nil
+	}
+	var total int64
+	if err := c.Pool.Table(models.TableMenu).
+		Where("parent_id IN ? AND tenant_id <> ''", parentIds).Count(&total).Error; err != nil {
+		return 0, errort.NewCommonEdgeX(errort.DefaultSystemError, "menu query failed", err)
+	}
+	return total, nil
+}
+
+/******************************* 租户菜单展示层覆盖 *******************************/
+
+func sysMenuPrefsByTenant(c *Client, tenantId string) ([]models.TenantMenuPref, error) {
+	list := make([]models.TenantMenuPref, 0)
+	if tenantId == "" {
+		return list, nil
+	}
+	if err := c.Pool.Table(models.TableTenantMenuPref).
+		Where("tenant_id = ?", tenantId).Order("menu_id ASC").Find(&list).Error; err != nil {
+		return nil, errort.NewCommonEdgeX(errort.DefaultSystemError, "menu pref query failed", err)
+	}
+	return list, nil
+}
+
+// upsertSysMenuPref 按 (tenant_id, menu_id) 幂等写入；用「先查后写」而不是方言 upsert，
+// 让 sqlite / mysql 两个后端共用同一份实现。
+func upsertSysMenuPref(c *Client, p models.TenantMenuPref) (models.TenantMenuPref, error) {
+	var exist models.TenantMenuPref
+	err := c.Pool.Table(models.TableTenantMenuPref).
+		Where("tenant_id = ? AND menu_id = ?", p.TenantId, p.MenuId).First(&exist).Error
+	if err == gorm.ErrRecordNotFound {
+		if p.Id == "" {
+			p.Id = utils.RandomNum()
+		}
+		now := time.Now().UnixMilli()
+		p.Timestamps = models.Timestamps{Created: now, Modified: now}
+		if cErr := c.Pool.Table(models.TableTenantMenuPref).Create(&p).Error; cErr != nil {
+			return p, errort.NewCommonEdgeX(errort.DefaultSystemError, "menu pref creation failed", cErr)
+		}
+		return p, nil
+	}
+	if err != nil {
+		return p, errort.NewCommonEdgeX(errort.DefaultSystemError, "menu pref query failed", err)
+	}
+	updates := map[string]interface{}{
+		"hidden":      p.Hidden,
+		"custom_name": p.CustomName,
+		"custom_icon": p.CustomIcon,
+		"sort":        p.Sort,
+		"modified":    time.Now().UnixMilli(),
+	}
+	if uErr := c.Pool.Table(models.TableTenantMenuPref).Where("id = ?", exist.Id).Updates(updates).Error; uErr != nil {
+		return exist, errort.NewCommonEdgeX(errort.DefaultSystemError, "menu pref update failed", uErr)
+	}
+	exist.Hidden = p.Hidden
+	exist.CustomName = p.CustomName
+	exist.CustomIcon = p.CustomIcon
+	exist.Sort = p.Sort
+	return exist, nil
+}
+
+func deleteSysMenuPref(c *Client, tenantId, menuId string) error {
+	if err := c.Pool.Table(models.TableTenantMenuPref).
+		Where("tenant_id = ? AND menu_id = ?", tenantId, menuId).Delete(&models.TenantMenuPref{}).Error; err != nil {
+		return errort.NewCommonEdgeX(errort.DefaultSystemError, "menu pref delete failed", err)
+	}
+	return nil
+}
+
+func deleteSysMenuPrefsByTenant(c *Client, tenantId string) (int64, error) {
+	if tenantId == "" {
+		return 0, nil
+	}
+	res := c.Pool.Table(models.TableTenantMenuPref).Where("tenant_id = ?", tenantId).Delete(&models.TenantMenuPref{})
+	if res.Error != nil {
+		return 0, errort.NewCommonEdgeX(errort.DefaultSystemError, "menu pref delete failed", res.Error)
+	}
+	return res.RowsAffected, nil
+}
+
+// deleteSysMenuPrefsByMenuIds 跨租户清理这些菜单的覆盖记录（平台删除菜单时的级联）
+func deleteSysMenuPrefsByMenuIds(c *Client, menuIds []string) error {
+	if len(menuIds) == 0 {
+		return nil
+	}
+	if err := c.Pool.Table(models.TableTenantMenuPref).
+		Where("menu_id IN ?", menuIds).Delete(&models.TenantMenuPref{}).Error; err != nil {
+		return errort.NewCommonEdgeX(errort.DefaultSystemError, "menu pref delete failed", err)
+	}
+	return nil
 }
 
 /******************************* 部门 *******************************/
@@ -601,26 +755,55 @@ func sysDeptCountByParentIds(c *Client, parentIds []string) (int64, error) {
 	return total, nil
 }
 
-/******************************* 登入日志 *******************************/
+/******************************* 审查日志（登录 + 操作） *******************************/
 
-func addSysLoginLog(c *Client, l models.LoginLog) error {
+func addSysAuditLog(c *Client, l models.AuditLog) error {
 	if len(l.Id) == 0 {
 		l.Id = utils.RandomNum()
 	}
+	if l.Created == 0 {
+		l.Created = time.Now().UnixMilli()
+	}
 	if err := c.Pool.Table(l.TableName()).Create(&l).Error; err != nil {
-		return errort.NewCommonEdgeX(errort.DefaultSystemError, "login log creation failed", err)
+		return errort.NewCommonEdgeX(errort.DefaultSystemError, "audit log creation failed", err)
 	}
 	return nil
 }
 
-func sysLoginLogSearch(c *Client, offset, limit int, req dtos.SysLoginLogSearchRequest) ([]models.LoginLog, uint32, error) {
+// addSysAuditLogs 批量写入（同一租户作用域内的记录一次插入；空列表直接返回）
+func addSysAuditLogs(c *Client, list []models.AuditLog) error {
+	if len(list) == 0 {
+		return nil
+	}
+	now := time.Now().UnixMilli()
+	for i := range list {
+		if len(list[i].Id) == 0 {
+			list[i].Id = utils.RandomNum()
+		}
+		if list[i].Created == 0 {
+			list[i].Created = now
+		}
+	}
+	if err := c.Pool.Table(models.TableAuditLog).Create(&list).Error; err != nil {
+		return errort.NewCommonEdgeX(errort.DefaultSystemError, "audit log batch creation failed", err)
+	}
+	return nil
+}
+
+func sysAuditLogSearch(c *Client, offset, limit int, req dtos.SysAuditLogSearchRequest) ([]models.AuditLog, uint32, error) {
 	var (
-		list  []models.LoginLog
+		list  []models.AuditLog
 		total int64
 	)
-	tx := c.Pool.Table(models.TableLoginLog)
+	tx := c.Pool.Table(models.TableAuditLog)
 	if req.Username != "" {
 		tx = tx.Where("username LIKE ?", "%"+req.Username+"%")
+	}
+	if req.Type != "" {
+		tx = tx.Where("type = ?", req.Type)
+	}
+	if req.Module != "" {
+		tx = tx.Where("module = ?", req.Module)
 	}
 	if req.Ip != "" {
 		tx = tx.Where("ip LIKE ?", "%"+req.Ip+"%")
@@ -629,36 +812,49 @@ func sysLoginLogSearch(c *Client, offset, limit int, req dtos.SysLoginLogSearchR
 		tx = tx.Where("status = ?", req.Status)
 	}
 	if req.StartTime > 0 {
-		tx = tx.Where("login_time >= ?", req.StartTime)
+		tx = tx.Where("created >= ?", req.StartTime)
 	}
 	if req.EndTime > 0 {
-		tx = tx.Where("login_time <= ?", req.EndTime)
+		tx = tx.Where("created <= ?", req.EndTime)
 	}
 	if err := tx.Count(&total).Error; err != nil {
-		return nil, 0, errort.NewCommonEdgeX(errort.DefaultSystemError, "login log query failed", err)
+		return nil, 0, errort.NewCommonEdgeX(errort.DefaultSystemError, "audit log query failed", err)
 	}
-	tx = tx.Order("login_time DESC")
+	tx = tx.Order("created DESC, login_time DESC")
 	if !req.IsAll {
 		tx = tx.Offset(offset).Limit(limit)
 	}
 	if err := tx.Find(&list).Error; err != nil {
-		return nil, 0, errort.NewCommonEdgeX(errort.DefaultSystemError, "login log query failed", err)
+		return nil, 0, errort.NewCommonEdgeX(errort.DefaultSystemError, "audit log query failed", err)
 	}
 	return list, uint32(total), nil
 }
 
-func deleteSysLoginLogByIds(c *Client, ids []string) error {
+func deleteSysAuditLogByIds(c *Client, ids []string) error {
 	if len(ids) == 0 {
 		return nil
 	}
-	if err := c.Pool.Table(models.TableLoginLog).Where("id IN ?", ids).Delete(&models.LoginLog{}).Error; err != nil {
-		return errort.NewCommonEdgeX(errort.DefaultSystemError, "login log delete failed", err)
+	if err := c.Pool.Table(models.TableAuditLog).Where("id IN ?", ids).Delete(&models.AuditLog{}).Error; err != nil {
+		return errort.NewCommonEdgeX(errort.DefaultSystemError, "audit log delete failed", err)
 	}
 	return nil
 }
 
-func clearSysLoginLog(c *Client) error {
-	return c.Pool.Exec(fmt.Sprintf("DELETE FROM %s", models.TableLoginLog)).Error
+// clearSysAuditLog 按当前租户作用域清空（必须走 GORM 删除以便租户插件追加条件）
+func clearSysAuditLog(c *Client) error {
+	if err := c.Pool.Table(models.TableAuditLog).Where("1 = 1").Delete(&models.AuditLog{}).Error; err != nil {
+		return errort.NewCommonEdgeX(errort.DefaultSystemError, "audit log clear failed", err)
+	}
+	return nil
+}
+
+// deleteSysAuditLogBefore 删除 created < ts 的记录，返回删除条数（平台作用域跨租户清理）
+func deleteSysAuditLogBefore(c *Client, ts int64) (int64, error) {
+	res := c.Pool.Table(models.TableAuditLog).Where("created < ?", ts).Delete(&models.AuditLog{})
+	if res.Error != nil {
+		return 0, errort.NewCommonEdgeX(errort.DefaultSystemError, "audit log cleanup failed", res.Error)
+	}
+	return res.RowsAffected, nil
 }
 
 /******************************* 系统配置 *******************************/

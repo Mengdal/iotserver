@@ -12,9 +12,11 @@ import (
 	"github.com/gin-gonic/gin"
 	"iotserver/internal/dtos"
 	"iotserver/internal/iotserver/core/application/alertcentreapp"
+	"iotserver/internal/iotserver/core/application/auditlogapp"
 	"iotserver/internal/iotserver/core/application/categorytemplate"
 	"iotserver/internal/iotserver/core/application/deviceapp"
 	"iotserver/internal/iotserver/core/application/docapp"
+	"iotserver/internal/iotserver/core/application/gatewayapp"
 	"iotserver/internal/iotserver/core/application/homepageapp"
 	"iotserver/internal/iotserver/core/application/languagesdkapp"
 	"iotserver/internal/iotserver/core/application/productapp"
@@ -22,6 +24,8 @@ import (
 	"iotserver/internal/iotserver/core/application/resourceapp"
 	"iotserver/internal/iotserver/core/application/ruleengineapp"
 	"iotserver/internal/iotserver/core/application/sceneapp"
+	"iotserver/internal/iotserver/core/application/solutionapp"
+	"iotserver/internal/iotserver/core/application/tenantapp"
 	"iotserver/internal/iotserver/core/application/thingmodelapp"
 	"iotserver/internal/iotserver/core/application/thingmodeltemplate"
 	"iotserver/internal/iotserver/core/application/unittemplate"
@@ -29,6 +33,7 @@ import (
 	"iotserver/internal/iotserver/core/config"
 	"iotserver/internal/iotserver/core/container"
 	"iotserver/internal/iotserver/core/infrastructure/sqlite"
+	interfaces "iotserver/internal/iotserver/core/interface"
 	"iotserver/internal/iotserver/core/route"
 	pkgcontainer "iotserver/internal/pkg/container"
 	"iotserver/internal/pkg/di"
@@ -41,6 +46,10 @@ type testEnv struct {
 	engine      *gin.Engine
 	token       string
 	fakeEkuiper *fakeEkuiper
+	// client 直连数据库，供多租户隔离测试准备数据（建租户/角色/用户）
+	client *sqlite.Client
+	// auditApp 审查日志应用：测试用 Flush/CleanupExpired 做确定性断言
+	auditApp interfaces.AuditLogApp
 }
 
 func setupTestEnv(t *testing.T) *testEnv {
@@ -67,9 +76,7 @@ func setupTestEnv(t *testing.T) *testEnv {
 		container.LanguageSDKAppName:            func(get di.Get) interface{} { return languagesdkapp.NewLanguageSDKApp(ctx, dic) },
 		container.DriverAppName:                 func(get di.Get) interface{} { return nil },
 		container.DriverServiceAppName:          func(get di.Get) interface{} { return nil },
-		container.ProductAppName:                func(get di.Get) interface{} { return productapp.NewProductApp(ctx, dic) },
 		container.ThingModelAppName:             func(get di.Get) interface{} { return thingmodelapp.NewThingModelApp(ctx, dic) },
-		container.AlertRuleAppName:              func(get di.Get) interface{} { return alertcentreapp.NewAlertCentreApp(ctx, dic) },
 		container.CategoryTemplateAppName:       func(get di.Get) interface{} { return categorytemplate.NewCategoryTemplateApp(ctx, dic) },
 		container.UnitTemplateAppName:           func(get di.Get) interface{} { return unittemplate.NewUnitTemplateApp(ctx, dic) },
 		container.DocsAppName:                   func(get di.Get) interface{} { return docapp.NewDocsApp(ctx, dic) },
@@ -80,6 +87,31 @@ func setupTestEnv(t *testing.T) *testEnv {
 	userItf := userapp.New(dic)
 	dic.Update(di.ServiceConstructorMap{
 		container.UserItfName: func(get di.Get) interface{} { return userItf },
+	})
+	// 审查日志：异步写入 + 过期清理（构造函数内部访问 dic，必须在工厂闭包外构造）
+	auditApp := auditlogapp.New(dic)
+	dic.Update(di.ServiceConstructorMap{
+		container.AuditLogAppName: func(get di.Get) interface{} { return auditApp },
+	})
+	t.Cleanup(auditApp.Close)
+	// 租户管理：删租户保护 / 配额 / 到期相关用例需要走真实路由
+	tenantItf := tenantapp.New(dic)
+	dic.Update(di.ServiceConstructorMap{
+		container.TenantItfName: func(get di.Get) interface{} { return tenantItf },
+	})
+	// 网关管理：网关配额用例需要走真实路由
+	gatewayItf := gatewayapp.New(dic)
+	dic.Update(di.ServiceConstructorMap{
+		container.GatewayItfName: func(get di.Get) interface{} { return gatewayItf },
+	})
+	// productApp/alertApp 的构造函数内部会访问 dic，必须在工厂闭包外构造（闭包内构造会在解析时自锁）
+	productItf := productapp.NewProductApp(ctx, dic)
+	dic.Update(di.ServiceConstructorMap{
+		container.ProductAppName: func(get di.Get) interface{} { return productItf },
+	})
+	alertItf := alertcentreapp.NewAlertCentreApp(ctx, dic)
+	dic.Update(di.ServiceConstructorMap{
+		container.AlertRuleAppName: func(get di.Get) interface{} { return alertItf },
 	})
 	// deviceApp 的构造函数内部会访问 dic，必须在工厂闭包外构造（闭包内构造会在解析时自锁）
 	deviceItf := deviceapp.NewDeviceApp(ctx, dic)
@@ -105,6 +137,15 @@ func setupTestEnv(t *testing.T) *testEnv {
 	sceneItf := sceneapp.NewWithoutScheduler(dic)
 	dic.Update(di.ServiceConstructorMap{
 		container.SceneItfName: func(get di.Get) interface{} { return sceneItf },
+	})
+	// 数据存储：产品发布/建设备会建库表，e2e 用假客户端（不入库，只保证链路可达）
+	dic.Update(di.ServiceConstructorMap{
+		container.DataDBClientInterfaceName: func(get di.Get) interface{} { return fakeDataDB{} },
+	})
+	// 设备接入 - 方案（构造函数内部访问 dic，必须在工厂闭包外构造）
+	machineTemplateItf := solutionapp.New(dic)
+	dic.Update(di.ServiceConstructorMap{
+		container.SolutionItfName: func(get di.Get) interface{} { return machineTemplateItf },
 	})
 
 	if err = userItf.MigrateSystemData(); err != nil {
@@ -139,7 +180,7 @@ func setupTestEnv(t *testing.T) *testEnv {
 	if token == "" {
 		t.Fatal("token empty")
 	}
-	return &testEnv{engine: engine, token: token, fakeEkuiper: fakeEkuiper}
+	return &testEnv{engine: engine, token: token, fakeEkuiper: fakeEkuiper, client: client, auditApp: auditApp}
 }
 
 func doRequest(engine *gin.Engine, method, path, token string, body []byte) *httptest.ResponseRecorder {
@@ -503,5 +544,42 @@ func TestNonAdminMenusIncludeParentDirs(t *testing.T) {
 		if p == "system:menu:list" {
 			t.Fatalf("补全父目录后不应引入父目录的权限: %v", perms)
 		}
+	}
+}
+
+// 权限字符（role_key）只在同一租户内唯一：同租户重复要被拒绝，不同租户可重复。
+//
+// 背景：角色是租户隔离表，但"平台视图"下 GORM 插件不过滤，
+// 若用 WithCtx 直接查重会跨租户误判，因此实现里显式带上 tenant_id。
+func TestSysRoleKeyUniquePerTenant(t *testing.T) {
+	env := setupTestEnv(t)
+
+	bodyFirst, _ := json.Marshal(dtos.SysRoleAddRequest{Name: "运维同名", RoleKey: "ops_same", Status: 1, DataScope: "1"})
+	bodyDup, _ := json.Marshal(dtos.SysRoleAddRequest{Name: "运维同名2", RoleKey: "ops_same", Status: 1, DataScope: "1"})
+
+	// 平台级角色
+	if resp := parseResponse(t, doRequest(env.engine, http.MethodPost, "/api/v1/role", env.token, bodyFirst)); !resp.Success {
+		t.Fatalf("平台建角色失败: %v", resp.ErrorMsg)
+	}
+	// 平台内重复权限字符 → 拒绝
+	if resp := parseResponse(t, doRequest(env.engine, http.MethodPost, "/api/v1/role", env.token, bodyDup)); resp.Success {
+		t.Fatal("同一租户内重复的权限字符应被拒绝")
+	}
+
+	// 租户A：与平台同名同权限字符也要能建（不同租户互不影响）
+	_, userA := seedTenant(t, env, "rolekeya")
+	tokenA := loginAs(t, env, userA, tenantTestPassword)
+	if resp := parseResponse(t, doRequest(env.engine, http.MethodPost, "/api/v1/role", tokenA, bodyFirst)); !resp.Success {
+		t.Fatalf("租户A建同名同权限字符角色应成功: %v", resp.ErrorMsg)
+	}
+	if resp := parseResponse(t, doRequest(env.engine, http.MethodPost, "/api/v1/role", tokenA, bodyDup)); resp.Success {
+		t.Fatal("租户A内重复的权限字符应被拒绝")
+	}
+
+	// 租户B：同样可以建（两个租户各自有一份 ops_same）
+	_, userB := seedTenant(t, env, "rolekeyb")
+	tokenB := loginAs(t, env, userB, tenantTestPassword)
+	if resp := parseResponse(t, doRequest(env.engine, http.MethodPost, "/api/v1/role", tokenB, bodyFirst)); !resp.Success {
+		t.Fatalf("租户B建同名同权限字符角色应成功: %v", resp.ErrorMsg)
 	}
 }

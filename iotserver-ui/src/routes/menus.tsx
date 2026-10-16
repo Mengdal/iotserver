@@ -12,6 +12,8 @@ import {
   FileSearchOutlined,
   ToolOutlined,
   DatabaseOutlined,
+  CloudServerOutlined,
+  SafetyOutlined,
 } from '@ant-design/icons'
 import type { MenuItemType, SubMenuType } from 'antd/es/menu/hooks/useItems'
 import { renderMenuIcon } from '@/components/IconSelect'
@@ -38,12 +40,32 @@ const menus: AppMenuItem[] = [
     perm: P.HomeView,
   },
   {
+    // 平台管理员专属（后端菜单整组 platform_only，租户用户收不到这一组）
+    label: '平台管理',
+    key: '/platform',
+    icon: <SafetyOutlined />,
+    children: [
+      { label: '租户管理', key: '/platform/tenant', perm: P.PlatformTenantList },
+      { label: '系统配置', key: '/platform/sysSet', icon: <ToolOutlined />, perm: P.ConfigList },
+    ],
+  },
+  {
     label: '设备接入',
     key: '/gateway',
     icon: <GlobalOutlined />,
     children: [
       { label: '产品管理', key: '/gateway/product/manage', perm: P.ProductList },
       { label: '设备管理', key: '/gateway/device/manage', perm: P.DeviceList },
+      { label: '网关管理', key: '/gateway/gateway/manage', perm: P.GatewayList },
+      { label: '方案中心', key: '/solution/center', perm: P.SolutionList },
+    ],
+  },
+  {
+    // 驱动管理与「设备接入」同级（侧边栏层级以「菜单管理」为准）
+    label: '驱动管理',
+    key: '/drive',
+    icon: <CloudServerOutlined />,
+    children: [
       { label: '驱动镜像', key: '/gateway/drive/image', perm: P.ImageList },
       { label: '我的驱动', key: '/gateway/my/drive', perm: P.DriveList },
     ],
@@ -75,8 +97,8 @@ const menus: AppMenuItem[] = [
       { label: '角色管理', key: '/admin/sysRole', icon: <TeamOutlined />, perm: P.RoleList },
       { label: '菜单管理', key: '/admin/sysMenu', icon: <MenuOutlined />, perm: P.MenuList },
       { label: '部门管理', key: '/admin/sysDept', icon: <ApartmentOutlined />, perm: P.DeptList },
-      { label: '登入日志', key: '/admin/sysLoginLog', icon: <FileSearchOutlined />, perm: P.LoginLogList },
-      { label: '系统配置', key: '/admin/sysSet', icon: <ToolOutlined />, perm: P.ConfigList },
+      // 权限码用字面量：permissions.ts 重新生成后才有 AuditLog* 常量，旧码 system:loginlog:list 仅作兼容
+      { label: '审查日志', key: '/admin/sysAuditLog', icon: <FileSearchOutlined />, perm: 'system:auditlog:list' },
     ],
   },
   {

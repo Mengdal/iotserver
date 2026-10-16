@@ -52,7 +52,7 @@ func (m docApp) SyncDocs(ctx context.Context, versionName string) (int64, error)
 		IsAll: true,
 	}
 	dbreq := dtos.DocsSearchQueryRequest{BaseSearchConditionQuery: baseQuery}
-	docs, _, err := m.dbClient.DocsSearch(0, -1, dbreq)
+	docs, _, err := m.dbClient.WithCtx(ctx).DocsSearch(0, -1, dbreq)
 	if err != nil {
 		return 0, err
 	}
@@ -81,7 +81,7 @@ func (m docApp) SyncDocs(ctx context.Context, versionName string) (int64, error)
 			})
 		}
 	}
-	rows, err := m.dbClient.BatchUpsertDocsTemplate(upsertCosTemplate)
+	rows, err := m.dbClient.WithCtx(ctx).BatchUpsertDocsTemplate(upsertCosTemplate)
 	if err != nil {
 		return 0, err
 	}

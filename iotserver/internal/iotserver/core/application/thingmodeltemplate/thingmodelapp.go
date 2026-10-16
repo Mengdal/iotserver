@@ -37,7 +37,7 @@ type thingModelTemplate struct {
 func (m thingModelTemplate) ThingModelTemplateSearch(ctx context.Context, req dtos.ThingModelTemplateRequest) ([]dtos.ThingModelTemplateResponse, uint32, error) {
 	offset, limit := req.BaseSearchConditionQuery.GetPage()
 
-	thingModelTemplates, total, err := m.dbClient.ThingModelTemplateSearch(offset, limit, req)
+	thingModelTemplates, total, err := m.dbClient.WithCtx(ctx).ThingModelTemplateSearch(offset, limit, req)
 	if err != nil {
 		m.lc.Errorf("thingModelTemplate Search err %v", err)
 		return []dtos.ThingModelTemplateResponse{}, 0, err
@@ -51,7 +51,7 @@ func (m thingModelTemplate) ThingModelTemplateSearch(ctx context.Context, req dt
 }
 
 func (m thingModelTemplate) ThingModelTemplateByCategoryKey(ctx context.Context, categoryKey string) (dtos.ThingModelTemplateResponse, error) {
-	thingModelTemplate, err := m.dbClient.ThingModelTemplateByCategoryKey(categoryKey)
+	thingModelTemplate, err := m.dbClient.WithCtx(ctx).ThingModelTemplateByCategoryKey(categoryKey)
 	if err != nil {
 		m.lc.Errorf("thingModelTemplate Search err %v", err)
 		return dtos.ThingModelTemplateResponse{}, err
@@ -112,7 +112,7 @@ func (m thingModelTemplate) Sync(ctx context.Context, versionName string) (int64
 			})
 		}
 	}
-	rows, err := m.dbClient.BatchUpsertThingModelTemplate(upsertThingModelTemplate)
+	rows, err := m.dbClient.WithCtx(ctx).BatchUpsertThingModelTemplate(upsertThingModelTemplate)
 	m.lc.Infof("upsert thingModelTemplate rows %+v", rows)
 	if err != nil {
 		return 0, err
@@ -152,13 +152,13 @@ func (m thingModelTemplate) Sync(ctx context.Context, versionName string) (int64
 			}
 		}
 	}
-	m.dbClient.BatchDeleteSystemProperties()
-	m.dbClient.BatchDeleteSystemActions()
-	m.dbClient.BatchDeleteSystemEvents()
+	m.dbClient.WithCtx(ctx).BatchDeleteSystemProperties()
+	m.dbClient.WithCtx(ctx).BatchDeleteSystemActions()
+	m.dbClient.WithCtx(ctx).BatchDeleteSystemEvents()
 
-	m.dbClient.BatchInsertSystemProperties(modelProperty)
-	m.dbClient.BatchInsertSystemActions(modelAction)
-	m.dbClient.BatchInsertSystemEvents(modelEvent)
+	m.dbClient.WithCtx(ctx).BatchInsertSystemProperties(modelProperty)
+	m.dbClient.WithCtx(ctx).BatchInsertSystemActions(modelAction)
+	m.dbClient.WithCtx(ctx).BatchInsertSystemEvents(modelEvent)
 
 	return rows, nil
 }

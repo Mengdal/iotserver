@@ -354,7 +354,15 @@ const SysRolePage: React.FC = () => {
           <Form.Item label="角色名称" name="name" rules={[{ required: true, message: '请输入角色名称' }]}>
             <Input placeholder="请输入角色名称" />
           </Form.Item>
-          <Form.Item label="权限字符" name="roleKey" rules={[{ required: true, message: '请输入权限字符' }]}>
+          <Form.Item
+            label="权限字符"
+            name="roleKey"
+            extra="同一租户内不可重复（不同租户可以同名）；填 admin 表示该租户的超级管理员：菜单全给、权限拉满，且不可停用/删除"
+            rules={[
+              { required: true, message: '请输入权限字符' },
+              { pattern: /^[A-Za-z0-9_:.-]+$/, message: '只能包含字母、数字与 _ : . -' },
+            ]}
+          >
             <Input placeholder="例如 operator" />
           </Form.Item>
           <Form.Item label="显示顺序" name="sort">

@@ -1,10 +1,12 @@
 package dtos
 
-/************** 登入日志 **************/
+/************** 审查日志（登录 + 操作） **************/
 
-// SysLoginLogSearchRequest 登入日志查询
-type SysLoginLogSearchRequest struct {
+// SysAuditLogSearchRequest 审查日志查询
+type SysAuditLogSearchRequest struct {
 	Username  string `schema:"username,omitempty" form:"username"`
+	Type      string `schema:"type,omitempty" form:"type"`
+	Module    string `schema:"module,omitempty" form:"module"`
 	Ip        string `schema:"ip,omitempty" form:"ip"`
 	Status    string `schema:"status,omitempty" form:"status"`
 	StartTime int64  `schema:"startTime,omitempty" form:"startTime"`
@@ -14,21 +16,31 @@ type SysLoginLogSearchRequest struct {
 	IsAll     bool   `schema:"isAll,omitempty" form:"isAll"`
 }
 
-// SysLoginLogIdsRequest 批量删除登入日志
-type SysLoginLogIdsRequest struct {
+// SysAuditLogIdsRequest 批量删除审查日志
+type SysAuditLogIdsRequest struct {
 	Ids []string `json:"ids" binding:"required"`
 }
 
-// SysLoginLogResponse 登入日志信息
-type SysLoginLogResponse struct {
-	Id        string `json:"id"`
-	Username  string `json:"username"`
-	Ip        string `json:"ip"`
-	Browser   string `json:"browser"`
-	Os        string `json:"os"`
-	Status    int    `json:"status"`
-	Message   string `json:"message"`
-	LoginTime int64  `json:"loginTime"`
+// SysAuditLogResponse 审查日志信息
+type SysAuditLogResponse struct {
+	Id         string `json:"id"`
+	Type       string `json:"type"`
+	Username   string `json:"username"`
+	Module     string `json:"module"`
+	Action     string `json:"action"`
+	Target     string `json:"target"`
+	Method     string `json:"method"`
+	Path       string `json:"path"`
+	Ip         string `json:"ip"`
+	Browser    string `json:"browser"`
+	Os         string `json:"os"`
+	Status     int    `json:"status"`
+	ErrorCode  string `json:"errorCode"`
+	Message    string `json:"message"`
+	Params     string `json:"params"`
+	DurationMs int64  `json:"durationMs"`
+	LoginTime  int64  `json:"loginTime"`
+	Created    int64  `json:"created"`
 }
 
 /************** 系统配置 **************/

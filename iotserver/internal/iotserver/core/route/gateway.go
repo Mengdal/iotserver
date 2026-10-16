@@ -42,24 +42,63 @@ func RegisterGateway(engine *gin.Engine, dic *di.Container) {
 	v1.POST("ekuiper/scene", ctl.EkuiperScene)
 	v1.GET("ws/", websocket.NewServer(dic).Handle)
 
-	v1Auth := v1.Group("", jwt.JWTAuth(false))
+	v1Auth := v1.Group("", jwt.JWTAuth(false), middleware.TenantContext(), middleware.TenantExpireCheck(dic),
+		// 审查日志（操作日志）：只记非 GET 写操作，异步落库，不阻塞业务
+		middleware.AuditLog(dic))
 	v1Auth.PUT("auth/password", ctl.UpdatePassword)
-	/*******可视化看板（Shaper 嵌入）*******/
+	/*******可视化看板（画布）*******/
 	{
-		// 服务端用配置里的 API Key 换短期 JWT，前端拿不到密钥
-		v1Auth.GET("shaper/embed", ctl.ShaperEmbed)
 		// 看板管理（列表/新建/编辑/删除/设为首页或默认）
-		v1Auth.GET("viz/datasources", ctl.ShaperVizDatasources)
-		// 预览与取数（画布上每个组件用 /viz/query，整块画布一次请求用 /viz/query/batch）
-		v1Auth.POST("viz/preview", ctl.ShaperVizPreview)
-		v1Auth.POST("viz/query", ctl.ShaperVizQuery)
-		v1Auth.POST("viz/query/batch", ctl.ShaperVizQueryBatch)
-		v1Auth.GET("viz/boards", ctl.ShaperBoards)
-		v1Auth.POST("viz/boards", ctl.ShaperBoardCreate)
-		v1Auth.GET("viz/boards/:boardId", ctl.ShaperBoardDetail)
-		v1Auth.PUT("viz/boards/:boardId", ctl.ShaperBoardUpdate)
-		v1Auth.DELETE("viz/boards/:boardId", ctl.ShaperBoardDelete)
-		v1Auth.POST("viz/boards/:boardId/active", ctl.ShaperBoardActive)
+		v1Auth.GET("viz/boards", ctl.Perm(middleware.PermVizBoardList), ctl.VizBoards)
+		v1Auth.POST("viz/boards", ctl.Perm(middleware.PermVizBoardAdd), ctl.VizBoardCreate)
+		v1Auth.GET("viz/boards/:boardId", ctl.Perm(middleware.PermVizBoardQuery), ctl.VizBoardDetail)
+		v1Auth.PUT("viz/boards/:boardId", ctl.Perm(middleware.PermVizBoardEdit), ctl.VizBoardUpdate)
+		v1Auth.DELETE("viz/boards/:boardId", ctl.Perm(middleware.PermVizBoardRemove), ctl.VizBoardDelete)
+		v1Auth.POST("viz/boards/:boardId/active", ctl.Perm(middleware.PermVizBoardEdit), ctl.VizBoardActive)
+		// 看板取数：画布上的数据类组件（数值/仪表盘/折线/表格）批量查询设备属性与平台/租户统计指标
+		v1Auth.POST("viz/device-query", ctl.Perm(middleware.PermVizDataQuery), ctl.VizDeviceQuery)
+		// 可绑定的指标清单（前端下拉用；权限与取数一致）
+		v1Auth.GET("viz/metrics", ctl.Perm(middleware.PermVizDataQuery), ctl.VizMetrics)
+	}
+	/******* 平台管理（租户/租户）：平台管理员专属 *******/
+	{
+		platform := v1Auth.Group("", middleware.PlatformOnly())
+		platform.GET("tenant", ctl.Perm(middleware.PermPlatformTenantList), ctl.TenantSearch)
+		platform.GET("tenant/:id", ctl.Perm(middleware.PermPlatformTenantQuery), ctl.TenantById)
+		platform.POST("tenant", ctl.Perm(middleware.PermPlatformTenantAdd), ctl.TenantAdd)
+		platform.PUT("tenant", ctl.Perm(middleware.PermPlatformTenantEdit), ctl.TenantUpdate)
+		platform.DELETE("tenant/:id", ctl.Perm(middleware.PermPlatformTenantRemove), ctl.TenantDelete)
+
+		// 系统配置是全局唯一一份（sys_config 没有 tenant_id），写接口只允许平台管理员：
+		// 租户管理员天然拥有 system:config:* 权限码，若只校验权限码即可改写全平台配置。
+		// 读接口（GET）保留在 v1Auth，租户侧页面/内部逻辑仍需读取配置。
+		platform.POST("system-setup", ctl.Perm(middleware.PermConfigAdd), ctl.SysConfigAdd)
+		platform.PUT("system-setup", ctl.Perm(middleware.PermConfigEdit), ctl.SysConfigUpdate)
+		platform.DELETE("system-setup", ctl.Perm(middleware.PermConfigRemove), ctl.SysConfigDelete)
+		platform.POST("system-setup/save", ctl.Perm(middleware.PermConfigEdit), ctl.SysSetupSave)
+
+		// 在线备份：导出 Parquet + schema.sql 一致快照，不需停服（详见 controller 的 SystemBackup）
+		platform.POST("system/backup", ctl.Perm(middleware.PermConfigEdit), ctl.SystemBackup)
+	}
+	/******* 网关管理（第三方工业网关 MQTT 接入）*******/
+	{
+		v1Auth.GET("gateways", ctl.Perm(middleware.PermGatewayList), ctl.GatewaySearch)
+		v1Auth.GET("gateway/:id", ctl.Perm(middleware.PermGatewayQuery), ctl.GatewayById)
+		v1Auth.POST("gateway", ctl.Perm(middleware.PermGatewayAdd), ctl.GatewayAdd)
+		v1Auth.PUT("gateway", ctl.Perm(middleware.PermGatewayEdit), ctl.GatewayUpdate)
+		v1Auth.DELETE("gateway/:id", ctl.Perm(middleware.PermGatewayRemove), ctl.GatewayDelete)
+		v1Auth.PUT("gateway/config", ctl.Perm(middleware.PermGatewayConfig), ctl.GatewayPushConfig)
+		v1Auth.POST("gateway/command", ctl.Perm(middleware.PermGatewayCommand), ctl.GatewayCommand)
+	}
+	/******* 设备接入 - 方案（行业模板一键应用）*******/
+	{
+		v1Auth.GET("solutions", ctl.Perm(middleware.PermSolutionList), ctl.SolutionSearch)
+		v1Auth.GET("solution/:key", ctl.Perm(middleware.PermSolutionQuery), ctl.SolutionByKey)
+		v1Auth.POST("solution/:key/apply", ctl.Perm(middleware.PermSolutionApply), ctl.SolutionApply)
+		// 方案物模型条目维护：内置方案只读，租户首次修改会自动生成租户副本
+		v1Auth.POST("solution/:key/thing-model/item", ctl.Perm(middleware.PermSolutionTslAdd), ctl.SolutionThingModelItemAdd)
+		v1Auth.PUT("solution/:key/thing-model/item", ctl.Perm(middleware.PermSolutionTslEdit), ctl.SolutionThingModelItemUpdate)
+		v1Auth.DELETE("solution/:key/thing-model/item", ctl.Perm(middleware.PermSolutionTslRemove), ctl.SolutionThingModelItemDelete)
 	}
 	/*******首页 *******/
 	{
@@ -115,9 +154,6 @@ func RegisterGateway(engine *gin.Engine, dic *di.Container) {
 		v1Auth.PUT("thingmodel", ctl.Perm(middleware.PermProductEdit), ctl.ThingModelUpdate)
 		v1Auth.DELETE("thingmodel", ctl.Perm(middleware.PermProductEdit), ctl.ThingModelDelete)
 		v1Auth.GET("thingmodel/unit", ctl.Perm(middleware.PermProductQuery), ctl.Perm(middleware.PermDeviceQuery), ctl.ThingModelUnit)
-		v1Auth.POST("thingmodel/unit-sync", ctl.ThingModelUnitSync)                       //废弃
-		v1Auth.POST("thingmodel/docs-sync", ctl.ThingModelDocsSync)                       //废弃
-		v1Auth.POST("thingmodel/quicknavigation-sync", ctl.ThingModelQuickNavigationSync) //废弃
 
 	}
 
@@ -174,10 +210,8 @@ func RegisterGateway(engine *gin.Engine, dic *di.Container) {
 	/*******品类、物模型同步接口 *******/
 	{
 		v1Auth.GET("category-template", ctl.Perm(middleware.PermProductQuery), ctl.Perm(middleware.PermDeviceQuery), ctl.CategoryTemplateSearch)
-		v1Auth.POST("category-template/sync", ctl.CategoryTemplateSync) //废弃
 		v1Auth.GET("thingmodel-template", ctl.Perm(middleware.PermProductQuery), ctl.Perm(middleware.PermDeviceQuery), ctl.ThingModelTemplateSearch)
 		v1Auth.GET("thingmodel-template/:categoryKey", ctl.Perm(middleware.PermProductQuery), ctl.Perm(middleware.PermDeviceQuery), ctl.ThingModelTemplateByCategoryKey)
-		v1Auth.POST("thingmodel-template/sync", ctl.ThingModelTemplateSync) //废弃
 	}
 
 	/*******告警中心接口 *******/
@@ -202,7 +236,6 @@ func RegisterGateway(engine *gin.Engine, dic *di.Container) {
 	{
 
 		v1Auth.GET("language-sdk", ctl.Perm(middleware.PermDocsView), ctl.LanguageSdkSearch)
-		v1Auth.POST("language-sdk-sync", ctl.LanguageSdkSync) //废弃
 	}
 
 	/******* 系统管理 ********/
@@ -238,6 +271,10 @@ func RegisterGateway(engine *gin.Engine, dic *di.Container) {
 		v1Auth.POST("menu", ctl.Perm(middleware.PermMenuAdd), ctl.SysMenuAdd)
 		v1Auth.PUT("menu", ctl.Perm(middleware.PermMenuEdit), ctl.SysMenuUpdate)
 		v1Auth.DELETE("menu", ctl.Perm(middleware.PermMenuRemove), ctl.SysMenuDelete)
+		// 租户展示层覆盖（隐藏/改名/图标/排序）与平台重置租户菜单定制
+		v1Auth.GET("menu/pref", ctl.Perm(middleware.PermMenuList), ctl.SysMenuPrefs)
+		v1Auth.PUT("menu/pref", ctl.Perm(middleware.PermMenuCustomPref), ctl.SysMenuPrefSave)
+		v1Auth.POST("menu/tenant-reset", ctl.Perm(middleware.PermMenuCustomReset), ctl.SysMenuTenantReset)
 
 		// 部门管理
 		v1Auth.GET("dept", ctl.Perm(middleware.PermDeptList), ctl.SysDeptSearch)
@@ -247,18 +284,22 @@ func RegisterGateway(engine *gin.Engine, dic *di.Container) {
 		v1Auth.PUT("dept", ctl.Perm(middleware.PermDeptEdit), ctl.SysDeptUpdate)
 		v1Auth.DELETE("dept", ctl.Perm(middleware.PermDeptRemove), ctl.SysDeptDelete)
 
-		// 登入日志
-		v1Auth.GET("sys-login-log", ctl.Perm(middleware.PermLoginLogList), ctl.SysLoginLogSearch)
-		v1Auth.DELETE("sys-login-log", ctl.Perm(middleware.PermLoginLogRemove), ctl.SysLoginLogDelete)
-		v1Auth.DELETE("sys-login-log/clear", ctl.Perm(middleware.PermLoginLogRemove), ctl.SysLoginLogClear)
+		// 审查日志（登录 + 操作）
+		v1Auth.GET("sys-audit-log", ctl.Perm(middleware.PermAuditLogList), ctl.SysAuditLogSearch)
+		v1Auth.DELETE("sys-audit-log", ctl.Perm(middleware.PermAuditLogRemove), ctl.SysAuditLogDelete)
+		v1Auth.DELETE("sys-audit-log/clear", ctl.Perm(middleware.PermAuditLogRemove), ctl.SysAuditLogClear)
 
-		// 系统配置
+		// 兼容别名：旧「登入日志」接口与权限码保留一版，行为等价 type=login（下版本删除）
+		v1Auth.GET("sys-login-log",
+			ctl.Perm(middleware.PermAuditLogList, middleware.PermLoginLogList), ctl.SysLoginLogSearch)
+		v1Auth.DELETE("sys-login-log",
+			ctl.Perm(middleware.PermAuditLogRemove, middleware.PermLoginLogRemove), ctl.SysLoginLogDelete)
+		v1Auth.DELETE("sys-login-log/clear",
+			ctl.Perm(middleware.PermAuditLogRemove, middleware.PermLoginLogRemove), ctl.SysLoginLogClear)
+
+		// 系统配置：只保留读接口给租户；写接口在「平台管理」组（PlatformOnly）
 		v1Auth.GET("system-setup", ctl.Perm(middleware.PermConfigList), ctl.SysConfigSearch)
 		v1Auth.GET("system-setup/:id", ctl.Perm(middleware.PermConfigQuery), ctl.SysConfigById)
-		v1Auth.POST("system-setup", ctl.Perm(middleware.PermConfigAdd), ctl.SysConfigAdd)
-		v1Auth.PUT("system-setup", ctl.Perm(middleware.PermConfigEdit), ctl.SysConfigUpdate)
-		v1Auth.DELETE("system-setup", ctl.Perm(middleware.PermConfigRemove), ctl.SysConfigDelete)
-		v1Auth.POST("system-setup/save", ctl.Perm(middleware.PermConfigEdit), ctl.SysSetupSave)
 	}
 
 }

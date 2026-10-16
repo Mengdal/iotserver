@@ -3,11 +3,33 @@
  * 唯一来源: iotserver/internal/pkg/permissions/permissions.go
  */
 
+export const PlatformTenantList = 'platform:tenant:list'
+export const PlatformTenantQuery = 'platform:tenant:query'
+export const PlatformTenantAdd = 'platform:tenant:add'
+export const PlatformTenantEdit = 'platform:tenant:edit'
+export const PlatformTenantRemove = 'platform:tenant:remove'
+export const PlatformTenantSwitch = 'platform:tenant:switch'
+
 export const UserList = 'system:user:list'
 export const UserQuery = 'system:user:query'
 export const UserAdd = 'system:user:add'
 export const UserEdit = 'system:user:edit'
 export const UserRemove = 'system:user:remove'
+
+export const GatewayList = 'gateway:gateway:list'
+export const GatewayQuery = 'gateway:gateway:query'
+export const GatewayAdd = 'gateway:gateway:add'
+export const GatewayEdit = 'gateway:gateway:edit'
+export const GatewayRemove = 'gateway:gateway:remove'
+export const GatewayConfig = 'gateway:gateway:config'
+export const GatewayCommand = 'gateway:gateway:command'
+
+export const SolutionList = 'solution:list'
+export const SolutionQuery = 'solution:query'
+export const SolutionApply = 'solution:apply'
+export const SolutionTslAdd = 'solution:tsl:add'
+export const SolutionTslEdit = 'solution:tsl:edit'
+export const SolutionTslRemove = 'solution:tsl:remove'
 
 export const RoleList = 'system:role:list'
 export const RoleQuery = 'system:role:query'
@@ -20,12 +42,17 @@ export const MenuQuery = 'system:menu:query'
 export const MenuAdd = 'system:menu:add'
 export const MenuEdit = 'system:menu:edit'
 export const MenuRemove = 'system:menu:remove'
+export const MenuCustomPref = 'system:menu:custom:pref'
+export const MenuCustomReset = 'system:menu:custom:reset'
 
 export const DeptList = 'system:dept:list'
 export const DeptQuery = 'system:dept:query'
 export const DeptAdd = 'system:dept:add'
 export const DeptEdit = 'system:dept:edit'
 export const DeptRemove = 'system:dept:remove'
+
+export const AuditLogList = 'system:auditlog:list'
+export const AuditLogRemove = 'system:auditlog:remove'
 
 export const LoginLogList = 'system:loginlog:list'
 export const LoginLogRemove = 'system:loginlog:remove'
@@ -37,6 +64,13 @@ export const ConfigEdit = 'system:config:edit'
 export const ConfigRemove = 'system:config:remove'
 
 export const HomeView = 'home:view'
+
+export const VizBoardList = 'viz:board:list'
+export const VizBoardQuery = 'viz:board:query'
+export const VizBoardAdd = 'viz:board:add'
+export const VizBoardEdit = 'viz:board:edit'
+export const VizBoardRemove = 'viz:board:remove'
+export const VizDataQuery = 'viz:data:query'
 
 export const ProductList = 'gateway:product:list'
 export const ProductQuery = 'gateway:product:query'
@@ -100,13 +134,18 @@ export const AdvancedSceneStop = 'advanced:scene:stop'
 
 /** 全部权限标识（与后端 /api/v1/user/getinfo 返回的子集一致） */
 export const PERMISSIONS: string[] = [
+  PlatformTenantList, PlatformTenantQuery, PlatformTenantAdd, PlatformTenantEdit, PlatformTenantRemove, PlatformTenantSwitch,
   UserList, UserQuery, UserAdd, UserEdit, UserRemove,
+  GatewayList, GatewayQuery, GatewayAdd, GatewayEdit, GatewayRemove, GatewayConfig, GatewayCommand,
+  SolutionList, SolutionQuery, SolutionApply, SolutionTslAdd, SolutionTslEdit, SolutionTslRemove,
   RoleList, RoleQuery, RoleAdd, RoleEdit, RoleRemove,
-  MenuList, MenuQuery, MenuAdd, MenuEdit, MenuRemove,
+  MenuList, MenuQuery, MenuAdd, MenuEdit, MenuRemove, MenuCustomPref, MenuCustomReset,
   DeptList, DeptQuery, DeptAdd, DeptEdit, DeptRemove,
+  AuditLogList, AuditLogRemove,
   LoginLogList, LoginLogRemove,
   ConfigList, ConfigQuery, ConfigAdd, ConfigEdit, ConfigRemove,
   HomeView,
+  VizBoardList, VizBoardQuery, VizBoardAdd, VizBoardEdit, VizBoardRemove, VizDataQuery,
   ProductList, ProductQuery, ProductAdd, ProductEdit, ProductDel,
   DeviceList, DeviceQuery, DeviceAdd, DeviceEdit, DeviceDel, DeviceImport, DeviceBind,
   ImageList, ImageAdd, ImageEdit, ImageRemove,

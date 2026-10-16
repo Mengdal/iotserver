@@ -16,13 +16,22 @@ const { TextArea } = Input
 export interface DetailModalProps {
   productInfo?: ProductInfo
   onSuccess?: () => void
+  /**
+   * 可选的自定义提交：传入时不走 addThingModel，由调用方自行落库。
+   * 不传时行为与原来完全一致。
+   */
+  onSubmit?: (
+    payload: BaseThingModelType,
+    mode: 'add',
+    record?: ProductThingModelType,
+  ) => Promise<{ success: boolean, errorMsg?: string }>
 }
 
 export interface DetailModalRef {
   open: (record?: ProductThingModelType) => void
 }
 
-export const DetailModal = forwardRef<DetailModalRef, DetailModalProps>(({ productInfo, onSuccess }, ref) => {
+export const DetailModal = forwardRef<DetailModalRef, DetailModalProps>(({ productInfo, onSuccess, onSubmit }, ref) => {
   const [form] = useForm<DeatilModalFormValue>()
   const [record, setRecord] = useState<ProductThingModelType>()
   const [submitting, setSubmitting] = useState<boolean>(false)
@@ -148,20 +157,22 @@ export const DetailModal = forwardRef<DetailModalRef, DetailModalProps>(({ produ
 
                       console.log(result)
                       setSubmitting(true)
-                      addThingModel(result)
-                        .then(resp => {
-                          if (resp.success) {
-                            message.success('物模型添加成功')
-                            handleClose()
-                            if (typeof onSuccess === 'function') {
-                              onSuccess()
-                            }
-                          } else {
-                            message.error(resp?.errorMsg)
+                      try {
+                        const resp = onSubmit
+                          ? await onSubmit(result, 'add')
+                          : await addThingModel(result)
+                        if (resp.success) {
+                          message.success('物模型添加成功')
+                          handleClose()
+                          if (typeof onSuccess === 'function') {
+                            onSuccess()
                           }
-                        }).finally(() => {
-                          setSubmitting(false)
-                        })
+                        } else {
+                          message.error(resp?.errorMsg)
+                        }
+                      } finally {
+                        setSubmitting(false)
+                      }
                     }}
                   >确定</Button>
                   <Button onClick={handleClose}>取消</Button>

@@ -18,7 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/kirinlabs/HttpRequest"
-	"github.com/winc-link/edge-driver-proto/drivercommon"
+	"github.com/LMgateways/iotserver-driver-proto/drivercommon"
 	"iotserver/internal/dtos"
 	coreContainer "iotserver/internal/iotserver/core/container"
 	interfaces "iotserver/internal/iotserver/core/interface"
@@ -107,7 +107,7 @@ func (tmq *MessageApp) DeviceStatusToMessageBus(ctx context.Context, deviceId, d
 func (tmq *MessageApp) ThingModelMsgReport(ctx context.Context, msg dtos.ThingModelMessage) (*drivercommon.CommonResponse, error) {
 	tmq.pushMsgToMessageBus(msg.TransformMessageBus())
 	persistItf := coreContainer.PersistItfFrom(tmq.dic.Get)
-	err := persistItf.SaveDeviceThingModelData(msg)
+	err := persistItf.SaveDeviceThingModelData(ctx, msg)
 	if err != nil {
 		tmq.lc.Error("saveDeviceThingModelData error:", err.Error())
 	}

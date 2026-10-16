@@ -19,6 +19,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"iotserver/internal/dtos"
+	"iotserver/internal/models"
 	"iotserver/internal/pkg/constants"
 	"iotserver/internal/pkg/errort"
 	"iotserver/internal/pkg/httphelper"
@@ -523,6 +524,59 @@ func (ctl *controller) SysMenuDelete(c *gin.Context) {
 	httphelper.ResultSuccess(nil, c.Writer, lc)
 }
 
+// @Tags    系统管理-菜单
+// @Summary 当前租户的菜单展示层覆盖（隐藏/改名/图标/排序）
+// @Produce json
+// @Success 200 {object} httphelper.CommonResponse
+// @Router  /api/v1/menu/pref [get]
+func (ctl *controller) SysMenuPrefs(c *gin.Context) {
+	lc := ctl.lc
+	list, err := ctl.getUserApp().SysMenuPrefs(c)
+	if err != nil {
+		httphelper.RenderFail(c, err, c.Writer, lc)
+		return
+	}
+	httphelper.ResultSuccess(list, c.Writer, lc)
+}
+
+// @Tags    系统管理-菜单
+// @Summary 保存菜单展示层覆盖（隐藏/改名/排序，不覆盖 path/perms/component）
+// @Produce json
+// @Success 200 {object} httphelper.CommonResponse
+// @Router  /api/v1/menu/pref [put]
+func (ctl *controller) SysMenuPrefSave(c *gin.Context) {
+	lc := ctl.lc
+	var req dtos.SysMenuPrefSaveRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		httphelper.RenderFail(c, errort.NewCommonErr(errort.DefaultReqParamsError, err), c.Writer, lc)
+		return
+	}
+	if err := ctl.getUserApp().SysMenuPrefSave(c, req); err != nil {
+		httphelper.RenderFail(c, err, c.Writer, lc)
+		return
+	}
+	httphelper.ResultSuccess(nil, c.Writer, lc)
+}
+
+// @Tags    系统管理-菜单
+// @Summary 平台重置某租户的菜单定制（清空自建菜单与覆盖记录）
+// @Produce json
+// @Success 200 {object} httphelper.CommonResponse
+// @Router  /api/v1/menu/tenant-reset [post]
+func (ctl *controller) SysMenuTenantReset(c *gin.Context) {
+	lc := ctl.lc
+	var req dtos.SysMenuPrefResetRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		httphelper.RenderFail(c, errort.NewCommonErr(errort.DefaultReqParamsError, err), c.Writer, lc)
+		return
+	}
+	if err := ctl.getUserApp().SysMenuTenantReset(c, req.TenantId); err != nil {
+		httphelper.RenderFail(c, err, c.Writer, lc)
+		return
+	}
+	httphelper.ResultSuccess(nil, c.Writer, lc)
+}
+
 /******************************* 部门管理 *******************************/
 
 // @Tags    系统管理-部门
@@ -637,21 +691,61 @@ func (ctl *controller) SysDeptDelete(c *gin.Context) {
 	httphelper.ResultSuccess(nil, c.Writer, lc)
 }
 
-/******************************* 登入日志 *******************************/
+/******************************* 审查日志（登录 + 操作） *******************************/
 
-// @Tags    系统管理-登入日志
-// @Summary 登入日志列表
+// @Tags    系统管理-审查日志
+// @Summary 审查日志列表
 // @Produce json
 // @Success 200 {object} httphelper.CommonResponse
-// @Router  /api/v1/sys-login-log [get]
+// @Router  /api/v1/sys-audit-log [get]
+func (ctl *controller) SysAuditLogSearch(c *gin.Context) {
+	ctl.auditLogSearch(c, "")
+}
+
+// @Tags    系统管理-审查日志
+// @Summary 删除审查日志
+// @Produce json
+// @Success 200 {object} httphelper.CommonResponse
+// @Router  /api/v1/sys-audit-log [delete]
+func (ctl *controller) SysAuditLogDelete(c *gin.Context) {
+	ctl.auditLogDelete(c)
+}
+
+// @Tags    系统管理-审查日志
+// @Summary 清空审查日志
+// @Produce json
+// @Success 200 {object} httphelper.CommonResponse
+// @Router  /api/v1/sys-audit-log/clear [delete]
+func (ctl *controller) SysAuditLogClear(c *gin.Context) {
+	ctl.auditLogClear(c)
+}
+
+/******* 兼容别名：旧 /sys-login-log 路由，行为等价 type=login（下版本删除） *******/
+
 func (ctl *controller) SysLoginLogSearch(c *gin.Context) {
+	ctl.auditLogSearch(c, models.AuditTypeLogin)
+}
+
+func (ctl *controller) SysLoginLogDelete(c *gin.Context) {
+	ctl.auditLogDelete(c)
+}
+
+func (ctl *controller) SysLoginLogClear(c *gin.Context) {
+	ctl.auditLogClear(c)
+}
+
+// auditLogSearch forceType 非空时强制按该类型过滤（旧接口只查登录记录）
+func (ctl *controller) auditLogSearch(c *gin.Context, forceType string) {
 	lc := ctl.lc
-	var req dtos.SysLoginLogSearchRequest
+	var req dtos.SysAuditLogSearchRequest
 	if err := c.ShouldBind(&req); err != nil {
 		httphelper.RenderFail(c, errort.NewCommonErr(errort.DefaultReqParamsError, err), c.Writer, lc)
 		return
 	}
-	list, total, err := ctl.getUserApp().SysLoginLogSearch(c, req)
+	if forceType != "" {
+		req.Type = forceType
+	}
+	list, total, err := ctl.getUserApp().SysAuditLogSearch(c, req)
 	if err != nil {
 		httphelper.RenderFail(c, err, c.Writer, lc)
 		return
@@ -659,33 +753,23 @@ func (ctl *controller) SysLoginLogSearch(c *gin.Context) {
 	httphelper.ResultSuccess(httphelper.NewPageResult(list, total, req.Page, req.PageSize), c.Writer, lc)
 }
 
-// @Tags    系统管理-登入日志
-// @Summary 删除登入日志
-// @Produce json
-// @Success 200 {object} httphelper.CommonResponse
-// @Router  /api/v1/sys-login-log [delete]
-func (ctl *controller) SysLoginLogDelete(c *gin.Context) {
+func (ctl *controller) auditLogDelete(c *gin.Context) {
 	lc := ctl.lc
-	var req dtos.SysLoginLogIdsRequest
+	var req dtos.SysAuditLogIdsRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		httphelper.RenderFail(c, errort.NewCommonErr(errort.DefaultReqParamsError, err), c.Writer, lc)
 		return
 	}
-	if err := ctl.getUserApp().SysLoginLogDelete(c, req.Ids); err != nil {
+	if err := ctl.getUserApp().SysAuditLogDelete(c, req.Ids); err != nil {
 		httphelper.RenderFail(c, err, c.Writer, lc)
 		return
 	}
 	httphelper.ResultSuccess(nil, c.Writer, lc)
 }
 
-// @Tags    系统管理-登入日志
-// @Summary 清空登入日志
-// @Produce json
-// @Success 200 {object} httphelper.CommonResponse
-// @Router  /api/v1/sys-login-log/clear [delete]
-func (ctl *controller) SysLoginLogClear(c *gin.Context) {
+func (ctl *controller) auditLogClear(c *gin.Context) {
 	lc := ctl.lc
-	if err := ctl.getUserApp().SysLoginLogClear(c); err != nil {
+	if err := ctl.getUserApp().SysAuditLogClear(c); err != nil {
 		httphelper.RenderFail(c, err, c.Writer, lc)
 		return
 	}

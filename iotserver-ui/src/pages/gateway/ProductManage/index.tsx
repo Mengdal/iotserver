@@ -1,12 +1,13 @@
 import dayjs from 'dayjs'
 import React, { useEffect, useRef, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { Table, Card, Form, Input, Select, Button, Space, message, Typography, Popconfirm, Badge } from 'antd'
 import { PlusOutlined, ReloadOutlined, CheckCircleFilled, MinusCircleFilled } from '@ant-design/icons'
 import { getProductList, allProductSync, deleteProduct, useGetIotPlatform, useGetCloudInstance } from '@/api'
 import { useTableRequest } from '@/hooks'
 import { AddModal, AddModalRef } from './AddModal'
 import { RunStatusMap } from '@/utils/statusMap'
+import { confirmPlatformViewAdd } from '@/utils/platformViewGuard'
 import { ProductType } from '@/api/product'
 
 const { Text } = Typography
@@ -30,10 +31,27 @@ const ProductManage: React.FC<ProductManageProps> = () => {
   }, [])
 
   const navigate = useNavigate()
+  const location = useLocation()
 
   const addModalRef = useRef<AddModalRef>(null)
   const [submitting, setSubmitting] = useState(false)
   const [cloudInstanceId, setCloudInstanceId] = useState('')
+
+  // 从方案中心跳转过来时自动打开创建产品抽屉并预选方案品类；
+  // 打开后立刻清掉 state，避免刷新或后退时重复弹出。
+  useEffect(() => {
+    const state = location.state as {
+      openAdd?: boolean
+      categoryTemplateId?: string
+      categoryName?: string
+    } | null
+    if (!state?.openAdd) return
+    addModalRef.current?.open({
+      categoryTemplateId: state.categoryTemplateId,
+      categoryName: state.categoryName,
+    })
+    navigate(location.pathname, { replace: true, state: null })
+  }, [])
 
   const key = 'updatable'
   const [messageApi, contextHolder] = useMessage()
@@ -77,7 +95,8 @@ const ProductManage: React.FC<ProductManageProps> = () => {
         <Space className="mb15 justify-space-between">
           <Button
             type="primary"
-            onClick={() => {
+            onClick={async () => {
+              if (!await confirmPlatformViewAdd()) return
               addModalRef.current?.open()
             }}
           ><PlusOutlined />创建产品</Button>

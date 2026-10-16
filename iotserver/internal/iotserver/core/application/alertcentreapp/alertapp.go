@@ -28,6 +28,7 @@ import (
 	"iotserver/internal/pkg/di"
 	"iotserver/internal/pkg/errort"
 	"iotserver/internal/pkg/logger"
+	"iotserver/internal/pkg/tenant"
 	"iotserver/internal/pkg/utils"
 	dingding "iotserver/internal/tools/notify/dingding"
 	feishu "iotserver/internal/tools/notify/feishu"
@@ -67,7 +68,7 @@ func (p alertApp) AddAlertRule(ctx context.Context, req dtos.RuleAddRequest) (st
 	//insertAlertRule.Status = constants.RuleStop
 	insertAlertRule.AlertLevel = req.AlertLevel
 	insertAlertRule.Description = req.Description
-	resp, err := p.dbClient.AddAlertRule(insertAlertRule)
+	resp, err := p.dbClient.WithCtx(ctx).AddAlertRule(insertAlertRule)
 	if err != nil {
 		return "", err
 	}
@@ -78,12 +79,12 @@ func (p alertApp) UpdateAlertField(ctx context.Context, req dtos.RuleFieldUpdate
 	if req.Id == "" {
 		return errort.NewCommonEdgeX(errort.DefaultReqParamsError, "update req id is required", nil)
 	}
-	alertRule, err := p.dbClient.AlertRuleById(req.Id)
+	alertRule, err := p.dbClient.WithCtx(ctx).AlertRuleById(req.Id)
 	if err != nil {
 		return err
 	}
 	dtos.ReplaceRuleFields(&alertRule, req)
-	err = p.dbClient.GetDBInstance().Table(alertRule.TableName()).Select("*").Updates(alertRule).Error
+	err = p.dbClient.WithCtx(ctx).GetDBInstance().Table(alertRule.TableName()).Select("*").Updates(alertRule).Error
 	if err != nil {
 		return err
 	}
@@ -97,17 +98,17 @@ func (p alertApp) UpdateAlertRule(ctx context.Context, req dtos.RuleUpdateReques
 	if len(req.SubRule) != 1 {
 		return errors.New("")
 	}
-	device, err := p.dbClient.DeviceById(req.SubRule[0].DeviceId)
+	device, err := p.dbClient.WithCtx(ctx).DeviceById(req.SubRule[0].DeviceId)
 	if err != nil {
 		return err
 	}
 
-	product, err := p.dbClient.ProductById(device.ProductId)
+	product, err := p.dbClient.WithCtx(ctx).ProductById(device.ProductId)
 	if err != nil {
 		return err
 	}
 
-	alertRule, err := p.dbClient.AlertRuleById(req.Id)
+	alertRule, err := p.dbClient.WithCtx(ctx).AlertRuleById(req.Id)
 	if err != nil {
 		return err
 	}
@@ -236,7 +237,7 @@ func (p alertApp) UpdateAlertRule(ctx context.Context, req dtos.RuleUpdateReques
 	dtos.ReplaceRuleModelFields(&alertRule, req)
 	//alertRule.Status = constants.RuleStop
 	alertRule.DeviceId = device.Id
-	err = p.dbClient.GetDBInstance().Table(alertRule.TableName()).Select("*").Updates(alertRule).Error
+	err = p.dbClient.WithCtx(ctx).GetDBInstance().Table(alertRule.TableName()).Select("*").Updates(alertRule).Error
 	if err != nil {
 		return err
 	}
@@ -371,7 +372,7 @@ func checkSpecsTypeIntOrFloatParam(req dtos.SubRule) error {
 }
 
 func (p alertApp) AlertRuleById(ctx context.Context, id string) (dtos.RuleResponse, error) {
-	alertRule, err := p.dbClient.AlertRuleById(id)
+	alertRule, err := p.dbClient.WithCtx(ctx).AlertRuleById(id)
 	var response dtos.RuleResponse
 	if err != nil {
 		return response, err
@@ -394,11 +395,11 @@ func (p alertApp) AlertRuleById(ctx context.Context, id string) (dtos.RuleRespon
 
 	var ruleSubRules dtos.RuleSubRules
 	for _, rule := range alertRule.SubRule {
-		device, err := p.dbClient.DeviceById(alertRule.DeviceId)
+		device, err := p.dbClient.WithCtx(ctx).DeviceById(alertRule.DeviceId)
 		if err != nil {
 			return response, err
 		}
-		product, err := p.dbClient.ProductById(device.ProductId)
+		product, err := p.dbClient.WithCtx(ctx).ProductById(device.ProductId)
 		if err != nil {
 			return response, err
 		}
@@ -477,7 +478,7 @@ func (p alertApp) AlertRuleById(ctx context.Context, id string) (dtos.RuleRespon
 
 func (p alertApp) AlertRulesSearch(ctx context.Context, req dtos.AlertRuleSearchQueryRequest) ([]dtos.AlertRuleSearchQueryResponse, uint32, error) {
 	offset, limit := req.BaseSearchConditionQuery.GetPage()
-	resp, total, err := p.dbClient.AlertRuleSearch(offset, limit, req)
+	resp, total, err := p.dbClient.WithCtx(ctx).AlertRuleSearch(offset, limit, req)
 	if err != nil {
 		return []dtos.AlertRuleSearchQueryResponse{}, 0, err
 	}
@@ -490,7 +491,7 @@ func (p alertApp) AlertRulesSearch(ctx context.Context, req dtos.AlertRuleSearch
 
 func (p alertApp) AlertSearch(ctx context.Context, req dtos.AlertSearchQueryRequest) ([]dtos.AlertSearchQueryResponse, uint32, error) {
 	offset, limit := req.BaseSearchConditionQuery.GetPage()
-	resp, total, err := p.dbClient.AlertListSearch(offset, limit, req)
+	resp, total, err := p.dbClient.WithCtx(ctx).AlertListSearch(offset, limit, req)
 	if err != nil {
 		return []dtos.AlertSearchQueryResponse{}, 0, err
 	}
@@ -498,7 +499,7 @@ func (p alertApp) AlertSearch(ctx context.Context, req dtos.AlertSearchQueryRequ
 }
 
 func (p alertApp) AlertPlate(ctx context.Context, beforeTime int64) ([]dtos.AlertPlateQueryResponse, error) {
-	data, err := p.dbClient.AlertPlate(beforeTime)
+	data, err := p.dbClient.WithCtx(ctx).AlertPlate(beforeTime)
 	if err != nil {
 		return []dtos.AlertPlateQueryResponse{}, err
 	}
@@ -529,7 +530,7 @@ func (p alertApp) getAlertDataCount(data []dtos.AlertPlateQueryResponse, level c
 }
 
 func (p alertApp) AlertRulesDelete(ctx context.Context, id string) error {
-	_, err := p.dbClient.AlertRuleById(id)
+	_, err := p.dbClient.WithCtx(ctx).AlertRuleById(id)
 	if err != nil {
 		return err
 	}
@@ -539,11 +540,11 @@ func (p alertApp) AlertRulesDelete(ctx context.Context, id string) error {
 	if err != nil {
 		return err
 	}
-	return p.dbClient.DeleteAlertRuleById(id)
+	return p.dbClient.WithCtx(ctx).DeleteAlertRuleById(id)
 }
 
 func (p alertApp) AlertRulesRestart(ctx context.Context, id string) error {
-	alertRule, err := p.dbClient.AlertRuleById(id)
+	alertRule, err := p.dbClient.WithCtx(ctx).AlertRuleById(id)
 	if err != nil {
 		return err
 	}
@@ -557,11 +558,11 @@ func (p alertApp) AlertRulesRestart(ctx context.Context, id string) error {
 			return err
 		}
 	}
-	return p.dbClient.AlertRuleStart(id)
+	return p.dbClient.WithCtx(ctx).AlertRuleStart(id)
 }
 
 func (p alertApp) AlertRulesStop(ctx context.Context, id string) error {
-	_, err := p.dbClient.AlertRuleById(id)
+	_, err := p.dbClient.WithCtx(ctx).AlertRuleById(id)
 	if err != nil {
 		return err
 	}
@@ -570,11 +571,11 @@ func (p alertApp) AlertRulesStop(ctx context.Context, id string) error {
 	if err != nil {
 		return err
 	}
-	return p.dbClient.AlertRuleStop(id)
+	return p.dbClient.WithCtx(ctx).AlertRuleStop(id)
 }
 
 func (p alertApp) AlertRulesStart(ctx context.Context, id string) error {
-	alertRule, err := p.dbClient.AlertRuleById(id)
+	alertRule, err := p.dbClient.WithCtx(ctx).AlertRuleById(id)
 	if err != nil {
 		return err
 	}
@@ -586,19 +587,19 @@ func (p alertApp) AlertRulesStart(ctx context.Context, id string) error {
 	if err != nil {
 		return err
 	}
-	return p.dbClient.AlertRuleStart(id)
+	return p.dbClient.WithCtx(ctx).AlertRuleStart(id)
 }
 
 func (p alertApp) AlertIgnore(ctx context.Context, id string) error {
-	return p.dbClient.AlertIgnore(id)
+	return p.dbClient.WithCtx(ctx).AlertIgnore(id)
 }
 
 func (p alertApp) TreatedIgnore(ctx context.Context, id, message string) error {
-	return p.dbClient.TreatedIgnore(id, message)
+	return p.dbClient.WithCtx(ctx).TreatedIgnore(id, message)
 }
 
 func (p alertApp) AlertRuleStatus(ctx context.Context, id string) (constants.RuleStatus, error) {
-	alertRule, err := p.dbClient.AlertRuleById(id)
+	alertRule, err := p.dbClient.WithCtx(ctx).AlertRuleById(id)
 	if err != nil {
 		return "", err
 	}
@@ -627,11 +628,11 @@ func (p alertApp) checkAlertRuleParam(ctx context.Context, rule models.AlertRule
 		if subRule.ProductId == "" || subRule.DeviceId == "" {
 			return errort.NewCommonErr(errort.AlertRuleParamsError, fmt.Errorf("alertRule id(%s) device id or product id is null", rule.Id))
 		}
-		product, err := p.dbClient.ProductById(subRule.ProductId)
+		product, err := p.dbClient.WithCtx(ctx).ProductById(subRule.ProductId)
 		if err != nil {
 			return errort.NewCommonErr(errort.AlertRuleProductOrDeviceUpdate, fmt.Errorf("alertRule id(%s) device id or product id is null", rule.Id))
 		}
-		device, err := p.dbClient.DeviceById(subRule.DeviceId)
+		device, err := p.dbClient.WithCtx(ctx).DeviceById(subRule.DeviceId)
 		if err != nil {
 			return errort.NewCommonErr(errort.AlertRuleProductOrDeviceUpdate, fmt.Errorf("alertRule id(%s) product or device has been modified. Please edit the rule again", rule.Id))
 		}
@@ -757,17 +758,22 @@ func (p alertApp) AddAlert(ctx context.Context, req map[string]interface{}) erro
 		return errort.NewCommonErr(errort.DefaultReqParamsError, errors.New(""))
 	}
 
-	device, err := p.dbClient.DeviceById(coverDeviceId)
+	device, err := p.dbClient.WithCtx(ctx).DeviceById(coverDeviceId)
 	if err != nil {
 		return err
 	}
-	product, err := p.dbClient.ProductById(device.ProductId)
+	product, err := p.dbClient.WithCtx(ctx).ProductById(device.ProductId)
 	if err != nil {
 		return err
 	}
-	alertRule, err := p.dbClient.AlertRuleById(coverRuleId)
+	alertRule, err := p.dbClient.WithCtx(ctx).AlertRuleById(coverRuleId)
 	if err != nil {
 		return err
+	}
+	// 告警由 eKuiper 回调触发，请求本身没有租户上下文：从告警规则反查租户，
+	// 后续写入都落到该租户下，否则租户在「告警中心」看不到自己的告警。
+	if alertRule.TenantId != "" {
+		ctx = tenant.With(ctx, tenant.Context{TenantID: alertRule.TenantId})
 	}
 
 	alertResult := make(map[string]interface{})
@@ -801,7 +807,7 @@ func (p alertApp) AddAlert(ctx context.Context, req map[string]interface{}) erro
 	}
 
 	if alertRule.SilenceTime > 0 {
-		alertSend, err := p.dbClient.AlertListLastSend(alertRule.Id)
+		alertSend, err := p.dbClient.WithCtx(ctx).AlertListLastSend(alertRule.Id)
 		if err != nil {
 			if !errors.Is(err, gorm.ErrRecordNotFound) {
 				// 处理不是记录未找到的情况
@@ -822,7 +828,7 @@ func (p alertApp) AddAlert(ctx context.Context, req map[string]interface{}) erro
 	alertList.IsSend = true
 	alertList.Status = constants.Untreated
 
-	_, err = p.dbClient.AddAlertList(alertList)
+	_, err = p.dbClient.WithCtx(ctx).AddAlertList(alertList)
 	if err != nil {
 		return err
 	}

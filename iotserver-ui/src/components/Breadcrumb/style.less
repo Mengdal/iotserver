@@ -59,3 +59,35 @@
 .normal-breadcrumb-title {
   margin: 20px;
 }
+
+// 标题条右侧插槽：页面可把自己的搜索框等放上来（垂直居中）
+.advance-breadcrumb-extra {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 1 520px;
+  min-width: 260px;
+  padding: 0 16px 8px 0;
+}
+
+// 居中版式：搜索框在上、说明文案在下，整体居中（参考站「方案中心」标题条）
+.advance-breadcrumb-centered {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 22px 16px 0;
+  text-align: center;
+
+  .advance-breadcrumb-centered-slot {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+  }
+
+  .paragraph {
+    margin-bottom: 0;
+    color: #87909d;
+  }
+}

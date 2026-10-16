@@ -1,15 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Button, Card, Dropdown, Empty, Form, Input, Modal, Popconfirm, Spin, Tag, Typography, message,
+  Button, Card, Dropdown, Empty, Form, Input, Modal, Spin, Tag, Typography, message,
 } from 'antd'
 import type { MenuProps } from 'antd'
 import {
   AppstoreOutlined, AreaChartOutlined, BarChartOutlined, BlockOutlined, DashboardOutlined,
   FundOutlined, HeatMapOutlined, LineChartOutlined, MoreOutlined, PieChartOutlined,
-  PlusOutlined, ThunderboltOutlined,
+  PlusOutlined,
 } from '@ant-design/icons'
-import { defaultSpec } from '@/components/WidgetConfig'
 import {
   createVizBoard, deleteVizBoard, getVizBoards, setVizBoardActive, VizBoard,
 } from '@/api'
@@ -29,15 +28,9 @@ const ICON_OPTIONS: { key: string, icon: React.ReactNode }[] = [
   { key: 'block', icon: <BlockOutlined /> },
 ]
 
-const iconOf = (key?: string, kind?: string) => {
-  if (kind === 'shaper') return <ThunderboltOutlined />
+const iconOf = (key?: string) => {
   const hit = ICON_OPTIONS.find(i => i.key === key)
   return hit ? hit.icon : <AppstoreOutlined />
-}
-
-const KIND_LABEL: Record<string, string> = {
-  canvas: '画布看板',
-  shaper: 'Shaper 看板',
 }
 
 const formatTime = (ts?: number) => {
@@ -106,7 +99,6 @@ const BoardManage: React.FC = () => {
     try {
       const resp = await createVizBoard({
         name: values.name.trim(),
-        kind: 'canvas',
         icon: values.icon,
         canvas: { cols: 12, rowHeight: 40, widgets: [] },
       })
@@ -128,65 +120,67 @@ const BoardManage: React.FC = () => {
     }
   }
 
-  /** 把早期用 SQL 建的看板转成平台看板（先铺一个组件，进去再改） */
-  const convertToCanvas = async (record: VizBoard) => {
-    const resp = await createVizBoard({
-      name: record.name,
-      kind: 'canvas',
-      icon: record.icon,
-      canvas: {
-        cols: 12,
-        rowHeight: 40,
-        widgets: [{
-          id: `w${Date.now().toString(36)}`,
-          type: 'chart',
-          title: record.name,
-          showTitle: true,
-          layout: { x: 0, y: 0, w: 12, h: 8 },
-          spec: record.spec || defaultSpec(''),
-        }],
-      },
-    })
-    if (resp.success) {
-      message.success('已转为平台看板')
-      const newId = resp.result && resp.result.id
-      if (newId) {
-        navigate(`/viz/boards/${newId}/edit`)
-      } else {
+  const remove = async (record: VizBoard) => {
+    try {
+      const resp = await deleteVizBoard(record.id)
+      if (resp.success) {
+        message.success('已删除')
         load()
+      } else {
+        message.error(resp.errorMsg || '删除失败')
       }
-    } else {
-      message.error(resp.errorMsg || '转换失败')
+    } catch (e: any) {
+      // 没有 catch 的话，接口 4xx/5xx（axios 会 reject）会变成静默的 unhandled rejection，
+      // 用户看到的就是"点了删除没反应"
+      message.error(e?.message || '删除失败')
     }
   }
 
-  const remove = async (record: VizBoard) => {
-    const resp = await deleteVizBoard(record.id)
-    if (resp.success) {
-      message.success('已删除')
-      load()
-    } else {
-      message.error(resp.errorMsg || '删除失败')
-    }
+  /**
+   * 二次确认用 Modal.confirm，不要用 Popconfirm 塞进 Dropdown 菜单项里：
+   * 菜单项一点，Dropdown 就关闭并卸载菜单内容，跟着被卸载的确认弹层根本没机会显示，
+   * 表现出来就是"点删除没反应"。
+   */
+  const confirmRemove = (record: VizBoard) => {
+    Modal.confirm({
+      title: `删除看板「${record.name}」？`,
+      content: '看板上的组件会一起删掉，删除后不能恢复。',
+      okText: '删除',
+      okButtonProps: { danger: true },
+      cancelText: '取消',
+      onOk: () => remove(record),
+    })
   }
 
   const setActive = async (record: VizBoard, slot: 'home' | 'default', value: boolean) => {
-    const resp = await setVizBoardActive(record.id, slot, value)
-    if (resp.success) {
-      message.success('已更新')
-      load()
-    } else {
-      message.error(resp.errorMsg || '设置失败')
+    try {
+      const resp = await setVizBoardActive(record.id, slot, value)
+      if (resp.success) {
+        message.success('已更新')
+        load()
+      } else {
+        message.error(resp.errorMsg || '设置失败')
+      }
+    } catch (e: any) {
+      message.error(e?.message || '设置失败')
     }
   }
 
   const menuFor = (record: VizBoard): MenuProps['items'] => {
     const items: NonNullable<MenuProps['items']> = []
-    if (record.kind === 'canvas') {
-      items.push({ key: 'canvas', label: '编辑看板', onClick: () => navigate(`/viz/boards/${record.id}/edit`) })
-    } else {
-      items.push({ key: 'convert', label: '转为平台看板', onClick: () => convertToCanvas(record) })
-    }
+    items.push({ key: 'canvas', label: '编辑看板', onClick: () => navigate(`/viz/boards/${record.id}/edit`) })
+    // 只读大屏：不套后台外壳，可直接投到墙上/分享给只看数据的同事
+    items.push({
+      key: 'view',
+      label: '大屏展示（只读）',
+      onClick: () => window.open(`/viz/view/${record.id}`, '_blank'),
+    })
+    // 首页看板：首页（/home/dashboard）整页渲染它；没设时首页走内置静态页
+    items.push({
+      key: 'home',
+      label: record.isHome ? '取消首页看板' : '设为首页看板',
+      onClick: () => setActive(record, 'home', !record.isHome),
+    })
     items.push({
       key: 'default',
       label: record.isDefault ? '取消数据看板整页' : '设为数据看板整页',
@@ -196,11 +190,8 @@ const BoardManage: React.FC = () => {
     items.push({
       key: 'delete',
       danger: true,
-      label: (
-        <Popconfirm title="确定删除这块看板？" onConfirm={() => remove(record)}>
-          <span>删除</span>
-        </Popconfirm>
-      ),
+      label: '删除',
+      onClick: () => confirmRemove(record),
     })
     return items
   }
@@ -212,7 +203,7 @@ const BoardManage: React.FC = () => {
       onClick={() => navigate(`/viz/boards/${record.id}/edit`)}
     >
       <div className="board-card__head">
-        <span className="board-card__icon">{iconOf(record.icon, record.kind)}</span>
+        <span className="board-card__icon">{iconOf(record.icon)}</span>
         <span className="board-card__name">{record.name}</span>
         <span style={{ marginLeft: 'auto' }} onClick={e => e.stopPropagation()}>
           <Dropdown menu={{ items: menuFor(record) }} trigger={['click']}>
@@ -221,11 +212,11 @@ const BoardManage: React.FC = () => {
         </span>
       </div>
       <div className="board-card__meta">
-        {KIND_LABEL[record.kind] || record.kind}
-        {record.kind === 'canvas' ? ` · ${record.widgetCount || 0} 个组件` : ' · SQL 驱动'}
+        画布看板 · {record.widgetCount || 0} 个组件
         {record.updateAt ? ` · ${formatTime(record.updateAt)}` : ''}
       </div>
       <div className="board-card__tags">
+        {record.isHome ? <Tag color="blue">首页看板</Tag> : null}
         {record.isDefault ? <Tag color="green">数据看板整页</Tag> : null}
       </div>
     </div>
@@ -238,8 +229,10 @@ const BoardManage: React.FC = () => {
       extra={<Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>新建看板</Button>}
     >
       <Paragraph type="secondary">
-        新建看板后进入编辑器：右上角<Text strong>「添加组件」</Text>加图表或文本，在组件配置里选<Text strong>数据表</Text>和
-        <Text strong>图形</Text>即可出图；组件<Text strong>拖标题栏</Text>换位置、<Text strong>拖右下角</Text>改大小。
+        新建看板后进入编辑器：左侧<Text strong>「组件库」</Text>点一下或拖进画布来放<Text strong>文本</Text>和
+        <Text strong>容器</Text>；组件<Text strong>拖标题栏</Text>换位置、<Text strong>拖右下角</Text>改大小。
+        卡片右上角菜单可把看板设为<Text strong>首页看板</Text>（首页整页展示这块看板）或
+        <Text strong>数据看板整页</Text>（「数据看板」页展示）。
       </Paragraph>
 
       {loading

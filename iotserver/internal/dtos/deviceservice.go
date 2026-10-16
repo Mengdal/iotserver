@@ -33,6 +33,9 @@ type RunServiceCfg struct {
 	DockerMountDevices []string
 	DockerParams       string
 	DriverName         string // 驱动名
+	// DriverPort 驱动 gRPC 服务的容器内端口（平台已分配的）。
+	// 平台以本机进程运行时，需要把它发布到宿主机，否则平台连不回驱动容器。
+	DriverPort int
 }
 
 func DeviceServiceFromModel(ds models.DeviceService) DeviceService {

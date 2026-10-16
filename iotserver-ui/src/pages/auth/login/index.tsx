@@ -1,6 +1,6 @@
 import { Login, getInitInfo, initPassword } from '@/api'
 import useRequest from '@/hooks/useRequest'
-import { setUser } from '@/utils/auth'
+import { clearCurrentTenantId, setUser } from '@/utils/auth'
 import { Button, Form, Input, message } from 'antd'
 import React, { useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
@@ -25,6 +25,8 @@ export default function login () {
     Login(values)
       .then(resp => {
         if (resp.success) {
+          // 新会话默认「平台视图」，不沿用上个账号留下的代管租户
+          clearCurrentTenantId()
           setUser(resp.result)
           loginSuccess()
         } else {

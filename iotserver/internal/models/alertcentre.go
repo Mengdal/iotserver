@@ -21,6 +21,7 @@ import (
 
 type AlertRule struct {
 	Timestamps  `gorm:"embedded"`
+	TenantField `gorm:"embedded"`
 	Id          string `gorm:"id;primaryKey"`
 	Name        string
 	DeviceId    string                    `gorm:"index"`
@@ -87,6 +88,7 @@ func (d *AlertRule) Get() interface{} {
 
 type AlertList struct {
 	Timestamps  `gorm:"embedded"`
+	TenantField `gorm:"embedded"`
 	Id          string                    `gorm:"id;primaryKey;not null;type:string;size:255;comment:主键"`
 	AlertRuleId string                    `gorm:"type:string;size:255;comment:告警记录ID"`
 	TriggerTime int64                     `gorm:"comment:触发时间"`

@@ -22,8 +22,8 @@ import (
 	"iotserver/internal/pkg/errort"
 	"strconv"
 
-	"github.com/winc-link/edge-driver-proto/drivercommon"
-	"github.com/winc-link/edge-driver-proto/driverdevice"
+	"github.com/LMgateways/iotserver-driver-proto/drivercommon"
+	"github.com/LMgateways/iotserver-driver-proto/driverdevice"
 )
 
 func (p deviceApp) ConnectIotPlatform(ctx context.Context, request *driverdevice.ConnectIotPlatformRequest) *driverdevice.ConnectIotPlatformResponse {
@@ -43,7 +43,7 @@ func (p deviceApp) ConnectIotPlatform(ctx context.Context, request *driverdevice
 	messageApp := container.MessageItfFrom(p.dic.Get)
 	messageApp.DeviceStatusToMessageBus(ctx, deviceInfo.Id, constants.DeviceOnline)
 
-	err = p.dbClient.DeviceOnlineById(request.DeviceId)
+	err = p.dbClient.WithCtx(ctx).DeviceOnlineById(request.DeviceId)
 	if err != nil {
 		errWrapper := errort.NewCommonEdgeXWrapper(err)
 		baseResponse.Code = strconv.Itoa(int(errWrapper.Code()))
@@ -75,7 +75,7 @@ func (p deviceApp) DisConnectIotPlatform(ctx context.Context, request *driverdev
 	messageApp := container.MessageItfFrom(p.dic.Get)
 	messageApp.DeviceStatusToMessageBus(ctx, deviceInfo.Id, constants.DeviceOffline)
 
-	err = p.dbClient.DeviceOfflineById(request.DeviceId)
+	err = p.dbClient.WithCtx(ctx).DeviceOfflineById(request.DeviceId)
 	if err != nil {
 		errWrapper := errort.NewCommonEdgeXWrapper(err)
 		baseResponse.Code = strconv.Itoa(int(errWrapper.Code()))

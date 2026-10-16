@@ -1,0 +1,36 @@
+/* 画布网格（gridstack）：卡片撑满格子、去掉 gridstack 自带的内滚动条、拖动/缩放时整块浮起 */
+.grid-stack.grid-canvas {
+  width: 100%;
+
+  /* gridstack 默认给内容层加了 overflow-y:auto，会和卡片自身的滚动叠加出双滚动条 */
+  > .grid-stack-item > .grid-stack-item-content {
+    overflow: visible;
+  }
+
+  /* 卡片高度跟格子走；图表用 ResizeObserver 自适应，不会留白 */
+  .widget-card {
+    height: 100%;
+  }
+
+  /* 拖动 / 缩放中：整块浮起 */
+  > .grid-stack-item.ui-draggable-dragging,
+  > .grid-stack-item.ui-resizable-resizing {
+    z-index: 20;
+
+    .widget-card {
+      opacity: 0.92;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+    }
+  }
+
+  /* 只读态不要显示"可拖动"的手型 */
+  &.grid-canvas--editable > .grid-stack-item > .grid-stack-item-content .widget-card > .ant-card-head {
+    cursor: move;
+    user-select: none;
+
+    button,
+    .ant-dropdown-trigger {
+      cursor: pointer;
+    }
+  }
+}

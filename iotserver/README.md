@@ -55,7 +55,6 @@ docker buildx build --platform linux/amd64 -t iotserver-core:v1.0 \
 
 ```bash
 cd manifest/docker
-cp ../../.env.shaper.example ../../.env.shaper   # Shaper 的 Key/看板 ID（compose 会挂载该文件；不建会挂成空目录）
 docker compose up -d
 # 镜像名不同时用环境变量覆盖（compose 默认 iotserver-core:v1.0）
 IOTSERVER_IMAGE=<你的仓库>/iotserver-core:v1.0 docker compose up -d
@@ -88,8 +87,14 @@ make test                                  # 后端全部测试
 go run ./tools/lakectl stats               # DuckLake 行数 / 快照数 / 数据文件数
 go run ./tools/lakectl flush|purge|compact # 刷盘 / 按保留期清理 / 压实（需先停服务）
 go run ./tools/gen-permissions             # 调整权限后重新生成前端权限常量
-make start-shaper                          # 读取本地 .env.shaper 后启动（本机开发）
+make start                                 # 用 go run 直接启动（本机开发；启动前自动保证前端产物最新）
+make ui                                    # 前端：构建 + 同步到 cmd/iotserver-ui/build
+make sync-ui                               # 前端：只同步（已构建过、只差拷贝时用）
 ```
+
+> `make start` / `make run` 会先检查前端：源码比产物新就自动 `make ui`（构建 + 同步），
+> 否则只做必要的同步或直接跳过——不会出现"重启了但页面还是旧的"。
+> 前端产物是服务运行时从磁盘读的，所以只改前端时不用重启服务，浏览器强刷即可。
 
 ## 6. 关键配置（`cmd/iotserver-core/res/configuration.toml`）
 
@@ -100,12 +105,15 @@ make start-shaper                          # 读取本地 .env.shaper 后启动�
 | `Service.CallbackUrl` | eKuiper 规则动作回调平台的基地址；容器内用服务名，默认 `http://iotserver-core:58081` |
 | `Service.CallbackToken` | 回调共享密钥；非空时回调必须带 `x-callback-token`（规则动作自动携带）。改后重启服务会自动重下发运行中规则的动作 |
 | `Pprof.Enabled` | 调试端点 `/debug/pprof`，默认 `false`；开启后需 `x-token` + `system:debug:pprof` 权限 |
-| `Shaper.LocalEnvFile` | Shaper 的 API Key / 看板 ID 所在文件（由 compose 挂载，不入库） |
+| `Viz.BoardsFile` | 历史字段（已不读取）：看板早已落库（`viz_board` 表、按租户隔离），新装自带内置看板（首页/演示/监控，编译期内嵌，见 `internal/pkg/seed/boards`） |
 
 # 主要功能
 
 - 产品管理
 - 设备管理
+- 网关管理（第三方工业网关 MQTT 接入：实时上报 + 断点续传补传 + 配置/命令下发）
+- 机器模板（7 个内置工业模板：冷库/压缩机/灌装机/包装机/注塑机/产线/能源监测，一键生成产品+告警）
+- 租户管理（多租户：一个实例服务多个租户，行级数据隔离，平台管理员可切换代管）
 - 镜像管理
 - 驱动管理
 - 驱动市场
@@ -116,11 +124,35 @@ make start-shaper                          # 读取本地 .env.shaper 后启动�
 - 场景联动
 - 插件市场
 - 数据大屏
-- 系统管理（用户 / 角色 / 菜单 / 部门 / 登入日志 / 系统配置 / 个人中心）
+- 系统管理（用户 / 角色 / 菜单 / 部门 / 审查日志 / 系统配置；个人中心在顶栏头像下拉）
+
+# 多租户与网关接入
+
+## 多租户（租户隔离）
+
+- 平台管理员（内置 `admin`，不属于任何租户）在「租户管理」里创建租户，顶栏可切换「当前租户」代管；
+  切换后前端会带 `x-tenant-id` 请求头，后端只放行平台管理员使用该头。
+- 数据隔离由 GORM 租户插件执行：`models.TenantScopedTableNames()` 登记的表会自动追加 `tenant_id` 条件，
+  业务代码通过 `dbClient.WithCtx(ctx)` 携带租户上下文；未携带上下文时按 `[Tenant] Enforce` 配置处理
+  （`false`=迁移期仅告警，`true`=fail-closed 返回空集）。
+- 组织树：租户 → 工厂 → 车间 → 产线（`sys_dept.dept_type`），设备/网关可挂到具体节点。
+- 隔离回归测试：`internal/iotserver/core/e2e/tenant_isolation_test.go`（租户间列表/详情/改删/看板/平台接口越权）。
+
+## 网关接入
+
+第三方工业网关负责 PLC 协议采集与本地缓存，平台侧通过 MQTT 接入：
+
+- 主题约定：上行 `iot/up/{sn}/{data|batch|status|offline}`，下行 `iot/down/{sn}/{config|cmd}`；
+- **断点续传**：`batch` 报文逐条带原始采集时间（毫秒），平台按 `(gateway_id, seq)` 幂等去重，
+  数据落到采集时刻而不是接收时刻；
+- 接入规范（可直接发给网关厂商）：[docs/gateway-integration.md](docs/gateway-integration.md)
+- 回归测试：`internal/iotserver/core/application/gatewayingest/service_test.go`、
+  `internal/iotserver/core/application/persistence/batch_backfill_test.go`
+
 
 # 系统管理（RBAC）
 
-系统管理模块位于前端导航「系统配置」下，包含 7 个子模块：
+系统管理模块位于前端导航「系统配置」下，包含 6 个子模块：
 
 | 前端路由               | 功能     | 主要接口                                                       |
 | ---------------------- | -------- | -------------------------------------------------------------- |
@@ -128,9 +160,10 @@ make start-shaper                          # 读取本地 .env.shaper 后启动�
 | `/admin/sysRole`       | 角色管理 | `/api/v1/role`、`/api/v1/menurole`                              |
 | `/admin/sysMenu`       | 菜单管理 | `/api/v1/menu`、`/api/v1/menu/tree`                             |
 | `/admin/sysDept`       | 部门管理 | `/api/v1/dept`、`/api/v1/dept-tree`                             |
-| `/admin/sysLoginLog`   | 登入日志 | `/api/v1/sys-login-log`、`/api/v1/sys-login-log/clear`          |
+| `/admin/sysAuditLog`   | 审查日志（登录 + 操作） | `/api/v1/sys-audit-log`、`/api/v1/sys-audit-log/clear`        |
 | `/admin/sysSet`        | 系统配置 | `/api/v1/system-setup`、`/api/v1/system-setup/save`             |
-| `/common/userProfile`  | 个人中心 | `GET/PUT /api/v1/user/profile`、`GET /api/v1/user/getinfo`      |
+
+> 个人中心不单独建菜单：入口固定在顶栏头像下拉（`GET /api/v1/user/getinfo`、`PUT /api/v1/user/profile`），页面路由仍为 `/common/userProfile`。
 
 **权限模型**
 
@@ -207,15 +240,20 @@ make start-shaper                          # 读取本地 .env.shaper 后启动�
 
 ## 时序数据后端
 
-`configuration.toml` 的 `[Databases.Data.Primary]` 支持四种数据层：
+`configuration.toml` 的 `[Databases.Data.Primary]` 支持两种数据层：
 
 | Type | 说明 | 额外配置 |
 | --- | --- | --- |
-| `leveldb` | 默认，本地 KV | `DataSource` = 数据目录 |
-| `tstorage` | 本地时序库 | `DataSource` = 数据目录 |
-| `tdengine` | 远程时序库 | `Dsn` |
+| `duckdb` | **默认**，单文件列存 | `DataSource` = 数据库文件路径 |
 | `ducklake` | DuckDB + Parquet 湖仓 | `DataSource` = catalog 路径，`Dsn` = Parquet 目录 |
 
-`ducklake` 使用官方 DuckDB Go 驱动，要求 **Go ≥ 1.24** 且 **CGO 开启**，运行镜像需 glibc。
-`ducklake` 扩展首次需联网安装，之后缓存在 catalog 同级的 `extensions/` 目录（可离线预置）。
-catalog 为单写者，同一湖同一时刻只允许一个进程访问。
+两者都使用官方 DuckDB Go 驱动，要求 **Go ≥ 1.24** 且 **CGO 开启**，运行镜像需 glibc。
+
+`duckdb` 把数据写在 DuckDB 原生表里：一个事务不再产生一个 Parquet 文件，因此不需要分区、
+合并小文件、过期快照那一整套文件生命周期管理，保留策略只需 `DELETE` + `CHECKPOINT`。
+
+`ducklake` 额外依赖 ducklake 扩展（首次需联网安装，之后缓存在 catalog 同级的 `extensions/`
+目录，可离线预置）。
+
+> 单写者约束对两者都成立：同一个数据库文件 / 同一个湖，同一时刻只允许一个进程打开，
+> 因此 core 无法水平扩展，需要单实例 + 主备或定期快照来兜。

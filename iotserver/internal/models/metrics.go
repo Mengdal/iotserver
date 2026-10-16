@@ -1,8 +1,9 @@
 package models
 
 type Metrics struct {
-	Key            string `gorm:"column:key;pk"`
-	Timestamp      int64  `gorm:"column:timestamp"` // 时间戳
+	Key string `gorm:"column:key;pk"`
+	TenantField
+	Timestamp      int64 `gorm:"column:timestamp"` // 时间戳
 	CpuUsedPercent float64
 	MemoryUsed     int64
 }
@@ -16,7 +17,8 @@ func (table *Metrics) Get() interface{} {
 }
 
 type SystemMetrics struct {
-	ID        int64  `gorm:"column:id;pk;autoIncrement"`
+	ID int64 `gorm:"column:id;pk;autoIncrement"`
+	TenantField
 	Data      string `gorm:"column:data"`
 	Timestamp int64  `gorm:"column:timestamp"` // 时间戳
 }

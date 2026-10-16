@@ -28,7 +28,9 @@
   background-image: url('../../../assets/images/background.png');
   background-repeat: no-repeat;
   background-size: 354px 286px;
-  background-position: center 70%;
+  /* 插图贴底摆放：logo + 标题在面板顶部，插图在下方，两者不重叠
+     （原来定位在 70% 高度处，标题会压在插图上） */
+  background-position: center bottom;
 }
 .login-content__leftTitle {
   font-size: 20px;

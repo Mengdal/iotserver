@@ -9,6 +9,7 @@ import (
 
 	"iotserver/internal/dtos"
 	"iotserver/internal/pkg/logger"
+	tenantplugin "iotserver/internal/tools/sqldb/tenant"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -46,6 +47,13 @@ func (c *GormClient) Close() {
 
 }
 
+// WithPool 返回使用指定连接的副本（多租户作用域用）
+func (c *GormClient) WithPool(pool *gorm.DB) ClientSQLite {
+	cp := *c
+	cp.Pool = pool
+	return &cp
+}
+
 func NewGormClient(config dtos.Configuration, lc logger.LoggingClient) (*GormClient, error) {
 
 	// 获取配置文件，创建相应的目录
@@ -59,6 +67,10 @@ func NewGormClient(config dtos.Configuration, lc logger.LoggingClient) (*GormCli
 	})
 	if err != nil {
 		return nil, fmt.Errorf("sqlite open failed: %w", err)
+	}
+	// 租户隔离回调：对已登记的租户表自动追加 tenant_id 条件（见 tools/sqldb/tenant）
+	if err := tenantplugin.Register(pool); err != nil {
+		return nil, fmt.Errorf("register tenant plugin failed: %w", err)
 	}
 	// WAL + busy_timeout：后台任务（场景日志、规则状态同步）与请求并发写时，
 	// 默认的 rollback journal 容易 database is locked，导致「动作已执行但日志丢失」。

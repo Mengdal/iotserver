@@ -15,10 +15,11 @@
 package models
 
 type MsgGather struct {
-	Timestamps `gorm:"embedded"`
-	Id         string `gorm:"id;primaryKey;not null;type:string;size:255;comment:主键"`
-	Date       string `json:"date" gorm:"type:string;size:255;comment:日期"`
-	Count      int    `json:"count" gorm:"comment:数量"`
+	Timestamps  `gorm:"embedded"`
+	TenantField `gorm:"embedded"`
+	Id          string `gorm:"id;primaryKey;not null;type:string;size:255;comment:主键"`
+	Date        string `json:"date" gorm:"type:string;size:255;comment:日期"`
+	Count       int    `json:"count" gorm:"comment:数量"`
 }
 
 func (d *MsgGather) TableName() string {

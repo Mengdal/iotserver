@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="4 4 24 24" width="24" height="24" role="img" aria-label="logo">
+  <!-- 平台 Logo：尖顶六边形环（颜色 #2FB8F8，描边 4）。
+       viewBox 取图形的紧包围盒（4..28），让可见部分贴住容器边缘：
+       登录页/顶栏的 logo 与旁边的文字按同一左边界对齐。
+       矢量源，任意尺寸清晰；PWA 图标（public/logo192|512.png）保留原始留白。 -->
+  <path d="M16 6 L26 11 L26 21 L16 26 L6 21 L6 11 Z" fill="none" stroke="#2FB8F8" stroke-width="4" stroke-linejoin="miter" />
+</svg>

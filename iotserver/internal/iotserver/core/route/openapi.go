@@ -22,6 +22,7 @@ import (
 	"iotserver/internal/iotserver/core/controller/http/openapi"
 	"iotserver/internal/pkg/di"
 	"iotserver/internal/pkg/errort"
+	"iotserver/internal/pkg/middleware"
 	"iotserver/internal/tools/jwt"
 	"iotserver/internal/tools/openapihelper"
 )
@@ -55,7 +56,9 @@ func RegisterOpenApi(engine *gin.Engine, dic *di.Container) {
 	v := engine.Group("/v1.0/openapi")
 	v.POST("/auth/login", ctl.Login)
 	v.POST("/token/:refreshToken", ctl.RefreshToken)
-	v1 := v.Group("", jwt.JWTAuth(false))
+	v1 := v.Group("", jwt.JWTAuth(false), middleware.TenantContext(), middleware.TenantExpireCheck(dic),
+		// 审查日志（操作日志）：OpenAPI 写操作同样入审查日志
+		middleware.AuditLog(dic))
 
 	//产品管理的API
 	{

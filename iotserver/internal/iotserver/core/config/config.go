@@ -37,8 +37,9 @@ type ConfigurationStruct struct {
 	WebServer           bootstrapConfig.ServiceInfo
 	DockerManage        DockerManage
 	ApplicationSettings ApplicationSettings
-	Shaper              ShaperInfo
+	Viz                 VizInfo
 	Pprof               PprofInfo
+	Tenant              TenantInfo
 	Topics              struct {
 		CommandTopic TopicInfo
 	}
@@ -51,27 +52,21 @@ type PprofInfo struct {
 	Enabled bool
 }
 
-// ShaperInfo 可视化看板（Shaper）嵌入配置
-type ShaperInfo struct {
-	// Enabled 打开后前端「数据看板」页面才会去嵌入
-	Enabled bool
-	// BaseUrl Shaper 实例地址，必须浏览器可直连（用于加载 /embed/shaper.js）
-	BaseUrl string
-	// ApiKey Shaper Admin → API Keys 创建的密钥（需要 jwt 权限），只留在服务端
-	ApiKey string
-	// DashboardId 默认嵌入的看板 ID
-	DashboardId string
-	// HomeDashboardId 首页卡片用的看板 ID（可与 DashboardId 不同）
-	HomeDashboardId string
-	// BrowserBaseUrl 返回给浏览器的地址（容器部署时服务端用 http://shaper:5454、
-	// 浏览器要用 http://127.0.0.1:5454，两者不同）；为空则与 BaseUrl 相同
-	BrowserBaseUrl string
-	// BoardsFile 看板管理用的登记文件（默认 .shaper-boards.json）：
-	// Shaper 的接口不返回看板 SQL 原文，所以 SQL 副本与「首页/默认」标记存在这里
+// VizInfo 画布看板（布局 + 文本组件）配置
+type VizInfo struct {
+	// BoardsFile 历史字段：看板早已改为落库（viz_board 表）并按租户隔离，
+	// 内置看板也改成了编译期种子（internal/pkg/seed/boards）。
+	// 这里保留仅为兼容旧配置文件，不再读取。
 	BoardsFile string
-	// LocalEnvFile 本地未入库的 KEY=VALUE 文件（默认 .env.shaper），
-	// 用于在没人带环境变量启动时也能拿到 ApiKey/DashboardId
-	LocalEnvFile string
+}
+
+// TenantInfo 多租户隔离配置
+type TenantInfo struct {
+	// Enforce 无租户上下文的调用是否 fail-closed。
+	//   false（默认，迁移期）：不打租户条件，仅打告警日志（日志级别可控制）—— 未改造完的调用点仍可工作；
+	//   true（上线/测试）：租户表查询在缺少租户上下文时返回空集，写入直接报错。
+	// 建议在业务接口全部完成 WithCtx 改造、隔离测试跑通后再置 true。
+	Enforce bool
 }
 
 type WritableInfo struct {

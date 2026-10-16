@@ -21,6 +21,7 @@ import (
 	"iotserver/internal/models"
 	"iotserver/internal/pkg/constants"
 	"iotserver/internal/pkg/errort"
+	"iotserver/internal/pkg/tenant"
 )
 
 func (app *driverLibApp) AddDriverLib(ctx context.Context, dl dtos.DeviceLibraryAddRequest) error {
@@ -34,7 +35,8 @@ func (app *driverLibApp) AddDriverLib(ctx context.Context, dl dtos.DeviceLibrary
 }
 
 func (app *driverLibApp) createDriverLib(dl models.DeviceLibrary) (models.DeviceLibrary, error) {
-	return app.dbClient.AddDeviceLibrary(dl)
+	// 平台作用域：系统路径，不按租户过滤
+	return app.dbClient.WithCtx(tenant.Platform(context.Background())).AddDeviceLibrary(dl)
 }
 
 func (app *driverLibApp) addOrUpdateSupportVersionConfig(dl models.DeviceLibrary) models.DeviceLibrary {
@@ -67,7 +69,7 @@ func (app *driverLibApp) DeviceLibrariesSearch(ctx context.Context, req dtos.Dev
 
 	req = app.prepareSearch(req, installingIds)
 
-	deviceLibraries, total, err := app.dbClient.DeviceLibrariesSearch(offset, limit, req)
+	deviceLibraries, total, err := app.dbClient.WithCtx(ctx).DeviceLibrariesSearch(offset, limit, req)
 	if err != nil {
 		return deviceLibraries, 0, err
 	}
@@ -78,7 +80,7 @@ func (app *driverLibApp) DeviceLibrariesSearch(ctx context.Context, req dtos.Dev
 		dlIds = append(dlIds, v.Id)
 		dlMapDsExist[v.Id] = false
 	}
-	dss, _, err := app.dbClient.DeviceServicesSearch(0, -1, dtos.DeviceServiceSearchQueryRequest{DeviceLibraryIds: dtos.ApiParamsArrayToString(dlIds)})
+	dss, _, err := app.dbClient.WithCtx(ctx).DeviceServicesSearch(0, -1, dtos.DeviceServiceSearchQueryRequest{DeviceLibraryIds: dtos.ApiParamsArrayToString(dlIds)})
 	if err != nil {
 		return deviceLibraries, 0, err
 	}
@@ -119,7 +121,7 @@ func (app *driverLibApp) prepareSearch(req dtos.DeviceLibrarySearchQueryRequest,
 }
 
 func (app *driverLibApp) DeleteDeviceLibraryById(ctx context.Context, id string) error {
-	dl, err := app.dbClient.DeviceLibraryById(id)
+	dl, err := app.dbClient.WithCtx(ctx).DeviceLibraryById(id)
 	if err != nil {
 		return err
 	}
@@ -144,7 +146,8 @@ func (app *driverLibApp) DeleteDeviceLibraryById(ctx context.Context, id string)
 }
 
 func (app *driverLibApp) DriverLibById(dlId string) (models.DeviceLibrary, error) {
-	dl, err := app.dbClient.DeviceLibraryById(dlId)
+	// 平台作用域：系统路径，不按租户过滤
+	dl, err := app.dbClient.WithCtx(tenant.Platform(context.Background())).DeviceLibraryById(dlId)
 	if err != nil {
 		app.lc.Errorf("DriverLibById req DeviceLibraryById(%s) err %v", dlId, err)
 		return models.DeviceLibrary{}, err
@@ -182,7 +185,7 @@ func (app *driverLibApp) UpgradeDeviceLibrary(ctx context.Context, req dtos.Devi
 }
 
 func (app *driverLibApp) UpdateDeviceLibrary(ctx context.Context, update dtos.UpdateDeviceLibrary) error {
-	dl, dbErr := app.dbClient.DeviceLibraryById(update.Id)
+	dl, dbErr := app.dbClient.WithCtx(ctx).DeviceLibraryById(update.Id)
 	if dbErr != nil {
 		return dbErr
 	}
@@ -191,7 +194,7 @@ func (app *driverLibApp) UpdateDeviceLibrary(ctx context.Context, update dtos.Up
 
 	dl = app.addOrUpdateSupportVersionConfig(dl)
 
-	if err := app.dbClient.UpdateDeviceLibrary(dl); err != nil {
+	if err := app.dbClient.WithCtx(ctx).UpdateDeviceLibrary(dl); err != nil {
 		return err
 	}
 

@@ -22,7 +22,8 @@ func (o *DataResourceOption) Scan(value interface{}) error {
 
 // DataResource 数据资源实例（HTTP推送 / MQTT / Kafka / InfluxDB / TDengine）
 type DataResource struct {
-	Id   string `json:"id" gorm:"column:id;primaryKey;type:string;size:64;comment:主键"`
+	Id string `json:"id" gorm:"column:id;primaryKey;type:string;size:64;comment:主键"`
+	TenantField
 	Name string `json:"name" gorm:"column:name;type:string;size:64;index;comment:实例名称"`
 	Type string `json:"type" gorm:"column:type;type:string;size:64;index;comment:资源类型"`
 	// 列名用 option_json：option 是 MySQL 保留字

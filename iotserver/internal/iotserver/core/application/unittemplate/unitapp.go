@@ -47,7 +47,7 @@ func NewUnitTemplateApp(ctx context.Context, dic *di.Container) interfaces.UnitA
 func (m *unitApp) UnitTemplateSearch(ctx context.Context, req dtos.UnitRequest) ([]dtos.UnitResponse, uint32, error) {
 	offset, limit := req.BaseSearchConditionQuery.GetPage()
 
-	unitTemplates, total, err := m.dbClient.UnitSearch(offset, limit, req)
+	unitTemplates, total, err := m.dbClient.WithCtx(ctx).UnitSearch(offset, limit, req)
 	if err != nil {
 		m.lc.Errorf("unit Templates Search err %v", err)
 		return []dtos.UnitResponse{}, 0, err
@@ -106,7 +106,7 @@ func (m *unitApp) Sync(ctx context.Context, versionName string) (int64, error) {
 			})
 		}
 	}
-	rows, err := m.dbClient.BatchUpsertUnitTemplate(upsertUnitTemplate)
+	rows, err := m.dbClient.WithCtx(ctx).BatchUpsertUnitTemplate(upsertUnitTemplate)
 	if err != nil {
 		return 0, err
 	}

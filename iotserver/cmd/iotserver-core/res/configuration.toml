@@ -40,16 +40,18 @@ DataSource = 'manifest/docker/db-data/core-data/core.db?_timeout=5000'
 
 [Databases.Data]
 [Databases.Data.Primary]
-#Type = 'tstorage'
-#DataSource = 'manifest/docker/db-data/tstorage-data/'
-#Type = 'tdengine'
-#Dsn = 'root:taosdata@ws(127.0.0.1:6041)/iotserver'
+# 单文件列存（默认）：一个 DuckDB 数据库文件，事务不产生 Parquet 文件，
+# 因此不需要分区 / 合并小文件 / 过期快照那一整套文件生命周期管理。
+Type = 'duckdb'
+DataSource = 'manifest/docker/db-data/duckdb/core-data.duckdb'
+# 湖仓形态（可选）：catalog + Parquet 数据目录，需要 ducklake 扩展。
 #Type = 'ducklake'
-#DataSource = 'manifest/docker/db-data/ducklake/catalog.db'  # 元数据（SQLite catalog）
+#DataSource = 'manifest/docker/db-data/ducklake/catalog.db'  # 元数据（catalog）
 #Dsn = 'manifest/docker/db-data/ducklake/data'              # 数据文件（Parquet）目录
-Type = 'ducklake'
-DataSource = 'manifest/docker/db-data/ducklake/catalog.db'
-Dsn = 'manifest/docker/db-data/ducklake/data'
+# 容器里这份数据目录写成 iotserver/db-data/ducklake/data（工作目录 /var/bin），
+# 与本地的 manifest/docker/db-data/ducklake/data 是**同一个物理目录**但字符串不同。
+# ducklake 会把 DATA_PATH 记进 catalog 并校验字符串，所以这里允许用配置值覆盖它。
+#OverrideDataPath = true
 
 [MessageQueue]
 Protocol = 'tcp'
@@ -63,19 +65,13 @@ PublishTopicPrefix = 'eventbus/in'
 [Pprof]
 Enabled = false
 
-# 可视化看板（Shaper）嵌入配置
-# ApiKey 在 Shaper 的 Admin → API Keys 里创建（需要 jwt 权限）；密钥只留在服务端。
-# 也可以不写进本文件，改用环境变量 IOTSERVER_SHAPER_APIKEY（优先级更高）。
-[Shaper]
-Enabled = true
-BaseUrl = 'http://127.0.0.1:5454'
-ApiKey = ''
-DashboardId = ''
-# 首页卡片用的看板 ID（留空则前端用 DashboardId 或后端返回的 homeDashboardId）
-HomeDashboardId = ''
-# 浏览器侧看到的地址（容器部署时服务端走服务名、浏览器走宿主机地址），留空则与 BaseUrl 相同
-BrowserBaseUrl = ''
-# 看板管理登记文件（SQL 副本 + 首页/默认标记），默认 .shaper-boards.json
-BoardsFile = '.shaper-boards.json'
-# 本地未入库的 KEY=VALUE 文件（环境变量与上面的值都取不到时读它），默认值即下面的路径
-LocalEnvFile = '.env.shaper'
+# 画布看板（布局 + 文本组件）
+# 看板登记文件：看板名称/图标/首页标记，以及每个组件的位置、类型与文本
+[Viz]
+BoardsFile = '.viz-boards.json'
+
+# 多租户隔离（ROBX：一个实例服务多个租户，按 tenant_id 行级隔离）
+# Enforce=false（迁移期）：未带租户上下文的调用不过滤，仅打告警日志；
+# Enforce=true（上线）：租户表查询缺少租户上下文时返回空集，写入报错。
+[Tenant]
+Enforce = false

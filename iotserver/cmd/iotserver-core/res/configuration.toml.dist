@@ -1,6 +1,6 @@
 [Writable]
 LogLevel = 'INFO'
-LogPath = 'hummingbird/logs/hummingbird-core.log'
+LogPath = 'iotserver/logs/iotserver-core.log'
 
 [Service]
 Host = '0.0.0.0'
@@ -30,17 +30,15 @@ Timeout = 120
 [Databases.Metadata]
 [Databases.Metadata.Primary]
 Type = 'sqlite'
-DataSource = 'hummingbird/db-data/core-data/core.db?_timeout=5000'
+DataSource = 'iotserver/db-data/core-data/core.db?_timeout=5000'
 #Type = 'mysql'
-#Dsn = 'root:123456@tcp(127.0.0.1:3306)/hummingbird?charset=utf8mb4&parseTime=True&loc=Local'
+#Dsn = 'root:123456@tcp(127.0.0.1:3306)/iotserver?charset=utf8mb4&parseTime=True&loc=Local'
 
 
 [Databases.Data]
 [Databases.Data.Primary]
-Type = 'leveldb'
-DataSource = 'hummingbird/db-data/leveldb-core-data/'
-#Type = 'tdengine'
-#Dsn = 'root:taosdata@ws(127.0.0.1:6041)/hummingbird'
+Type = 'duckdb'
+DataSource = 'iotserver/db-data/duckdb/core-data.duckdb'
 
 [MessageQueue]
 Protocol = 'tcp'
@@ -49,17 +47,13 @@ Port = 58090
 Type = 'mqtt'
 PublishTopicPrefix = 'eventbus/in'
 
-# 可视化看板（Shaper）嵌入配置
-[Shaper]
-Enabled = true
-BaseUrl = 'http://127.0.0.1:5454'
-ApiKey = ''
-DashboardId = ''
-# 首页卡片用的看板 ID（留空则前端用 DashboardId 或后端返回的 homeDashboardId）
-HomeDashboardId = ''
-# 浏览器侧看到的地址（容器部署时服务端走服务名、浏览器走宿主机地址），留空则与 BaseUrl 相同
-BrowserBaseUrl = ''
-# 看板管理登记文件（SQL 副本 + 首页/默认标记），默认 .shaper-boards.json
-BoardsFile = '.shaper-boards.json'
-# 本地未入库的 KEY=VALUE 文件（环境变量与上面的值都取不到时读它），默认值即下面的路径
-LocalEnvFile = '.env.shaper'
+# 画布看板（布局 + 文本组件）
+# 看板登记文件：看板名称/图标/首页标记，以及每个组件的位置、类型与文本
+[Viz]
+BoardsFile = '.viz-boards.json'
+
+# 多租户隔离（ROBX：一个实例服务多个租户，按 tenant_id 行级隔离）
+# Enforce=false（迁移期）：未带租户上下文的调用不过滤，仅打告警日志；
+# Enforce=true（上线）：租户表查询缺少租户上下文时返回空集，写入报错。
+[Tenant]
+Enforce = false

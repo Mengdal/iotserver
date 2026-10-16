@@ -19,21 +19,28 @@ import (
 	"crypto/sha1"
 	"database/sql/driver"
 	"encoding/hex"
-	"github.com/winc-link/edge-driver-proto/driverdevice"
+	"github.com/LMgateways/iotserver-driver-proto/driverdevice"
 	"iotserver/internal/pkg/constants"
 	"strings"
 )
 
 type Device struct {
-	Timestamps      `gorm:"embedded"`
-	Id              string                 `gorm:"id;primaryKey;not null;type:string;size:255;comment:主键"`
+	Timestamps  `gorm:"embedded"`
+	TenantField `gorm:"embedded"`
+	Id          string `gorm:"id;primaryKey;not null;type:string;size:255;comment:主键"`
+	// DeptId 所属组织节点（工厂/车间/产线），用于组织维度归属
+	DeptId string `gorm:"column:dept_id;type:string;size:64;index;comment:组织节点ID"`
+	// GatewayId 所属工业网关（阶段二：第三方网关接入时绑定）
+	GatewayId string `gorm:"column:gateway_id;type:string;size:64;index;comment:所属网关ID"`
+	// DeviceKey 网关内设备标识：网关上报时用它映射到本设备
+	DeviceKey       string                 `gorm:"column:device_key;type:string;size:255;index;comment:网关内设备标识"`
 	CloudDeviceId   string                 `gorm:"type:string;size:255;comment:云设备ID"`
 	CloudProductId  string                 `gorm:"type:string;size:255;comment:云产品ID"`
 	CloudInstanceId string                 `gorm:"index;type:string;size:255;comment:云实例ID"`
 	DriveInstanceId string                 `gorm:"index;type:string;size:255;comment:驱动实例ID"`
 	Name            string                 `gorm:"type:string;size:255;comment:名字"`
 	DeviceSn        string                 `gorm:"type:string;size:255;comment:设备唯一编码"`
-	Status          constants.DeviceStatus `gorm:"type:string;size:50;comment:设备状态"`
+	Status          constants.DeviceStatus `gorm:"type:string;size:50;index;comment:设备状态"`
 	Description     string                 `gorm:"type:text;comment:描述"`
 	ProductId       string                 `gorm:"type:string;size:255;comment:产品ID"`
 	Secret          string                 `gorm:"type:string;size:255;comment:密钥"`

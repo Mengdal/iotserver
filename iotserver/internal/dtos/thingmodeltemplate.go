@@ -371,14 +371,7 @@ func GetModelPropertyEventActionByThingModelTemplate(thingModelJSON string) (pro
 	err := json.Unmarshal([]byte(thingModelJSON), thingModelTemplate)
 	if err == nil {
 		for _, property := range thingModelTemplate.Properties {
-			var accessMode string
-			if property.RwFlag == "READ_ONLY" {
-				accessMode = "R"
-			} else if property.RwFlag == "READ_WRITE" {
-				accessMode = "RW"
-			} else if property.RwFlag == "WRITE_ONLY" {
-				accessMode = "W"
-			}
+			accessMode := normalizeRwFlag(property.RwFlag)
 			properties = append(properties, models.Properties{
 				Id:          utils.RandomNum(),
 				Name:        property.Name,
@@ -394,14 +387,7 @@ func GetModelPropertyEventActionByThingModelTemplate(thingModelJSON string) (pro
 			})
 		}
 		for _, event := range thingModelTemplate.Events {
-			var eventType constants.EventType
-			if event.EventType == "ALERT_EVENT_TYPE" {
-				eventType = constants.EventTypeAlert
-			} else if event.EventType == "INFO_EVENT_TYPE" {
-				eventType = constants.EventTypeInfo
-			} else if event.EventType == "ERROR_EVENT_TYPE" {
-				eventType = constants.EventTypeError
-			}
+			eventType := normalizeEventType(event.EventType)
 			events = append(events, models.Events{
 				Id:           utils.RandomNum(),
 				Name:         event.EventName,
@@ -434,4 +420,36 @@ func GetModelPropertyEventActionByThingModelTemplate(thingModelJSON string) (pro
 		}
 	}
 	return
+}
+
+// normalizeRwFlag 归一化读写标志。
+//
+// 兼容两种写法：云端模板的历史写法（READ_ONLY/READ_WRITE/WRITE_ONLY）
+// 与平台内置工业模板使用的短写法（R/RW/W）。未知取值一律按只读处理，
+// 避免生成物模型时出现空的 AccessMode。
+func normalizeRwFlag(rwFlag string) string {
+	switch strings.ToUpper(strings.TrimSpace(rwFlag)) {
+	case "R", "READ_ONLY", "READONLY":
+		return "R"
+	case "RW", "READ_WRITE", "READWRITE":
+		return "RW"
+	case "W", "WRITE_ONLY", "WRITEONLY":
+		return "W"
+	default:
+		return "R"
+	}
+}
+
+// normalizeEventType 归一化事件类型，兼容 ALERT 与 ALERT_EVENT_TYPE 两种写法
+func normalizeEventType(eventType string) constants.EventType {
+	switch strings.ToUpper(strings.TrimSpace(eventType)) {
+	case "ALERT", "ALERT_EVENT_TYPE":
+		return constants.EventTypeAlert
+	case "ERROR", "ERROR_EVENT_TYPE":
+		return constants.EventTypeError
+	case "INFO", "INFO_EVENT_TYPE":
+		return constants.EventTypeInfo
+	default:
+		return constants.EventTypeInfo
+	}
 }

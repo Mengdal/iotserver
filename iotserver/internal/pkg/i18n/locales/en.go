@@ -127,6 +127,26 @@ func GetEnMessages() []*i18n.Message {
 			ID:    "21709",
 			Other: `The config key already exists.`,
 		},
+		{
+			ID:    "21710",
+			Other: `The built-in solution is read-only (a tenant copy is created when a tenant modifies it).`,
+		},
+		{
+			ID:    "21711",
+			Other: `The tenant account has expired. Please contact the platform administrator.`,
+		},
+		{
+			ID:    "21712",
+			Other: `The resource quota has been reached: {{.info}}`,
+		},
+		{
+			ID:    "21713",
+			Other: `{{.info}}`,
+		},
+		{
+			ID:    "21714",
+			Other: `{{.info}}`,
+		},
 
 		// 驱动库
 		{

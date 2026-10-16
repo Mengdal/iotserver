@@ -1,0 +1,670 @@
+{
+  "key": "injection_molding",
+  "name": "注塑机",
+  "industry": "橡塑",
+  "version": 1,
+  "icon": "database",
+  "description": "注塑机运行监控与工艺参数采集",
+  "thingModelJson": {
+    "properties": [
+      {
+        "name": "料筒温度",
+        "identifier": "barrel_temp",
+        "dataType": "FLOAT",
+        "description": "料筒一区温度",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "400",
+          "min": "0",
+          "step": "0.1",
+          "unit": "℃",
+          "unitName": "摄氏度"
+        },
+        "dataSpecsList": null
+      },
+      {
+        "name": "料筒二区温度",
+        "identifier": "barrel_temp_2",
+        "dataType": "FLOAT",
+        "description": "料筒二区温度",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "400",
+          "min": "0",
+          "step": "0.1",
+          "unit": "℃",
+          "unitName": "摄氏度"
+        },
+        "dataSpecsList": null
+      },
+      {
+        "name": "料筒三区温度",
+        "identifier": "barrel_temp_3",
+        "dataType": "FLOAT",
+        "description": "料筒三区温度",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "400",
+          "min": "0",
+          "step": "0.1",
+          "unit": "℃",
+          "unitName": "摄氏度"
+        },
+        "dataSpecsList": null
+      },
+      {
+        "name": "料筒四区温度",
+        "identifier": "barrel_temp_4",
+        "dataType": "FLOAT",
+        "description": "料筒四区温度",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "400",
+          "min": "0",
+          "step": "0.1",
+          "unit": "℃",
+          "unitName": "摄氏度"
+        },
+        "dataSpecsList": null
+      },
+      {
+        "name": "模具温度",
+        "identifier": "mold_temp",
+        "dataType": "FLOAT",
+        "description": "模具型腔温度",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "300",
+          "min": "0",
+          "step": "0.1",
+          "unit": "℃",
+          "unitName": "摄氏度"
+        },
+        "dataSpecsList": null
+      },
+      {
+        "name": "注射压力",
+        "identifier": "injection_pressure",
+        "dataType": "FLOAT",
+        "description": "注射段液压压力",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "250",
+          "min": "0",
+          "step": "0.1",
+          "unit": "MPa",
+          "unitName": "兆帕"
+        },
+        "dataSpecsList": null
+      },
+      {
+        "name": "保压压力",
+        "identifier": "holding_pressure",
+        "dataType": "FLOAT",
+        "description": "保压段压力",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "250",
+          "min": "0",
+          "step": "0.1",
+          "unit": "MPa",
+          "unitName": "兆帕"
+        },
+        "dataSpecsList": null
+      },
+      {
+        "name": "锁模力",
+        "identifier": "clamping_force",
+        "dataType": "FLOAT",
+        "description": "模具锁模力",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "3000",
+          "min": "0",
+          "step": "0.1",
+          "unit": "kN",
+          "unitName": "千牛"
+        },
+        "dataSpecsList": null
+      },
+      {
+        "name": "螺杆转速",
+        "identifier": "screw_speed",
+        "dataType": "FLOAT",
+        "description": "塑化螺杆转速",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "300",
+          "min": "0",
+          "step": "0.1",
+          "unit": "r/min",
+          "unitName": "转每分钟"
+        },
+        "dataSpecsList": null
+      },
+      {
+        "name": "周期时间",
+        "identifier": "cycle_time",
+        "dataType": "FLOAT",
+        "description": "单模成型周期",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "300",
+          "min": "0",
+          "step": "0.1",
+          "unit": "s",
+          "unitName": "秒"
+        },
+        "dataSpecsList": null
+      },
+      {
+        "name": "产量",
+        "identifier": "output_count",
+        "dataType": "INT",
+        "description": "累计成型模数",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "999999",
+          "min": "0",
+          "step": "1",
+          "unit": "模",
+          "unitName": "模"
+        },
+        "dataSpecsList": null
+      },
+      {
+        "name": "良品数",
+        "identifier": "good_count",
+        "dataType": "INT",
+        "description": "累计良品模数",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "999999",
+          "min": "0",
+          "step": "1",
+          "unit": "模",
+          "unitName": "模"
+        },
+        "dataSpecsList": null
+      },
+      {
+        "name": "不良品数",
+        "identifier": "reject_count",
+        "dataType": "INT",
+        "description": "累计不良品模数",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "999999",
+          "min": "0",
+          "step": "1",
+          "unit": "模",
+          "unitName": "模"
+        },
+        "dataSpecsList": null
+      },
+      {
+        "name": "运行状态",
+        "identifier": "run_status",
+        "dataType": "BOOL",
+        "description": "注塑机运行状态",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": null,
+        "dataSpecsList": [
+          {
+            "name": "停止",
+            "value": 0
+          },
+          {
+            "name": "运行",
+            "value": 1
+          }
+        ]
+      },
+      {
+        "name": "设定料筒温度",
+        "identifier": "set_barrel_temp",
+        "dataType": "FLOAT",
+        "description": "目标料筒温度，支持远程下发",
+        "required": false,
+        "rwFlag": "RW",
+        "dataSpecs": {
+          "max": "400",
+          "min": "0",
+          "step": "0.1",
+          "unit": "℃",
+          "unitName": "摄氏度"
+        },
+        "dataSpecsList": null
+      }
+    ],
+    "events": [
+      {
+        "eventName": "超温报警",
+        "eventType": "ALERT",
+        "identifier": "over_temp",
+        "description": "料筒温度超过上限",
+        "required": false,
+        "outputData": [
+          {
+            "name": "当前温度",
+            "identifier": "value",
+            "dataType": "FLOAT",
+            "required": false,
+            "dataSpecs": {
+              "max": "400",
+              "min": "0",
+              "step": "0.1",
+              "unit": "℃",
+              "unitName": "摄氏度"
+            },
+            "dataSpecsList": null
+          },
+          {
+            "name": "温区",
+            "identifier": "zone",
+            "dataType": "INT",
+            "required": false,
+            "dataSpecs": {
+              "max": "4",
+              "min": "1",
+              "step": "1",
+              "unit": "段",
+              "unitName": "段"
+            },
+            "dataSpecsList": null
+          }
+        ]
+      },
+      {
+        "eventName": "低压报警",
+        "eventType": "ALERT",
+        "identifier": "low_pressure",
+        "description": "注射压力低于下限",
+        "required": false,
+        "outputData": [
+          {
+            "name": "当前注射压力",
+            "identifier": "value",
+            "dataType": "FLOAT",
+            "required": false,
+            "dataSpecs": {
+              "max": "250",
+              "min": "0",
+              "step": "0.1",
+              "unit": "MPa",
+              "unitName": "兆帕"
+            },
+            "dataSpecsList": null
+          },
+          {
+            "name": "压力下限",
+            "identifier": "threshold",
+            "dataType": "FLOAT",
+            "required": false,
+            "dataSpecs": {
+              "max": "250",
+              "min": "0",
+              "step": "0.1",
+              "unit": "MPa",
+              "unitName": "兆帕"
+            },
+            "dataSpecsList": null
+          }
+        ]
+      },
+      {
+        "eventName": "周期异常",
+        "eventType": "ALERT",
+        "identifier": "cycle_abnormal",
+        "description": "成型周期偏离标准值",
+        "required": false,
+        "outputData": [
+          {
+            "name": "当前周期",
+            "identifier": "value",
+            "dataType": "FLOAT",
+            "required": false,
+            "dataSpecs": {
+              "max": "300",
+              "min": "0",
+              "step": "0.1",
+              "unit": "s",
+              "unitName": "秒"
+            },
+            "dataSpecsList": null
+          },
+          {
+            "name": "标准周期",
+            "identifier": "standard",
+            "dataType": "FLOAT",
+            "required": false,
+            "dataSpecs": {
+              "max": "300",
+              "min": "0",
+              "step": "0.1",
+              "unit": "s",
+              "unitName": "秒"
+            },
+            "dataSpecsList": null
+          }
+        ]
+      },
+      {
+        "eventName": "不良率超限",
+        "eventType": "ALERT",
+        "identifier": "reject_rate_high",
+        "description": "不良率超过允许上限",
+        "required": false,
+        "outputData": [
+          {
+            "name": "不良率",
+            "identifier": "rate",
+            "dataType": "FLOAT",
+            "required": false,
+            "dataSpecs": {
+              "max": "100",
+              "min": "0",
+              "step": "0.01",
+              "unit": "%",
+              "unitName": "百分比"
+            },
+            "dataSpecsList": null
+          },
+          {
+            "name": "不良品数",
+            "identifier": "count",
+            "dataType": "INT",
+            "required": false,
+            "dataSpecs": {
+              "max": "999999",
+              "min": "0",
+              "step": "1",
+              "unit": "模",
+              "unitName": "模"
+            },
+            "dataSpecsList": null
+          }
+        ]
+      },
+      {
+        "eventName": "模式切换",
+        "eventType": "INFO",
+        "identifier": "mode_changed",
+        "description": "注塑机自动手动模式切换",
+        "required": false,
+        "outputData": [
+          {
+            "name": "当前模式",
+            "identifier": "mode",
+            "dataType": "ENUM",
+            "required": false,
+            "dataSpecs": null,
+            "dataSpecsList": [
+              {
+                "name": "手动",
+                "value": 0
+              },
+              {
+                "name": "自动",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "name": "切换时间",
+            "identifier": "time",
+            "dataType": "DATE",
+            "required": false,
+            "dataSpecs": null,
+            "dataSpecsList": null
+          }
+        ]
+      }
+    ],
+    "services": [
+      {
+        "serviceName": "启动",
+        "identifier": "start",
+        "description": "启动设备",
+        "required": false,
+        "callType": "ASYNC",
+        "inputParams": [],
+        "outParams": []
+      },
+      {
+        "serviceName": "停止",
+        "identifier": "stop",
+        "description": "停止设备",
+        "required": false,
+        "callType": "ASYNC",
+        "inputParams": [],
+        "outParams": []
+      },
+      {
+        "serviceName": "复位",
+        "identifier": "reset",
+        "description": "复位设备与计数器",
+        "required": false,
+        "callType": "ASYNC",
+        "inputParams": [],
+        "outParams": []
+      },
+      {
+        "serviceName": "自动手动切换",
+        "identifier": "switch_mode",
+        "description": "切换注塑机运行模式",
+        "required": false,
+        "callType": "ASYNC",
+        "inputParams": [
+          {
+            "name": "目标模式",
+            "identifier": "mode",
+            "dataType": "ENUM",
+            "required": true,
+            "dataSpecs": null,
+            "dataSpecsList": [
+              {
+                "name": "手动",
+                "value": 0
+              },
+              {
+                "name": "自动",
+                "value": 1
+              }
+            ]
+          }
+        ],
+        "outParams": []
+      },
+      {
+        "serviceName": "设定料筒温度",
+        "identifier": "set_barrel_temp",
+        "description": "下发目标温度",
+        "required": false,
+        "callType": "ASYNC",
+        "inputParams": [
+          {
+            "name": "目标温度",
+            "identifier": "target",
+            "dataType": "FLOAT",
+            "required": true,
+            "dataSpecs": {
+              "max": "400",
+              "min": "0",
+              "step": "0.1",
+              "unit": "℃",
+              "unitName": "摄氏度"
+            },
+            "dataSpecsList": null
+          }
+        ],
+        "outParams": []
+      },
+      {
+        "serviceName": "设定工艺参数",
+        "identifier": "set_process_params",
+        "description": "批量下发注射、保压与转速参数",
+        "required": false,
+        "callType": "ASYNC",
+        "inputParams": [
+          {
+            "name": "注射压力",
+            "identifier": "injection_pressure",
+            "dataType": "FLOAT",
+            "required": false,
+            "dataSpecs": {
+              "max": "250",
+              "min": "0",
+              "step": "0.1",
+              "unit": "MPa",
+              "unitName": "兆帕"
+            },
+            "dataSpecsList": null
+          },
+          {
+            "name": "保压压力",
+            "identifier": "holding_pressure",
+            "dataType": "FLOAT",
+            "required": false,
+            "dataSpecs": {
+              "max": "250",
+              "min": "0",
+              "step": "0.1",
+              "unit": "MPa",
+              "unitName": "兆帕"
+            },
+            "dataSpecsList": null
+          },
+          {
+            "name": "螺杆转速",
+            "identifier": "screw_speed",
+            "dataType": "FLOAT",
+            "required": false,
+            "dataSpecs": {
+              "max": "300",
+              "min": "0",
+              "step": "0.1",
+              "unit": "r/min",
+              "unitName": "转每分钟"
+            },
+            "dataSpecsList": null
+          }
+        ],
+        "outParams": []
+      }
+    ]
+  },
+  "alarmRules": [
+    {
+      "name": "料筒超温",
+      "propertyCode": "barrel_temp",
+      "operator": ">",
+      "value": "260",
+      "alertLevel": 1,
+      "alertType": 1,
+      "silenceTime": 300,
+      "description": "料筒温度超过 260℃"
+    },
+    {
+      "name": "注射压力低",
+      "propertyCode": "injection_pressure",
+      "operator": "<",
+      "value": "40",
+      "alertLevel": 2,
+      "alertType": 1,
+      "silenceTime": 600,
+      "description": "注射压力低于 40 MPa"
+    },
+    {
+      "name": "周期超限",
+      "propertyCode": "cycle_time",
+      "operator": ">",
+      "value": "120",
+      "alertLevel": 3,
+      "alertType": 1,
+      "silenceTime": 900,
+      "description": "成型周期超过 120 秒"
+    },
+    {
+      "name": "模具温度高",
+      "propertyCode": "mold_temp",
+      "operator": ">",
+      "value": "120",
+      "alertLevel": 2,
+      "alertType": 1,
+      "silenceTime": 600,
+      "description": "模具温度超过 120℃"
+    },
+    {
+      "name": "不良品数偏高",
+      "propertyCode": "reject_count",
+      "operator": ">",
+      "value": "20",
+      "alertLevel": 2,
+      "alertType": 1,
+      "silenceTime": 1800,
+      "description": "累计不良品模数超过 20"
+    }
+  ],
+  "dashboard": {
+    "name": "注塑机看板",
+    "widgets": [
+      {
+        "title": "料筒温度",
+        "type": "line",
+        "propertyCode": "barrel_temp",
+        "timeRange": "1h",
+        "aggInterval": 60,
+        "aggMethod": "avg"
+      },
+      {
+        "title": "当前周期",
+        "type": "kpi",
+        "propertyCode": "cycle_time",
+        "unit": "s",
+        "decimals": 1
+      },
+      {
+        "title": "节拍",
+        "type": "gauge",
+        "propertyCode": "cycle_time",
+        "unit": "s",
+        "min": 0,
+        "max": 120
+      },
+      {
+        "title": "产量",
+        "type": "kpi",
+        "propertyCode": "output_count",
+        "unit": "模",
+        "decimals": 0
+      },
+      {
+        "title": "注塑机运行总览",
+        "type": "text",
+        "text": "注塑机运行与工艺参数综合监控"
+      }
+    ]
+  },
+  "metrics": {
+    "running": "run_status",
+    "output": "output_count",
+    "good": "good_count",
+    "reject": "reject_count",
+    "cycleTime": "cycle_time"
+  }
+}

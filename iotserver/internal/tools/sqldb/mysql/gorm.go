@@ -3,9 +3,10 @@ package mysql
 import (
 	"errors"
 	"fmt"
+	"gorm.io/gorm/clause"
 	"iotserver/internal/dtos"
 	"iotserver/internal/pkg/logger"
-	"gorm.io/gorm/clause"
+	tenantplugin "iotserver/internal/tools/sqldb/tenant"
 
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -55,11 +56,22 @@ func (c *GormClient) Close() {
 	}
 }
 
+// WithPool 返回使用指定连接的副本（多租户作用域用）
+func (c *GormClient) WithPool(pool *gorm.DB) ClientSQLite {
+	cp := *c
+	cp.Pool = pool
+	return &cp
+}
+
 func NewGormClient(config dtos.Configuration, lc logger.LoggingClient) (*GormClient, error) {
 	dsn := config.Dsn
 	pool, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil {
 		return nil, err
+	}
+	// 租户隔离回调：对已登记的租户表自动追加 tenant_id 条件（见 tools/sqldb/tenant）
+	if err := tenantplugin.Register(pool); err != nil {
+		return nil, fmt.Errorf("register tenant plugin failed: %w", err)
 	}
 
 	return &GormClient{Pool: pool}, nil
@@ -82,12 +94,12 @@ func (c *GormClient) CreateObject(object DataObject) (err error) {
 	return c.Pool.Table(object.TableName()).Create(object).Error
 }
 
-//DeleteObject  删除
+// DeleteObject  删除
 func (c *GormClient) DeleteObject(object DataObject) (err error) {
 	return c.Pool.Table(object.TableName()).Delete(object).Error
 }
 
-//GetObject  获取结果
+// GetObject  获取结果
 func (c *GormClient) GetObject(obCond DataObject, object DataObject) (err error) {
 	return c.Pool.Table(object.TableName()).Where(obCond).First(object).Error
 }
@@ -102,12 +114,12 @@ func (c *GormClient) UpdateObject(object DataObject) (err error) {
 	return c.Pool.Table(object.TableName()).Select("*").Updates(object).Error
 }
 
-//AssociationsUpdateObject 关联更新
+// AssociationsUpdateObject 关联更新
 func (c *GormClient) AssociationsUpdateObject(object DataObject) (err error) {
 	return c.Pool.Session(&gorm.Session{FullSaveAssociations: true}).Table(object.TableName()).Select("*").Updates(object).Error
 }
 
-//AssociationsDeleteObject 关联删除
+// AssociationsDeleteObject 关联删除
 func (c *GormClient) AssociationsDeleteObject(object DataObject) (err error) {
 	return c.Pool.Session(&gorm.Session{FullSaveAssociations: true}).Table(object.TableName()).Select(clause.Associations).Delete(object).Error
 }
@@ -196,10 +208,10 @@ func (c *GormClient) GetObjects(doCond DataObject, do DataObject, likeParam *Lik
 }
 
 /*
-	fields: 			全字段名称列表
-	conflictFields: 	唯一字段名称列表
-	updateFields: 		更新字段名称列表
-	record: 			更新数据列表
+fields: 			全字段名称列表
+conflictFields: 	唯一字段名称列表
+updateFields: 		更新字段名称列表
+record: 			更新数据列表
 */
 func (c *GormClient) BatchUpdate(fields, conflictFields, updateFields []string, tableName string, records [][]interface{}) error {
 	if len(records) == 0 {

@@ -32,6 +32,16 @@ import type { FlatMeta } from '../utils/treeTable'
 
 const { useMessage } = message
 
+/** 组织节点类型：与后端 models.DeptType* 保持一致 */
+const DEPT_TYPE_OPTIONS = [
+  { value: 1, label: '公司' },
+  { value: 2, label: '工厂' },
+  { value: 3, label: '车间' },
+  { value: 4, label: '产线' },
+]
+
+const deptTypeLabel = (value?: number) => DEPT_TYPE_OPTIONS.find(item => item.value === value)?.label || '公司'
+
 type FlatDept = SysDept & FlatMeta
 
 interface ParentOption {
@@ -110,7 +120,7 @@ const SysDeptPage: React.FC = () => {
   const openAdd = (parentId?: string) => {
     setEditing(null)
     editForm.resetFields()
-    editForm.setFieldsValue({ parentId: parentId || '0', sort: 0, status: 1 })
+    editForm.setFieldsValue({ parentId: parentId || '0', sort: 0, status: 1, deptType: 1 })
     setModalOpen(true)
   }
 
@@ -120,6 +130,7 @@ const SysDeptPage: React.FC = () => {
     editForm.setFieldsValue({
       parentId: record.parentId || '0',
       name: record.name,
+      deptType: record.deptType || 1,
       sort: record.sort,
       leader: record.leader,
       phone: record.phone,
@@ -183,6 +194,12 @@ const SysDeptPage: React.FC = () => {
           {value}
         </span>
       ),
+    },
+    {
+      title: '节点类型',
+      dataIndex: 'deptType',
+      width: 100,
+      render: (value: number) => <Tag color="processing">{deptTypeLabel(value)}</Tag>,
     },
     { title: '负责人', dataIndex: 'leader', width: 140, render: (value: string) => value || '-' },
     { title: '联系电话', dataIndex: 'phone', width: 160, render: (value: string) => value || '-' },
@@ -289,6 +306,9 @@ const SysDeptPage: React.FC = () => {
           </Form.Item>
           <Form.Item label="部门名称" name="name" rules={[{ required: true, message: '请输入部门名称' }]}>
             <Input placeholder="请输入部门名称" />
+          </Form.Item>
+          <Form.Item label="节点类型" name="deptType" initialValue={1}>
+            <Select options={DEPT_TYPE_OPTIONS} placeholder="请选择节点类型" />
           </Form.Item>
           <Row gutter={12}>
             <Col span={12}>

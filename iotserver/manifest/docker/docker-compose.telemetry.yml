@@ -1,0 +1,46 @@
+# 持续测试数据服务（独立编排）
+#
+# 为什么不放进 docker-compose.yml：
+#   那份编排里有 iotserver-core 服务，而平台 core 当前是**本机进程**在跑
+#   （占用 3000/58081/57081，并独占 DuckDB 文件）。若用那份编排 up，
+#   会同时拉起 core 容器 → 端口冲突 + DuckDB 单写者文件锁冲突。
+#   因此这里单独一份编排，只跑造数服务，不碰 core。
+#
+# 用法：
+#   cd iotserver/manifest/docker
+#   docker compose -f docker-compose.telemetry.yml up -d
+#   docker compose -f docker-compose.telemetry.yml logs -f     # 看上报心跳
+#   docker compose -f docker-compose.telemetry.yml down        # 停止造数
+#
+# 依赖：本机 API（3000）与 MQTT broker（58090）已在监听。
+# 容器通过 host.docker.internal 访问宿主，不加入 docker-compose.yml 的网络，
+# 因此与那份编排完全解耦。
+
+services:
+  telemgen:
+    # 用本机已有的 Go 镜像直接 go run，避免额外构建与拉取
+    image: golang:1.24-bookworm
+    container_name: iotserver-telemgen
+    hostname: telemgen
+    restart: unless-stopped
+    working_dir: /src
+    environment:
+      GOPATH: /go
+      GOMODCACHE: /go/pkg/mod
+      GOCACHE: /tmp/gocache
+      GOFLAGS: -mod=mod
+      GOPROXY: "off"      # 依赖全部来自挂载的模块缓存，禁止联网
+      CGO_ENABLED: "0"    # 造数工具只依赖纯 Go 的 paho.mqtt
+    volumes:
+      # ../../ = 模块根目录 iotserver/；../../../.gopath = 本机 GOPATH（含模块缓存）
+      - ../../:/src
+      - ../../../.gopath:/go
+    extra_hosts:
+      # macOS 原生支持 host.docker.internal；这一行让 Linux 也能用
+      - "host.docker.internal:host-gateway"
+    command: >
+      go run ./tools/telemgen
+      -api http://host.docker.internal:3000
+      -broker tcp://host.docker.internal:58090
+      -devices 5
+      -interval 5s

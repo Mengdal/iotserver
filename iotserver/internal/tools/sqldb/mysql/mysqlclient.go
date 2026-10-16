@@ -24,6 +24,11 @@ type DataObject interface {
 type ClientSQLite interface {
 	CloseSession()
 
+	// WithPool 返回使用指定 gorm.DB（可携带租户上下文）的副本。
+	// 多租户隔离依赖它：Client.WithCtx 必须同时替换 Pool 与 client 包装体，
+	// 否则走 c.client.* 的查询会绕过租户过滤。
+	WithPool(pool *gorm.DB) ClientSQLite
+
 	// 关闭连接
 	Close()
 	// 初始化建表操作

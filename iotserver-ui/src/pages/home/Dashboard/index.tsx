@@ -1,61 +1,55 @@
-import React, { useCallback, useEffect, useState } from 'react'
-import Overview from './components/Overview'
-import DeviceMessages from './components/DeviceMessages'
-import DeviceMessageRank from './components/DeviceMessageRank'
-import { HomePageInfo } from './types'
-import { getHomePageInfo } from '@/api'
+import React, { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { Button, Empty, Spin } from 'antd'
+import { getVizBoards, VizBoard } from '@/api'
+import CanvasBoard from '@/components/CanvasBoard'
 import './index.less'
-import { Col, Row } from 'antd'
-
-interface DashboardProps {
-}
 
 /**
- * 首页仪表盘：参考 demo.winc-link.com/home/dashboard 的排版，只保留三块
+ * 首页：整页渲染「首页看板」（看板管理里设为首页看板的那块；新装由内置种子自带，
+ * 见后端 pkg/seed/boards.go）。
  *
- *   第一行  平台概述（整宽）
- *   第二行  设备消息总数（宽） | 设备消息量排名
- *
- * 数据来源都是平台自己的接口（/api/v1/home-page 的 pageInfo 与 msg_gather）；
- * 「设备消息量排名」需要的 topMessage 接口本地后端还没有，先按 demo 给空状态。
- * Shaper 看板保留在「数据看板」整页与「运维监控-系统监控」两处（见 shaper/README.md）。
+ * 首页不再维护第二套手写 UI：布局、取数、自动刷新都由看板编辑器与画布渲染负责，
+ * 改版式不用发前端版本。没有首页看板时（例如被删光）给引导去「看板管理」。
  */
-const Dashboard: React.FC<DashboardProps> = () => {
-  const [homePageInfo, setHomePageInfo] = useState<HomePageInfo>()
-
-  const loadHomePageInfo = useCallback(() => {
-    getHomePageInfo<HomePageInfo>()
-      .then((resp) => {
-        if (resp.success) {
-          setHomePageInfo({
-            ...resp.result,
-            msg_gather: (resp.result.msg_gather || []).reverse(),
-          })
-        }
-      }).catch((err: any) => {
-        console.log(err)
-      })
-  }, [])
+const Dashboard: React.FC = () => {
+  const navigate = useNavigate()
+  const [board, setBoard] = useState<VizBoard | undefined>()
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
   useEffect(() => {
-    loadHomePageInfo()
-  }, [loadHomePageInfo])
+    getVizBoards()
+      .then((resp) => {
+        if (resp.success) setBoard((resp.result.list || []).find(b => b.isHome))
+        else setError(resp.errorMsg || '看板加载失败')
+      })
+      .catch((e: any) => setError(e?.message || '看板加载失败'))
+      .finally(() => setLoading(false))
+  }, [])
 
-  return (<div className="dashboard">
-    <Row gutter={[20, 20]}>
-      <Col span={24}>
-        <Overview pageInfo={homePageInfo?.pageInfo} />
-      </Col>
-    </Row>
-    <Row gutter={[20, 20]} className="mt20">
-      <Col span={24} xl={16} xxl={16}>
-        <DeviceMessages msgGatherList={homePageInfo?.msg_gather || []} />
-      </Col>
-      <Col span={24} xl={8} xxl={8}>
-        <DeviceMessageRank />
-      </Col>
-    </Row>
-  </div>)
+  if (loading) {
+    return <div style={{ padding: 48, textAlign: 'center' }}><Spin /></div>
+  }
+
+  if (!board) {
+    return (
+      <div className="dashboard">
+        <Empty
+          image={Empty.PRESENTED_IMAGE_SIMPLE}
+          description={error || '还没有首页看板：去「看板管理」新建一块，并设为首页看板'}
+        >
+          <Button type="primary" onClick={() => navigate('/viz/boards')}>去看板管理</Button>
+        </Empty>
+      </div>
+    )
+  }
+
+  return (
+    <div className="dashboard">
+      <CanvasBoard boardId={board.id} />
+    </div>
+  )
 }
 
 export default Dashboard

@@ -1,7 +1,9 @@
 
 const USER_KEY = '$user$'
+/** 平台管理员当前「代管/查看」的租户：空值代表平台视图（全部租户） */
+const TENANT_KEY = '$tenant$'
 
-export { USER_KEY }
+export { USER_KEY, TENANT_KEY }
 
 export const setUser = (user: any) => localStorage.setItem(USER_KEY, JSON.stringify(user))
 export const getUser = () => {
@@ -15,7 +17,11 @@ export const getUser = () => {
   }
   return null
 }
-export const clearUser = () => localStorage.removeItem(USER_KEY)
+export const clearUser = () => {
+  localStorage.removeItem(USER_KEY)
+  // 退出登录时一并清掉「当前租户」，避免下个账号沿用上一个平台的代管租户
+  clearCurrentTenantId()
+}
 export const getToken = () => getUser()?.token
 
 /** 当前登录用户信息（登录接口返回的 user 节点） */
@@ -27,6 +33,32 @@ export const isAdmin = (): boolean => {
   if (user?.user?.admin === true || user?.admin === true) return true
   return false
 }
+
+/** 是否平台（ROBX）管理员：只有平台管理员能看「租户管理」和切换租户 */
+export const isPlatformAdmin = (): boolean => {
+  const user = getUser()
+  if (user?.user?.platformAdmin === true || user?.platformAdmin === true) return true
+  return false
+}
+
+/** 平台管理员当前代管的租户 id；空字符串表示平台视图（全部租户） */
+export const getCurrentTenantId = (): string => {
+  try {
+    return localStorage.getItem(TENANT_KEY) || ''
+  } catch (error) {
+    return ''
+  }
+}
+
+export const setCurrentTenantId = (tenantId: string) => {
+  if (tenantId) {
+    localStorage.setItem(TENANT_KEY, tenantId)
+  } else {
+    localStorage.removeItem(TENANT_KEY)
+  }
+}
+
+export const clearCurrentTenantId = () => localStorage.removeItem(TENANT_KEY)
 
 /** 当前用户权限标识集合 */
 export const getPermissions = (): string[] => {
