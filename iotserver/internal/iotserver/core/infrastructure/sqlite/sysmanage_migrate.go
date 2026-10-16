@@ -87,6 +87,8 @@ func (c *Client) MigrateSystemTables() error {
 		// ===== 网关接入（第三方工业网关 MQTT 上行）=====
 		&models.Gateway{},
 		&models.GatewayIngestLog{},
+		// 参考系统（/edge 协议）接入设备的设备级测点（无物模型时的读取侧来源）
+		&models.DeviceTag{},
 		// ===== 行业方案 =====
 		&models.Solution{},
 		// ===== 画布看板（落库）=====
@@ -103,7 +105,50 @@ func (c *Client) MigrateSystemTables() error {
 	if err := c.ensureUniqueIndexes(); err != nil {
 		return err
 	}
+	if err := c.ensurePartialUniqueIndexes(); err != nil {
+		return err
+	}
 	return c.seedSystemData()
+}
+
+// ensurePartialUniqueIndexes 建「只对部分行成立」的唯一索引。
+//
+// 为什么不能放进 ensureUniqueIndexes：那里的索引对整表成立。
+// device 表的 (gateway_id, device_key) 只对**网关接入的设备**唯一——
+// 平台手工创建与驱动接入的设备这两列都是空串，普通唯一索引会立刻冲突。
+//
+// SQLite 支持带 WHERE 的部分索引；MySQL 不支持（其版本见 mysql 包，为显式空实现）。
+func (c *Client) ensurePartialUniqueIndexes() error {
+	pool := c.Pool.WithContext(tenant.Platform(context.Background()))
+	const (
+		name  = "uk_device_gateway_key"
+		table = models.TableDevice
+	)
+	if pool.Migrator().HasIndex(table, name) {
+		return nil
+	}
+	// 先探测重复：直接建索引会在历史脏数据上失败，导致服务起不来（与 ensureUniqueIndexes 同理）
+	var dupCount int64
+	if err := pool.Table(table).
+		Select("COUNT(*)").
+		Where("gateway_id <> '' AND device_key <> ''").
+		Group("gateway_id, device_key").
+		Having("COUNT(*) > 1").
+		Count(&dupCount).Error; err != nil {
+		return fmt.Errorf("check duplicate of %s failed: %w", table, err)
+	}
+	if dupCount > 0 {
+		c.loggingClient.Warnf("table %s has %d duplicated (gateway_id, device_key), skip creating %s",
+			table, dupCount, name)
+		return nil
+	}
+	stmt := fmt.Sprintf(
+		"CREATE UNIQUE INDEX %s ON %s(gateway_id, device_key) WHERE gateway_id <> '' AND device_key <> ''",
+		name, table)
+	if err := pool.Exec(stmt).Error; err != nil {
+		c.loggingClient.Warnf("create partial unique index %s on %s failed: %v", name, table, err)
+	}
+	return nil
 }
 
 // migrateTenantColumns 多租户改造的数据迁移：

@@ -29,6 +29,7 @@ import (
 	"iotserver/internal/iotserver/core/application/docapp"
 	"iotserver/internal/iotserver/core/application/driverapp"
 	"iotserver/internal/iotserver/core/application/driverserviceapp"
+	"iotserver/internal/iotserver/core/application/edgeingest"
 	"iotserver/internal/iotserver/core/application/gatewayapp"
 	"iotserver/internal/iotserver/core/application/gatewayingest"
 	"iotserver/internal/iotserver/core/application/homepageapp"
@@ -61,6 +62,7 @@ import (
 	"iotserver/internal/pkg/handlers"
 	"iotserver/internal/pkg/logger"
 	"iotserver/internal/pkg/startup"
+	"iotserver/internal/tools/edgeprotocol"
 	"iotserver/internal/tools/ekuiperclient"
 	"iotserver/internal/tools/gatewaymqtt"
 	"iotserver/internal/tools/hpcloudclient"
@@ -399,6 +401,15 @@ func (b *Bootstrap) initClient(ctx context.Context, wg *sync.WaitGroup, dic *di.
 		lc.Errorf("网关接入服务启动失败（不影响其它功能）: %v", err)
 	} else {
 		lc.Infof("网关接入服务已启动，订阅主题: %s+/+", gatewaymqtt.TopicPrefixUp)
+	}
+
+	// 参考系统接入服务（罗米/things，iotddc）：订阅 /edge/... 兼容其上行协议。
+	// 与自有网关协议并存、互不影响，MQTT 连接失败同样不阻断启动。
+	edgeIngest := edgeingest.New(dic)
+	if err := edgeIngest.Start(); err != nil {
+		lc.Errorf("参考系统接入服务启动失败（不影响其它功能）: %v", err)
+	} else {
+		lc.Infof("参考系统接入服务已启动，订阅主题: %sconnect/+/+ 等", edgeprotocol.TopicPrefix)
 	}
 	return true
 }

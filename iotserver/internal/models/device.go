@@ -33,7 +33,11 @@ type Device struct {
 	// GatewayId 所属工业网关（阶段二：第三方网关接入时绑定）
 	GatewayId string `gorm:"column:gateway_id;type:string;size:64;index;comment:所属网关ID"`
 	// DeviceKey 网关内设备标识：网关上报时用它映射到本设备
-	DeviceKey       string                 `gorm:"column:device_key;type:string;size:255;index;comment:网关内设备标识"`
+	DeviceKey string `gorm:"column:device_key;type:string;size:255;index;comment:网关内设备标识"`
+	// ProvisionSource 设备来源，取值见 DeviceSource*
+	ProvisionSource string `gorm:"column:provision_source;type:string;size:32;comment:设备来源"`
+	// ProvisionState 供应状态，取值见 DeviceState*（清单摘除不删行，只改状态）
+	ProvisionState  string                 `gorm:"column:provision_state;type:string;size:32;index;comment:供应状态"`
 	CloudDeviceId   string                 `gorm:"type:string;size:255;comment:云设备ID"`
 	CloudProductId  string                 `gorm:"type:string;size:255;comment:云产品ID"`
 	CloudInstanceId string                 `gorm:"index;type:string;size:255;comment:云实例ID"`
@@ -63,6 +67,24 @@ func (c Protocols) Value() (driver.Value, error) {
 func (c *Protocols) Scan(value interface{}) error {
 	return GormScanWrap(value, c)
 }
+
+// Device 来源（Device.ProvisionSource）
+const (
+	DeviceSourceManual  = "manual"  // 平台手工创建
+	DeviceSourceGateway = "gateway" // 随网关清单自动注册
+	DeviceSourceDriver  = "driver"  // 经驱动实例接入
+)
+
+// Device 供应状态（Device.ProvisionState）
+const (
+	DeviceStateActive = "active" // 正常
+	// DeviceStateAbsent 网关全量清单里已不含该设备。
+	// 只改状态不删行：时序历史在时序库里，但删除元数据会断掉告警规则/组态的引用。
+	DeviceStateAbsent = "absent"
+)
+
+// TableDevice 设备表名
+const TableDevice = "device"
 
 func (table *Device) TableName() string {
 	return "device"

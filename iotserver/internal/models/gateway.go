@@ -7,6 +7,22 @@ const (
 	GatewayStatusNever   = 2 // 从未上线
 )
 
+// 网关接入协议。
+//
+// native 用平台自有协议（iot/up/{sn}/{data|batch|status|offline} 上行，
+// 见 docs/gateway-integration.md）；edge 兼容参考系统（罗米/things，iotddc）的
+// /edge/{connect,property,lastwill} 协议（见 docs/device-access-design.md）。
+const (
+	GatewayProtocolNative = "gatewaymqtt"
+	GatewayProtocolEdge   = "edge"
+)
+
+// 子设备自动注册开关
+const (
+	GatewayAutoProvisionOff = 0 // 只记录清单，不注册设备
+	GatewayAutoProvisionOn  = 1 // 清单里的设备自动注册并绑定（默认）
+)
+
 // Gateway 工业网关（第三方网关产品，负责 PLC 协议采集与断点续传）
 //
 // 与 Device 的关系：一个网关下挂多台设备（Device.GatewayId / Device.DeviceKey），
@@ -19,10 +35,20 @@ type Gateway struct {
 	DeptId string `gorm:"column:dept_id;type:string;size:64;index;comment:组织节点ID"`
 	Name   string `gorm:"column:name;type:string;size:255;comment:网关名称"`
 	// Sn 网关序列号，同时作为 MQTT clientId / username（租户内唯一）
-	Sn              string `gorm:"column:sn;type:string;size:128;index;comment:网关序列号"`
-	Vendor          string `gorm:"column:vendor;type:string;size:128;comment:厂商"`
-	Model           string `gorm:"column:model;type:string;size:128;comment:型号"`
-	FirmwareVersion string `gorm:"column:firmware_version;type:string;size:64;comment:固件版本"`
+	Sn string `gorm:"column:sn;type:string;size:128;index;comment:网关序列号"`
+	// Pk 外部协议的产品标识。参考系统的网关身份是 /edge/{kind}/{pk}/{sn}/...，
+	// 即 pk 与 sn 两段共同定位（实测两者取值可相同）；自有协议不使用该字段。
+	Pk string `gorm:"column:pk;type:string;size:128;index;comment:外部协议产品标识(pk)"`
+	// Protocol 接入协议，取值见 GatewayProtocolNative / GatewayProtocolEdge
+	Protocol string `gorm:"column:protocol;type:string;size:32;default:'gatewaymqtt';comment:接入协议"`
+	// AutoProvision 子设备是否随清单自动注册，取值见 GatewayAutoProvisionOn/Off
+	AutoProvision int `gorm:"column:auto_provision;type:int;default:1;comment:子设备自动注册 1开 0关"`
+	// ExcludeDeviceKeys 不注册的网关内设备标识名单（逗号分隔）。
+	// 实测网关会把自己的时钟等上报为设备（dn=system/user），这类应排除，避免污染设备列表。
+	ExcludeDeviceKeys string `gorm:"column:exclude_device_keys;type:string;size:1000;comment:排除的网关内设备标识(逗号分隔)"`
+	Vendor            string `gorm:"column:vendor;type:string;size:128;comment:厂商"`
+	Model             string `gorm:"column:model;type:string;size:128;comment:型号"`
+	FirmwareVersion   string `gorm:"column:firmware_version;type:string;size:64;comment:固件版本"`
 	// Secret MQTT 接入密钥（平台生成，不明文回显）
 	Secret string `gorm:"column:secret;type:string;size:255;comment:接入密钥"`
 	// Config 采集/上报配置（JSON，由平台下发）

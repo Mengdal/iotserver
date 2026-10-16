@@ -32,7 +32,8 @@
 
 ### 1.2 阻塞项（已核实；不修则功能不成立）
 
-1. **网关密钥从未生成。** `GatewayAdd`（`gatewayapp.go:88`）只写 name/sn/dept/vendor/model/remark，从不设置 `Secret`；全仓库对 `g.Secret` 只有一处**读**（`gatewayapp.go:81`）。结果是 `GatewayMqttInfo.Password` 恒为空字符串，而 `docs/gateway-integration.md` 第 1 节承诺「平台生成的一次性密钥」——文档与实现不符。
+1. ~~**网关密钥从未生成。**~~ **（更正）** 原述有误：密钥是生成的，但用的是**非加密随机**。`gatewayApp.GatewayAdd`（`gatewayapp.go:88`）自身不设 `Secret`，但 DB 层 `addGateway`（`infrastructure/sqlite/gateway_repo.go:189`）会补：`if g.Secret == "" { g.Secret = utils.GenerateDeviceSecret(16) }`，且 `GatewayAdd` 返回的正是这个补过的对象，所以一次性密钥确实会回给调用方，`docs/gateway-integration.md` 第 1 节的承诺是成立的。
+   **真正的问题是**：`GenerateDeviceSecret`（`internal/pkg/utils/uuid.go:28`）用的是 `math/rand`（`rand2 "math/rand"`）而非 `crypto/rand`，密钥可预测；同一个文件里的 `RandomNum()`（被用作**主键**）更是 `math/rand` + 时间种子 + 8 位数字（1e8 空间）。这一条**不阻塞本需求**，但批量自动注册会放大主键碰撞风险（见 5.2 节：自动注册的设备改用 `uuid.NewString()`）。
 
 2. **未注册设备被硬拒绝。** `resolveDevice`（`gatewayingest/service.go:365`）两步查找失败即返回错误，`ingestRecord` 随即放弃该条。这正是「携带设备信息入库」要改掉的行为。
 
@@ -206,7 +207,7 @@ MQTT 只保证 QoS1 的至少一次投递，**不保证 `devices` 一定先于 `
 
 这两条不属于新功能，但不修则新功能是残缺的：
 
-1. **`GatewayAdd` 生成 Secret。** 用 `crypto/rand` 生成高熵密钥，仅在创建/重置时返回一次。设计取舍：`mqtt_auth` 表（`models/mqttauth.go`）已经是通用 MQTT 凭据表且有唯一索引，**建议网关凭据也落到这张表**（`ResourceType=gateway`, `ResourceId=gateway.id`），与设备侧统一，而不是继续用 `gateway.secret` 单列。存哈希还是明文取决于 `mqtt_auth` 现状——它目前是明文列，先保持一致、后续统一加哈希，别只给网关做加密造成两套语义。
+1. **密钥与主键的随机源**（更正后的问题，见 1.2 节第 1 条）。`GenerateDeviceSecret` 与 `RandomNum` 都基于 `math/rand`：前者生成 MQTT 接入密钥，后者被当作主键。建议改为 `crypto/rand` / `uuid`。设计取舍：`mqtt_auth` 表（`models/mqttauth.go`）已经是通用 MQTT 凭据表且有唯一索引，**建议网关凭据也落到这张表**（`ResourceType=gateway`, `ResourceId=gateway.id`），与设备侧统一，而不是继续用 `gateway.secret` 单列。存哈希还是明文取决于 `mqtt_auth` 现状——它目前是明文列，先保持一致、后续统一加哈希，别只给网关做加密造成两套语义。
 
 2. **`GatewayDelete` 真正处理设备绑定。** 建议改为**软删除网关**（保留行 + `deleted_at`），并显式决定其下设备是解绑还是级联摘除。硬删 + SN 复用会让历史数据的归属彻底错乱。
 
