@@ -64,6 +64,19 @@ type DBClient interface {
 	DeviceByGatewayAndKey(gatewayId, deviceKey string) (models.Device, error)
 	DeviceBySn(deviceSn string) (models.Device, error)
 
+	// ===== 参考系统（/edge 协议）接入 =====
+	// GatewayByPkSn 按「外部协议产品标识 + 序列号」定位网关（空 pk 视为任意）
+	GatewayByPkSn(pk, sn string) (models.Gateway, error)
+	// UpsertGatewayDevice 按 (gateway_id, device_key) 插入或更新设备，返回是否新建
+	UpsertGatewayDevice(d models.Device) (models.Device, bool, error)
+	// ListGatewayDevices 取网关下已注册设备，按 device_key 索引（全量清单比对用）
+	ListGatewayDevices(gatewayId string) (map[string]models.Device, error)
+	// MarkDevicesAbsent 把全量清单里已消失的设备标记为摘除（不删行）
+	MarkDevicesAbsent(ids []string) (int64, error)
+	// UpsertDeviceTags 写入/更新设备级测点定义（无物模型设备的读取侧来源）
+	UpsertDeviceTags(deviceId string, tags []models.DeviceTag) (int, error)
+	ListDeviceTags(deviceId string) ([]models.DeviceTag, error)
+
 	// ===== 画布看板（落库，按租户隔离）=====
 	VizBoards() ([]models.VizBoard, error)
 	VizBoardsReplace(list []models.VizBoard) error

@@ -152,14 +152,14 @@ func (pst *persistApp) searchDeviceHistoryPropertyData(ctx context.Context, req 
 	if err != nil {
 		return nil, 0, err
 	}
-	productInfo, err := pst.dbClient.WithCtx(ctx).ProductById(deviceInfo.ProductId)
+	defs, err := pst.devicePropertyDefs(ctx, deviceInfo)
 	if err != nil {
 		return nil, 0, err
 	}
 	var response []dtos.ReportData
 	var count int
-	for _, property := range productInfo.Properties {
-		if property.Code != req.Code {
+	for _, def := range defs {
+		if def.Code != req.Code {
 			continue
 		}
 		response, count, err = pst.dataDbClient.GetDeviceProperty(req, deviceInfo)
@@ -177,18 +177,17 @@ func (pst *persistApp) searchDeviceLatestPropertyData(ctx context.Context, req d
 	if err != nil {
 		return nil, err
 	}
-	productInfo, err := pst.dbClient.WithCtx(ctx).ProductById(deviceInfo.ProductId)
+	defs, err := pst.devicePropertyDefs(ctx, deviceInfo)
 	if err != nil {
 		return nil, err
 	}
-	response := make([]dtos.ThingModelDataResponse, 0)
-	for _, property := range productInfo.Properties {
-		if req.Code != "" && property.Code != req.Code {
+	response := make([]dtos.ThingModelDataResponse, 0, len(defs))
+	for _, def := range defs {
+		if req.Code != "" && def.Code != req.Code {
 			continue
 		}
-		code := property.Code
 		latestReq := req
-		latestReq.Code = code
+		latestReq.Code = def.Code
 		latestReq.Last = true
 		ksv, _, err := pst.dataDbClient.GetDeviceProperty(latestReq, deviceInfo)
 		if err != nil {
@@ -201,14 +200,80 @@ func (pst *persistApp) searchDeviceLatestPropertyData(ctx context.Context, req d
 		}
 		response = append(response, dtos.ThingModelDataResponse{
 			ReportData: reportData,
-			Code:       code,
-			DataType:   string(property.TypeSpec.Type),
-			Name:       property.Name,
-			Unit:       propertyUnit(property),
-			AccessMode: property.AccessMode,
+			Code:       def.Code,
+			DataType:   def.DataType,
+			Name:       def.Name,
+			Unit:       def.Unit,
+			AccessMode: def.AccessMode,
 		})
 	}
 	return response, nil
+}
+
+// propertyDef 读取侧的测点定义（把「产品物模型」与「设备级测点」两种来源归一）
+type propertyDef struct {
+	Code       string
+	Name       string
+	DataType   string
+	Unit       string
+	AccessMode string
+}
+
+// devicePropertyDefs 取设备的测点定义：**产品物模型优先，无产品/无物模型时回落到设备级测点表**。
+//
+// 存在的必要性：随网关清单自动接入的子设备可以没有产品（参考系统的上行协议里
+// 根本没有产品维度），而原来的读路径无条件 `ProductById(device.ProductId)` 并遍历
+// 其物模型——空产品会让整个查询直接报错，界面上一个测点都显示不出来。
+// 见 docs/device-access-design.md 第 1.5 节。
+func (pst *persistApp) devicePropertyDefs(ctx context.Context, device models.Device) ([]propertyDef, error) {
+	if device.ProductId != "" {
+		productInfo, err := pst.dbClient.WithCtx(ctx).ProductById(device.ProductId)
+		// 产品查不到不算错误：可能是没有产品，也可能产品已被删除。
+		// 此时回落到设备级测点表，而不是让整个查询失败。
+		if err == nil && len(productInfo.Properties) > 0 {
+			out := make([]propertyDef, 0, len(productInfo.Properties))
+			for _, p := range productInfo.Properties {
+				out = append(out, propertyDef{
+					Code:       p.Code,
+					Name:       p.Name,
+					DataType:   string(p.TypeSpec.Type),
+					Unit:       propertyUnit(p),
+					AccessMode: p.AccessMode,
+				})
+			}
+			return out, nil
+		}
+	}
+	tags, err := pst.dbClient.WithCtx(ctx).ListDeviceTags(device.Id)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]propertyDef, 0, len(tags))
+	for _, t := range tags {
+		out = append(out, propertyDef{
+			Code:       t.Code,
+			Name:       t.Name,
+			DataType:   tagDataType(t.Type),
+			Unit:       t.Unit,
+			AccessMode: t.AccessMode,
+		})
+	}
+	return out, nil
+}
+
+// tagDataType 把设备级测点的类型映射到物模型的数据类型取值。
+// 自动发现时未知类型回落 text——不猜数值，猜错会让前端按数值格式化字符串。
+func tagDataType(t string) string {
+	switch t {
+	case string(constants.SpecsTypeInt):
+		return string(constants.SpecsTypeInt)
+	case string(constants.SpecsTypeFloat):
+		return string(constants.SpecsTypeFloat)
+	case string(constants.SpecsTypeBool):
+		return string(constants.SpecsTypeBool)
+	default:
+		return string(constants.SpecsTypeText)
+	}
 }
 
 // searchDeviceEventData 查询事件历史

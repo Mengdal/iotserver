@@ -87,6 +87,8 @@ func (c *Client) MigrateSystemTables() error {
 		// ===== 网关接入（第三方工业网关 MQTT 上行）=====
 		&models.Gateway{},
 		&models.GatewayIngestLog{},
+		// 参考系统（/edge 协议）接入设备的设备级测点（无物模型时的读取侧来源）
+		&models.DeviceTag{},
 		// ===== 行业方案 =====
 		&models.Solution{},
 		// ===== 画布看板（落库）=====
@@ -103,7 +105,24 @@ func (c *Client) MigrateSystemTables() error {
 	if err := c.ensureUniqueIndexes(); err != nil {
 		return err
 	}
+	if err := c.ensurePartialUniqueIndexes(); err != nil {
+		return err
+	}
 	return c.seedSystemData()
+}
+
+// ensurePartialUniqueIndexes 在 SQLite 侧为 device(gateway_id, device_key) 建部分唯一索引。
+//
+// MySQL **不支持带 WHERE 的部分索引**，因此这里显式空实现：
+//   - 若不加 WHERE 而直接建普通唯一索引，平台手工创建与驱动接入的设备
+//     （gateway_id 与 device_key 均为空串）会在第二行就冲突；
+//   - 变通做法（生成列 / 空串替换成 uuid）会改动既有列语义，代价大于收益。
+//
+// 因此 MySQL 后端只依赖应用层的 upsert 事务语义（edge_repo.upsertGatewayDevice 先查后写）。
+// 并发重复插入的兜底在 MySQL 上缺失，属已知限制；
+// 若将来 MySQL 成为元数据库主选，再按生成列方案补。
+func (c *Client) ensurePartialUniqueIndexes() error {
+	return nil
 }
 
 // migrateTenantColumns 多租户改造的数据迁移：
