@@ -62,7 +62,6 @@ import (
 	"iotserver/internal/pkg/handlers"
 	"iotserver/internal/pkg/logger"
 	"iotserver/internal/pkg/startup"
-	"iotserver/internal/tools/edgeprotocol"
 	"iotserver/internal/tools/ekuiperclient"
 	"iotserver/internal/tools/gatewaymqtt"
 	"iotserver/internal/tools/hpcloudclient"
@@ -409,7 +408,7 @@ func (b *Bootstrap) initClient(ctx context.Context, wg *sync.WaitGroup, dic *di.
 	if err := edgeIngest.Start(); err != nil {
 		lc.Errorf("参考系统接入服务启动失败（不影响其它功能）: %v", err)
 	} else {
-		lc.Infof("参考系统接入服务已启动，订阅主题: %sconnect/+/+ 等", edgeprotocol.TopicPrefix)
+		lc.Infof("参考系统接入服务已启动（按已登记网关逐个订阅，详见随后的「订阅已对齐」日志）")
 	}
 	return true
 }
