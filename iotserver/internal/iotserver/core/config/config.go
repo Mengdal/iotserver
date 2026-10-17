@@ -14,6 +14,7 @@ package config
 
 import (
 	"fmt"
+	"strings"
 
 	"go.uber.org/atomic"
 
@@ -40,9 +41,29 @@ type ConfigurationStruct struct {
 	Viz                 VizInfo
 	Pprof               PprofInfo
 	Tenant              TenantInfo
-	Topics              struct {
+	// EdgeIngest 参考系统（/edge 协议）接入所用的独立 broker 配置
+	EdgeIngest EdgeIngestInfo
+	Topics     struct {
 		CommandTopic TopicInfo
 	}
+}
+
+// EdgeIngestInfo 参考系统（罗米/things，/edge 协议）接入的 broker 配置。
+//
+// 为什么必须与 MessageQueue 分开：MessageQueue 同时承担平台的**内部消息总线**
+// （PublishTopicPrefix = eventbus/in，规则引擎/事件链路都走它），而参考系统的上行
+// 数据在**另一个 broker** 上。直接改 MessageQueue.Host 会把这套内部总线也搬到对方去。
+//
+// Broker 留空时回落到 MessageQueue，保证既有部署行为不变。
+type EdgeIngestInfo struct {
+	// Broker 参考系统 broker 地址，形如 tcp://host:1885
+	Broker string
+	// Username / Password 接入该 broker 的凭据（对方允许匿名访问时可留空）
+	Username string
+	Password string
+	// ResyncIntervalSec 订阅刷新间隔（秒）。网关在界面上增删后，据此自动重订阅，
+	// 无需重启服务。<=0 时用默认值。
+	ResyncIntervalSec int
 }
 
 // PprofInfo 调试端点配置。
@@ -131,6 +152,23 @@ type ApplicationSettings struct {
 // URL constructs a URL from the protocol, host and port and returns that as a string.
 func (m MessageQueueInfo) URL() string {
 	return fmt.Sprintf("%s://%s:%v", m.Protocol, m.Host, m.Port)
+}
+
+// BrokerURL 参考系统接入实际使用的 broker 地址：未单独配置时回落到 MessageQueue。
+func (e EdgeIngestInfo) BrokerURL(m MessageQueueInfo) string {
+	if b := strings.TrimSpace(e.Broker); b != "" {
+		return b
+	}
+	return m.URL()
+}
+
+// Credentials 参考系统接入使用的账号密码：单独配置优先，否则用 MessageQueue 里的可选凭据。
+func (e EdgeIngestInfo) Credentials(m MessageQueueInfo) (username, password string) {
+	username, password = strings.TrimSpace(e.Username), e.Password
+	if username == "" && password == "" {
+		return m.Optional["Username"], m.Optional["Password"]
+	}
+	return username, password
 }
 
 // UpdateFromRaw converts configuration received from the registry to a service-specific configuration struct which is

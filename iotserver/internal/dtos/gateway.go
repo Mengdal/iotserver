@@ -16,8 +16,11 @@ type GatewaySearchQueryRequest struct {
 
 // GatewayAddRequest 新增网关
 type GatewayAddRequest struct {
-	Name   string `json:"name" binding:"required"`
-	Sn     string `json:"sn" binding:"required"`
+	Name string `json:"name" binding:"required"`
+	Sn   string `json:"sn" binding:"required"`
+	// Pk 外部协议的产品标识。参考系统（/edge 协议）的网关身份是 {pk}/{sn}，
+	// 平台按它拼订阅主题；留空则用 sn 顶替（实测两者取值常相同）。自有协议不用它。
+	Pk     string `json:"pk"`
 	DeptId string `json:"deptId"`
 	Vendor string `json:"vendor"`
 	Model  string `json:"model"`
@@ -28,6 +31,7 @@ type GatewayAddRequest struct {
 type GatewayUpdateRequest struct {
 	Id     string `json:"id" binding:"required"`
 	Name   string `json:"name"`
+	Pk     string `json:"pk"`
 	DeptId string `json:"deptId"`
 	Vendor string `json:"vendor"`
 	Model  string `json:"model"`
@@ -64,6 +68,7 @@ type GatewayResponse struct {
 	Id     string `json:"id"`
 	Name   string `json:"name"`
 	Sn     string `json:"sn"`
+	Pk     string `json:"pk"`
 	DeptId string `json:"deptId"`
 	// DeptName 组织节点名称（列表展示「所属」用）
 	DeptName        string `json:"deptName"`

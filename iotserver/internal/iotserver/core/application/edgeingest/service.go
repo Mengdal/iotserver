@@ -51,6 +51,9 @@ const (
 	// deviceOnlineThrottle 同一设备最多多久写一次「置在线」。
 	// 网关是按包上报的，同一设备不必每包都写一次元数据库。
 	deviceOnlineThrottle = 30 * time.Second
+	// defaultResyncInterval 订阅对齐的默认间隔（配置未指定时）。
+	// 它决定「界面新增网关 → 多久开始收它的数据」。
+	defaultResyncInterval = 60 * time.Second
 )
 
 // errSkipDevice 表示「该设备按配置被跳过」，属于预期情况而非故障。
@@ -71,6 +74,12 @@ type Service struct {
 
 	onlineMu   sync.Mutex
 	onlineSeen map[string]time.Time
+
+	// subMu / subscribed 当前已订阅的主题集合，用于增量对齐（退订消失的网关）
+	subMu      sync.Mutex
+	subscribed map[string]struct{}
+	// stopCh 关闭 resync 循环
+	stopCh chan struct{}
 }
 
 // New 构造接入服务
@@ -88,15 +97,19 @@ func (s *Service) config() *coreConfig.ConfigurationStruct {
 	return coreContainer.ConfigurationFrom(s.dic.Get)
 }
 
-// Start 连接 MQTT 并订阅 /edge 上行主题
+// Start 连接参考系统的 broker，并按已登记网关逐个订阅 /edge 上行主题。
+//
+// broker 取 [EdgeIngest].Broker（未配置则回落到 MessageQueue），主题**按网关逐个拼**，
+// 不用通配——理由见 edgeprotocol.TopicsForGateway。
 func (s *Service) Start() error {
+	cfg := s.config()
+	username, password := cfg.EdgeIngest.Credentials(cfg.MessageQueue)
 	req := dtos.NewMQTTClient{
-		Broker:   s.config().MessageQueue.URL(),
+		Broker:   cfg.EdgeIngest.BrokerURL(cfg.MessageQueue),
 		ClientId: mqttClientID,
-		Username: s.config().MessageQueue.Optional["Username"],
-		Password: s.config().MessageQueue.Optional["Password"],
-		// QoS0：参考系统的上行也是以 QoS0 发布的（见 PropertyPostProcessor 的订阅）
-		SubTopics: edgeprotocol.SubscribeTopics(),
+		Username: username,
+		Password: password,
+		// 初始不订阅：主题要按网关表逐个拼，见下面的 syncSubscriptions
 	}
 	handler := func(_ mqtt.Client, message mqtt.Message) {
 		if err := s.HandleMessage(message.Topic(), message.Payload()); err != nil && s.lc != nil {
@@ -104,12 +117,110 @@ func (s *Service) Start() error {
 		}
 	}
 	client, err := pkgMQTT.NewMQTTClient(req, s.lc, handler,
-		func(ctx context.Context) { s.lc.Info("参考系统接入 mqtt connected") },
+		func(ctx context.Context) {
+			s.lc.Info("参考系统接入 mqtt connected")
+			// 重连后立即对齐一次订阅（客户端也会重订已知主题，这里兜底新增的网关）
+			if err := s.syncSubscriptions(); err != nil {
+				s.warnf("参考系统接入：重连后对齐订阅失败: %v", err)
+			}
+		},
 		func(ctx context.Context, msg dtos.CallbackMessage) { s.lc.Info("参考系统接入 mqtt disconnected") })
 	if err != nil {
 		return fmt.Errorf("参考系统接入 MQTT 连接失败: %w", err)
 	}
 	s.mqttClient = client
+	s.stopCh = make(chan struct{})
+
+	if err := s.syncSubscriptions(); err != nil {
+		// 订阅失败不阻断启动：网关可能还没建，后续 resync 会补上
+		s.warnf("参考系统接入：初始订阅失败（等待下次对齐）: %v", err)
+	}
+	go s.resyncLoop(resyncInterval(cfg.EdgeIngest.ResyncIntervalSec))
+	return nil
+}
+
+// resyncInterval 订阅刷新间隔：配置 <=0 时用默认值
+func resyncInterval(sec int) time.Duration {
+	if sec <= 0 {
+		return defaultResyncInterval
+	}
+	return time.Duration(sec) * time.Second
+}
+
+// resyncLoop 周期性对齐订阅，使界面上增删网关无需重启即可生效
+func (s *Service) resyncLoop(interval time.Duration) {
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-s.stopCh:
+			return
+		case <-ticker.C:
+			if err := s.syncSubscriptions(); err != nil {
+				s.warnf("参考系统接入：订阅对齐失败: %v", err)
+			}
+		}
+	}
+}
+
+// syncSubscriptions 按当前网关表对齐订阅：新网关订阅、已删网关退订。
+//
+// 只订阅**平台里登记过的网关**。参考系统 broker 上还有别的客户的网关，
+// 通配订阅会把它们的数据一并拉进来（该 broker 实测允许匿名订阅）。
+func (s *Service) syncSubscriptions() error {
+	// 没有租户上下文：这里订的是「哪些网关属于本平台」，用平台作用域。
+	ctx := tenant.Platform(context.Background())
+	gateways, _, err := s.dbClient.WithCtx(ctx).GatewaySearch(0, -1, dtos.GatewaySearchQueryRequest{})
+	if err != nil {
+		return fmt.Errorf("读取网关列表失败: %w", err)
+	}
+
+	desired := make(map[string]struct{}, len(gateways)*4)
+	for _, g := range gateways {
+		for _, topic := range edgeprotocol.TopicsForGateway(g.Pk, g.Sn) {
+			desired[topic] = struct{}{}
+		}
+	}
+
+	s.subMu.Lock()
+	if s.subscribed == nil {
+		s.subscribed = map[string]struct{}{}
+	}
+	var added, removed []string
+	for topic := range desired {
+		if _, ok := s.subscribed[topic]; !ok {
+			added = append(added, topic)
+		}
+	}
+	for topic := range s.subscribed {
+		if _, ok := desired[topic]; !ok {
+			removed = append(removed, topic)
+		}
+	}
+	s.subMu.Unlock()
+
+	if len(added) == 0 && len(removed) == 0 {
+		return nil
+	}
+	if s.mqttClient != nil {
+		if len(added) > 0 {
+			if err := s.mqttClient.Subscribe(added...); err != nil {
+				return fmt.Errorf("订阅失败: %w", err)
+			}
+		}
+		if len(removed) > 0 {
+			if err := s.mqttClient.Unsubscribe(removed...); err != nil {
+				// 退订失败不致命：多收一个主题不会出错，下次对齐还会再试
+				s.warnf("参考系统接入：退订失败: %v", err)
+			}
+		}
+	}
+
+	s.subMu.Lock()
+	s.subscribed = desired
+	s.subMu.Unlock()
+	s.infof("参考系统接入：订阅已对齐 —— 网关 %d 台，主题 %d 个（新增 %d、退订 %d）",
+		len(gateways), len(desired), len(added), len(removed))
 	return nil
 }
 

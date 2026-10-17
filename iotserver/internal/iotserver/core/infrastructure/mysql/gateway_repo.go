@@ -113,6 +113,7 @@ func updateGateway(c *Client, g models.Gateway) error {
 	}
 	return c.Pool.Table(models.TableGateway).Where("id = ?", g.Id).Updates(map[string]interface{}{
 		"name":     g.Name,
+		"pk":       g.Pk,
 		"dept_id":  g.DeptId,
 		"vendor":   g.Vendor,
 		"model":    g.Model,

@@ -40,6 +40,7 @@ func toGatewayResponse(g models.Gateway, deviceCount int64, deptNames map[string
 		Id:              g.Id,
 		Name:            g.Name,
 		Sn:              g.Sn,
+		Pk:              g.Pk,
 		DeptId:          g.DeptId,
 		DeptName:        deptNames[g.DeptId],
 		Vendor:          g.Vendor,
@@ -98,6 +99,7 @@ func (app *gatewayApp) GatewayAdd(ctx context.Context, req dtos.GatewayAddReques
 	g, err := app.dbClient.WithCtx(ctx).AddGateway(models.Gateway{
 		Name:   strings.TrimSpace(req.Name),
 		Sn:     sn,
+		Pk:     strings.TrimSpace(req.Pk),
 		DeptId: req.DeptId,
 		Vendor: req.Vendor,
 		Model:  req.Model,
@@ -120,6 +122,7 @@ func (app *gatewayApp) GatewayUpdate(ctx context.Context, req dtos.GatewayUpdate
 	return app.dbClient.WithCtx(ctx).UpdateGateway(models.Gateway{
 		Id:     req.Id,
 		Name:   strings.TrimSpace(req.Name),
+		Pk:     strings.TrimSpace(req.Pk),
 		DeptId: req.DeptId,
 		Vendor: req.Vendor,
 		Model:  req.Model,

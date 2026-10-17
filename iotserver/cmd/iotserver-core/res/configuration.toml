@@ -60,6 +60,21 @@ Port = 58090
 Type = 'mqtt'
 PublishTopicPrefix = 'eventbus/in'
 
+# 参考系统（罗米/things，即 iotddc）接入所用的 broker。
+#
+# 为什么不复用上面那段：MessageQueue 同时还跑着平台的**内部消息总线**
+# （PublishTopicPrefix = eventbus/in，规则引擎/事件链路都走它），而参考系统的上行
+# 数据在**另一个 broker** 上。把 MessageQueue.Host 直接改过去会连带搬走内部总线。
+#
+# Broker 留空则回落到 MessageQueue 的地址（既有部署行为不变）。
+# 本文件在仓库里：生产地址与凭据请按环境填写，提交前记得清空。
+[EdgeIngest]
+Broker = ''
+Username = ''
+Password = ''
+# 订阅刷新间隔（秒）：界面上增删网关后自动重订阅，无需重启服务；<=0 用默认值 60
+ResyncIntervalSec = 60
+
 # 调试端点（/debug/pprof）：默认关闭。
 # 开启后需携带 x-token 且账号具备 system:debug:pprof 权限（超级管理员直通）。
 [Pprof]

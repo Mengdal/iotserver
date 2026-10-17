@@ -91,13 +91,30 @@ func ParseTopic(topic string) (kind, pk, sn string, ok bool) {
 	return "", "", "", false
 }
 
-// SubscribeTopics 返回需要订阅的上行主题模式（pk/sn 用 + 通配）。
-func SubscribeTopics() []string {
+// TopicsForGateway 按某台网关的 pk/sn 组装它需要订阅的上行主题。
+//
+// **逐个网关拼主题，而不是订阅 `/edge/property/+/+/post` 这类通配**，原因有二：
+//
+//  1. 数据边界：参考系统的 broker 上挂着**别的客户**的网关（实测该 broker 允许匿名
+//     订阅），通配等于把别人的生产数据一并拉进自己的平台。
+//  2. 开销：网关一多，通配订阅的流量与解析成本不可控，而这些数据平台根本用不上。
+//
+// pk 为空时用 sn 顶替。实测参考系统的 pk 与 sn 取值相同，但两者语义不同
+// （pk 是产品/型号标识、sn 是设备序列号），若对方给的 pk 与 sn 不一致，
+// 应在网关里把 pk 填上，否则主题拼不对、订阅不到数据。
+func TopicsForGateway(pk, sn string) []string {
+	sn = strings.TrimSpace(sn)
+	if sn == "" {
+		return nil
+	}
+	if pk = strings.TrimSpace(pk); pk == "" {
+		pk = sn
+	}
 	return []string{
-		TopicPrefix + "connect/+/+",
-		TopicPrefix + "property/+/+/post",
-		TopicPrefix + "property/history/+/+/post",
-		TopicPrefix + "lastwill/+/+",
+		TopicPrefix + "connect/" + pk + "/" + sn,
+		TopicPrefix + "property/" + pk + "/" + sn + "/post",
+		TopicPrefix + "property/history/" + pk + "/" + sn + "/post",
+		TopicPrefix + "lastwill/" + pk + "/" + sn,
 	}
 }
 

@@ -1,6 +1,7 @@
 package edgeprotocol
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -230,5 +231,50 @@ func TestNumericOrString(t *testing.T) {
 		if got != in {
 			t.Errorf("NumericOrString(%q) = %v, 应原样保持", in, got)
 		}
+	}
+}
+
+// TestTopicsForGateway 锁定「按网关逐个拼主题、绝不使用通配」。
+//
+// 用通配（/edge/property/+/+/post）的后果不只是开销：参考系统的 broker 上挂着
+// 别的客户的网关，且该 broker 实测允许匿名订阅——通配等于把别人的生产数据一起拉进来。
+func TestTopicsForGateway(t *testing.T) {
+	topics := TopicsForGateway("260112801", "260112801")
+	want := map[string]bool{
+		"/edge/connect/260112801/260112801":               true,
+		"/edge/property/260112801/260112801/post":         true,
+		"/edge/property/history/260112801/260112801/post": true,
+		"/edge/lastwill/260112801/260112801":              true,
+	}
+	if len(topics) != len(want) {
+		t.Fatalf("主题数 = %d, want %d: %v", len(topics), len(want), topics)
+	}
+	for _, topic := range topics {
+		if !want[topic] {
+			t.Errorf("出现非预期主题: %s", topic)
+		}
+		// 任何通配符都不允许出现
+		if strings.ContainsAny(topic, "+#") {
+			t.Errorf("主题不允许含通配符: %s", topic)
+		}
+	}
+
+	// pk 为空 → 用 sn 顶替（实测两者取值常相同）
+	if got := TopicsForGateway("", "SN1"); len(got) != 4 || got[1] != "/edge/property/SN1/SN1/post" {
+		t.Errorf("pk 为空时应用 sn 顶替，got %v", got)
+	}
+
+	// pk 与 sn 不同 → 必须分别使用，不能互相顶替
+	got := TopicsForGateway("PK-A", "SN-B")
+	if got[1] != "/edge/property/PK-A/SN-B/post" || got[2] != "/edge/property/history/PK-A/SN-B/post" {
+		t.Errorf("pk 与 sn 不同时必须分别使用，got %v", got)
+	}
+
+	// sn 为空 → 不订阅任何东西（避免拼出 /edge/property/pk//post 这种非法主题）
+	if got := TopicsForGateway("PK", ""); len(got) != 0 {
+		t.Errorf("sn 为空时不应产生主题，got %v", got)
+	}
+	if got := TopicsForGateway("PK", "   "); len(got) != 0 {
+		t.Errorf("sn 为空白时不应产生主题，got %v", got)
 	}
 }

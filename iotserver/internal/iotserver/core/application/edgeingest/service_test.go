@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -111,6 +112,92 @@ func newEdgeFixture(t *testing.T) *edgeFixture {
 // tenantCtx 构造该网关所属租户的作用域（服务内部也是这么做的）
 func (f *edgeFixture) tenantCtx() context.Context {
 	return tenant.With(tenant.Platform(context.Background()), tenant.Context{TenantID: f.tenantID})
+}
+
+// topics 取当前已订阅主题的集合（含锁，供断言用）
+func (f *edgeFixture) topics() map[string]bool {
+	f.svc.subMu.Lock()
+	defer f.svc.subMu.Unlock()
+	out := make(map[string]bool, len(f.svc.subscribed))
+	for t := range f.svc.subscribed {
+		out[t] = true
+	}
+	return out
+}
+
+// TestSyncSubscriptions_PerGatewayTopics 锁定「按已登记网关逐个订阅、绝不用通配、增删即时对齐」。
+//
+// 为什么不能用通配：参考系统的 broker 上挂着**别的客户**的网关，而该 broker
+// 实测允许匿名订阅——`/edge/property/+/+/post` 会把别人的生产数据一并拉进本平台。
+// 所以订阅集合必须严格等于「平台里登记过的网关」。
+func TestSyncSubscriptions_PerGatewayTopics(t *testing.T) {
+	f := newEdgeFixture(t)
+
+	if err := f.svc.syncSubscriptions(); err != nil {
+		t.Fatalf("syncSubscriptions: %v", err)
+	}
+	base := f.topics()
+	// fixture 里的网关：sn=260112801、pk=260112801
+	for _, topic := range []string{
+		"/edge/connect/260112801/260112801",
+		"/edge/property/260112801/260112801/post",
+		"/edge/property/history/260112801/260112801/post",
+		"/edge/lastwill/260112801/260112801",
+	} {
+		if !base[topic] {
+			t.Errorf("缺少网关主题 %s", topic)
+		}
+	}
+	// 任何主题都不许含通配符
+	for topic := range base {
+		if strings.ContainsAny(topic, "+#") {
+			t.Errorf("订阅出现通配主题: %s", topic)
+		}
+	}
+
+	// 新增一台网关（pk 与 sn 不同）→ 只多出它的 4 个主题，原有订阅不受影响
+	// 租户由上下文注入（内嵌提升字段不能在字面量里赋值）
+	second, err := f.db.WithCtx(f.tenantCtx()).AddGateway(models.Gateway{
+		Name: "第二台网关", Sn: "SN-2", Pk: "PK-2",
+	})
+	if err != nil {
+		t.Fatalf("add gateway: %v", err)
+	}
+	if err := f.svc.syncSubscriptions(); err != nil {
+		t.Fatalf("sync after add: %v", err)
+	}
+	afterAdd := f.topics()
+	if len(afterAdd) != len(base)+4 {
+		t.Errorf("新增一台网关应恰好多 4 个主题：%d -> %d，got %v", len(base), len(afterAdd), afterAdd)
+	}
+	// pk 与 sn 必须分别使用，不能互相顶替
+	for _, topic := range []string{
+		"/edge/connect/PK-2/SN-2",
+		"/edge/property/PK-2/SN-2/post",
+		"/edge/property/history/PK-2/SN-2/post",
+		"/edge/lastwill/PK-2/SN-2",
+	} {
+		if !afterAdd[topic] {
+			t.Errorf("缺少第二台网关的主题 %s", topic)
+		}
+	}
+
+	// 删掉该网关 → 它的主题应被退订，集合回到原样
+	if err := f.db.WithCtx(f.tenantCtx()).DeleteGateway(second.Id); err != nil {
+		t.Fatalf("delete gateway: %v", err)
+	}
+	if err := f.svc.syncSubscriptions(); err != nil {
+		t.Fatalf("sync after delete: %v", err)
+	}
+	afterDelete := f.topics()
+	if len(afterDelete) != len(base) {
+		t.Errorf("删除网关后主题数应回到 %d，实际 %d：%v", len(base), len(afterDelete), afterDelete)
+	}
+	for topic := range afterDelete {
+		if strings.Contains(topic, "/PK-2/SN-2") {
+			t.Errorf("已删网关的主题未被退订: %s", topic)
+		}
+	}
 }
 
 // connectPayload 构造接入报文：两台设备，一台带两个测点（AI/AO），一台带一个（AV）
