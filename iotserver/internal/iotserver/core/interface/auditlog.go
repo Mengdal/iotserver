@@ -16,7 +16,7 @@ type AuditLogApp interface {
 	Enqueue(tc tenant.Context, log models.AuditLog)
 	// Flush 立即落库当前队列中已入队的记录（测试与关停使用）
 	Flush()
-	// CleanupExpired 按 data.retentionDays 清理过期记录，返回删除条数（0 表示永久保留）
+	// CleanupExpired 按默认保留天数（30 天）清理过期记录，返回删除条数
 	CleanupExpired(ctx context.Context) (int64, error)
 	// Close 停止后台协程并落盘剩余记录
 	Close()

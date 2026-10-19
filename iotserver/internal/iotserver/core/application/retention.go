@@ -5,8 +5,6 @@ package application
 
 import (
 	"context"
-	"strconv"
-	"strings"
 	"time"
 
 	"iotserver/internal/dtos"
@@ -15,7 +13,6 @@ import (
 	"iotserver/internal/models"
 	"iotserver/internal/pkg/di"
 	"iotserver/internal/pkg/logger"
-	"iotserver/internal/pkg/seed"
 	"iotserver/internal/pkg/tenant"
 )
 
@@ -29,13 +26,13 @@ const retentionRunTimeout = 30 * time.Minute
 // RunRetention 按租户执行时序数据保留策略。
 //
 // 之所以放在应用层按租户驱动，而不是让数据层用启动时读到的固定值自己清理：
-//   - 保留天数支持按租户配置（tenant.retention_days 覆盖全局配置）；
-//   - 每次运行重新读取配置，改完保留期不必重启服务。
+//   - 保留天数按租户配置（tenant.retention_days，见租户管理）；
+//   - 租户为 0 时使用默认值（30 天），无需系统级配置。
 //
 // 语义：
 //
 //	租户 retention_days > 0  → 按该天数
-//	租户 retention_days = 0  → 用系统全局配置 data.retentionDays（缺失则 30 天）
+//	租户 retention_days = 0  → 用默认保留天数（30 天）
 //	租户 retention_days < 0  → 永久保留，跳过
 //
 // 数据层未实现 DataPurger 能力时（如 ducklake）直接返回，保留其自带的全局维护。
@@ -51,7 +48,7 @@ func RunRetention(dic *di.Container, lc logger.LoggingClient) {
 	}
 
 	dbClient := resourceContainer.DBClientFrom(dic.Get)
-	globalDays := globalRetentionDays(ctx, dbClient, lc)
+	globalDays := defaultRetentionDays
 
 	tenants, _, err := dbClient.WithCtx(ctx).TenantSearch(0, -1, dtos.TenantSearchQueryRequest{})
 	if err != nil {
@@ -111,23 +108,4 @@ func effectiveRetentionDays(tenantDays, globalDays int) (days int, skip bool) {
 		globalDays = defaultRetentionDays
 	}
 	return globalDays, false
-}
-
-// globalRetentionDays 读取系统全局保留天数（sys_config 的 data.retentionDays）。
-// 每次运行都重新读取，因此改配置无需重启。
-func globalRetentionDays(ctx context.Context, dbClient interfaces.DBClient, lc logger.LoggingClient) int {
-	cfg, err := dbClient.WithCtx(ctx).SysConfigByKey(seed.ConfigKeyRetentionDays)
-	if err != nil {
-		lc.Warnf("retention: 读取全局保留天数失败，使用默认 %d 天: %v", defaultRetentionDays, err)
-		return defaultRetentionDays
-	}
-	days, convErr := strconv.Atoi(strings.TrimSpace(cfg.ConfigValue))
-	if convErr != nil || days < 0 {
-		lc.Warnf("retention: 全局保留天数取值非法(%q)，使用默认 %d 天", cfg.ConfigValue, defaultRetentionDays)
-		return defaultRetentionDays
-	}
-	if days == 0 {
-		return defaultRetentionDays
-	}
-	return days
 }

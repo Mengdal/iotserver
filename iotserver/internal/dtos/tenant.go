@@ -20,7 +20,7 @@ type TenantAddRequest struct {
 	MaxDevices   int    `json:"maxDevices"`
 	MaxGateways  int    `json:"maxGateways"`
 	MaxUsers     int    `json:"maxUsers"`
-	// RetentionDays 时序数据保留天数：>0 按该天数、=0 用全局配置、<0 永久保留
+	// RetentionDays 时序数据保留天数：>0 按该天数、=0 用默认值（30 天）、<0 永久保留
 	RetentionDays int    `json:"retentionDays"`
 	Remark        string `json:"remark"`
 }
@@ -36,7 +36,7 @@ type TenantUpdateRequest struct {
 	MaxDevices   int    `json:"maxDevices"`
 	MaxGateways  int    `json:"maxGateways"`
 	MaxUsers     int    `json:"maxUsers"`
-	// RetentionDays 时序数据保留天数：>0 按该天数、=0 用全局配置、<0 永久保留
+	// RetentionDays 时序数据保留天数：>0 按该天数、=0 用默认值（30 天）、<0 永久保留
 	RetentionDays int    `json:"retentionDays"`
 	Status        int    `json:"status"`
 	Remark        string `json:"remark"`
@@ -55,7 +55,7 @@ type TenantResponse struct {
 	MaxDevices   int    `json:"maxDevices"`
 	MaxGateways  int    `json:"maxGateways"`
 	MaxUsers     int    `json:"maxUsers"`
-	// RetentionDays 时序数据保留天数：>0 按该天数、=0 用全局配置、<0 永久保留
+	// RetentionDays 时序数据保留天数：>0 按该天数、=0 用默认值（30 天）、<0 永久保留
 	RetentionDays int    `json:"retentionDays"`
 	Remark        string `json:"remark"`
 	Created       int64  `json:"created"`

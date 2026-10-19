@@ -48,12 +48,20 @@ interface TenantFormValues {
   maxDevices?: number
   maxGateways?: number
   maxUsers?: number
+  retentionDays?: number
   status?: number
   remark?: string
 }
 
 /** 配额：0 表示不限 */
 const quotaText = (value: number) => (value > 0 ? String(value) : t('不限'))
+
+/** 数据保留天数：0 = 默认 30 天，<0 = 永久 */
+const retentionText = (value?: number) => {
+  if (value === undefined || value === null || value === 0) return t('默认（30 天）')
+  if (value < 0) return t('永久')
+  return t('{{count}} 天', { count: value })
+}
 
 const TenantPage: React.FC = () => {
   const [messageApi, contextHolder] = useMessage()
@@ -132,6 +140,7 @@ const TenantPage: React.FC = () => {
       maxDevices: record.maxDevices || 0,
       maxGateways: record.maxGateways || 0,
       maxUsers: record.maxUsers || 0,
+      retentionDays: record.retentionDays ?? 0,
       status: record.status,
       remark: record.remark,
     })
@@ -150,6 +159,8 @@ const TenantPage: React.FC = () => {
       maxDevices: values.maxDevices || 0,
       maxGateways: values.maxGateways || 0,
       maxUsers: values.maxUsers || 0,
+      // 0 = 默认 30 天，-1 = 永久
+      retentionDays: values.retentionDays ?? 0,
       remark: values.remark || '',
     }
     setSubmitting(true)
@@ -232,6 +243,12 @@ const TenantPage: React.FC = () => {
           {quotaText(record.maxDevices)} / {quotaText(record.maxGateways)} / {quotaText(record.maxUsers)}
         </span>
       ),
+    },
+    {
+      title: t('数据保留'),
+      dataIndex: 'retentionDays',
+      width: 140,
+      render: (value: number) => retentionText(value),
     },
     {
       title: t('状态'),
@@ -355,7 +372,7 @@ const TenantPage: React.FC = () => {
         <Form
           form={editForm}
           layout="vertical"
-          initialValues={{ status: 1, maxDevices: 0, maxGateways: 0, maxUsers: 0 }}
+          initialValues={{ status: 1, maxDevices: 0, maxGateways: 0, maxUsers: 0, retentionDays: 0 }}
         >
           <Row gutter={12}>
             <Col span={12}>
@@ -435,6 +452,17 @@ const TenantPage: React.FC = () => {
             <Col span={8}>
               <Form.Item label={t('用户配额')} name="maxUsers" tooltip={t('0 表示不限')}>
                 <InputNumber min={0} precision={0} style={{ width: '100%' }} placeholder="0" />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={12}>
+            <Col span={12}>
+              <Form.Item
+                label={t('数据保留天数')}
+                name="retentionDays"
+                tooltip={t('0 表示使用默认（30 天），-1 表示永久保留')}
+              >
+                <InputNumber min={-1} precision={0} style={{ width: '100%' }} placeholder="0" />
               </Form.Item>
             </Col>
           </Row>

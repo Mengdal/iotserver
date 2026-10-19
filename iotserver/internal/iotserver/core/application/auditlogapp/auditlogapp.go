@@ -3,14 +3,12 @@
 // 写入：缓冲 channel + 后台协程批量落库（满 100 条或每 1 秒 flush），
 // 队列满时丢弃并告警，业务主链路绝不阻塞。
 //
-// 清理：ticker 每 6 小时的平台作用域任务，按系统配置 data.retentionDays
+// 清理：ticker 每 6 小时的平台作用域任务，按默认保留天数（30 天）
 // 删除 created 超期的记录（0 = 永久保留）。
 package auditlogapp
 
 import (
 	"context"
-	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -20,7 +18,6 @@ import (
 	pkgcontainer "iotserver/internal/pkg/container"
 	"iotserver/internal/pkg/di"
 	"iotserver/internal/pkg/logger"
-	"iotserver/internal/pkg/seed"
 	"iotserver/internal/pkg/tenant"
 )
 
@@ -186,8 +183,7 @@ func (a *auditLogApp) cleanupLoop() {
 	}
 }
 
-// CleanupExpired 平台作用域跨租户删除 created < now - retentionDays 的记录。
-// retentionDays 为 0 时永久保留（一条不删）。
+// CleanupExpired 平台作用域跨租户删除 created < now - defaultRetentionDays 的记录。
 func (a *auditLogApp) CleanupExpired(ctx context.Context) (int64, error) {
 	if ctx == nil {
 		ctx = context.Background()
@@ -195,22 +191,6 @@ func (a *auditLogApp) CleanupExpired(ctx context.Context) (int64, error) {
 	db := a.dbClient.WithCtx(tenant.Platform(ctx))
 
 	days := defaultRetentionDays
-	if cfg, err := db.SysConfigByKey(seed.ConfigKeyRetentionDays); err == nil {
-		value := strings.TrimSpace(cfg.ConfigValue)
-		if value != "" {
-			if v, convErr := strconv.Atoi(value); convErr == nil && v >= 0 {
-				days = v
-			} else if a.lc != nil {
-				a.lc.Warnf("审查日志清理: 保留天数配置非法(%q)，按 %d 天处理", cfg.ConfigValue, defaultRetentionDays)
-			}
-		}
-	}
-	if days <= 0 {
-		if a.lc != nil {
-			a.lc.Info("审查日志清理: 保留天数为 0（永久保留），本次跳过")
-		}
-		return 0, nil
-	}
 
 	cutoff := time.Now().AddDate(0, 0, -days).UnixMilli()
 	removed, err := db.DeleteSysAuditLogBefore(cutoff)

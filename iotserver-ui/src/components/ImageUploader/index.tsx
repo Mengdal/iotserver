@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react'
-import { Button, Modal, Space, Upload, message } from 'antd'
-import { DeleteOutlined, PlusOutlined } from '@ant-design/icons'
+import { Upload, message } from 'antd'
+import { PlusOutlined } from '@ant-design/icons'
 import type { RcFile } from 'antd/es/upload'
 import { t } from '@/i18n'
 
@@ -53,13 +53,14 @@ function compress (dataUrl: string, maxSize: number, quality = 0.9): Promise<str
 }
 
 /**
- * 图片上传：单张。方框内预览，悬浮显示「预览 / 删除」，未选图时显示「+ 选择图片」。
+ * 图片上传：单张。
+ * 未选图时显示「+ 选择图片」；已有图时**点击图片即可替换**，
+ * 不在旁边额外放「替换 / 删除」按钮。
  * 图片以 data URL 回填表单，随系统配置一起保存。
  */
 const ImageUploader: React.FC<ImageUploaderProps> = ({ value, onChange, width = 120, height = 120, disabled }) => {
   const [messageApi, contextHolder] = useMessage()
   const [hover, setHover] = useState(false)
-  const [previewOpen, setPreviewOpen] = useState(false)
 
   const beforeUpload = useCallback(async (file: RcFile) => {
     if (!/^image\//.test(file.type)) {
@@ -78,71 +79,57 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ value, onChange, width = 
   }, [messageApi, onChange, width, height])
 
   return (
-    <Space align="start" size={12}>
+    <>
       {contextHolder}
-      <div
-        style={{
-          width,
-          height,
-          border: '1px dashed #d9d9d9',
-          borderRadius: 8,
-          background: '#fafafa',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          overflow: 'hidden',
-          position: 'relative',
-        }}
-        onMouseEnter={() => setHover(true)}
-        onMouseLeave={() => setHover(false)}
-      >
-        {value
-          ? (
-            <>
-              <img src={value} alt="preview" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
-              {!disabled && hover && (
-                <div
-                  style={{
-                    position: 'absolute',
-                    inset: 0,
-                    background: 'rgba(0,0,0,0.45)',
-                    color: '#fff',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 16,
-                    fontSize: 12,
-                  }}
-                >
-                  <span style={{ cursor: 'pointer' }} onClick={() => setPreviewOpen(true)}>{t('预览')}</span>
-                  <span style={{ cursor: 'pointer' }} onClick={() => onChange?.('')}>{t('删除')}</span>
-                </div>
-              )}
-            </>
-          )
-          : (
-            <Upload accept="image/*" showUploadList={false} beforeUpload={beforeUpload} disabled={disabled}>
-              <div style={{ textAlign: 'center', color: '#8c8c8c', cursor: disabled ? 'not-allowed' : 'pointer' }}>
+      <Upload accept="image/*" showUploadList={false} beforeUpload={beforeUpload} disabled={disabled}>
+        <div
+          style={{
+            width,
+            height,
+            border: '1px dashed #d9d9d9',
+            borderRadius: 8,
+            background: '#fafafa',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            overflow: 'hidden',
+            position: 'relative',
+            cursor: disabled ? 'not-allowed' : 'pointer',
+          }}
+          onMouseEnter={() => setHover(true)}
+          onMouseLeave={() => setHover(false)}
+        >
+          {value
+            ? (
+              <>
+                <img src={value} alt="preview" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                {!disabled && hover && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      background: 'rgba(0,0,0,0.45)',
+                      color: '#fff',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 12,
+                    }}
+                  >
+                    {t('点击替换')}
+                  </div>
+                )}
+              </>
+            )
+            : (
+              <div style={{ textAlign: 'center', color: '#8c8c8c' }}>
                 <PlusOutlined style={{ fontSize: 18 }} />
                 <div style={{ fontSize: 12, marginTop: 4 }}>{t('选择图片')}</div>
               </div>
-            </Upload>
-          )}
-      </div>
-
-      {value && !disabled && (
-        <Space direction="vertical" size={4}>
-          <Upload accept="image/*" showUploadList={false} beforeUpload={beforeUpload}>
-            <Button size="small">{t('替换')}</Button>
-          </Upload>
-          <Button size="small" danger icon={<DeleteOutlined />} onClick={() => onChange?.('')}>{t('删除')}</Button>
-        </Space>
-      )}
-
-      <Modal open={previewOpen} footer={null} onCancel={() => setPreviewOpen(false)} title={t('预览')}>
-        <img src={value} alt="preview" style={{ width: '100%' }} />
-      </Modal>
-    </Space>
+            )}
+        </div>
+      </Upload>
+    </>
   )
 }
 

@@ -21,6 +21,8 @@ export interface Tenant {
   maxDevices: number
   maxGateways: number
   maxUsers: number
+  /** 时序数据保留天数：>0 按天数，0 = 默认 30 天，<0 = 永久 */
+  retentionDays: number
   remark: string
   created?: number
   modified?: number

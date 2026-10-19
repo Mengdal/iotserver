@@ -381,11 +381,6 @@ func (c *Client) seedSystemData() error {
 		}
 
 		/******* 系统配置 *******/
-		// 平台名称/描述跟随代码中的默认值刷新，其余配置仅在缺失时写入，避免覆盖用户修改
-		alwaysRefresh := map[string]struct{}{
-			"platform.name":      {},
-			"platform.copyright": {},
-		}
 		// 清理历史遗留的「无代码消费」配置项
 		if err := tx.Table("sys_config").Where("config_key IN ?", seed.UnusedConfigKeys()).
 			Delete(&models.SystemConfig{}).Error; err != nil {
@@ -398,16 +393,13 @@ func (c *Client) seedSystemData() error {
 				return err
 			}
 			if count > 0 {
-				// 名称/分组/类型始终跟随代码；值只对 alwaysRefresh 的品牌项刷新，避免覆盖用户修改
+				// 名称/分组/类型跟随代码；配置值一律保留用户修改后的值
 				updates := map[string]interface{}{
 					"name":       item.Name,
 					"group_name": item.Group,
 					"type":       item.Type,
 					"sort":       item.Sort,
 					"modified":   now,
-				}
-				if _, ok := alwaysRefresh[item.Key]; ok {
-					updates["config_value"] = item.Value
 				}
 				if err := tx.Table("sys_config").Where("config_key = ?", item.Key).Updates(updates).Error; err != nil {
 					return err

@@ -30,7 +30,7 @@ func InitSchedule(dic *di.Container, lc logger.LoggingClient) {
 		RunRetention(dic, lc)
 	})
 
-	// 每分钟把超时未活跃的设备/网关置为离线（超时值见配置 data.offlineTimeout）
+	// 每分钟把超时未活跃的设备/网关置为离线（超时值见 devicestatus.defaultOfflineTimeoutMinutes）
 	crontab.Schedule.AddFunc("* * * * *", func() {
 		SweepOffline(dic, lc)
 	})

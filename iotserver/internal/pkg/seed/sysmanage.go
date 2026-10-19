@@ -76,13 +76,12 @@ const (
 )
 
 // 会被真实读取的系统配置键
+//
+// 数据保留天数不再放在系统配置里：它按租户管理（tenant.retention_days），
+// 租户为 0 时用代码里的默认值；离线判定超时同理，使用代码默认值。
 const (
 	ConfigKeyPasswordMinLength = "security.passwordMinLength"
 	ConfigKeySessionTimeout    = "security.sessionTimeout"
-	ConfigKeyRetentionDays     = "data.retentionDays"
-	// ConfigKeyOfflineTimeout 设备/网关离线判定超时（分钟）：最后活跃时间早于
-	// now - 该值，即由后台扫描置为离线。设备与网关共用同一个值，避免两套语义。
-	ConfigKeyOfflineTimeout = "data.offlineTimeout"
 )
 
 // 内置管理员
@@ -420,8 +419,6 @@ func DefaultConfigs() []ConfigItem {
 		{"platform.loginBackground", "登录页背景图", "", "brand", "image", 5},
 		{"security.sessionTimeout", "会话超时时间(分钟)", "180", "security", "number", 6},
 		{"security.passwordMinLength", "密码最小长度", "6", "security", "number", 7},
-		{"data.retentionDays", "数据保留天数", "30", "data", "number", 8},
-		{"data.offlineTimeout", "离线判定超时(分钟)", "5", "data", "number", 9},
 	}
 }
 
@@ -433,6 +430,9 @@ func UnusedConfigKeys() []string {
 		"security.loginFailLock",
 		"security.allowRegister",
 		"data.messageRetentionDays",
+		// 数据保留改为按租户管理（tenant.retention_days），离线超时改用代码默认值
+		"data.retentionDays",
+		"data.offlineTimeout",
 		"notify.enable",
 		"notify.silenceTime",
 	}

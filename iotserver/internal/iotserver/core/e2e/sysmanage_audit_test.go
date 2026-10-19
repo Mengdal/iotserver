@@ -11,7 +11,6 @@ import (
 
 	"iotserver/internal/dtos"
 	"iotserver/internal/models"
-	"iotserver/internal/pkg/seed"
 	"iotserver/internal/pkg/tenant"
 	"iotserver/internal/pkg/utils"
 	tenantplugin "iotserver/internal/tools/sqldb/tenant"
@@ -69,16 +68,6 @@ func insertAuditLog(t *testing.T, env *testEnv, username string, created int64) 
 		t.Fatalf("插入审查日志失败: %v", err)
 	}
 	return log.Id
-}
-
-// setAuditRetention 修改 data.retentionDays
-func setAuditRetention(t *testing.T, env *testEnv, value string) {
-	t.Helper()
-	err := env.client.WithCtx(tenant.Platform(context.Background())).SaveSysConfigValues(
-		[]dtos.SysSetupItem{{ConfigKey: seed.ConfigKeyRetentionDays, ConfigValue: value}})
-	if err != nil {
-		t.Fatalf("修改保留天数失败: %v", err)
-	}
 }
 
 // countAuditLogs 记录总数
@@ -343,13 +332,12 @@ func TestAuditLogTenantIsolation(t *testing.T) {
 func TestAuditLogRetentionCleanup(t *testing.T) {
 	env := setupTestEnv(t)
 
+	// 审查日志保留天数固定为 30 天（按租户的时序数据保留策略是另一套，见租户管理）
 	expired := "audit_expired_1"
 	fresh := "audit_fresh_1"
-	insertAuditLog(t, env, expired, time.Now().AddDate(0, 0, -10).UnixMilli())
-	insertAuditLog(t, env, fresh, time.Now().UnixMilli())
+	insertAuditLog(t, env, expired, time.Now().AddDate(0, 0, -31).UnixMilli())
+	insertAuditLog(t, env, fresh, time.Now().AddDate(0, 0, -1).UnixMilli())
 
-	// retentionDays=1：过期删除、未过期保留
-	setAuditRetention(t, env, "1")
 	removed, err := env.auditApp.CleanupExpired(context.Background())
 	if err != nil {
 		t.Fatalf("清理失败: %v", err)
@@ -358,29 +346,10 @@ func TestAuditLogRetentionCleanup(t *testing.T) {
 		t.Fatalf("应至少删除 1 条过期记录，实际 %d", removed)
 	}
 	if auditLogExists(t, env, expired) {
-		t.Fatal("过期记录未被删除")
+		t.Fatal("超过 30 天的记录未被删除")
 	}
 	if !auditLogExists(t, env, fresh) {
-		t.Fatal("未过期记录被误删")
-	}
-
-	// retentionDays=0：永久保留，一条不删
-	expired2 := "audit_expired_2"
-	insertAuditLog(t, env, expired2, time.Now().AddDate(0, 0, -30).UnixMilli())
-	before := countAuditLogs(t, env)
-	setAuditRetention(t, env, "0")
-	removed, err = env.auditApp.CleanupExpired(context.Background())
-	if err != nil {
-		t.Fatalf("清理失败: %v", err)
-	}
-	if removed != 0 {
-		t.Fatalf("retentionDays=0 时不应删除任何记录，实际 %d", removed)
-	}
-	if got := countAuditLogs(t, env); got != before {
-		t.Fatalf("retentionDays=0 时记录数应不变: before=%d after=%d", before, got)
-	}
-	if !auditLogExists(t, env, expired2) {
-		t.Fatal("retentionDays=0 时过期记录被删除")
+		t.Fatal("30 天内的记录被误删")
 	}
 }
 

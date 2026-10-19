@@ -21,7 +21,7 @@ type Tenant struct {
 	MaxUsers    int `gorm:"column:max_users;type:int;default:0;comment:用户配额"`
 	// RetentionDays 该租户的时序数据保留天数：
 	//   >0 按该天数清理（覆盖系统全局配置）
-	//   =0 用系统全局配置（sys_config 的 data.retentionDays）
+	//   =0 用默认保留天数（30 天）
 	//   <0 永久保留，不清理
 	RetentionDays int    `gorm:"column:retention_days;type:int;default:0;comment:时序数据保留天数(0=用全局配置,-1=永久)"`
 	Remark        string `gorm:"column:remark;type:string;size:500;comment:备注"`

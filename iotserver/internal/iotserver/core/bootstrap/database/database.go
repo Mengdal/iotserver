@@ -16,8 +16,6 @@ import (
 	"iotserver/internal/pkg/constants"
 	"iotserver/internal/tools/datadb/duckdb"
 	"iotserver/internal/tools/datadb/ducklake"
-	"strconv"
-	"strings"
 
 	"iotserver/internal/pkg/di"
 	"iotserver/internal/pkg/logger"
@@ -26,7 +24,6 @@ import (
 
 	interfaces "iotserver/internal/iotserver/core/interface"
 	pkgContainer "iotserver/internal/pkg/container"
-	"iotserver/internal/pkg/seed"
 )
 
 // Database contains references to dependencies required by the database bootstrap implementation.
@@ -35,6 +32,10 @@ type Database struct {
 }
 
 // NewDatabase is a factory method that returns an initialized Database receiver struct.
+// defaultDataRetentionDays 数据层默认保留天数（0 表示永久保留）。
+// 按租户的保留策略由应用层 retention 任务执行；这里只是数据层启动时的兜底值。
+const defaultDataRetentionDays = 30
+
 func NewDatabase(database *config.ConfigurationStruct) Database {
 	return Database{
 		database: database,
@@ -69,18 +70,18 @@ func (d Database) newDataDBClient(
 	switch dataDbInfo.Type {
 	case string(constants.DuckDB):
 		// 单文件列存（默认）：DataSource = DuckDB 数据库文件路径
-		// 保留天数来自「系统配置 → 数据配置 → 数据保留天数」
+		// 保留天数默认值；按租户的保留策略由应用层（retention）执行
 		return duckdb.NewClient(dtos.Configuration{
 			DataSource:    dataDbInfo.DataSource,
-			RetentionDays: retentionDays(dbClient, lc),
+			RetentionDays: defaultDataRetentionDays,
 		}, lc)
 	case string(constants.DuckLake):
 		// 湖仓形态：DataSource = catalog（元数据）路径；Dsn = Parquet 数据目录
-		// 保留天数同样来自「系统配置 → 数据配置 → 数据保留天数」
+		// 保留天数默认值；按租户的保留策略由应用层（retention）执行
 		return ducklake.NewClient(dtos.Configuration{
 			DataSource:       dataDbInfo.DataSource,
 			Dsn:              dataDbInfo.Dsn,
-			RetentionDays:    retentionDays(dbClient, lc),
+			RetentionDays:    defaultDataRetentionDays,
 			OverrideDataPath: dataDbInfo.OverrideDataPath,
 		}, lc)
 	default:
@@ -134,19 +135,4 @@ func (d Database) BootstrapHandler(
 		}
 	}()
 	return true
-}
-
-// retentionDays 读取「数据保留天数」配置（缺省 30 天；0 表示永久保留）
-func retentionDays(dbClient interfaces.DBClient, lc logger.LoggingClient) int {
-	const defaultDays = 30
-	cfg, err := dbClient.SysConfigByKey(seed.ConfigKeyRetentionDays)
-	if err != nil {
-		return defaultDays
-	}
-	days, convErr := strconv.Atoi(strings.TrimSpace(cfg.ConfigValue))
-	if convErr != nil || days < 0 {
-		lc.Warnf("database: invalid retention days %q, fallback to %d", cfg.ConfigValue, defaultDays)
-		return defaultDays
-	}
-	return days
 }
