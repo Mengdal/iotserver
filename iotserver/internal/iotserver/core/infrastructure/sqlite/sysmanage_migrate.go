@@ -537,7 +537,7 @@ func (c *Client) seedSystemData() error {
 	return c.seedSolutions()
 }
 
-// seedSolutions 写入内置工业方案（ROBX 行业模板）。
+// seedSolutions 写入内置工业方案（内置行业模板）。
 //
 // 同时写三张表：
 //   - category_template / thing_model_template：让前端「一键建产品」直接选到工业品类（零改动）；

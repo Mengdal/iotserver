@@ -712,7 +712,7 @@ info:
     name: API Support
   description: Swagger API for Golang Project iotserver.
   termsOfService: http://swagger.io/terms/
-  title: 罗米物联网平台 API
+  title: iotserver 物联网平台 API
   version: "1.0"
 paths:
   /api/v1/alert:

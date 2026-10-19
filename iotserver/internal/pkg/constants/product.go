@@ -24,7 +24,7 @@ type IotPlatform string
 const (
 	IotPlatform_LocalIot    IotPlatform = "本地"
 	IotPlatform_CustomerIot IotPlatform = "用户自定义"   //用户自定义
-	IotPlatform_LuomiIot    IotPlatform = "罗米物联网平台" //罗米物联网平台
+	IotPlatform_LuomiIot    IotPlatform = "罗米物联网平台" // 参考系统（iotddc / things）平台
 	IotPlatform_AliIot      IotPlatform = "阿里云"     //阿里
 	IotPlatform_HuaweiIot   IotPlatform = "华为云"     //华为
 	IotPlatform_TencentIot  IotPlatform = "腾讯云"     //腾讯

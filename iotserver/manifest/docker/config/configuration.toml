@@ -72,7 +72,7 @@ PublishTopicPrefix = 'eventbus/in'
 [Viz]
 BoardsFile = '.viz-boards.json'
 
-# 多租户隔离（ROBX：一个实例服务多个租户，按 tenant_id 行级隔离）
+# 多租户隔离（多租户：一个实例服务多个租户，按 tenant_id 行级隔离）
 # Enforce=false（迁移期）：未带租户上下文的调用不过滤，仅打告警日志；
 # Enforce=true（上线）：租户表查询缺少租户上下文时返回空集，写入报错。
 [Tenant]

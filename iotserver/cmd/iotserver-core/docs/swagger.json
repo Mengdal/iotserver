@@ -2,7 +2,7 @@
     "swagger": "2.0",
     "info": {
         "description": "Swagger API for Golang Project iotserver.",
-        "title": "罗米物联网平台 API",
+        "title": "iotserver 物联网平台 API",
         "termsOfService": "http://swagger.io/terms/",
         "contact": {
             "name": "API Support",

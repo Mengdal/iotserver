@@ -223,7 +223,7 @@ func (uapp *userApp) buildLoginUser(ctx context.Context, user models.User, lang 
 	}
 	result.Admin = admin
 	result.DataScope = scope
-	// 平台管理员 = 内置超级管理员 且 不属于任何租户（ROBX 运营账号）
+	// 平台管理员 = 内置超级管理员 且 不属于任何租户（平台运营账号）
 	result.PlatformAdmin = admin && user.TenantId == ""
 
 	assigned, err := uapp.menusOfUser(user.Id, user.TenantId, admin)

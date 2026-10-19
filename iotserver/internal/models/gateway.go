@@ -10,7 +10,7 @@ const (
 // 网关接入协议。
 //
 // native 用平台自有协议（iot/up/{sn}/{data|batch|status|offline} 上行，
-// 见 docs/gateway-integration.md）；edge 兼容参考系统（罗米/things，iotddc）的
+// 见 docs/gateway-integration.md）；edge 兼容参考系统（iotddc / things）的
 // /edge/{connect,property,lastwill} 协议（见 docs/device-access-design.md）。
 const (
 	GatewayProtocolNative = "gatewaymqtt"

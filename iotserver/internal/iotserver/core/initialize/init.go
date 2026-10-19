@@ -402,7 +402,7 @@ func (b *Bootstrap) initClient(ctx context.Context, wg *sync.WaitGroup, dic *di.
 		lc.Infof("网关接入服务已启动，订阅主题: %s+/+", gatewaymqtt.TopicPrefixUp)
 	}
 
-	// 参考系统接入服务（罗米/things，iotddc）：订阅 /edge/... 兼容其上行协议。
+	// 参考系统接入服务（iotddc / things）：订阅 /edge/... 兼容其上行协议。
 	// 与自有网关协议并存、互不影响，MQTT 连接失败同样不阻断启动。
 	edgeIngest := edgeingest.New(dic)
 	if err := edgeIngest.Start(); err != nil {

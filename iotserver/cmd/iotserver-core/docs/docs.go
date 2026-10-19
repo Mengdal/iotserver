@@ -4768,7 +4768,7 @@ var SwaggerInfo = &swag.Spec{
 	Host:             "",
 	BasePath:         "/api/v1",
 	Schemes:          []string{},
-	Title:            "罗米物联网平台 API",
+	Title:            "iotserver 物联网平台 API",
 	Description:      "Swagger API for Golang Project iotserver.",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,

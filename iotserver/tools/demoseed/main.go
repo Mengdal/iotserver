@@ -447,7 +447,7 @@ func ensureGateway(c *client, code, deptID string, sum *summary) {
 			"name":   "演示网关1",
 			"sn":     sn,
 			"deptId": deptID,
-			"vendor": "ROBX",
+			"vendor": "iotserver",
 			"model":  "GW-2000",
 			"remark": "demoseed 演示网关",
 		})

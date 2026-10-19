@@ -2,7 +2,7 @@ package models
 
 import "sync"
 
-// Tenant 租户。ROBX 作为平台管理员在一个实例内管理多个租户，
+// Tenant 租户。平台管理员在一个实例内管理多个租户，
 // 每个租户的数据通过 tenant_id 行级隔离。
 type Tenant struct {
 	Timestamps   `gorm:"embedded"`

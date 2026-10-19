@@ -185,7 +185,7 @@ const (
 	VizDataQuery   = "viz:data:query"
 )
 
-// 租户管理：**平台级**权限，只授予 ROBX 运营账号。
+// 租户管理：**平台级**权限，只授予平台运营账号。
 // 租户用户即使拥有同名前缀的菜单也不会生效（菜单带 platform_only，不下发给租户）。
 const (
 	PlatformTenantList   = "platform:tenant:list"

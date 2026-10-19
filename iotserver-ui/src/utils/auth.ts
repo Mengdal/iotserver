@@ -34,7 +34,7 @@ export const isAdmin = (): boolean => {
   return false
 }
 
-/** 是否平台（ROBX）管理员：只有平台管理员能看「租户管理」和切换租户 */
+/** 是否平台管理员：只有平台管理员能看「租户管理」和切换租户 */
 export const isPlatformAdmin = (): boolean => {
   const user = getUser()
   if (user?.user?.platformAdmin === true || user?.platformAdmin === true) return true

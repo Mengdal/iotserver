@@ -48,7 +48,7 @@ type ConfigurationStruct struct {
 	}
 }
 
-// EdgeIngestInfo 参考系统（罗米/things，/edge 协议）接入的 broker 配置。
+// EdgeIngestInfo 参考系统（iotddc / things，/edge 协议）接入的 broker 配置。
 //
 // 为什么必须与 MessageQueue 分开：MessageQueue 同时承担平台的**内部消息总线**
 // （PublishTopicPrefix = eventbus/in，规则引擎/事件链路都走它），而参考系统的上行

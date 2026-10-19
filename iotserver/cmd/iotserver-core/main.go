@@ -18,7 +18,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// @title 罗米物联网平台 API
+// @title iotserver 物联网平台 API
 // @version 1.0
 // @description Swagger API for Golang Project iotserver.
 // @termsOfService http://swagger.io/terms/

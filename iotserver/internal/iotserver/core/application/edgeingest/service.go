@@ -1,4 +1,4 @@
-// Package edgeingest 接入参考系统（罗米物联网平台 / things，即 iotddc）的 /edge 协议。
+// Package edgeingest 接入参考系统（iotddc / things）的 /edge 协议。
 //
 // 设计见 docs/device-access-design.md。与平台自有网关协议（application/gatewayingest，
 // 主题 iot/up/{sn}/...）**并存且互不影响**：本服务持有自己的 MQTT 连接与订阅，

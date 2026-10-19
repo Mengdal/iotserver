@@ -1,4 +1,4 @@
-// Package edgeprotocol 解析参考系统（罗米物联网平台 / things，即 iotddc）的 /edge 上行协议。
+// Package edgeprotocol 解析参考系统（iotddc / things）的 /edge 上行协议。
 //
 // 与平台自有网关协议并存（自有协议见 tools/gatewaymqtt 的 iot/up/* 与
 // docs/gateway-integration.md）。本包只做「把对方报文解析成平台内部结构」，

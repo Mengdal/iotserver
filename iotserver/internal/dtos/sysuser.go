@@ -95,7 +95,7 @@ type LoginUserResponse struct {
 	TenantName string `json:"tenantName"`
 	// DataScope 数据范围：1全部 2本部门 3本部门及以下 4仅本人
 	DataScope string `json:"dataScope"`
-	// PlatformAdmin 平台（ROBX）管理员：前端据此显示租户切换器
+	// PlatformAdmin 平台管理员：前端据此显示租户切换器
 	PlatformAdmin bool `json:"platformAdmin"`
 }
 

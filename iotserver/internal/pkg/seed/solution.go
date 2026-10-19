@@ -11,7 +11,7 @@ import (
 	"iotserver/internal/models"
 )
 
-// 内置工业方案（ROBX Smart Factory 用）。
+// 内置工业方案（Smart Factory 用）。
 //
 // 每个模板文件同时提供三份数据：
 //   - category_template / thing_model_template：让前端现有「一键建产品」链路直接可用（零改动）；

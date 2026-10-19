@@ -1,9 +1,9 @@
 // Package tenant 提供多租户上下文：谁在请求、作用域属于哪个租户、是否平台级操作。
 //
-// 设计要点（与 ROBX 改造方案一致）：
+// 设计要点（与多租户改造方案一致）：
 //   - 租户上下文随 context.Context 传递，仓储层通过 GORM 插件从 Statement.Context 读取；
 //   - 默认 fail-closed：拿不到租户上下文、且不是平台作用域时，租户表的查询返回空集；
-//   - 平台作用域（Platform=true）用于 ROBX 运营、后台任务与系统初始化，可跨租户读写。
+//   - 平台作用域（Platform=true）用于平台运营、后台任务与系统初始化，可跨租户读写。
 package tenant
 
 import (
@@ -20,7 +20,7 @@ type Context struct {
 	DeptID string
 	// DataScope 数据范围：1全部 2本部门 3本部门及以下 4仅本人
 	DataScope string
-	// IsPlatformAdmin 平台（ROBX）管理员：可切换/代管租户
+	// IsPlatformAdmin 平台管理员：可切换/代管租户
 	IsPlatformAdmin bool
 	// Platform 平台作用域：不受租户过滤限制（运营、后台任务、初始化）
 	Platform bool
@@ -46,7 +46,7 @@ func With(ctx context.Context, tc Context) context.Context {
 	return context.WithValue(ctx, ctxKey{}, tc)
 }
 
-// Platform 返回一个平台作用域的上下文（后台任务/系统初始化/ROBX 运营）
+// Platform 返回一个平台作用域的上下文（后台任务/系统初始化/平台运营）
 func Platform(ctx context.Context) context.Context {
 	return With(ctx, Context{Platform: true})
 }

@@ -45,7 +45,7 @@ const MainLayout: React.FC = () => {
   const user = auth
   const userInfo = user?.user
   const admin = userInfo?.admin === true || user?.admin === true
-  // 平台（ROBX）管理员：显示租户切换器（登录接口返回 platformAdmin）
+  // 平台管理员：显示租户切换器（登录接口返回 platformAdmin）
   const platformAdmin = userInfo?.platformAdmin === true || user?.platformAdmin === true
   const [tenants, setTenants] = useState<Tenant[]>([])
   const [currentTenantId, setCurrentTenantIdState] = useState<string>(() => getCurrentTenantId())

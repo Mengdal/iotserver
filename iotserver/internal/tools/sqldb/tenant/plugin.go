@@ -96,7 +96,7 @@ func tenantWriteCallback(tx *gorm.DB) {
 	}
 	tc := tenantctx.FromContext(stmtContext(tx))
 	if tc.Platform {
-		// 平台作用域（ROBX 运营 / 后台任务 / 系统初始化）：不加限制
+		// 平台作用域（平台运营 / 后台任务 / 系统初始化）：不加限制
 		return
 	}
 	if tc.TenantID == "" {

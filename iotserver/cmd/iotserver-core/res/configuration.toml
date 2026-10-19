@@ -60,7 +60,7 @@ Port = 58090
 Type = 'mqtt'
 PublishTopicPrefix = 'eventbus/in'
 
-# 参考系统（罗米/things，即 iotddc）接入所用的 broker。
+# 参考系统（iotddc / things）接入所用的 broker。
 #
 # 为什么不复用上面那段：MessageQueue 同时还跑着平台的**内部消息总线**
 # （PublishTopicPrefix = eventbus/in，规则引擎/事件链路都走它），而参考系统的上行
@@ -69,7 +69,7 @@ PublishTopicPrefix = 'eventbus/in'
 # Broker 留空则回落到 MessageQueue 的地址（既有部署行为不变）。
 # 本文件在仓库里：生产地址与凭据请按环境填写，提交前记得清空。
 [EdgeIngest]
-Broker = 'tcp://things.iotddc.com:1885'
+Broker = ''
 Username = ''
 Password = ''
 # 订阅刷新间隔（秒）：界面上增删网关后自动重订阅，无需重启服务；<=0 用默认值 60
@@ -85,7 +85,7 @@ Enabled = false
 [Viz]
 BoardsFile = '.viz-boards.json'
 
-# 多租户隔离（ROBX：一个实例服务多个租户，按 tenant_id 行级隔离）
+# 多租户隔离（多租户：一个实例服务多个租户，按 tenant_id 行级隔离）
 # Enforce=false（迁移期）：未带租户上下文的调用不过滤，仅打告警日志；
 # Enforce=true（上线）：租户表查询缺少租户上下文时返回空集，写入报错。
 [Tenant]

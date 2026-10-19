@@ -119,7 +119,7 @@ func withActions(base []permAction, extra ...permAction) []permAction {
 }
 
 var buttonGroups = []buttonGroup{
-	// 平台级：租户管理，只授予 ROBX 运营账号
+	// 平台级：租户管理，只授予平台运营账号
 	{MenuPlatformTenant, "租户管理", "platform:tenant", []permAction{
 		{"add", "新增"}, {"edit", "修改"}, {"remove", "删除"}, {"switch", "切换"}}},
 	{MenuAdminUser, "用户管理", "system:user", crudActions},
@@ -166,7 +166,7 @@ func DefaultMenus() []models.Menu {
 			Icon: "dashboard", MenuType: models.MenuTypeMenu, Perms: permissions.HomeView,
 			Sort: 1, Visible: 1, Status: 1, IsFrame: 1,
 		},
-		// ===== 平台管理（仅 ROBX 运营账号可见）=====
+		// ===== 平台管理（仅 平台运营账号可见）=====
 		{
 			// 平台管理：平台管理员专属功能的分组（租户管理、系统配置）。
 			// 整组标记 platform_only：租户用户侧边栏不出现该目录，也不会出现"空目录"。

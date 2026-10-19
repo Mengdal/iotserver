@@ -28,7 +28,7 @@ func targetTenant(ctx context.Context) string {
 	return tc.TenantID
 }
 
-// isPlatformAdminCtx 当前请求是否是平台管理员（ROBX 运营账号）
+// isPlatformAdminCtx 当前请求是否是平台管理员（平台运营账号）
 func isPlatformAdminCtx(ctx context.Context) bool {
 	return tenant.FromContext(ctx).IsPlatformAdmin
 }

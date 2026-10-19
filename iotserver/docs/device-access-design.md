@@ -15,9 +15,9 @@
 | 物模型 | **允许没有，直接接入**（本设计的核心诉求） | 有产品与物模型 |
 | 平台既有支撑 | 需新建（本设计） | 已有：`CloudService` / `CloudInstance` / `dmi/docker` / `driverserviceapp` |
 
-关键判断：**路径 B 不需要新建**——平台已有 `CloudService`（`constants/cloudservice.go`：罗米/阿里/华为/腾讯/涂鸦/OneNET）、`CloudInstance`（docker 驱动实例，带 `authorization_config`/`extend_template`，`constants.CloudInstance = "cloudInstanceService"`）、`application/dmi/docker`、`driverserviceapp`、`controller/rpcserver/driverserver`，设备与产品上已有 `Platform`/`CloudProductId`/`CloudInstanceId`。本次工作集中在**路径 A + 两条路径的统一层**。
+关键判断：**路径 B 不需要新建**——平台已有 `CloudService`（`constants/cloudservice.go`：参考系统/阿里/华为/腾讯/涂鸦/OneNET）、`CloudInstance`（docker 驱动实例，带 `authorization_config`/`extend_template`，`constants.CloudInstance = "cloudInstanceService"`）、`application/dmi/docker`、`driverserviceapp`、`controller/rpcserver/driverserver`，设备与产品上已有 `Platform`/`CloudProductId`/`CloudInstanceId`。本次工作集中在**路径 A + 两条路径的统一层**。
 
-> 注：`IotPlatform_LuomiIot = "罗米物联网平台"`（`internal/pkg/constants/product.go:27`）即 iotddc/things。因此接入它**不必新增枚举值**，直接复用。
+> 注：`IotPlatform_LuomiIot`（`internal/pkg/constants/product.go:27`）的取值即 iotddc/things 平台。因此接入它**不必新增枚举值**，直接复用。
 
 ## 1. 路径 A：网关子设备接入（兼容 `/edge` 协议）
 
@@ -125,7 +125,7 @@ device_tag: device_id, code, name, type, unit, access_mode, source(auto|manual),
 
 | 组件 | 位置 |
 | --- | --- |
-| 云服务名称枚举 | `internal/pkg/constants/cloudservice.go`（含 `CloudServiceLuomiName = "罗米物联网平台"`） |
+| 云服务名称枚举 | `internal/pkg/constants/cloudservice.go`（含参考系统平台枚举） |
 | 驱动/云实例管理 | `application/dmi/docker/{app,driver,manager}.go`、`application/driverserviceapp/` |
 | 驱动侧 RPC | `controller/rpcserver/driverserver/` |
 | 实例类型 | `constants.CloudInstance = "cloudInstanceService"`（`internal/pkg/constants/common.go:22`） |
