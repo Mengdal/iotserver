@@ -421,6 +421,26 @@ func (c *Client) seedSystemData() error {
 			}
 		}
 
+		/******* 内置看板升级 *******/
+		// 存量看板里的占位组件（如首页看板的「设备消息量排名」文本）按内置定义升级成真实组件；
+		// 只替换组件 id 一致、类型仍然是 text 的项，用户改过类型的组件不会被动。
+		if preset, ok := seed.BoardPresetById("builtin-home"); ok {
+			var boards []models.VizBoard
+			if err := tx.Table((&models.VizBoard{}).TableName()).Find(&boards).Error; err != nil {
+				return err
+			}
+			for _, b := range boards {
+				next, changed := seed.UpgradeBoardWidgets(b.Canvas, preset.Canvas)
+				if !changed {
+					continue
+				}
+				if err := tx.Table((&models.VizBoard{}).TableName()).Where("id = ?", b.Id).
+					Update("canvas", next).Error; err != nil {
+					return err
+				}
+			}
+		}
+
 		/******* 内置管理员 *******/
 		var adminCount int64
 		if err := tx.Table("user").Where("username = ?", "admin").Count(&adminCount).Error; err != nil {

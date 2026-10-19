@@ -1,7 +1,7 @@
 import React, { forwardRef, useCallback, useImperativeHandle, useState } from 'react'
 import { Modal, Table, Tag } from 'antd'
 import { thingModelTemplate } from '@/api'
-import { t } from '@/i18n'
+import { t, tt } from '@/i18n'
 
 export interface ThingModelTemplate {
   id: string
@@ -44,7 +44,7 @@ export const StandardFuncModal = forwardRef<StandardFuncModalRef, StandardFuncMo
                   type_spec: i.type_spec.type,
                 })),
                 ...(events || []).map(i => ({
-                  type: '属性',
+                  type: '事件',
                   id: i.id,
                   name: i.name,
                   code: i.code,
@@ -52,7 +52,7 @@ export const StandardFuncModal = forwardRef<StandardFuncModalRef, StandardFuncMo
                   type_spec: '-',
                 })),
                 ...(actions || []).map(i => ({
-                  type: '属性',
+                  type: '服务',
                   id: i.id,
                   name: i.name,
                   code: i.code,
@@ -92,7 +92,7 @@ export const StandardFuncModal = forwardRef<StandardFuncModalRef, StandardFuncMo
             render (value, record) {
               return (
                 <>
-                  {value}
+                  {tt(value)}
                   <Tag color="processing" className="ml10">{record.tag}</Tag>
                 </>
               )

@@ -59,6 +59,8 @@ func RegisterGateway(engine *gin.Engine, dic *di.Container) {
 		v1Auth.POST("viz/device-query", ctl.Perm(middleware.PermVizDataQuery), ctl.VizDeviceQuery)
 		// 可绑定的指标清单（前端下拉用；权限与取数一致）
 		v1Auth.GET("viz/metrics", ctl.Perm(middleware.PermVizDataQuery), ctl.VizMetrics)
+		// 设备消息量排行（首页看板「设备消息量排名」组件）
+		v1Auth.GET("viz/device-message-rank", ctl.Perm(middleware.PermVizDataQuery), ctl.VizDeviceMessageRank)
 	}
 	/******* 平台管理（租户/租户）：平台管理员专属 *******/
 	{

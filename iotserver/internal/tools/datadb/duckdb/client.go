@@ -408,6 +408,40 @@ func (c *Client) GetDeviceMsgCountByGiveTime(deviceId string, startTime, endTime
 	return total, nil
 }
 
+// CountMsgGroupByDevice 按设备分组统计时间窗内的消息数（属性 + 事件 + 服务）。
+// 看板排行榜用：一次 GROUP BY 拿全量设备，避免逐设备统计。
+func (c *Client) CountMsgGroupByDevice(tenantID string, startTime, endTime int64) (map[string]int, error) {
+	c.flushPending()
+	out := make(map[string]int)
+	for _, table := range []string{tableProperty, tableEvent, tableService} {
+		where := "ts_ms >= ? AND ts_ms <= ?"
+		args := []interface{}{startTime, endTime}
+		if tenantID != "" {
+			where += " AND tenant_id = ?"
+			args = append(args, tenantID)
+		}
+		rows, err := c.db.Query("SELECT device_id, count(*) FROM "+table+" WHERE "+where+" GROUP BY device_id", args...)
+		if err != nil {
+			return nil, err
+		}
+		for rows.Next() {
+			var deviceID string
+			var n int
+			if err := rows.Scan(&deviceID, &n); err != nil {
+				rows.Close()
+				return nil, err
+			}
+			out[deviceID] += n
+		}
+		if err := rows.Err(); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		rows.Close()
+	}
+	return out, nil
+}
+
 // CountAllMsgByTimeRange 全平台指定时间段内的消息总数（一条 SQL，避免按设备 N+1 计数）
 func (c *Client) CountAllMsgByTimeRange(tenantID string, startTime, endTime int64) (int, error) {
 	c.flushPending()

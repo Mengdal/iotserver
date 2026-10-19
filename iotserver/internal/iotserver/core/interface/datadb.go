@@ -55,6 +55,14 @@ type MsgCounter interface {
 	CountAllMsgByTimeRange(tenantID string, startTime, endTime int64) (int, error)
 }
 
+// DeviceMsgCounter 可选能力：按设备分组统计时间窗内的消息数（看板排行榜用）。
+//
+// 一次 GROUP BY 完成，避免逐设备统计的 N+1；tenantID 为空表示不限租户（平台作用域）。
+// 时间窗内没有消息的设备不会出现在结果里。
+type DeviceMsgCounter interface {
+	CountMsgGroupByDevice(tenantID string, startTime, endTime int64) (map[string]int, error)
+}
+
 // DataPurger 可选能力：数据层支持按时间清理时序数据。
 //
 // 保留策略由应用层驱动（见 application/retention.go）：按租户读取各自的保留天数，

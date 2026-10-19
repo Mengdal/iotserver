@@ -133,6 +133,9 @@ const MainLayout: React.FC = () => {
   const [sliderMenuOpenKeys, setSliderMenuOpenKeys] = useState<string[]>([])
 
   useEffect(() => {
+    // 内容区自己滚动（见 style.less）：切路由时手动回到顶部，保持原来整页滚动的体验
+    const view = document.querySelector('.main-view')
+    if (view) view.scrollTop = 0
     const { paths, titles } = siderMenus.reduce((r, menu) => {
       const item = menu as SubMenuType
       const children = (Array.isArray(item.children) ? item.children : []) as SubMenuType[]

@@ -26,13 +26,13 @@ export const stringValidator = (rule: any, value: any, callback: any) => {
 export const TypeSpecMap: {
   [key in TypeSpec]: string
 } = {
-  int: 'int(整数型)',
-  float: 'float(浮点型)',
-  enum: 'enum(枚举)',
-  bool: 'bool(布尔)',
-  struct: 'struct(结构体)',
-  date: 'date(时间)',
-  array: 'array(数组)',
+  int: t('int(整数型)'),
+  float: t('float(浮点型)'),
+  enum: t('enum(枚举)'),
+  bool: t('bool(布尔)'),
+  struct: t('struct(结构体)'),
+  date: t('date(时间)'),
+  array: t('array(数组)'),
   text: t('text(字符串)'),
 }
 

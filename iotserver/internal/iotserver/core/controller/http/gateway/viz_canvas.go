@@ -49,6 +49,8 @@ const (
 	vizWidgetLine  = "line"
 	vizWidgetTable = "table"
 	vizWidgetStats = "stats"
+	// vizWidgetRank 排行榜：自己调用 /viz/device-message-rank 取数，不参与批量取数
+	vizWidgetRank = "rank"
 	// 文本组件正文长度上限
 	vizTextMaxLen = 4000
 	// 组件 config 序列化后的字节上限（避免把大 JSON 塞进看板文件）
@@ -117,6 +119,13 @@ var vizWidgetRegistry = map[string]vizWidgetSpec{
 			"decimals": 0,
 			"unit":     "",
 			"compare":  "none",
+		},
+	},
+	vizWidgetRank: {
+		DefaultTitle: "消息量排行",
+		Defaults: map[string]interface{}{
+			"timeRange": "7d",
+			"limit":     5,
 		},
 	},
 	vizWidgetGauge: {

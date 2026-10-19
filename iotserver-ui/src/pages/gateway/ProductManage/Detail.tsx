@@ -11,16 +11,16 @@ import { ProductActions, ProductEvents, ProductInfo, ProductProperties, ProductT
 import { get } from 'lodash'
 import './style.less'
 import { productRelease, productUnrelease } from '@/api/devices'
-import { t } from '@/i18n'
+import { t, tt } from '@/i18n'
 
 const { Text, Link } = Typography
 const { useForm, useWatch } = Form
 const { useMessage } = message
 
 const TypeMap: {[key: string]: string} = {
-  action: '服务类型',
-  event: '事件类型',
-  property: '属性类型',
+  action: t('服务类型'),
+  event: t('事件类型'),
+  property: t('属性类型'),
 }
 
 const ProductDetail = () => {
@@ -156,10 +156,10 @@ const ProductDetail = () => {
             >
               <Descriptions.Item label={t('产品ID')}><Text copyable>{productInfo?.id}</Text></Descriptions.Item>
               {isCloudProduct && <Descriptions.Item label={t('云端产品标识')}><Text copyable>{productInfo?.cloud_product_id}</Text></Descriptions.Item>}
-              <Descriptions.Item label={t('节点类型')}>{productInfo?.node_type}</Descriptions.Item>
-              <Descriptions.Item label={t('数据来源')}>{productInfo?.platform}</Descriptions.Item>
-              <Descriptions.Item label={t('数据格式')}>{productInfo?.data_format}</Descriptions.Item>
-              <Descriptions.Item label={t('协议类型')}>{productInfo?.protocol}</Descriptions.Item>
+              <Descriptions.Item label={t('节点类型')}>{tt(productInfo?.node_type)}</Descriptions.Item>
+              <Descriptions.Item label={t('数据来源')}>{tt(productInfo?.platform)}</Descriptions.Item>
+              <Descriptions.Item label={t('数据格式')}>{tt(productInfo?.data_format)}</Descriptions.Item>
+              <Descriptions.Item label={t('协议类型')}>{tt(productInfo?.protocol)}</Descriptions.Item>
               <Descriptions.Item label={t('创建时间')}>{dayjs(productInfo?.created_at).format('YYYY-MM-DD HH:mm:ss')}</Descriptions.Item>
               <Descriptions.Item label={t('厂商名称')}>{productInfo?.factory}</Descriptions.Item>
               {isCloudProduct && <Descriptions.Item label={t('最后一次同步时间')}>{dayjs(productInfo?.last_sync_time).format('YYYY-MM-DD HH:mm:ss')}</Descriptions.Item>}
@@ -223,7 +223,7 @@ const ProductDetail = () => {
                 return (
                   <>
                     <span>{TypeMap[value as string]}</span>
-                    {record?.tag && <Tag color="default" className="ml10">{record?.tag}</Tag>}
+                    {record?.tag && <Tag color="default" className="ml10">{tt(record?.tag)}</Tag>}
                   </>
                 )
               },
@@ -248,9 +248,11 @@ const ProductDetail = () => {
                 const specs = get<ProductThingModelType, string, string>(record, 'type_spec.specs', '{}') as TypeSpec
 
                 if (type === 'array') {
-                  return t('数组个数: ') + JSON.parse(specs)?.size
+                  const size = JSON.parse(specs)?.size
+                  return size === undefined || size === null ? '-' : t('数组个数: {{count}}', { count: size })
                 } else if (type === 'text') {
-                  return t('数据长度: ') + JSON.parse(specs)?.length
+                  const length = JSON.parse(specs)?.length
+                  return length === undefined || length === null ? '-' : t('数据长度: {{count}}', { count: length })
                 } else if (type === 'date') {
                   return t('整数类型Int64的UTC时间戳 (毫秒)')
                 } else if (type === 'bool' || type === 'enum') {
@@ -263,7 +265,7 @@ const ProductDetail = () => {
                     <>
                       <div>{t('取值范围:')} {specsObj?.min}-{specsObj?.max}</div>
                       <div>{t('步长:')} {specsObj?.step}</div>
-                      <div>{t('单位:')} {specsObj?.unit} ({specsObj?.unitName})</div>
+                      <div>{t('单位:')} {specsObj?.unit}{specsObj?.unitName ? ` (${specsObj.unitName})` : ''}</div>
                     </>
                   )
                 }

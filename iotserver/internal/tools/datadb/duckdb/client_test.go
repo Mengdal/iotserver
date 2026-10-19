@@ -493,6 +493,45 @@ func TestCountAllMsgByTimeRange(t *testing.T) {
 	}
 }
 
+// TestCountMsgGroupByDevice 按设备分组计数：同一设备多次上报累加，租户过滤生效
+func TestCountMsgGroupByDevice(t *testing.T) {
+	c := newTestClient(t)
+	now := time.Now().UnixNano() / int64(time.Millisecond)
+	base := now - 60_000
+
+	insert := func(tenantID, deviceID string) {
+		ctx := context.Background()
+		if tenantID != "" {
+			ctx = tenant.With(ctx, tenant.Context{TenantID: tenantID})
+		}
+		if err := c.Insert(ctx, deviceID, map[string]interface{}{
+			"temp": dtos.ReportData{Value: 1.0, Time: base},
+		}); err != nil {
+			t.Fatalf("insert: %v", err)
+		}
+	}
+	insert("t-aaa", "dev-1")
+	insert("t-aaa", "dev-1")
+	insert("t-aaa", "dev-2")
+	insert("t-bbb", "dev-3")
+	c.flushPending()
+
+	all, err := c.CountMsgGroupByDevice("", base-1000, base+1000)
+	if err != nil {
+		t.Fatalf("全平台分组计数失败: %v", err)
+	}
+	if all["dev-1"] != 2 || all["dev-2"] != 1 || all["dev-3"] != 1 {
+		t.Fatalf("全平台分组计数不对: %+v", all)
+	}
+	onlyA, err := c.CountMsgGroupByDevice("t-aaa", base-1000, base+1000)
+	if err != nil {
+		t.Fatalf("租户分组计数失败: %v", err)
+	}
+	if onlyA["dev-1"] != 2 || onlyA["dev-2"] != 1 || onlyA["dev-3"] != 0 {
+		t.Fatalf("租户分组计数不对: %+v", onlyA)
+	}
+}
+
 // seedAggRows 写入指定时间点的数值行
 func seedAggRows(t *testing.T, c *Client, deviceID string, rows []struct {
 	ts int64

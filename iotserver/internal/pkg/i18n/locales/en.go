@@ -1195,5 +1195,11 @@ func GetEnMessages() []*i18n.Message {
 			ID:    "不支持的语言: {{.p1}}",
 			Other: "Unsupported language: {{.p1}}",
 		},
+
+		// 后端接口返回的细节文案（errort.NewMessageErr，ID 就是中文原文）
+		{
+			ID:    "统计设备消息量失败：{{.p1}}",
+			Other: "Failed to count device messages: {{.p1}}",
+		},
 	}
 }

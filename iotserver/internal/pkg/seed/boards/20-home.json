@@ -78,9 +78,12 @@
         "id": "home-msg-rank",
         "title": "设备消息量排名",
         "showTitle": true,
-        "type": "text",
+        "type": "rank",
         "layout": { "x": 8, "y": 5, "w": 4, "h": 8 },
-        "text": "暂无设备消息排名数据。\n\n后端还没有按设备统计消息量的接口（topMessage），接口就绪后这里是排行榜组件。"
+        "config": {
+          "timeRange": "7d",
+          "limit": 5
+        }
       }
     ]
   }

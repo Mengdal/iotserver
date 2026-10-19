@@ -41,9 +41,9 @@ type BoardPreset struct {
 
 // boardFile 内置看板文件（boards/*.json）的顶层结构
 type boardFile struct {
-	Id        string `json:"id"`
-	Name      string `json:"name"`
-	Icon      string `json:"icon"`
+	Id   string `json:"id"`
+	Name string `json:"name"`
+	Icon string `json:"icon"`
 	// Scope 适用作用域：platform（仅平台）或 all（平台与租户都种）
 	Scope     string          `json:"scope"`
 	IsHome    bool            `json:"isHome"`
@@ -87,4 +87,88 @@ func BoardPresets(scope BoardScope) []BoardPreset {
 		})
 	}
 	return out
+}
+
+// BoardPresetById 按 id 取内置看板定义（存量看板升级时用）。
+// 用平台作用域取，平台与租户的内置看板共用同一份定义。
+func BoardPresetById(id string) (BoardPreset, bool) {
+	for _, p := range BoardPresets(BoardScopePlatform) {
+		if p.Id == id {
+			return p, true
+		}
+	}
+	return BoardPreset{}, false
+}
+
+// UpgradeBoardWidgets 用内置定义升级存量看板里的「占位文本」组件。
+//
+// 只替换同时满足以下条件的组件：
+//   - 组件 id 与内置定义一致；
+//   - 当前类型还是 text（说明还是种子里的占位文案，缺省类型也按 text 处理）；
+//   - 内置定义里该组件已经是别的类型。
+//
+// 用户改过类型的组件、自定义组件都不会被动；返回新的画布 JSON 与是否发生变化。
+func UpgradeBoardWidgets(canvas string, presetCanvas json.RawMessage) (string, bool) {
+	var stored, preset map[string]interface{}
+	if json.Unmarshal([]byte(canvas), &stored) != nil || json.Unmarshal(presetCanvas, &preset) != nil {
+		return canvas, false
+	}
+	storedWidgets, ok := stored["widgets"].([]interface{})
+	if !ok {
+		return canvas, false
+	}
+	presetWidgets, ok := preset["widgets"].([]interface{})
+	if !ok {
+		return canvas, false
+	}
+	byID := make(map[string]map[string]interface{}, len(presetWidgets))
+	for _, raw := range presetWidgets {
+		w, ok := raw.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		if id, _ := w["id"].(string); id != "" {
+			byID[id] = w
+		}
+	}
+	changed := false
+	for i, raw := range storedWidgets {
+		w, ok := raw.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		id, _ := w["id"].(string)
+		next, ok := byID[id]
+		if !ok {
+			continue
+		}
+		curType, _ := w["type"].(string)
+		nextType, _ := next["type"].(string)
+		if nextType == "" || nextType == curType || (curType != "" && curType != "text") {
+			continue
+		}
+		// 只换类型与内容：布局和标题沿用存量看板里的值，
+		// 否则升级会把用户调好的位置/大小重置成种子里的默认值。
+		merged := make(map[string]interface{}, len(next))
+		for k, v := range next {
+			merged[k] = v
+		}
+		if layout, ok := w["layout"]; ok {
+			merged["layout"] = layout
+		}
+		if title, _ := w["title"].(string); title != "" {
+			merged["title"] = title
+		}
+		storedWidgets[i] = merged
+		changed = true
+	}
+	if !changed {
+		return canvas, false
+	}
+	stored["widgets"] = storedWidgets
+	out, err := json.Marshal(stored)
+	if err != nil {
+		return canvas, false
+	}
+	return string(out), true
 }

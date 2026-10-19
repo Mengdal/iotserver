@@ -26,6 +26,7 @@ export interface VizLayout {
 export type VizWidgetType =
   | 'text' | 'container' | 'chart'
   | 'stats' | 'kpi' | 'gauge' | 'line' | 'table'
+  | 'rank'
 
 /** 数据类组件绑定的一条数据序列：设备 + 属性 */
 export interface VizSeriesRef {
@@ -286,4 +287,29 @@ export function loadVizMetrics (): Promise<VizMetricDef[]> {
 /** 清掉指标清单缓存（下次使用会重新请求） */
 export function resetVizMetricsCache (): void {
   vizMetricsCache = null
+}
+
+/* ---------------------------- 设备消息量排行 ---------------------------- */
+
+export interface VizRankItem {
+  deviceId: string
+  deviceName: string
+  /** 时间窗内的消息数（属性 + 事件 + 服务） */
+  count: number
+}
+
+export interface VizRankResult {
+  items: VizRankItem[]
+  /** 时间窗内全部设备的消息总数（算占比用） */
+  total: number
+  timeRange: string
+}
+
+/** 设备消息量排行（首页看板「设备消息量排名」组件） */
+export function getDeviceMessageRank (params: { timeRange?: string, limit?: number }) {
+  return httpRequest<any, CommonResponse<VizRankResult>>({
+    url: '/api/v1/viz/device-message-rank',
+    method: 'get',
+    params,
+  })
 }
