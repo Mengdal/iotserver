@@ -8,6 +8,7 @@ import { ThingModelType, BaseThingModelType, ProductInfo, ProductThingModelType,
 // import { debounce } from 'lodash'
 import { v4 } from 'uuid'
 import './style.less'
+import { t } from '@/i18n'
 
 const { useForm } = Form
 const { TextArea } = Input
@@ -111,7 +112,7 @@ export const DetailModal = forwardRef<DetailModalRef, DetailModalProps>(({ produ
 
   return (
     <Drawer
-      title={record ? '查看' : '添加自定义功能点'}
+      title={record ? t('查看') : t('添加自定义功能点')}
       placement="right"
       open={isModalOpen}
       width={550}
@@ -125,7 +126,7 @@ export const DetailModal = forwardRef<DetailModalRef, DetailModalProps>(({ produ
         <Space>
           {
             record
-              ? <Button onClick={handleClose}>关闭</Button>
+              ? <Button onClick={handleClose}>{t('关闭')}</Button>
               : (
                 <>
                   <Button
@@ -162,7 +163,7 @@ export const DetailModal = forwardRef<DetailModalRef, DetailModalProps>(({ produ
                           ? await onSubmit(result, 'add')
                           : await addThingModel(result)
                         if (resp.success) {
-                          message.success('物模型添加成功')
+                          message.success(t('物模型添加成功'))
                           handleClose()
                           if (typeof onSuccess === 'function') {
                             onSuccess()
@@ -174,8 +175,8 @@ export const DetailModal = forwardRef<DetailModalRef, DetailModalProps>(({ produ
                         setSubmitting(false)
                       }
                     }}
-                  >确定</Button>
-                  <Button onClick={handleClose}>取消</Button>
+                  >{t('确定')}</Button>
+                  <Button onClick={handleClose}>{t('取消')}</Button>
                 </>
               )
           }
@@ -184,16 +185,16 @@ export const DetailModal = forwardRef<DetailModalRef, DetailModalProps>(({ produ
     >
       <Form form={form} layout="vertical" disabled={!!record}>
         <Form.Item
-          label="功能类型"
+          label={t('功能类型')}
           name="thing_model_type"
-          rules={[{ required: true, message: '请选择功能类型' }]}
+          rules={[{ required: true, message: t('请选择功能类型') }]}
         >
           <Select
-            placeholder="请选择功能类型"
+            placeholder={t('请选择功能类型')}
             options={[
-              { value: 'property', label: '属性类型' },
-              { value: 'event', label: '事件类型' },
-              { value: 'action', label: '服务类型' },
+              { value: 'property', label: t('属性类型') },
+              { value: 'event', label: t('事件类型') },
+              { value: 'action', label: t('服务类型') },
             ]}
             onChange={() => {
               // setNameOptions([])
@@ -208,9 +209,9 @@ export const DetailModal = forwardRef<DetailModalRef, DetailModalProps>(({ produ
           {() => {
             return (
               <Form.Item
-                label="功能名称"
+                label={t('功能名称')}
                 name="name"
-                rules={[{ required: true, message: '请输入功能名称' }]}
+                rules={[{ required: true, message: t('请输入功能名称') }]}
                 shouldUpdate={(prevValues, nextValues) => prevValues.thing_model_type !== nextValues.thing_model_type}
                 // getValueFromEvent={(value) => {
                 //   console.log(value)
@@ -222,7 +223,7 @@ export const DetailModal = forwardRef<DetailModalRef, DetailModalProps>(({ produ
                 //   }
                 // }}
               >
-                <Input placeholder="请输入功能名称"></Input>
+                <Input placeholder={t('请输入功能名称')}></Input>
                 {/* <Select
                   showSearch
                   allowClear
@@ -267,11 +268,11 @@ export const DetailModal = forwardRef<DetailModalRef, DetailModalProps>(({ produ
           }}
         </Form.Item>
         <Form.Item
-          label="标识符"
+          label={t('标识符')}
           name="code"
-          rules={[{ required: true, message: '请输入标识符' }]}
+          rules={[{ required: true, message: t('请输入标识符') }]}
         >
-          <Input placeholder="请输入标识符"></Input>
+          <Input placeholder={t('请输入标识符')}></Input>
         </Form.Item>
         <Form.Item
           noStyle
@@ -288,15 +289,15 @@ export const DetailModal = forwardRef<DetailModalRef, DetailModalProps>(({ produ
                     showView={!!record}
                   />
                   <Form.Item
-                    label="读写类型"
+                    label={t('读写类型')}
                     name="access_model"
-                    rules={[{ required: true, message: '请选择读写类型' }]}
+                    rules={[{ required: true, message: t('请选择读写类型') }]}
                   >
                     <Select
-                      placeholder="请选择读写类型"
+                      placeholder={t('请选择读写类型')}
                       options={[
-                        { label: '读', value: 'R' },
-                        { label: '读写', value: 'RW' },
+                        { label: t('读'), value: 'R' },
+                        { label: t('读写'), value: 'RW' },
                       ]}
                     ></Select>
                   </Form.Item>
@@ -316,10 +317,10 @@ export const DetailModal = forwardRef<DetailModalRef, DetailModalProps>(({ produ
           }}
         </Form.Item>
         <Form.Item
-          label="描述"
+          label={t('描述')}
           name="description"
         >
-          <TextArea placeholder="请输入描述" rows={4}></TextArea>
+          <TextArea placeholder={t('请输入描述')} rows={4}></TextArea>
         </Form.Item>
       </Form>
     </Drawer>

@@ -10,7 +10,6 @@ package tenantquota
 
 import (
 	"context"
-	"fmt"
 
 	interfaces "iotserver/internal/iotserver/core/interface"
 	"iotserver/internal/pkg/errort"
@@ -80,7 +79,7 @@ func Ensure(ctx context.Context, db interfaces.DBClient, lc logger.LoggingClient
 	// 0（或负数）视为不限
 	if limit > 0 && current+1 > int64(limit) {
 		return errort.NewCommonErr(errort.AppTenantQuotaExceeded,
-			fmt.Errorf("%s数量已达上限（当前 %d，上限 %d）", label, current, limit))
+			errort.NewMessageErr("{{.p1}}数量已达上限（当前 {{.p2}}，上限 {{.p3}}）", map[string]interface{}{"p1": label, "p2": current, "p3": limit}))
 	}
 	return nil
 }

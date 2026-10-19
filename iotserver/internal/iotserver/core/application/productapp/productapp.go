@@ -118,7 +118,7 @@ func (p *productApp) ProductDelete(ctx context.Context, id string) error {
 		return err
 	}
 	if total > 0 {
-		return errort.NewCommonEdgeX(errort.ProductMustDeleteDevice, "该产品已绑定子设备，请优先删除子设备", err)
+		return errort.NewCommonErr(errort.ProductMustDeleteDevice, errort.NewMessageErr("该产品已绑定子设备，请优先删除子设备", nil))
 	}
 	alertApp := resourceContainer.AlertRuleAppNameFrom(p.dic.Get)
 	err = alertApp.CheckRuleByProductId(ctx, id)

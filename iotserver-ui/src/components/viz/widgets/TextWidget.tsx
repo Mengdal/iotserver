@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import { Input, Typography } from 'antd'
 import { FileTextOutlined } from '@ant-design/icons'
 import type { VizWidgetManifest } from '../types'
+import { t, tt } from '@/i18n'
 
 const { Paragraph } = Typography
 
@@ -37,15 +38,16 @@ const TextWidget: React.FC<{ ctx: any }> = ({ ctx }) => {
 
   if (ctx.readOnly) {
     return (
+      // 内置看板里的说明文字有对应英文词条时跟着语言变；用户自己写的正文原样显示
       <Paragraph style={{ whiteSpace: 'pre-wrap', marginBottom: 0 }}>
-        {text || '（空文本）'}
+        {tt(text) || t('（空文本）')}
       </Paragraph>
     )
   }
   return (
     <Input.TextArea
       value={draft}
-      placeholder="写点说明，例如：数据来源、口径、更新频率…"
+      placeholder={t('写点说明，例如：数据来源、口径、更新频率…')}
       autoSize={{ minRows: 3, maxRows: 14 }}
       onChange={e => setDraft(e.target.value)}
       onBlur={flush}
@@ -56,7 +58,7 @@ const TextWidget: React.FC<{ ctx: any }> = ({ ctx }) => {
 
 export const textManifest: VizWidgetManifest = {
   type: 'text',
-  label: '文本',
+  label: t('文本'),
   icon: <FileTextOutlined />,
   defaultSize: { w: 6, h: 4 },
   defaultConfig: () => ({}),

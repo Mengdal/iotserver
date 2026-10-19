@@ -10,6 +10,7 @@ import { Card, Col, Row, Space, Button, Divider, Empty, Typography, Modal, Form,
 import { useParams } from 'react-router-dom'
 import dayjs from 'dayjs'
 import duration from 'dayjs/plugin/duration'
+import { t } from '@/i18n'
 
 dayjs.extend(duration)
 
@@ -40,16 +41,16 @@ const RuleDetail = () => {
 
   function formatDuration (ms: number) {
     if (ms === 0) {
-      return '无'
+      return t('无')
     }
     const d = dayjs.duration(ms)
     let formattedDuration
     if (d.asHours() >= 1) {
-      formattedDuration = `${Math.floor(d.asHours())} 小时`
+      formattedDuration = t('{{p1}} 小时', { p1: Math.floor(d.asHours()) })
     } else if (d.asMinutes() >= 1) {
-      formattedDuration = `${Math.floor(d.asMinutes())} 分钟`
+      formattedDuration = t('{{p1}} 分钟', { p1: Math.floor(d.asMinutes()) })
     } else {
-      formattedDuration = `${Math.floor(d.asSeconds())} 秒`
+      formattedDuration = t('{{p1}} 秒', { p1: Math.floor(d.asSeconds()) })
     }
     return formattedDuration
   }
@@ -81,7 +82,7 @@ const RuleDetail = () => {
       }
       if (click === 'description') {
         if (!description) {
-          message.warning('请输入描述信息')
+          message.warning(t('请输入描述信息'))
           return
         }
         params.name = undefined
@@ -92,7 +93,7 @@ const RuleDetail = () => {
         editRules(ruleInfo.id, params)
           .then(resp => {
             if (resp.success) {
-              messageApi.open({ type: 'success', content: '编辑成功' })
+              messageApi.open({ type: 'success', content: t('编辑成功') })
               setOpen(false)
               loadRuleInfo()
             } else {
@@ -141,32 +142,32 @@ const RuleDetail = () => {
             />
           </div>
         }
-        describe="告警规则详情提供基础信息、告警规则管理等功能。"
+        describe={t('告警规则详情提供基础信息、告警规则管理等功能。')}
         breadcrumb={[
-          { label: '告警中心', to: '/monitor/alarmCenter/list' },
-          { label: `规则详情 [ ${ruleInfo?.name || ''} ]`, to: '' },
+          { label: t('告警中心'), to: '/monitor/alarmCenter/list' },
+          { label: t('规则详情 [ {{p1}} ]', { p1: ruleInfo?.name || '' }), to: '' },
         ]}
         background={require('@/assets/images/head-bg.8b029587.png')}
       />
       <Card>
         <Row className="mt20">
           <Col span={6}>
-            启用状态：
+            {t('启用状态：')}
             {ruleInfo?.status === 'running'
-              ? (<Space><CheckCircleFilled style={{ color: '#55af70' }} />启用</Space>)
+              ? (<Space><CheckCircleFilled style={{ color: '#55af70' }} />{t('启用')}</Space>)
               : ruleInfo?.status === 'stopped'
-                ? (<Space><MinusCircleFilled style={{ color: '#87909d' }} />禁用</Space>)
+                ? (<Space><MinusCircleFilled style={{ color: '#87909d' }} />{t('禁用')}</Space>)
                 : '-'
             }
           </Col>
           <Col span={6}>
-            创建时间：{dayjs(ruleInfo?.created).format('YYYY-MM-DD HH:mm:ss')}
+            {t('创建时间：')}{dayjs(ruleInfo?.created).format('YYYY-MM-DD HH:mm:ss')}
           </Col>
           <Col span={6}>
-            告警类型：{ruleInfo?.alert_type}
+            {t('告警类型：')}{ruleInfo?.alert_type}
           </Col>
           <Col span={6}>
-            告警级别：{ruleInfo?.alert_level}
+            {t('告警级别：')}{ruleInfo?.alert_level}
             <EditOutlined className="ml10"
               onClick={() => {
                 showNameModal()
@@ -175,7 +176,7 @@ const RuleDetail = () => {
             />
           </Col>
           <Col span={18} className="mt15">
-            规则描述：{ruleInfo?.description}
+            {t('规则描述：')}{ruleInfo?.description}
             <EditOutlined className="ml10"
               onClick={() => {
                 showNameModal()
@@ -186,25 +187,25 @@ const RuleDetail = () => {
         </Row>
         <div className="ruleInfo-title mt20">
           <span style={{ fontSize: '14px', fontWeight: '600' }}>
-            规则内容
+            {t('规则内容')}
           </span>
           <Button
             type="primary"
             onClick={() => {
               editRuleModalRef.current?.open(ruleInfo)
             }}
-          >编辑规则</Button>
+          >{t('编辑规则')}</Button>
         </div>
         {ruleInfo?.sub_rule
           ? (<div className="ruleInfo-content">
             <div className="ruleInfo-content__item" style={{ backgroundColor: '#fafafa' }}>
-              <span className="ml20 mr20">触发条件</span>
-              <span className="ml20">限制：{ruleInfo?.condition === 'anyone' ? '满足任意条件执行' : '满足全部条件执行'}
+              <span className="ml20 mr20">{t('触发条件')}</span>
+              <span className="ml20">{t('限制：')}{ruleInfo?.condition === 'anyone' ? t('满足任意条件执行') : t('满足全部条件执行')}
               </span>
             </div>
             {(ruleInfo?.sub_rule || []).map((item, index) => (
               <div key={index + 1} className="ruleInfo-content__item">
-                <div className="ruleInfo-content__title">条件 {index + 1}</div>
+                <div className="ruleInfo-content__title">{t('条件')} {index + 1}</div>
                 <span className="ml20" style={{ whiteSpace: 'pre' }}>{item?.condition}</span>
               </div>
             ))}
@@ -242,36 +243,36 @@ const RuleDetail = () => {
                 </span></>
               )} */}
             <div className="ruleInfo-content__item" style={{ backgroundColor: '#fafafa' }}>
-              <span className="ml20">通知方式</span>
+              <span className="ml20">{t('通知方式')}</span>
             </div>
             <div className="ruleInfo-content__item">
-              <div className="ruleInfo-content__title">通知 1</div>
-              <span className="ml20">告警中心</span>
+              <div className="ruleInfo-content__title">{t('通知 1')}</div>
+              <span className="ml20">{t('告警中心')}</span>
             </div>
             {(ruleInfo?.notify || []).map((item, index) => (
               <div key={index + 1} className="ruleInfo-content__item">
-                <div className="ruleInfo-content__title">通知 {index + 2}</div>
+                <div className="ruleInfo-content__title">{t('通知')} {index + 2}</div>
                 {item.name === 'sms'
-                  ? <><span className="ml20">{item.name} 短信</span>
+                  ? <><span className="ml20">{item.name} {t('短信')}</span>
                     <Divider type="vertical" className="ml20" />
                     <span className="ml15">
-                      手机号：{item.option.phoneNumber}
+                      {t('手机号：')}{item.option.phoneNumber}
                     </span></>
                   : <><span className="ml20">{item.name}</span>
                     <Divider type="vertical" className="ml20" />
                     <span className="ml15">
-                      通知地址：{item.option.webhook}
+                      {t('通知地址：')}{item.option.webhook}
                     </span></>
                 }
                 <Divider type="vertical" className="ml20" />
-                <span className="ml15">生效时间：{item.start_effect_time} - {item.end_effect_time}</span>
+                <span className="ml15">{t('生效时间：')}{item.start_effect_time} - {item.end_effect_time}</span>
               </div>
             ))}
             <div className="ruleInfo-content__item" style={{ backgroundColor: '#fafafa' }}>
-              <span className="ml20">静默时间</span>
+              <span className="ml20">{t('静默时间')}</span>
             </div>
             <div className="ruleInfo-content__item">
-              <div className="ruleInfo-content__title">时间</div>
+              <div className="ruleInfo-content__title">{t('时间')}</div>
               <span className="ml20">{formatDuration(ruleInfo?.silence_time)}</span>
             </div>
           </div>)
@@ -279,19 +280,19 @@ const RuleDetail = () => {
             <div className="ruleInfo-content__none">
               <Empty description={false} />
               <div style={{ fontSize: '14px' }}>
-                尚未添加任何条件
+                {t('尚未添加任何条件')}
               </div>
               <div style={{ color: '#71777e' }} className="mt15">
-                点击
+                {t('点击')}
                 <span
                   style={{ color: '#2979e7', cursor: 'pointer' }}
                   onClick={() => {
                     editRuleModalRef.current?.open(ruleInfo)
                   }}
                 >
-                  编辑规则
+                  {t('编辑规则')}
                 </span>
-                ，进行规则条件、动作设置
+                {t('，进行规则条件、动作设置')}
               </div>
             </div>
           </div>
@@ -302,10 +303,10 @@ const RuleDetail = () => {
         open={open}
         onOk={handleOk}
         onCancel={handleCancel}
-        okText="确定"
-        cancelText="取消"
+        okText={t('确定')}
+        cancelText={t('取消')}
         maskClosable={false}
-        title={click === 'name' ? '编辑规则名称' : click === 'alert_level' ? '编辑告警级别' : click === 'description' ? '编辑描述信息' : ''}
+        title={click === 'name' ? t('编辑规则名称') : click === 'alert_level' ? t('编辑告警级别') : click === 'description' ? t('编辑描述信息') : ''}
       >
         <Form
           form={form}
@@ -313,47 +314,47 @@ const RuleDetail = () => {
           initialValues={initialValues}
         >
           {click === 'name' && <Form.Item
-            label="规则名称"
+            label={t('规则名称')}
             name="name"
             rules={[
               {
                 // required: true,
                 validator (rule, value, callback) {
                   if (!value) {
-                    callback('请输入规则名称')
+                    callback(t('请输入规则名称'))
                   } else if (/^[a-zA-Z\u4e00-\u9fa5][a-zA-Z0-9\u4e00-\u9fa5_-]{0,31}$/.test(value)) {
                     callback()
                   } else {
-                    callback('1-32位字符，支持中文、英文、数字及特殊字符_-，必须以英文或中文字符开头')
+                    callback(t('1-32位字符，支持中文、英文、数字及特殊字符_-，必须以英文或中文字符开头'))
                   }
                 },
               },
             ]}
           >
-            <Input placeholder="1-32位字符，支持中文、英文、数字及特殊字符_-，必须以英文或中文字符开头"></Input>
+            <Input placeholder={t('1-32位字符，支持中文、英文、数字及特殊字符_-，必须以英文或中文字符开头')}></Input>
           </Form.Item>}
           {click === 'alert_level' && <Form.Item
-            label="告警级别"
+            label={t('告警级别')}
             name="alert_level"
           >
             <Select
-              placeholder="请选择"
+              placeholder={t('请选择')}
               options={[
-                { value: '紧急', label: '紧急' },
-                { value: '重要', label: '重要' },
-                { value: '次要', label: '次要' },
-                { value: '提示', label: '提示' },
+                { value: '紧急', label: t('紧急') },
+                { value: '重要', label: t('重要') },
+                { value: '次要', label: t('次要') },
+                { value: '提示', label: t('提示') },
               ]}
             />
           </Form.Item>}
           {click === 'description' && <Form.Item
-            label="规则描述"
+            label={t('规则描述')}
             name="description"
           >
             <TextArea
               showCount
               maxLength={100}
-              placeholder="请输入描述信息"
+              placeholder={t('请输入描述信息')}
               rows={4}></TextArea>
           </Form.Item>}
         </Form>

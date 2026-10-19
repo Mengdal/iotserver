@@ -5,6 +5,7 @@ import { PlusOutlined, CloseCircleFilled, CheckCircleFilled } from '@ant-design/
 import { useTableRequest } from '@/hooks'
 import { DataResource, deleteResource, getDataResource, testResource } from '@/api'
 import { AddInfluxDBModal, AddInfluxDBModalRef } from './components/AddInfluxDBModal'
+import { t } from '@/i18n'
 
 const { Text } = Typography
 const { useMessage } = message
@@ -32,7 +33,7 @@ const InfluxDB: React.FC<InfluxDBProps> = () => {
             onClick={() => {
               AddInfluxDBModalRef.current?.open()
             }}
-          ><PlusOutlined />添加实例</Button>
+          ><PlusOutlined />{t('添加实例')}</Button>
         </Space>
         <Table
           loading={loading}
@@ -42,9 +43,9 @@ const InfluxDB: React.FC<InfluxDBProps> = () => {
           rowKey="id"
           size="small"
           columns={[
-            { title: '实例名称', key: 'name', dataIndex: 'name' },
+            { title: t('实例名称'), key: 'name', dataIndex: 'name' },
             {
-              title: '创建时间',
+              title: t('创建时间'),
               key: 'created',
               dataIndex: 'created',
               render (value) {
@@ -52,17 +53,17 @@ const InfluxDB: React.FC<InfluxDBProps> = () => {
               },
             },
             {
-              title: '验证状态',
+              title: t('验证状态'),
               key: 'health',
               dataIndex: 'health',
               render: (value) => {
-                if (value === false) return <Space><CloseCircleFilled style={{ color: '#ef8e62' }} />验证失败</Space>
-                if (value === true) return <Space><CheckCircleFilled style={{ color: '#52c41a' }} />验证成功</Space>
+                if (value === false) return <Space><CloseCircleFilled style={{ color: '#ef8e62' }} />{t('验证失败')}</Space>
+                if (value === true) return <Space><CheckCircleFilled style={{ color: '#52c41a' }} />{t('验证成功')}</Space>
                 return '-'
               },
             },
             {
-              title: '操作',
+              title: t('操作'),
               key: 'action',
               dataIndex: 'action',
               render (value, record) {
@@ -73,29 +74,29 @@ const InfluxDB: React.FC<InfluxDBProps> = () => {
                         testResource(record?.id)
                           .then(resp => {
                             if (resp.success) {
-                              messageApi.open({ type: 'success', content: '操作成功' })
+                              messageApi.open({ type: 'success', content: t('操作成功') })
                               reload()
                             } else {
                               messageApi.open({ type: 'error', content: resp.errorMsg })
                             }
                           })
                       }}
-                    >验证</Typography.Link>
+                    >{t('验证')}</Typography.Link>
                     <Typography.Link
                       onClick={() => {
                         AddInfluxDBModalRef.current?.open(record)
                       }}
-                    >修改</Typography.Link>
+                    >{t('修改')}</Typography.Link>
                     <Popconfirm
-                      title="您确定要删除该实例吗？"
-                      okText="确定"
-                      cancelText="取消"
+                      title={t('您确定要删除该实例吗？')}
+                      okText={t('确定')}
+                      cancelText={t('取消')}
                       placement="topRight"
                       onConfirm={() => {
                         deleteResource(record?.id)
                           .then(resp => {
                             if (resp.success) {
-                              messageApi.open({ type: 'success', content: '删除成功' })
+                              messageApi.open({ type: 'success', content: t('删除成功') })
                               reload()
                             } else {
                               messageApi.open({ type: 'error', content: resp.errorMsg })
@@ -103,7 +104,7 @@ const InfluxDB: React.FC<InfluxDBProps> = () => {
                           })
                       }}
                     >
-                      <Typography.Link>删除</Typography.Link>
+                      <Typography.Link>{t('删除')}</Typography.Link>
                     </Popconfirm>
                   </Space>
                 )

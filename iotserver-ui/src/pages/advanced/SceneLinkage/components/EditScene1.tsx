@@ -5,6 +5,7 @@ import { SceneData, editScene, getDevice, getProductInfo, getProductList } from 
 import { ProductInfo } from '@/pages/gateway/ProductManage/types'
 import SelectWeekDays from './SelectWeekDays'
 import { MinusCircleOutlined } from '@ant-design/icons'
+import { t } from '@/i18n'
 
 interface IEditScene {
   record: SceneData
@@ -93,7 +94,7 @@ export default function EditScene ({
 
   return (<DrawerForm
     open={!!record}
-    title="编辑场景"
+    title={t('编辑场景')}
     // trigger={children}
     // drawerProps={{
     //   placement: 'right',
@@ -132,7 +133,7 @@ export default function EditScene ({
         }
         const resp = await editScene(params)
         if (resp.success) {
-          message.success('编辑成功')
+          message.success(t('编辑成功'))
           // handleClose()
           onFinish()
           onClose()
@@ -153,18 +154,18 @@ export default function EditScene ({
       <div
         style={{ boxShadow: '0 0 6px 1px rgb(0 0 0 / 14%)', padding: '20px', borderRadius: '5px' }}
       >
-        <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 20 }}>触发条件</div>
+        <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 20 }}>{t('触发条件')}</div>
         <Row gutter={15}>
           <Col span={6}>
             <ProFormSelect
-              label="触发方式"
+              label={t('触发方式')}
               name={['conditions', 'condition_type']}
-              placeholder="选择触发方式"
+              placeholder={t('选择触发方式')}
               options={[
-                { value: 'notify', label: '设备触发' },
-                { value: 'timer', label: '定时触发' },
+                { value: 'notify', label: t('设备触发') },
+                { value: 'timer', label: t('定时触发') },
               ]}
-              rules={[{ required: true, message: '不能为空' }]}
+              rules={[{ required: true, message: t('不能为空') }]}
               fieldProps={{
                 onChange () {
                   formRef.current?.setFieldValue(['conditions', 'option', 'trigger'], undefined)
@@ -192,11 +193,11 @@ export default function EditScene ({
                       label=" "
                       required={false}
                       name={['conditions', 'option', 'trigger']}
-                      rules={[{ required: true, message: '不能为空' }]}
+                      rules={[{ required: true, message: t('不能为空') }]}
                       options={[
-                        { value: '设备数据触发', label: '设备数据触发' },
-                        { value: '设备事件触发', label: '设备事件触发' },
-                        { value: '设备状态触发', label: '设备状态触发' },
+                        { value: '设备数据触发', label: t('设备数据触发') },
+                        { value: '设备事件触发', label: t('设备事件触发') },
+                        { value: '设备状态触发', label: t('设备状态触发') },
                       ]}
                       fieldProps={{
                         onChange () {
@@ -213,11 +214,11 @@ export default function EditScene ({
                   </Col>
                   <Col span={6}>
                     <ProFormSelect
-                      label="产品"
+                      label={t('产品')}
                       name={['conditions', 'option', 'product_id']}
-                      rules={[{ required: true, message: '不能为空' }]}
+                      rules={[{ required: true, message: t('不能为空') }]}
                       showSearch
-                      placeholder="选择产品"
+                      placeholder={t('选择产品')}
                       request={async ({ keyWords }) => {
                         const res: any = await getProductList({ name: keyWords } as any)
                         console.log(res)
@@ -253,10 +254,10 @@ export default function EditScene ({
                       && <Col span={6}>
                         <ProFormSelect
                           key={record.conditions.option.product_id}
-                          rules={[{ required: true, message: '不能为空' }]}
-                          label="设备"
+                          rules={[{ required: true, message: t('不能为空') }]}
+                          label={t('设备')}
                           name={['conditions', 'option', 'device_id']}
-                          placeholder="选择设备"
+                          placeholder={t('选择设备')}
                           showSearch
                           request={async ({ keyWords }) => {
                             const res = await getDevice({
@@ -289,10 +290,10 @@ export default function EditScene ({
                           return (<Col span={6}>
                             <ProFormSelect
                               key={record.conditions.option.product_id}
-                              rules={[{ required: true, message: '不能为空' }]}
-                              label="功能"
+                              rules={[{ required: true, message: t('不能为空') }]}
+                              label={t('功能')}
                               name={['conditions', 'option', 'code']}
-                              placeholder="选择功能"
+                              placeholder={t('选择功能')}
                               request={async () => {
                                 const res = await getProductInfo<ProductInfo>(record.conditions.option.product_id)
                                 return (res.result?.properties || [])
@@ -345,10 +346,10 @@ export default function EditScene ({
                         if (record?.conditions?.option?.trigger === '设备事件触发' && record?.conditions?.option?.product_id) {
                           return (<Col span={6}><ProFormSelect
                             key={record.conditions.option.product_id}
-                            rules={[{ required: true, message: '不能为空' }]}
-                            label="事件"
+                            rules={[{ required: true, message: t('不能为空') }]}
+                            label={t('事件')}
                             name={['conditions', 'option', 'code']}
-                            placeholder="请选择"
+                            placeholder={t('请选择')}
                             request={async () => {
                               const res = await getProductInfo<ProductInfo>(record.conditions.option.product_id)
                               return (res.result?.events || []).map(({ name: label, code: value }) => ({
@@ -365,13 +366,13 @@ export default function EditScene ({
                         console.log('设备状态触发', record)
                         if (record?.conditions?.option?.trigger === '设备状态触发' && record?.conditions?.option?.product_id) {
                           return (<Col span={6}><ProFormSelect
-                            rules={[{ required: true, message: '不能为空' }]}
-                            label="设备状态"
+                            rules={[{ required: true, message: t('不能为空') }]}
+                            label={t('设备状态')}
                             name={['conditions', 'option', 'status']}
-                            placeholder="请选择"
+                            placeholder={t('请选择')}
                             options={[
-                              { label: '在线', value: '在线' },
-                              { label: '离线', value: '离线' },
+                              { label: t('在线'), value: '在线' },
+                              { label: t('离线'), value: '离线' },
                             ]} />
                           </Col>)
                         }
@@ -385,16 +386,16 @@ export default function EditScene ({
                         if (['int', 'float'].includes(record?.conditions?.option?.type)) {
                           return (<>
                             <Col span={6}><ProFormSelect
-                              label="取值类型"
+                              label={t('取值类型')}
                               name={['conditions', 'option', 'value_type']}
-                              rules={[{ required: true, message: '不能为空' }]}
-                              placeholder="请选择"
+                              rules={[{ required: true, message: t('不能为空') }]}
+                              placeholder={t('请选择')}
                               options={[
-                                { value: 'original', label: '原始值' },
-                                { value: 'avg', label: '平均值' },
-                                { value: 'max', label: '最大值' },
-                                { value: 'min', label: '最小值' },
-                                { value: 'sum', label: '求和值' },
+                                { value: 'original', label: t('原始值') },
+                                { value: 'avg', label: t('平均值') },
+                                { value: 'max', label: t('最大值') },
+                                { value: 'min', label: t('最小值') },
+                                { value: 'sum', label: t('求和值') },
                               ]} />
                             </Col>
                             <Form.Item
@@ -406,16 +407,16 @@ export default function EditScene ({
                               {({ getFieldValue }) => {
                                 return getFieldValue(['conditions', 'option', 'value_type']) !== 'original' && (<Col span={6}>
                                   <ProFormSelect
-                                    label="取值周期"
+                                    label={t('取值周期')}
                                     name={['conditions', 'option', 'value_cycle']}
-                                    placeholder="请选择"
-                                    rules={[{ required: true, message: '不能为空' }]}
+                                    placeholder={t('请选择')}
+                                    rules={[{ required: true, message: t('不能为空') }]}
                                     options={[
-                                      { value: '1分钟周期', label: '1分钟周期' },
-                                      { value: '5分钟周期', label: '5分钟周期' },
-                                      { value: '15分钟周期', label: '15分钟周期' },
-                                      { value: '30分钟周期', label: '30分钟周期' },
-                                      { value: '60分钟周期', label: '60分钟周期' },
+                                      { value: '1分钟周期', label: t('1分钟周期') },
+                                      { value: '5分钟周期', label: t('5分钟周期') },
+                                      { value: '15分钟周期', label: t('15分钟周期') },
+                                      { value: '30分钟周期', label: t('30分钟周期') },
+                                      { value: '60分钟周期', label: t('60分钟周期') },
                                     ]} />
                                 </Col>)
                               }}
@@ -424,10 +425,10 @@ export default function EditScene ({
                               <Row>
                                 <Col flex="70px">
                                   <ProFormSelect
-                                    label="判断条件"
+                                    label={t('判断条件')}
                                     name="decide_condition_1"
                                     width={80}
-                                    rules={[{ required: true, message: '不能为空' }]}
+                                    rules={[{ required: true, message: t('不能为空') }]}
                                     options={[
                                       { value: '>', label: '>' },
                                       { value: '<', label: '<' },
@@ -442,10 +443,10 @@ export default function EditScene ({
                                   label=" "
                                   required={false}
                                   name="decide_condition_2"
-                                  rules={[{ required: true, message: '不能为空' }]}
+                                  rules={[{ required: true, message: t('不能为空') }]}
                                   allowClear
                                   width={90}
-                                  placeholder="请输入" />
+                                  placeholder={t('请输入')} />
                                 </Col>
                               </Row>
                             </Col>
@@ -454,10 +455,10 @@ export default function EditScene ({
                         if (['bool'].includes(record?.conditions?.option?.type)) {
                           return (<>
                             <Col span={6}><ProFormSelect
-                              rules={[{ required: true, message: '不能为空' }]}
-                              label="判断条件"
+                              rules={[{ required: true, message: t('不能为空') }]}
+                              label={t('判断条件')}
                               name={['conditions', 'option', 'decide_condition']}
-                              placeholder="请选择"
+                              placeholder={t('请选择')}
                               options={[
                                 { value: 'true', label: 'True' },
                                 { value: 'false', label: 'False' },
@@ -468,21 +469,21 @@ export default function EditScene ({
                         if (['text'].includes(record?.conditions?.option?.type)) {
                           return (<>
                             <Col span={6}><ProFormText
-                              rules={[{ required: true, message: '不能为空' }]}
-                              label="判断条件"
+                              rules={[{ required: true, message: t('不能为空') }]}
+                              label={t('判断条件')}
                               name={['conditions', 'option', 'decide_condition']}
                               allowClear
-                              placeholder="请输入" />
+                              placeholder={t('请输入')} />
                             </Col>
                           </>)
                         }
                         if (['enum'].includes(record?.conditions?.option?.type)) {
                           return (<>
                             <Col span={6}><ProFormSelect
-                              rules={[{ required: true, message: '不能为空' }]}
-                              label="判断条件"
+                              rules={[{ required: true, message: t('不能为空') }]}
+                              label={t('判断条件')}
                               name={['conditions', 'option', 'decide_condition']}
-                              placeholder="请选择"
+                              placeholder={t('请选择')}
                               options={enumOptions}
                               // options={[
                               //   { value: '0', label: '红' },
@@ -503,7 +504,7 @@ export default function EditScene ({
                   <Col span={18}>
                     <Form.Item
                       name={['conditions', 'option', 'cron_expression']}
-                      rules={[{ required: true, message: '不能为空' }]}
+                      rules={[{ required: true, message: t('不能为空') }]}
                     >
                       <SelectWeekDays style={{ marginTop: '28px' }} />
                     </Form.Item>
@@ -520,7 +521,7 @@ export default function EditScene ({
         style={{ boxShadow: '0 0 6px 1px rgb(0 0 0 / 14%)', padding: '20px', borderRadius: '5px' }}
         // loading={initing}
       >
-        <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 20 }}>执行动作</div>
+        <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 20 }}>{t('执行动作')}</div>
         <ProFormList
           name="actions"
           deleteIconProps={{
@@ -555,18 +556,18 @@ export default function EditScene ({
             console.log(f, index, action)
             return (<div>
               <div className="mb10">
-                动作{index + 1}
+                {t('动作')}{index + 1}
               </div>
               <Row gutter={15}>
                 <Col span={6}>
                   <ProFormSelect
                     name="type"
-                    placeholder="选择动作类型"
+                    placeholder={t('选择动作类型')}
                     colProps={{ span: 16 }}
                     options={[
-                      { value: '设备执行', label: '设备执行' },
+                      { value: '设备执行', label: t('设备执行') },
                     ]}
-                    rules={[{ required: true, message: '不能为空' }]}
+                    rules={[{ required: true, message: t('不能为空') }]}
                   />
                 </Col>
                 <ProFormDependency name={['actions', 'type']}>
@@ -576,8 +577,8 @@ export default function EditScene ({
                         <ProFormSelect
                           colProps={{ span: 6 }}
                           name={['product_id']}
-                          placeholder="选择产品"
-                          rules={[{ required: true, message: '不能为空' }]}
+                          placeholder={t('选择产品')}
+                          rules={[{ required: true, message: t('不能为空') }]}
                           showSearch
                           request={async ({ keyWords }) => {
                             const res: any = await getProductList({ name: keyWords } as any)
@@ -614,10 +615,10 @@ export default function EditScene ({
                     && <Col span={6} key={`${index}_${record.product_id}`}>
                       <ProFormSelect
                         colProps={{ span: 6 }}
-                        rules={[{ required: true, message: '不能为空' }]}
+                        rules={[{ required: true, message: t('不能为空') }]}
                         key={`${index}_${record.product_id}`}
                         name={['device_id']}
-                        placeholder="选择设备"
+                        placeholder={t('选择设备')}
                         showSearch
                         params={{
                           product_id: record.product_id,
@@ -652,9 +653,9 @@ export default function EditScene ({
                     return (record?.device_id
                     && <Col span={6}>
                       <ProFormSelect
-                        rules={[{ required: true, message: '不能为空' }]}
+                        rules={[{ required: true, message: t('不能为空') }]}
                         name={['code']}
-                        placeholder="选择功能"
+                        placeholder={t('选择功能')}
                         params={record.product_id}
                         request={async () => {
                           const res = await getProductInfo<ProductInfo>(record.product_id)
@@ -704,10 +705,10 @@ export default function EditScene ({
                       return (<>
                         <Col span={6}>
                           <ProFormText
-                            rules={[{ required: true, message: '不能为空' }]}
+                            rules={[{ required: true, message: t('不能为空') }]}
                             name={['value']}
                             allowClear
-                            placeholder="数值：" />
+                            placeholder={t('数值：')} />
                         </Col>
                       </>)
                     }
@@ -715,9 +716,9 @@ export default function EditScene ({
                       return (<>
                         <Col span={6}>
                           <ProFormSelect
-                            rules={[{ required: true, message: '不能为空' }]}
+                            rules={[{ required: true, message: t('不能为空') }]}
                             name={['value']}
-                            placeholder="请选择"
+                            placeholder={t('请选择')}
                             options={[
                               { value: 'true', label: 'True' },
                               { value: 'false', label: 'False' },
@@ -730,9 +731,9 @@ export default function EditScene ({
                       return (<>
                         <Col span={6}>
                           <ProFormSelect
-                            rules={[{ required: true, message: '不能为空' }]}
+                            rules={[{ required: true, message: t('不能为空') }]}
                             name={['value']}
-                            placeholder="请选择"
+                            placeholder={t('请选择')}
                             options={listEnumOptions[index]}
                             // options={[
                             //   { value: '0', label: '红' },

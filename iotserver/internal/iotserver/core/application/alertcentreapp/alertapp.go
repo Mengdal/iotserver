@@ -27,6 +27,7 @@ import (
 	"iotserver/internal/pkg/container"
 	"iotserver/internal/pkg/di"
 	"iotserver/internal/pkg/errort"
+	"iotserver/internal/pkg/i18n"
 	"iotserver/internal/pkg/logger"
 	"iotserver/internal/pkg/tenant"
 	"iotserver/internal/pkg/utils"
@@ -859,14 +860,14 @@ func (p alertApp) AddAlert(ctx context.Context, req map[string]interface{}) erro
 				continue
 			}
 			weixinAlertClient := yiqiweixin.NewWeiXinClient(p.lc, p.dic)
-			go weixinAlertClient.Send(notify.Option["webhook"], alertRule.SubRule[0], device, product, alertRule.Name)
+			go weixinAlertClient.Send(notify.Option["webhook"], alertRule.SubRule[0], device, product, alertRule.Name, notifyLang(notify))
 		case constants.DingDing:
 			if !checkEffectTime(notify.StartEffectTime, notify.EndEffectTime) {
 				continue
 			}
 			weixinAlertClient := dingding.NewDingDingClient(p.lc)
 			//发送内容请用户自行完善
-			go weixinAlertClient.Send(notify.Option["webhook"], alertRule.SubRule[0], device, product, alertRule.Name)
+			go weixinAlertClient.Send(notify.Option["webhook"], alertRule.SubRule[0], device, product, alertRule.Name, notifyLang(notify))
 		case constants.FeiShu:
 			if !checkEffectTime(notify.StartEffectTime, notify.EndEffectTime) {
 				continue
@@ -892,6 +893,16 @@ func (p alertApp) AddAlert(ctx context.Context, req map[string]interface{}) erro
 	}
 
 	return nil
+}
+
+// notifyLang 通知语言：按通知配置里的 lang 走（前端「通知语言」可选择），没配就用默认语言。
+func notifyLang(notify models.SubNotify) string {
+	if notify.Option != nil {
+		if lang := notify.Option["lang"]; lang != "" {
+			return lang
+		}
+	}
+	return i18n.DefaultLang
 }
 
 func checkEffectTime(startTime, endTime string) bool {

@@ -17,13 +17,50 @@ package yiqiweixin
 import (
 	"encoding/json"
 	"fmt"
+	"time"
+
 	"github.com/kirinlabs/HttpRequest"
+
 	"iotserver/internal/dtos"
 	"iotserver/internal/models"
 	"iotserver/internal/pkg/constants"
 	"iotserver/internal/pkg/di"
+	"iotserver/internal/pkg/i18n"
 	"iotserver/internal/pkg/logger"
-	"time"
+)
+
+// 告警通知正文模板：中文原文即词条 ID，英文译文在 internal/pkg/i18n/locales/en.go
+const (
+	tplDataAlert = `设备已触发数据告警
+         >设备名称:<font color=\"comment\">{{.p1}}</font>
+         >告警规则:<font color=\"comment\">{{.p2}}</font>
+		 >属性名称:<font color=\"comment\">{{.p3}}</font>
+ 		 >触发时间:<font color=\"comment\">{{.p4}}</font>
+      `
+	tplDataAlertWithValue = `设备已触发数据告警
+         >设备名称:<font color=\"comment\">{{.p1}}</font>
+         >告警规则:<font color=\"comment\">{{.p2}}</font>
+		 >属性名称:<font color=\"comment\">{{.p3}}</font>
+         >当前属性值:<font color=\"comment\">{{.p4}}</font>
+ 		 >触发时间:<font color=\"comment\">{{.p5}}</font>
+      `
+	tplEventAlert = `设备已触发事件告警
+         >设备名称:<font color=\"comment\">{{.p1}}</font>
+         >告警规则:<font color=\"comment\">{{.p2}}</font>
+		 >事件名称:<font color=\"comment\">{{.p3}}</font>
+ 	     >触发时间:<font color=\"comment\">{{.p4}}</font>
+         `
+	tplEventAlertWithValue = `设备已触发事件告警
+         >设备名称:<font color=\"comment\">{{.p1}}</font>
+         >告警规则:<font color=\"comment\">{{.p2}}</font>
+		 >事件名称:<font color=\"comment\">{{.p3}}</font>
+         >事件内容:<font color=\"comment\">{{.p4}}</font>
+ 	     >触发时间:<font color=\"comment\">{{.p5}}</font>
+         `
+	tplStatusAlert = `设备已触发状态告警
+         >设备名称:<font color=\"comment\">{{.p1}}</font>
+         >告警规则:<font color=\"comment\">{{.p2}}</font>
+		 >设备状态:<font color=\"comment\">{{.p3}}</font>`
 )
 
 type WeixinClient struct {
@@ -47,9 +84,10 @@ type Markdown struct {
 	Content string `json:"content"`
 }
 
-func (d *WeixinClient) generateWeiXinTemplate(rule models.Rule, device models.Device, product models.Product, ruleName string) QiYeWeiXinTemplate {
+func (d *WeixinClient) generateWeiXinTemplate(rule models.Rule, device models.Device, product models.Product, ruleName string, lang string) QiYeWeiXinTemplate {
 	var qt QiYeWeiXinTemplate
 	qt.Msgtype = "markdown"
+	now := time.Now().Format("2006-01-02 15:04:05")
 	switch rule.Trigger {
 	case constants.DeviceDataTrigger:
 		var code string
@@ -69,24 +107,22 @@ func (d *WeixinClient) generateWeiXinTemplate(rule models.Rule, device models.De
 			persisterReq.DeviceId = device.Id
 			persisterReq.Code = rule.Option["code"]
 		}
+		property := propertyName + "[" + code + "]"
 		if data == nil {
-			qt.Markdown.Content = fmt.Sprintf(`设备已触发数据告警
-         >设备名称:<font color=\"comment\">%s</font>
-         >告警规则:<font color=\"comment\">%s</font>
-		 >属性名称:<font color=\"comment\">%s</font>
- 		 >触发时间:<font color=\"comment\">%s</font>
-      `, device.Name, ruleName, fmt.Sprintf(propertyName+"[%s]", code),
-				time.Now().Format("2006-01-02 15:04:05"))
+			qt.Markdown.Content = i18n.Trans(lang, tplDataAlert, map[string]interface{}{
+				"p1": device.Name,
+				"p2": ruleName,
+				"p3": property,
+				"p4": now,
+			})
 		} else {
-			qt.Markdown.Content = fmt.Sprintf(`设备已触发数据告警
-         >设备名称:<font color=\"comment\">%s</font>
-         >告警规则:<font color=\"comment\">%s</font>
-		 >属性名称:<font color=\"comment\">%s</font>
-         >当前属性值:<font color=\"comment\">%s</font>
- 		 >触发时间:<font color=\"comment\">%s</font>
-      `, device.Name, ruleName, fmt.Sprintf(propertyName+"[%s]", code),
-				fmt.Sprintf("%s(%s)", data, unit),
-				time.Now().Format("2006-01-02 15:04:05"))
+			qt.Markdown.Content = i18n.Trans(lang, tplDataAlertWithValue, map[string]interface{}{
+				"p1": device.Name,
+				"p2": ruleName,
+				"p3": property,
+				"p4": fmt.Sprintf("%v(%s)", data, unit),
+				"p5": now,
+			})
 		}
 	case constants.DeviceEventTrigger:
 		var code string
@@ -108,38 +144,40 @@ func (d *WeixinClient) generateWeiXinTemplate(rule models.Rule, device models.De
 			persisterReq.EventCode = rule.Option["code"]
 			persisterReq.EventType = eventType
 		}
+		event := eventName + "[" + code + "]"
 		if data == nil {
-			qt.Markdown.Content = fmt.Sprintf(`设备已触发事件告警
-         >设备名称:<font color=\"comment\">%s</font>
-         >告警规则:<font color=\"comment\">%s</font>
-		 >事件名称:<font color=\"comment\">%s</font>
- 	     >触发时间:<font color=\"comment\">%s</font>
-         `, device.Name, ruleName, fmt.Sprintf(eventName+"[%s]", code), time.Now().Format("2006-01-02 15:04:05"))
+			qt.Markdown.Content = i18n.Trans(lang, tplEventAlert, map[string]interface{}{
+				"p1": device.Name,
+				"p2": ruleName,
+				"p3": event,
+				"p4": now,
+			})
 		} else {
-			qt.Markdown.Content = fmt.Sprintf(`设备已触发事件告警
-         >设备名称:<font color=\"comment\">%s</font>
-         >告警规则:<font color=\"comment\">%s</font>
-		 >事件名称:<font color=\"comment\">%s</font>
-         >事件内容:<font color=\"comment\">%s</font>
- 	     >触发时间:<font color=\"comment\">%s</font>
-         `, device.Name, ruleName, fmt.Sprintf(eventName+"[%s]", code), data, time.Now().Format("2006-01-02 15:04:05"))
+			qt.Markdown.Content = i18n.Trans(lang, tplEventAlertWithValue, map[string]interface{}{
+				"p1": device.Name,
+				"p2": ruleName,
+				"p3": event,
+				"p4": data,
+				"p5": now,
+			})
 		}
 	case constants.DeviceStatusTrigger:
-		qt.Markdown.Content = fmt.Sprintf(`设备已触发状态告警
-         >设备名称:<font color=\"comment\">%s</font>
-         >告警规则:<font color=\"comment\">%s</font>
-		 >设备状态:<font color=\"comment\">%s</font>`, device.Name, ruleName, device.Status)
+		qt.Markdown.Content = i18n.Trans(lang, tplStatusAlert, map[string]interface{}{
+			"p1": device.Name,
+			"p2": ruleName,
+			"p3": i18n.Trans(lang, string(device.Status), nil),
+		})
 	}
 	return qt
 }
 
-func (d *WeixinClient) Send(webhook string, rule models.Rule, device models.Device, product models.Product, ruleName string) {
+func (d *WeixinClient) Send(webhook string, rule models.Rule, device models.Device, product models.Product, ruleName string, lang string) {
 	if webhook == "" {
 		return
 	}
 	req := HttpRequest.NewRequest()
 	req.JSON()
-	context, _ := json.Marshal(d.generateWeiXinTemplate(rule, device, product, ruleName))
+	context, _ := json.Marshal(d.generateWeiXinTemplate(rule, device, product, ruleName, lang))
 	d.lc.Info("weixin sent context", string(context))
 	resp, err := req.Post(webhook, context)
 	if err != nil {

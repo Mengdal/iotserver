@@ -1,12 +1,13 @@
 import { v4 } from 'uuid'
 import { TypeSpec, PropertyThingModelType, EventThingModelType, ActionThingModelType, EnumValue, DeatilModalFormValue } from './types'
 import { isUndefined } from 'lodash'
+import { t } from '@/i18n'
 
 export const intValidator = (rule: any, value: any, callback: any) => {
   if ([undefined, null, ''].includes(value)) {
-    callback('请输入 ')
+    callback(t('请输入 '))
   } else if (!/^\d+$/.test(value)) {
-    callback('请输入整数')
+    callback(t('请输入整数'))
   } else {
     callback()
   }
@@ -14,9 +15,9 @@ export const intValidator = (rule: any, value: any, callback: any) => {
 
 export const stringValidator = (rule: any, value: any, callback: any) => {
   if ([undefined, null, ''].includes(value)) {
-    callback('请输入 ')
+    callback(t('请输入 '))
   } else if (!/^(?![-_])[\u4e00-\u9fa5_\-a-zA-Z0-9]{1,20}$/.test(value)) {
-    callback('1-20位, 中文、英文、数字及特殊字符_-, 必须以中文、英文或数字开头')
+    callback(t('1-20位, 中文、英文、数字及特殊字符_-, 必须以中文、英文或数字开头'))
   } else {
     callback()
   }
@@ -32,7 +33,7 @@ export const TypeSpecMap: {
   struct: 'struct(结构体)',
   date: 'date(时间)',
   array: 'array(数组)',
-  text: 'text(字符串)',
+  text: t('text(字符串)'),
 }
 
 function getStructTableData (arr: any[]) {

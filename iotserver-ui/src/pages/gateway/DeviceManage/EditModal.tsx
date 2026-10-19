@@ -3,6 +3,7 @@ import { Form, Drawer, Input, Button, Space, message } from 'antd'
 import { CloseOutlined } from '@ant-design/icons'
 import { editDevices } from '@/api'
 import { DevicesType } from '@/api/devices'
+import { t } from '@/i18n'
 
 const { useForm } = Form
 const { TextArea } = Input
@@ -40,7 +41,7 @@ export const EditModal = forwardRef<EditModalRef, EditModalProps>(({ onFinish },
 
   return (
     <Drawer
-      title={'编辑设备'}
+      title={t('编辑设备')}
       placement="right"
       open={isModalOpen}
       width={550}
@@ -65,7 +66,7 @@ export const EditModal = forwardRef<EditModalRef, EditModalProps>(({ onFinish },
                     description: values?.description,
                   }).then(resp => {
                     if (resp.success) {
-                      message.success('编辑成功')
+                      message.success(t('编辑成功'))
                       handleClose()
                       onFinish()
                     } else {
@@ -76,41 +77,41 @@ export const EditModal = forwardRef<EditModalRef, EditModalProps>(({ onFinish },
                   })
                 })
             }}
-          >确定</Button>
-          <Button onClick={handleClose}>取消</Button>
+          >{t('确定')}</Button>
+          <Button onClick={handleClose}>{t('取消')}</Button>
         </Space>
       }
     >
       <Form form={form} layout="vertical">
         <Form.Item
-          label="设备名称"
+          label={t('设备名称')}
           name="name"
         >
-          <Input placeholder="请输入驱动名称" disabled></Input>
+          <Input placeholder={t('请输入驱动名称')} disabled></Input>
         </Form.Item>
         <Form.Item
-          label="设备状态"
+          label={t('设备状态')}
           name="status"
         >
-          <Input placeholder="请输入容器名称" disabled></Input>
+          <Input placeholder={t('请输入容器名称')} disabled></Input>
         </Form.Item>
         <Form.Item
-          label="平台"
+          label={t('平台')}
           name="platform"
         >
-          <Input placeholder="请输入协议" disabled></Input>
+          <Input placeholder={t('请输入协议')} disabled></Input>
         </Form.Item>
         <Form.Item
-          label="关联驱动"
+          label={t('关联驱动')}
           name="driver_service_name"
         >
-          <Input placeholder="请输入驱动标识" disabled></Input>
+          <Input placeholder={t('请输入驱动标识')} disabled></Input>
         </Form.Item>
         <Form.Item
-          label="描述"
+          label={t('描述')}
           name="description"
         >
-          <TextArea placeholder="请输入描述" rows={4}></TextArea>
+          <TextArea placeholder={t('请输入描述')} rows={4}></TextArea>
         </Form.Item>
       </Form>
     </Drawer>

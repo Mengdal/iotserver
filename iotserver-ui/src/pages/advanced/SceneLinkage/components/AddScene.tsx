@@ -3,6 +3,7 @@ import { CloseOutlined } from '@ant-design/icons'
 import React, { forwardRef, useCallback, useImperativeHandle, useState } from 'react'
 import { addScene } from '@/api'
 import { DeviceLibraries } from '@/api/device-libraries'
+import { t } from '@/i18n'
 
 const { useForm } = Form
 const { TextArea } = Input
@@ -37,7 +38,7 @@ export const AddScene = forwardRef<AddSceneRef, AddSceneProps>(({ onFinish }, re
 
   return (
     <Drawer
-      title="新建场景"
+      title={t('新建场景')}
       placement="right"
       open={isModalOpen}
       width={550}
@@ -60,7 +61,7 @@ export const AddScene = forwardRef<AddSceneRef, AddSceneProps>(({ onFinish }, re
                   addScene(values)
                     .then(resp => {
                       if (resp.success) {
-                        message.success('添加成功')
+                        message.success(t('添加成功'))
                         handleClose()
                         onFinish()
                       } else {
@@ -71,40 +72,40 @@ export const AddScene = forwardRef<AddSceneRef, AddSceneProps>(({ onFinish }, re
                     })
                 })
             }}
-          >确定</Button>
-          <Button onClick={handleClose}>取消</Button>
+          >{t('确定')}</Button>
+          <Button onClick={handleClose}>{t('取消')}</Button>
         </Space>
       }
     >
       <Form form={form} layout="vertical">
         <Form.Item
-          label="场景名称"
+          label={t('场景名称')}
           name="name"
           rules={[
             {
               required: true,
               validator (rule, value, callback) {
                 if (!value) {
-                  callback('请输入场景名称')
+                  callback(t('请输入场景名称'))
                 } else if (/^[a-zA-Z\u4e00-\u9fa5][a-zA-Z0-9\u4e00-\u9fa5_-]{0,31}$/.test(value)) {
                   callback()
                 } else {
-                  callback('1-32位字符，支持中文、英文、数字及特殊字符_-，必须以英文或中文字符开头')
+                  callback(t('1-32位字符，支持中文、英文、数字及特殊字符_-，必须以英文或中文字符开头'))
                 }
               },
             },
           ]}
         >
-          <Input placeholder="1-32位字符，支持中文、英文、数字及特殊字符_-，必须以英文或中文字符开头"></Input>
+          <Input placeholder={t('1-32位字符，支持中文、英文、数字及特殊字符_-，必须以英文或中文字符开头')}></Input>
         </Form.Item>
         <Form.Item
-          label="场景描述"
+          label={t('场景描述')}
           name="description"
         >
           <TextArea
             showCount
             maxLength={100}
-            placeholder="请输入"
+            placeholder={t('请输入')}
             rows={4}></TextArea>
         </Form.Item>
       </Form>

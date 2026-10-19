@@ -167,7 +167,7 @@ func (app *sceneApp) SceneUpdate(ctx context.Context, req dtos.SceneUpdateReques
 	} else {
 		sql := app.buildSql(req.Conditions)
 		if sql == "" {
-			return errort.NewCommonErr(errort.SceneRuleParamsError, fmt.Errorf("触发条件无法生成查询语句"))
+			return errort.NewCommonErr(errort.SceneRuleParamsError, errort.NewMessageErr("触发条件无法生成查询语句", nil))
 		}
 		if err = app.syncEkuiperRule(ctx, old.Id, sql); err != nil {
 			return err
@@ -212,10 +212,10 @@ func (app *sceneApp) SceneStart(ctx context.Context, id string) error {
 		return err
 	}
 	if len(scene.Conditions) == 0 {
-		return errort.NewCommonErr(errort.SceneRuleParamsError, fmt.Errorf("请先配置触发条件"))
+		return errort.NewCommonErr(errort.SceneRuleParamsError, errort.NewMessageErr("请先配置触发条件", nil))
 	}
 	if len(scene.Actions) == 0 {
-		return errort.NewCommonErr(errort.SceneRuleParamsError, fmt.Errorf("请先配置执行动作"))
+		return errort.NewCommonErr(errort.SceneRuleParamsError, errort.NewMessageErr("请先配置执行动作", nil))
 	}
 	// 库中数据可能早于加固写入（或被人直接改库），启动前再校验一次
 	if err := checkSceneParam(scene.Conditions, scene.Actions); err != nil {
@@ -229,7 +229,7 @@ func (app *sceneApp) SceneStart(ctx context.Context, id string) error {
 	} else {
 		sql := app.buildSql(scene.Conditions)
 		if sql == "" {
-			return errort.NewCommonErr(errort.SceneRuleParamsError, fmt.Errorf("触发条件无法生成查询语句"))
+			return errort.NewCommonErr(errort.SceneRuleParamsError, errort.NewMessageErr("触发条件无法生成查询语句", nil))
 		}
 		if err = app.syncEkuiperRule(ctx, scene.Id, sql); err != nil {
 			return err
@@ -263,7 +263,7 @@ func (app *sceneApp) ExecuteSceneByRule(ctx context.Context, payload map[string]
 		ruleId = stringOf(payload, "ruleId")
 	}
 	if ruleId == "" {
-		return errort.NewCommonErr(errort.DefaultReqParamsError, fmt.Errorf("缺少 rule_id"))
+		return errort.NewCommonErr(errort.DefaultReqParamsError, errort.NewMessageErr("缺少 rule_id", nil))
 	}
 	scene, err := app.dbClient.WithCtx(ctx).SceneById(ruleId)
 	if err != nil {
@@ -273,7 +273,7 @@ func (app *sceneApp) ExecuteSceneByRule(ctx context.Context, payload map[string]
 	// 拿到场景ID即可反复触发设备写入
 	if scene.Status != string(constants.SceneStart) {
 		app.lc.Warnf("scene %s(%s) is not running, trigger ignored", scene.Name, scene.Id)
-		return errort.NewCommonErr(errort.SceneRuleParamsError, fmt.Errorf("场景未启用，忽略触发"))
+		return errort.NewCommonErr(errort.SceneRuleParamsError, errort.NewMessageErr("场景未启用，忽略触发", nil))
 	}
 	app.runSceneActions(ctx, &scene)
 	return nil
@@ -453,11 +453,11 @@ func parseCron(cron string) (*jobs.JobSchedule, time.Time, error) {
 		TimeData: jobs.TimeData{Expression: cronForScheduler(cron)},
 	})
 	if err != nil {
-		return nil, time.Time{}, errort.NewCommonErr(errort.SceneRuleParamsError, fmt.Errorf("定时表达式不合法: %v", err))
+		return nil, time.Time{}, errort.NewCommonErr(errort.SceneRuleParamsError, errort.NewMessageErr("定时表达式不合法: {{.p1}}", map[string]interface{}{"p1": err}))
 	}
 	next, _ := schedule.Next(time.Now())
 	if next.IsZero() {
-		return nil, time.Time{}, errort.NewCommonErr(errort.SceneRuleParamsError, fmt.Errorf("定时表达式无法匹配任何时间"))
+		return nil, time.Time{}, errort.NewCommonErr(errort.SceneRuleParamsError, errort.NewMessageErr("定时表达式无法匹配任何时间", nil))
 	}
 	return schedule, next, nil
 }
@@ -472,7 +472,7 @@ func validateCron(cron string) error {
 func (app *sceneApp) registerTimer(scene *models.Scene) error {
 	cron := cronOf(scene.Conditions)
 	if cron == "" {
-		return errort.NewCommonErr(errort.SceneRuleParamsError, fmt.Errorf("缺少定时表达式"))
+		return errort.NewCommonErr(errort.SceneRuleParamsError, errort.NewMessageErr("缺少定时表达式", nil))
 	}
 	schedule, next, err := parseCron(cron)
 	if err != nil {
@@ -653,10 +653,10 @@ var unsafeSqlChars = regexp.MustCompile("[\"'`;\\\r\n\t]")
 // checkSqlSafeField 校验会被拼接进 eKuiper SQL 的标识字段
 func checkSqlSafeField(label, value string, maxLen int) error {
 	if len([]rune(value)) > maxLen {
-		return errort.NewCommonErr(errort.SceneRuleParamsError, fmt.Errorf("%s 长度不能超过 %d 个字符", label, maxLen))
+		return errort.NewCommonErr(errort.SceneRuleParamsError, errort.NewMessageErr("{{.p1}} 长度不能超过 {{.p2}} 个字符", map[string]interface{}{"p1": label, "p2": maxLen}))
 	}
 	if unsafeSqlChars.MatchString(value) {
-		return errort.NewCommonErr(errort.SceneRuleParamsError, fmt.Errorf("%s 包含非法字符", label))
+		return errort.NewCommonErr(errort.SceneRuleParamsError, errort.NewMessageErr("{{.p1}} 包含非法字符", map[string]interface{}{"p1": label}))
 	}
 	return nil
 }
@@ -667,16 +667,16 @@ func checkDecideCondition(specsType, decideCondition string) error {
 	case constants.SpecsTypeInt, constants.SpecsTypeFloat, "":
 		if !numericConditionPattern.MatchString(decideCondition) {
 			return errort.NewCommonErr(errort.SceneRuleParamsError,
-				fmt.Errorf("判断条件格式错误，应为 操作符+数值，例如 \"> 30\""))
+				errort.NewMessageErr("判断条件格式错误，应为 操作符+数值，例如 \"> 30\"", nil))
 		}
 	case constants.SpecsTypeBool:
 		if !regexp.MustCompile(`^=\s*(true|false)$`).MatchString(decideCondition) {
-			return errort.NewCommonErr(errort.SceneRuleParamsError, fmt.Errorf("布尔型判断条件应为 = true 或 = false"))
+			return errort.NewCommonErr(errort.SceneRuleParamsError, errort.NewMessageErr("布尔型判断条件应为 = true 或 = false", nil))
 		}
 	default:
 		if !textConditionPattern.MatchString(decideCondition) {
 			return errort.NewCommonErr(errort.SceneRuleParamsError,
-				fmt.Errorf("判断条件格式错误，应为 = 值（不含引号/分号）"))
+				errort.NewMessageErr("判断条件格式错误，应为 = 值（不含引号/分号）", nil))
 		}
 	}
 	return nil
@@ -685,14 +685,14 @@ func checkDecideCondition(specsType, decideCondition string) error {
 // checkSceneParam 触发条件与执行动作校验
 func checkSceneParam(conditions []models.SceneCondition, actions []models.SceneAction) error {
 	if len(conditions) == 0 {
-		return errort.NewCommonErr(errort.SceneRuleParamsError, fmt.Errorf("请配置触发条件"))
+		return errort.NewCommonErr(errort.SceneRuleParamsError, errort.NewMessageErr("请配置触发条件", nil))
 	}
 	condition := conditions[0]
 	switch condition.ConditionType {
 	case ConditionTypeTimer:
 		cron := cronOf(conditions)
 		if cron == "" {
-			return errort.NewCommonErr(errort.SceneRuleParamsError, fmt.Errorf("请配置定时表达式"))
+			return errort.NewCommonErr(errort.SceneRuleParamsError, errort.NewMessageErr("请配置定时表达式", nil))
 		}
 		// 提前校验表达式合法性，避免编辑时通过、启动时才报错
 		if err := validateCron(cron); err != nil {
@@ -701,14 +701,14 @@ func checkSceneParam(conditions []models.SceneCondition, actions []models.SceneA
 	case ConditionTypeNotify:
 		option := condition.Option
 		if option == nil {
-			return errort.NewCommonErr(errort.SceneRuleParamsError, fmt.Errorf("请配置触发条件"))
+			return errort.NewCommonErr(errort.SceneRuleParamsError, errort.NewMessageErr("请配置触发条件", nil))
 		}
 		trigger := constants.Trigger(option["trigger"])
 		switch trigger {
 		case constants.DeviceDataTrigger:
 			for _, key := range []string{"product_id", "device_id", "code", "decide_condition"} {
 				if strings.TrimSpace(option[key]) == "" {
-					return errort.NewCommonErr(errort.SceneRuleParamsError, fmt.Errorf("触发条件缺少 %s", key))
+					return errort.NewCommonErr(errort.SceneRuleParamsError, errort.NewMessageErr("触发条件缺少 {{.p1}}", map[string]interface{}{"p1": key}))
 				}
 			}
 			// 这些字段会被拼进 eKuiper SQL，必须校验，避免越出字符串字面量导致条件恒真
@@ -718,7 +718,7 @@ func checkSceneParam(conditions []models.SceneCondition, actions []models.SceneA
 				}
 			}
 			if len([]rune(option["decide_condition"])) > maxConditionField {
-				return errort.NewCommonErr(errort.SceneRuleParamsError, fmt.Errorf("判断条件过长"))
+				return errort.NewCommonErr(errort.SceneRuleParamsError, errort.NewMessageErr("判断条件过长", nil))
 			}
 			if err := checkDecideCondition(option["type"], option["decide_condition"]); err != nil {
 				return err
@@ -726,7 +726,7 @@ func checkSceneParam(conditions []models.SceneCondition, actions []models.SceneA
 		case constants.DeviceEventTrigger:
 			for _, key := range []string{"product_id", "device_id", "code"} {
 				if strings.TrimSpace(option[key]) == "" {
-					return errort.NewCommonErr(errort.SceneRuleParamsError, fmt.Errorf("触发条件缺少 %s", key))
+					return errort.NewCommonErr(errort.SceneRuleParamsError, errort.NewMessageErr("触发条件缺少 {{.p1}}", map[string]interface{}{"p1": key}))
 				}
 			}
 			for label, key := range map[string]string{"产品ID": "product_id", "设备ID": "device_id", "事件编码": "code"} {
@@ -737,7 +737,7 @@ func checkSceneParam(conditions []models.SceneCondition, actions []models.SceneA
 		case constants.DeviceStatusTrigger:
 			for _, key := range []string{"device_id", "status"} {
 				if strings.TrimSpace(option[key]) == "" {
-					return errort.NewCommonErr(errort.SceneRuleParamsError, fmt.Errorf("触发条件缺少 %s", key))
+					return errort.NewCommonErr(errort.SceneRuleParamsError, errort.NewMessageErr("触发条件缺少 {{.p1}}", map[string]interface{}{"p1": key}))
 				}
 			}
 			for label, key := range map[string]string{"设备ID": "device_id"} {
@@ -746,25 +746,25 @@ func checkSceneParam(conditions []models.SceneCondition, actions []models.SceneA
 				}
 			}
 		default:
-			return errort.NewCommonErr(errort.SceneRuleParamsError, fmt.Errorf("不支持的触发方式: %s", option["trigger"]))
+			return errort.NewCommonErr(errort.SceneRuleParamsError, errort.NewMessageErr("不支持的触发方式: {{.p1}}", map[string]interface{}{"p1": option["trigger"]}))
 		}
 	default:
-		return errort.NewCommonErr(errort.SceneRuleParamsError, fmt.Errorf("不支持的触发类型: %s", condition.ConditionType))
+		return errort.NewCommonErr(errort.SceneRuleParamsError, errort.NewMessageErr("不支持的触发类型: {{.p1}}", map[string]interface{}{"p1": condition.ConditionType}))
 	}
 
 	if len(actions) == 0 {
-		return errort.NewCommonErr(errort.SceneRuleParamsError, fmt.Errorf("请配置执行动作"))
+		return errort.NewCommonErr(errort.SceneRuleParamsError, errort.NewMessageErr("请配置执行动作", nil))
 	}
 	for i := range actions {
 		if strings.TrimSpace(actions[i].DeviceId) == "" {
-			return errort.NewCommonErr(errort.SceneRuleParamsError, fmt.Errorf("第 %d 个动作未选择设备", i+1))
+			return errort.NewCommonErr(errort.SceneRuleParamsError, errort.NewMessageErr("第 {{.p1}} 个动作未选择设备", map[string]interface{}{"p1": i + 1}))
 		}
 		if strings.TrimSpace(actions[i].Code) == "" {
-			return errort.NewCommonErr(errort.SceneRuleParamsError, fmt.Errorf("第 %d 个动作未选择功能", i+1))
+			return errort.NewCommonErr(errort.SceneRuleParamsError, errort.NewMessageErr("第 {{.p1}} 个动作未选择功能", map[string]interface{}{"p1": i + 1}))
 		}
 		for label, value := range map[string]string{"设备ID": actions[i].DeviceId, "功能编码": actions[i].Code, "动作值": actions[i].Value} {
 			if len([]rune(value)) > maxConditionField {
-				return errort.NewCommonErr(errort.SceneRuleParamsError, fmt.Errorf("第 %d 个动作的%s过长", i+1, label))
+				return errort.NewCommonErr(errort.SceneRuleParamsError, errort.NewMessageErr("第 {{.p1}} 个动作的{{.p2}}过长", map[string]interface{}{"p1": i + 1, "p2": label}))
 			}
 		}
 	}
@@ -775,7 +775,7 @@ func checkSceneParam(conditions []models.SceneCondition, actions []models.SceneA
 func checkDescription(description string) error {
 	if len([]rune(description)) > maxDescriptionLen {
 		return errort.NewCommonErr(errort.DefaultReqParamsError,
-			fmt.Errorf("描述长度不能超过 %d 个字符", maxDescriptionLen))
+			errort.NewMessageErr("描述长度不能超过 {{.p1}} 个字符", map[string]interface{}{"p1": maxDescriptionLen}))
 	}
 	return nil
 }

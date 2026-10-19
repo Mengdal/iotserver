@@ -162,12 +162,12 @@ func (app *machineTemplateApp) SolutionByKey(ctx context.Context, key string) (d
 	key = strings.TrimSpace(key)
 	if key == "" {
 		return dtos.SolutionResponse{}, errort.NewCommonErr(errort.DefaultReqParamsError,
-			fmt.Errorf("模板 key 不能为空"))
+			errort.NewMessageErr("模板 key 不能为空", nil))
 	}
 	tpl, err := app.dbClient.WithCtx(ctx).SolutionByKey(tenantIDFromCtx(ctx), key)
 	if err != nil {
 		return dtos.SolutionResponse{}, errort.NewCommonErr(errort.DefaultResourcesNotFound,
-			fmt.Errorf("方案 %s 不存在", key))
+			errort.NewMessageErr("方案 {{.p1}} 不存在", map[string]interface{}{"p1": key}))
 	}
 	return machineTemplateResponseFromModel(tpl), nil
 }
@@ -177,11 +177,11 @@ func (app *machineTemplateApp) SolutionApply(ctx context.Context, key string, re
 	res := dtos.SolutionApplyResponse{DeviceIds: []string{}, AlarmRuleIds: []string{}, Skipped: []string{}}
 	key = strings.TrimSpace(key)
 	if key == "" {
-		return res, errort.NewCommonErr(errort.DefaultReqParamsError, fmt.Errorf("模板 key 不能为空"))
+		return res, errort.NewCommonErr(errort.DefaultReqParamsError, errort.NewMessageErr("模板 key 不能为空", nil))
 	}
 	tpl, err := app.dbClient.WithCtx(ctx).SolutionByKey(tenantIDFromCtx(ctx), key)
 	if err != nil {
-		return res, errort.NewCommonErr(errort.DefaultResourcesNotFound, fmt.Errorf("方案 %s 不存在", key))
+		return res, errort.NewCommonErr(errort.DefaultResourcesNotFound, errort.NewMessageErr("方案 {{.p1}} 不存在", map[string]interface{}{"p1": key}))
 	}
 
 	productName := strings.TrimSpace(req.ProductName)

@@ -1,5 +1,6 @@
 import axios, { AxiosRequestConfig, AxiosResponse } from 'axios'
 import { clearUser, getCurrentTenantId, getToken, isPlatformAdmin } from './auth'
+import { currentLocale, t } from '@/i18n'
 import { message } from 'antd'
 
 export const http = axios.create({
@@ -34,6 +35,8 @@ http.interceptors.request.use(
       'x-token': getToken(),
       // Authorization: `Bearer ${getToken()}`,
       ...(tenantId ? { 'x-tenant-id': tenantId } : {}),
+      // 语言：后端按这个头返回对应语言的错误信息（见 iotserver/internal/pkg/i18n）
+      'Accept-Language': currentLocale(),
     }
 
     return config
@@ -48,7 +51,7 @@ http.interceptors.response.use(
     if (response.data && response.data.errorCode === TOKEN_INVALID_CODE) {
       // 并发请求会一起失败，提示只弹一次（redirecting 去重），并且稍等一下再跳，
       // 让用户来得及看到"为什么被登出"
-      message.error(response.data.errorMsg || '登录已失效，请重新登录')
+      message.error(response.data.errorMsg || t('登录已失效，请重新登录'))
       window.setTimeout(toLogin, 600)
     }
     return response

@@ -22,6 +22,7 @@ import { SettingGroup, SettingRow } from '@/components/viz/widgets/SettingsLayou
 import { collectDescendantIds, flattenVizTree, groupByParent, isVizContainer } from '@/utils/vizTree'
 import './index.less'
 import type { GridStackNode } from 'gridstack'
+import { t } from '@/i18n'
 
 const { Text } = Typography
 
@@ -30,18 +31,18 @@ const ROW_HEIGHT = 40
 
 /** 自动刷新间隔可选项（秒，0 = 关）；真正的展示页按它轮询取数 */
 const REFRESH_OPTIONS = [
-  { label: '不自动刷新', value: 0 },
-  { label: '10 秒', value: 10 },
-  { label: '30 秒', value: 30 },
-  { label: '1 分钟', value: 60 },
-  { label: '5 分钟', value: 300 },
-  { label: '15 分钟', value: 900 },
-  { label: '1 小时', value: 3600 },
+  { label: t('不自动刷新'), value: 0 },
+  { label: t('10 秒'), value: 10 },
+  { label: t('30 秒'), value: 30 },
+  { label: t('1 分钟'), value: 60 },
+  { label: t('5 分钟'), value: 300 },
+  { label: t('15 分钟'), value: 900 },
+  { label: t('1 小时'), value: 3600 },
 ]
 
 /** 组件级刷新间隔：0 = 跟随看板（组件不配就跟整页一致） */
 const WIDGET_REFRESH_OPTIONS = [
-  { label: '跟随看板', value: 0 },
+  { label: t('跟随看板'), value: 0 },
   ...REFRESH_OPTIONS.slice(1),
 ]
 
@@ -90,7 +91,7 @@ const BoardEdit: React.FC = () => {
   const navigate = useNavigate()
   const isNew = id === 'new'
 
-  const [name, setName] = useState('新建看板')
+  const [name, setName] = useState(t('新建看板'))
   // widgets 是**扁平**的（含所有层级），归属关系单独放 parentOf：跨子网格拖拽只改归属
   const [widgets, setWidgets] = useState<VizWidget[]>([])
   const [parentOf, setParentOf] = useState<Record<string, string>>({})
@@ -124,7 +125,7 @@ const BoardEdit: React.FC = () => {
     if (isNew) {
       setWidgets([])
       setParentOf({})
-      setName('新建看板')
+      setName(t('新建看板'))
       setRefreshInterval(0)
       setLoading(false)
       return
@@ -140,10 +141,10 @@ const BoardEdit: React.FC = () => {
           setWidgets(flat.widgets)
           setParentOf(flat.parentOf)
         } else {
-          setError(resp.errorMsg || '看板加载失败')
+          setError(resp.errorMsg || t('看板加载失败'))
         }
       })
-      .catch((e: any) => setError(e?.message || '看板加载失败'))
+      .catch((e: any) => setError(e?.message || t('看板加载失败')))
       .finally(() => setLoading(false))
   }, [id, isNew])
 
@@ -370,7 +371,7 @@ const BoardEdit: React.FC = () => {
       kidIds.forEach(wid => { copy[wid] = parent })
       return copy
     })
-    message.success('已取消容器，里面的组件回到了上一层')
+    message.success(t('已取消容器，里面的组件回到了上一层'))
     markDirty()
   }
 
@@ -410,7 +411,7 @@ const BoardEdit: React.FC = () => {
 
   const save = async () => {
     if (!name.trim()) {
-      message.warning('请先给看板起个名字')
+      message.warning(t('请先给看板起个名字'))
       return
     }
     setSaving(true)
@@ -418,24 +419,24 @@ const BoardEdit: React.FC = () => {
       const payload = { name: name.trim(), canvas: canvasPayload() }
       const resp = isNew ? await createVizBoard(payload) : await updateVizBoard(id, payload)
       if (resp.success) {
-        message.success('看板已保存')
+        message.success(t('看板已保存'))
         setDirty(false)
         const newId = resp.result && resp.result.id
         if (isNew && newId) {
           navigate(`/viz/boards/${newId}/edit`, { replace: true })
         }
       } else {
-        message.error(resp.errorMsg || '保存失败')
+        message.error(resp.errorMsg || t('保存失败'))
       }
     } catch (e: any) {
-      message.error(e?.message || '保存失败')
+      message.error(e?.message || t('保存失败'))
     } finally {
       setSaving(false)
     }
   }
 
   const goBack = () => {
-    if (dirty && !window.confirm('有未保存的修改，确定离开吗？')) return
+    if (dirty && !window.confirm(t('有未保存的修改，确定离开吗？'))) return
     navigate('/viz/boards')
   }
 
@@ -459,17 +460,17 @@ const BoardEdit: React.FC = () => {
       const menu: NonNullable<MenuProps['items']> = []
       if (!readOnly) {
         menu.push(
-          { key: 'configure', label: '重命名容器', onClick: () => setSettingsId(w.id) },
+          { key: 'configure', label: t('重命名容器'), onClick: () => setSettingsId(w.id) },
           { type: 'divider' },
-          { key: 'unwrap', label: '取消容器（组件回到上一层）', onClick: () => unwrapContainer(w.id) },
+          { key: 'unwrap', label: t('取消容器（组件回到上一层）'), onClick: () => unwrapContainer(w.id) },
           { type: 'divider' },
-          { key: 'remove', label: '删除容器（含里面的组件）', danger: true, onClick: () => removeWidget(w.id) },
+          { key: 'remove', label: t('删除容器（含里面的组件）'), danger: true, onClick: () => removeWidget(w.id) },
         )
       }
       return (
         <div className="board-editor__container">
           <div className="board-editor__container-head">
-            <span className="board-editor__container-title">{w.title || '容器'}</span>
+            <span className="board-editor__container-title">{w.title || t('容器')}</span>
             {menu.length > 0
               ? (
                 <Dropdown menu={{ items: menu }} trigger={['click']}>
@@ -493,7 +494,7 @@ const BoardEdit: React.FC = () => {
               onDroppedWidget={(node, previous) => handleDroppedWidget(node, previous, w.id)}
               renderItem={renderWidget}
             />
-            {kids.length === 0 ? <div className="board-editor__container-empty">把组件拖进来</div> : null}
+            {kids.length === 0 ? <div className="board-editor__container-empty">{t('把组件拖进来')}</div> : null}
           </div>
         </div>
       )
@@ -532,7 +533,7 @@ const BoardEdit: React.FC = () => {
     <div className="board-editor">
       <div className="board-editor__toolbar">
         <Space size={8}>
-          <Button icon={<ArrowLeftOutlined />} onClick={goBack}>返回</Button>
+          <Button icon={<ArrowLeftOutlined />} onClick={goBack}>{t('返回')}</Button>
           {readOnly
             ? <Text strong style={{ fontSize: 15 }}>{name}</Text>
             : (
@@ -540,14 +541,15 @@ const BoardEdit: React.FC = () => {
                 value={name}
                 onChange={(e) => { setName(e.target.value); markDirty() }}
                 style={{ width: 240 }}
-                placeholder="看板名称"
+                placeholder={t('看板名称')}
               />
             )}
-          {dirty ? <Text type="warning" style={{ fontSize: 12 }}>未保存</Text> : null}
+          {dirty ? <Text type="warning" style={{ fontSize: 12 }}>{t('未保存')}</Text> : null}
         </Space>
         <Space size={12}>
-          <Space size={4}>
-            <Text type="secondary" style={{ fontSize: 12 }}>自动刷新</Text>
+          <Space size={4} style={{ flexShrink: 0 }}>
+            {/* 英文比中文长：不加 nowrap 会被挤成一列单字 */}
+            <Text type="secondary" style={{ fontSize: 12, whiteSpace: 'nowrap' }}>{t('自动刷新')}</Text>
             <Select
               size="small"
               style={{ width: 130 }}
@@ -556,16 +558,16 @@ const BoardEdit: React.FC = () => {
               onChange={(v) => { setRefreshInterval(v); markDirty() }}
             />
           </Space>
-          <Button icon={<ReloadOutlined />} onClick={data.refresh} loading={data.loading}>刷新数据</Button>
+          <Button icon={<ReloadOutlined />} onClick={data.refresh} loading={data.loading}>{t('刷新数据')}</Button>
           {!isNew
             ? (
               <Button
                 icon={<FullscreenOutlined />}
                 disabled={dirty}
-                title={dirty ? '请先保存再打开大屏' : '在新窗口打开只读大屏'}
+                title={dirty ? t('请先保存再打开大屏') : t('在新窗口打开只读大屏')}
                 onClick={() => window.open(`/viz/view/${id}`, '_blank')}
               >
-                大屏展示
+                {t('大屏展示')}
               </Button>
             )
             : null}
@@ -573,8 +575,8 @@ const BoardEdit: React.FC = () => {
             value={readOnly ? 'view' : 'edit'}
             onChange={value => setReadOnly(String(value) === 'view')}
             options={[
-              { label: <span><EditOutlined /> 编辑</span>, value: 'edit' },
-              { label: <span><EyeOutlined /> 查看</span>, value: 'view' },
+              { label: <span><EditOutlined /> {t('编辑')}</span>, value: 'edit' },
+              { label: <span><EyeOutlined /> {t('查看')}</span>, value: 'view' },
             ]}
           />
           <Button
@@ -583,22 +585,22 @@ const BoardEdit: React.FC = () => {
             disabled={readOnly}
             onClick={() => setPaletteOpen(open => !open)}
           >
-            组件库
+            {t('组件库')}
           </Button>
-          <Button icon={<SaveOutlined />} loading={saving} disabled={readOnly} onClick={save}>保存看板</Button>
+          <Button icon={<SaveOutlined />} loading={saving} disabled={readOnly} onClick={save}>{t('保存看板')}</Button>
         </Space>
       </div>
 
       {error ? <Alert type="error" showIcon style={{ margin: '0 16px 12px' }} message={error} /> : null}
       {data.error
-        ? <Alert type="warning" showIcon style={{ margin: '0 16px 12px' }} message="部分数据获取失败" description={data.error} />
+        ? <Alert type="warning" showIcon style={{ margin: '0 16px 12px' }} message={t('部分数据获取失败')} description={data.error} />
         : null}
 
       <div className="board-editor__main">
         {paletteOpen && !readOnly
           ? (
             <aside className="board-editor__palette">
-              <div className="board-editor__palette-group">新建组件（可拖到画布或容器里）</div>
+              <div className="board-editor__palette-group">{t('新建组件（可拖到画布或容器里）')}</div>
               <div className="board-editor__palette-list">
                 {palette.map(manifest => (
                   <div
@@ -634,7 +636,7 @@ const BoardEdit: React.FC = () => {
               <div className="board-editor__empty">
                 <Empty
                   image={Empty.PRESENTED_IMAGE_SIMPLE}
-                  description="空看板 —— 从左侧「组件库」点一下，或把组件拖进来"
+                  description={t('空看板 —— 从左侧「组件库」点一下，或把组件拖进来')}
                 />
               </div>
             )
@@ -653,7 +655,7 @@ const BoardEdit: React.FC = () => {
                 : null}
             </span>
           )
-          : '配置组件'}
+          : t('配置组件')}
         width={440}
         open={!!(settingsWidget && settingsManifest)}
         onClose={() => setSettingsId('')}
@@ -664,8 +666,8 @@ const BoardEdit: React.FC = () => {
           ? (
             <div className="board-editor__settings">
               {/* 标题与刷新间隔是"组件"的通用属性（不属于各组件自己的 config），统一放第一张卡 */}
-              <SettingGroup title="基本设置">
-                <SettingRow label="标题" hint="显示在组件卡片（容器）顶部；留空则用组件默认名。">
+              <SettingGroup title={t('基本设置')}>
+                <SettingRow label={t('标题')} hint={t('显示在组件卡片（容器）顶部；留空则用组件默认名。')}>
                   <Input
                     style={{ width: '100%' }}
                     placeholder={settingsManifest.label}
@@ -684,8 +686,8 @@ const BoardEdit: React.FC = () => {
                 {settingsManifest.data
                   ? (
                     <SettingRow
-                      label="刷新间隔"
-                      hint={`跟随看板 = 用顶部「自动刷新」的间隔（当前${refreshInterval ? ` ${refreshInterval} 秒` : '不自动刷新'}）`}
+                      label={t('刷新间隔')}
+                      hint={t('跟随看板 = 用顶部「自动刷新」的间隔（当前 {{p1}}）', { p1: refreshInterval ? t('{{count}} 秒', { count: refreshInterval }) : t('不自动刷新') })}
                     >
                       <Select
                         style={{ width: '100%' }}

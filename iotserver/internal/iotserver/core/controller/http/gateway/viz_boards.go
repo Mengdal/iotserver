@@ -314,7 +314,7 @@ func (ctl *controller) VizBoardCreate(c *gin.Context) {
 func (ctl *controller) VizBoardUpdate(c *gin.Context) {
 	boardId := strings.TrimSpace(c.Param("boardId"))
 	if boardId == "" {
-		httphelper.RenderFail(c, errort.NewCommonErr(errort.DefaultReqParamsError, fmt.Errorf("boardId 不能为空")), c.Writer, ctl.lc)
+		httphelper.RenderFail(c, errort.NewCommonErr(errort.DefaultReqParamsError, errort.NewMessageErr("boardId 不能为空", nil)), c.Writer, ctl.lc)
 		return
 	}
 	var req vizBoardSaveRequest
@@ -335,12 +335,12 @@ func (ctl *controller) VizBoardUpdate(c *gin.Context) {
 func (ctl *controller) VizBoardDelete(c *gin.Context) {
 	boardId := strings.TrimSpace(c.Param("boardId"))
 	if boardId == "" {
-		httphelper.RenderFail(c, errort.NewCommonErr(errort.DefaultReqParamsError, fmt.Errorf("boardId 不能为空")), c.Writer, ctl.lc)
+		httphelper.RenderFail(c, errort.NewCommonErr(errort.DefaultReqParamsError, errort.NewMessageErr("boardId 不能为空", nil)), c.Writer, ctl.lc)
 		return
 	}
 	if !ctl.removeCanvasBoard(c, boardId) {
 		httphelper.RenderFail(c, errort.NewCommonErr(errort.DefaultSystemError,
-			fmt.Errorf("看板不存在：%s", boardId)), c.Writer, ctl.lc)
+			errort.NewMessageErr("看板不存在：{{.p1}}", map[string]interface{}{"p1": boardId})), c.Writer, ctl.lc)
 	}
 }
 
@@ -366,7 +366,7 @@ func (ctl *controller) VizBoardActive(c *gin.Context) {
 		return
 	}
 	if req.Slot != "home" && req.Slot != "default" {
-		httphelper.RenderFail(c, errort.NewCommonErr(errort.DefaultReqParamsError, fmt.Errorf("slot 只能是 home 或 default")), c.Writer, ctl.lc)
+		httphelper.RenderFail(c, errort.NewCommonErr(errort.DefaultReqParamsError, errort.NewMessageErr("slot 只能是 home 或 default", nil)), c.Writer, ctl.lc)
 		return
 	}
 

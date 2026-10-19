@@ -2,7 +2,6 @@ package userapp
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	"iotserver/internal/models"
@@ -39,7 +38,7 @@ func isPlatformAdminCtx(ctx context.Context) bool {
 func requireMenuWriteScope(ctx context.Context, target string) error {
 	if target == "" && !isPlatformAdminCtx(ctx) {
 		return errort.NewCommonErr(errort.AppPermissionDenied,
-			fmt.Errorf("平台原始菜单只有平台管理员可以维护"))
+			errort.NewMessageErr("平台原始菜单只有平台管理员可以维护", nil))
 	}
 	return nil
 }
@@ -48,7 +47,7 @@ func requireMenuWriteScope(ctx context.Context, target string) error {
 func requireMenuRowOwnership(ctx context.Context, m models.Menu, target string) error {
 	if m.TenantId != target {
 		return errort.NewCommonErr(errort.AppPermissionDenied,
-			fmt.Errorf("菜单 %s 属于 %s 作用域，当前作用域无权修改", m.Id, scopeName(m.TenantId)))
+			errort.NewMessageErr("菜单 {{.p1}} 属于 {{.p2}} 作用域，当前作用域无权修改", map[string]interface{}{"p1": m.Id, "p2": scopeName(m.TenantId)}))
 	}
 	return requireMenuWriteScope(ctx, target)
 }
@@ -61,7 +60,7 @@ func requireNoTenantPerms(target, perms string) error {
 	}
 	if strings.TrimSpace(perms) != "" {
 		return errort.NewCommonErr(errort.DefaultReqParamsError,
-			fmt.Errorf("租户自建菜单不允许设置权限码(perms)，平台菜单的权限由平台管理员维护"))
+			errort.NewMessageErr("租户自建菜单不允许设置权限码(perms)，平台菜单的权限由平台管理员维护", nil))
 	}
 	return nil
 }

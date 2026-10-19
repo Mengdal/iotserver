@@ -5,6 +5,7 @@ import { Button, DatePicker, Form, Modal, Table } from 'antd'
 // import { ExclamationCircleOutlined } from '@ant-design/icons'
 import { DeviceProperty, getHistoryProperty, HistoryProperty } from '@/api/device-thingmodel'
 import { useTableRequest } from '@/hooks'
+import { t } from '@/i18n'
 
 const { RangePicker } = DatePicker
 const { useForm } = Form
@@ -90,7 +91,7 @@ export const Tab1Modal = forwardRef<Tab1ModalRef, Tab1ModalProps>((props, ref) =
 
   return (
     <Modal
-      title="功能历史数据"
+      title={t('功能历史数据')}
       open={isModalOpen}
       footer={null}
       width={1000}
@@ -99,15 +100,15 @@ export const Tab1Modal = forwardRef<Tab1ModalRef, Tab1ModalProps>((props, ref) =
       }}
     >
       <Form layout="inline" className="mb5">
-        <Form.Item label="功能名称">{record?.name}</Form.Item>
-        <Form.Item label="标识符">{record?.code}</Form.Item>
-        <Form.Item label="数据类型">{record?.data_type}</Form.Item>
+        <Form.Item label={t('功能名称')}>{record?.name}</Form.Item>
+        <Form.Item label={t('标识符')}>{record?.code}</Form.Item>
+        <Form.Item label={t('数据类型')}>{record?.data_type}</Form.Item>
       </Form>
       <Form layout="inline" className="mb10" form={form}>
         <Form.Item name="range" initialValue={[dayjs().add(-1, 'hours'), dayjs()]}>
           <RangePicker
             format="YYYY-MM-DD HH:mm:ss"
-            placeholder={['开始日期', '结束日期']}
+            placeholder={[t('开始日期'), t('结束日期')]}
             // onCalendarChange={val => setDates(val)}
             onOpenChange={(open) => {
               if (open) {
@@ -151,9 +152,9 @@ export const Tab1Modal = forwardRef<Tab1ModalRef, Tab1ModalProps>((props, ref) =
             //   }
             // }}
             presets={[
-              { label: '最近1小时', value: [dayjs().add(-1, 'hours'), dayjs()] },
-              { label: '最近3小时', value: [dayjs().add(-3, 'hours'), dayjs()] },
-              { label: '最近24小时', value: [dayjs().add(-24, 'hours'), dayjs()] },
+              { label: t('最近1小时'), value: [dayjs().add(-1, 'hours'), dayjs()] },
+              { label: t('最近3小时'), value: [dayjs().add(-3, 'hours'), dayjs()] },
+              { label: t('最近24小时'), value: [dayjs().add(-24, 'hours'), dayjs()] },
             ]}
             // renderExtraFooter={() => {
             //   return (
@@ -170,10 +171,10 @@ export const Tab1Modal = forwardRef<Tab1ModalRef, Tab1ModalProps>((props, ref) =
             onClick={() => {
               search()
             }}
-          >查询</Button>
+          >{t('查询')}</Button>
           <Button className="ml10" onClick={() => {
             form.resetFields()
-          }}>重置</Button>
+          }}>{t('重置')}</Button>
         </Form.Item>
       </Form>
 
@@ -187,7 +188,7 @@ export const Tab1Modal = forwardRef<Tab1ModalRef, Tab1ModalProps>((props, ref) =
         rowKey="time"
         columns={[
           {
-            title: '时间',
+            title: t('时间'),
             key: 'time',
             dataIndex: 'time',
             width: 500,
@@ -195,7 +196,7 @@ export const Tab1Modal = forwardRef<Tab1ModalRef, Tab1ModalProps>((props, ref) =
               return dayjs(value).format('YYYY-MM-DD HH:mm:ss')
             },
           },
-          { title: '原始值', key: 'value', dataIndex: 'value' },
+          { title: t('原始值'), key: 'value', dataIndex: 'value' },
         ]}
       >
 

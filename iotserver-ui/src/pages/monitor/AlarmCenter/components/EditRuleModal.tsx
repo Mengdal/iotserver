@@ -9,6 +9,7 @@ import useRequest from '@/hooks/useRequest'
 import { RuleInfo } from '../types'
 import { time2Timestamp } from '@/utils/time'
 import dayjs from 'dayjs'
+import { LOCALES, t } from '@/i18n'
 // import dayjs from 'dayjs'
 // (window as any).dayjs = dayjs
 
@@ -41,17 +42,17 @@ export const EditRuleModal = forwardRef<EditRuleModalRef, EditRuleModalProps>(({
   }, [])
 
   const DeviceStatusOptions = [
-    { label: '在线', value: '在线' },
-    { label: '离线', value: '离线' },
+    { label: t('在线'), value: '在线' },
+    { label: t('离线'), value: '离线' },
   ]
 
   const optionsNotify = [
-    { label: '告警中心', value: 'alarm', disabled: true },
+    { label: t('告警中心'), value: 'alarm', disabled: true },
     // { label: 'sms短信', value: 'sms' },
-    { label: '企业微信机器人', value: '企业微信机器人' },
-    { label: '钉钉机器人', value: '钉钉机器人' },
-    { label: '飞书机器人', value: '飞书机器人' },
-    { label: 'API接口', value: 'API接口' },
+    { label: t('企业微信机器人'), value: '企业微信机器人' },
+    { label: t('钉钉机器人'), value: '钉钉机器人' },
+    { label: t('飞书机器人'), value: '飞书机器人' },
+    { label: t('API接口'), value: 'API接口' },
   ]
 
   // 获取产品接口
@@ -257,7 +258,7 @@ export const EditRuleModal = forwardRef<EditRuleModalRef, EditRuleModalProps>(({
 
   return (
     <Drawer
-      title="编辑规则"
+      title={t('编辑规则')}
       placement="right"
       open={isModalOpen}
       width={650}
@@ -323,7 +324,7 @@ export const EditRuleModal = forwardRef<EditRuleModalRef, EditRuleModalProps>(({
                     editAlarmRules(ruleInfo.id, params)
                       .then(resp => {
                         if (resp.success) {
-                          message.success('编辑成功')
+                          message.success(t('编辑成功'))
                           handleClose()
                           onFinish()
                         } else {
@@ -335,8 +336,8 @@ export const EditRuleModal = forwardRef<EditRuleModalRef, EditRuleModalProps>(({
                   }
                 })
             }}
-          >确定</Button>
-          <Button onClick={handleClose}>取消</Button>
+          >{t('确定')}</Button>
+          <Button onClick={handleClose}>{t('取消')}</Button>
         </Space>
       }
     >
@@ -352,33 +353,33 @@ export const EditRuleModal = forwardRef<EditRuleModalRef, EditRuleModalProps>(({
       >
         <Card>
           <div style={{ color: '#666', fontSize: '14px' }} className="mb10">
-            启动规则
+            {t('启动规则')}
           </div>
           <Form.Item
-            label="触发方式"
+            label={t('触发方式')}
             name={['trigger']}
-            rules={[{ required: true, message: '请选择触发方式' }]}
+            rules={[{ required: true, message: t('请选择触发方式') }]}
           >
             <Select
-              placeholder="请选择"
+              placeholder={t('请选择')}
               onChange={triggerChange}
               allowClear
               options={[
-                { value: '设备数据触发', label: '设备数据触发' },
-                { value: '设备事件触发', label: '设备事件触发' },
-                { value: '设备状态触发', label: '设备状态触发' },
+                { value: '设备数据触发', label: t('设备数据触发') },
+                { value: '设备事件触发', label: t('设备事件触发') },
+                { value: '设备状态触发', label: t('设备状态触发') },
               ]}
             />
           </Form.Item>
           <Row gutter={15}>
             <Col span={12}>
               <Form.Item
-                label="产品"
+                label={t('产品')}
                 name={['sub_rule', 'product_id']}
-                rules={[{ required: true, message: '不能为空' }]}
+                rules={[{ required: true, message: t('不能为空') }]}
               >
                 <Select
-                  placeholder="请选择"
+                  placeholder={t('请选择')}
                   onChange={productChange}
                   loading={productTypeApi.loading}
                   showSearch
@@ -391,12 +392,12 @@ export const EditRuleModal = forwardRef<EditRuleModalRef, EditRuleModalProps>(({
             </Col>
             <Col span={12}>
               <Form.Item
-                label="设备"
+                label={t('设备')}
                 name={['sub_rule', 'device_id']}
-                rules={[{ required: true, message: '不能为空' }]}
+                rules={[{ required: true, message: t('不能为空') }]}
               >
                 <Select
-                  placeholder="请选择"
+                  placeholder={t('请选择')}
                   loading={devicesTypeApi.loading}
                   filterOption={false}
                   showSearch
@@ -411,12 +412,12 @@ export const EditRuleModal = forwardRef<EditRuleModalRef, EditRuleModalProps>(({
             </Col>
           </Row>
           <Form.Item
-            label={trigger === '设备数据触发' ? '功能' : trigger === '设备事件触发' ? '事件' : trigger === '设备状态触发' ? '设备状态' : ''}
+            label={trigger === '设备数据触发' ? t('功能') : trigger === '设备事件触发' ? t('事件') : trigger === '设备状态触发' ? t('设备状态') : ''}
             name={trigger === '设备状态触发' ? ['sub_rule', 'option', 'status'] : ['sub_rule', 'option', 'code']}
-            rules={[{ required: true, message: '不能为空' }]}
+            rules={[{ required: true, message: t('不能为空') }]}
           >
             <Select
-              placeholder="请选择"
+              placeholder={t('请选择')}
               onChange={optionChange}
               loading={productTypeApi.loading}
               showSearch
@@ -431,19 +432,19 @@ export const EditRuleModal = forwardRef<EditRuleModalRef, EditRuleModalProps>(({
           {trigger === '设备数据触发' && (<>
             {['int', 'float'].includes(codeType) && <>
               <Form.Item
-                label="取值类型"
+                label={t('取值类型')}
                 name={['sub_rule', 'option', 'value_type']}
-                rules={[{ required: true, message: '不能为空' }]}
+                rules={[{ required: true, message: t('不能为空') }]}
               >
                 <Select
-                  placeholder="请选择"
+                  placeholder={t('请选择')}
                   allowClear
                   options={[
-                    { value: 'original', label: '原始值' },
-                    { value: 'avg', label: '平均值' },
-                    { value: 'max', label: '最大值' },
-                    { value: 'min', label: '最小值' },
-                    { value: 'sum', label: '求和值' },
+                    { value: 'original', label: t('原始值') },
+                    { value: 'avg', label: t('平均值') },
+                    { value: 'max', label: t('最大值') },
+                    { value: 'min', label: t('最小值') },
+                    { value: 'sum', label: t('求和值') },
                   ]} />
               </Form.Item>
               <Form.Item
@@ -454,19 +455,19 @@ export const EditRuleModal = forwardRef<EditRuleModalRef, EditRuleModalProps>(({
               >
                 {({ getFieldValue }) => {
                   return getFieldValue(['sub_rule', 'option', 'value_type']) !== 'original' && (<Form.Item
-                    label="取值周期"
+                    label={t('取值周期')}
                     name={['sub_rule', 'option', 'value_cycle']}
-                    rules={[{ required: true, message: '不能为空' }]}
+                    rules={[{ required: true, message: t('不能为空') }]}
                   >
                     <Select
-                      placeholder="请选择"
+                      placeholder={t('请选择')}
                       allowClear
                       options={[
-                        { value: '1分钟周期', label: '1分钟周期' },
-                        { value: '5分钟周期', label: '5分钟周期' },
-                        { value: '15分钟周期', label: '15分钟周期' },
-                        { value: '30分钟周期', label: '30分钟周期' },
-                        { value: '60分钟周期', label: '60分钟周期' },
+                        { value: '1分钟周期', label: t('1分钟周期') },
+                        { value: '5分钟周期', label: t('5分钟周期') },
+                        { value: '15分钟周期', label: t('15分钟周期') },
+                        { value: '30分钟周期', label: t('30分钟周期') },
+                        { value: '60分钟周期', label: t('60分钟周期') },
                       ]} />
                   </Form.Item>)
                 }}
@@ -474,12 +475,12 @@ export const EditRuleModal = forwardRef<EditRuleModalRef, EditRuleModalProps>(({
               <Row gutter={15}>
                 <Col span={6}>
                   <Form.Item
-                    label="判断条件"
+                    label={t('判断条件')}
                     name="decide_condition_1"
-                    rules={[{ required: true, message: '不能为空' }]}
+                    rules={[{ required: true, message: t('不能为空') }]}
                   >
                     <Select
-                      placeholder="请选择"
+                      placeholder={t('请选择')}
                       // onChange={decideChange}
                       allowClear
                       options={[
@@ -496,9 +497,9 @@ export const EditRuleModal = forwardRef<EditRuleModalRef, EditRuleModalProps>(({
                   <Form.Item
                     label=""
                     name="decide_condition_2"
-                    rules={[{ required: true, message: '不能为空' }]}
+                    rules={[{ required: true, message: t('不能为空') }]}
                   >
-                    <Input style={{ marginTop: '28px' }} allowClear placeholder="请输入" />
+                    <Input style={{ marginTop: '28px' }} allowClear placeholder={t('请输入')} />
                   </Form.Item>
                 </Col>
               </Row>
@@ -522,12 +523,12 @@ export const EditRuleModal = forwardRef<EditRuleModalRef, EditRuleModalProps>(({
               </Form.Item>
             } */}
             {['bool'].includes(codeType) && <Form.Item
-              label="判断条件"
+              label={t('判断条件')}
               name={['sub_rule', 'option', 'decide_condition_bool']}
-              rules={[{ required: true, message: '不能为空' }]}
+              rules={[{ required: true, message: t('不能为空') }]}
             >
               <Select
-                placeholder="请选择"
+                placeholder={t('请选择')}
                 allowClear
                 options={[
                   { value: 'true', label: 'True' },
@@ -535,19 +536,19 @@ export const EditRuleModal = forwardRef<EditRuleModalRef, EditRuleModalProps>(({
                 ]} />
             </Form.Item>}
             {['text'].includes(codeType) && <Form.Item
-              label="判断条件"
+              label={t('判断条件')}
               name={['sub_rule', 'option', 'decide_condition_text']}
-              rules={[{ required: true, message: '不能为空' }]}
+              rules={[{ required: true, message: t('不能为空') }]}
             >
-              <Input placeholder="请输入"></Input>
+              <Input placeholder={t('请输入')}></Input>
             </Form.Item>}
             {['enum'].includes(codeType) && <Form.Item
-              label="判断条件"
+              label={t('判断条件')}
               name={['sub_rule', 'option', 'decide_condition_enum']}
-              rules={[{ required: true, message: '不能为空' }]}
+              rules={[{ required: true, message: t('不能为空') }]}
             >
               <Select
-                placeholder="请选择"
+                placeholder={t('请选择')}
                 allowClear
                 options={decideConditionOptions}
                 // options={[
@@ -562,29 +563,29 @@ export const EditRuleModal = forwardRef<EditRuleModalRef, EditRuleModalProps>(({
         </Card>
         <Form.Item
           label={<div>
-            <div>静默时间</div>
+            <div>{t('静默时间')}</div>
             <div style={{ color: '#666' }} className="mb20">
-              若已配置静默时间，则告警规则触发告警后，在设定的时间范围内将不再重复生成告警和通知。超出设定时间告警仍未恢复，则会再次触发告警。
+              {t('若已配置静默时间，则告警规则触发告警后，在设定的时间范围内将不再重复生成告警和通知。超出设定时间告警仍未恢复，则会再次触发告警。')}
             </div>
           </div>}
           name="silence_time"
           className="mt20"
         >
           <Select
-            placeholder="请选择"
+            placeholder={t('请选择')}
             // onChange={silenceTimeChange}
             allowClear
             options={[
-              { value: 0, label: '无' },
-              { value: 5 * 60 * 1000, label: '5分钟' },
-              { value: 10 * 60 * 1000, label: '10分钟' },
-              { value: 15 * 60 * 1000, label: '15分钟' },
-              { value: 30 * 60 * 1000, label: '30分钟' },
-              { value: 60 * 60 * 1000, label: '1小时' },
-              { value: 3 * 60 * 60 * 1000, label: '3小时' },
-              { value: 6 * 60 * 60 * 1000, label: '6小时' },
-              { value: 12 * 60 * 60 * 1000, label: '12小时' },
-              { value: 24 * 60 * 60 * 1000, label: '24小时' },
+              { value: 0, label: t('无') },
+              { value: 5 * 60 * 1000, label: t('5分钟') },
+              { value: 10 * 60 * 1000, label: t('10分钟') },
+              { value: 15 * 60 * 1000, label: t('15分钟') },
+              { value: 30 * 60 * 1000, label: t('30分钟') },
+              { value: 60 * 60 * 1000, label: t('1小时') },
+              { value: 3 * 60 * 60 * 1000, label: t('3小时') },
+              { value: 6 * 60 * 60 * 1000, label: t('6小时') },
+              { value: 12 * 60 * 60 * 1000, label: t('12小时') },
+              { value: 24 * 60 * 60 * 1000, label: t('24小时') },
             ]}
           />
         </Form.Item>
@@ -593,9 +594,9 @@ export const EditRuleModal = forwardRef<EditRuleModalRef, EditRuleModalProps>(({
             return (<>
               <Form.Item
                 label={<div>
-                  <div>通知方式</div>
+                  <div>{t('通知方式')}</div>
                   <div style={{ color: '#666' }} className="mb20">
-                    满足触发条件后所进行的告警通知方式，告警列表中可查看所有告警记录
+                    {t('满足触发条件后所进行的告警通知方式，告警列表中可查看所有告警记录')}
                   </div>
                 </div>}
               // name={['name']}
@@ -626,35 +627,35 @@ export const EditRuleModal = forwardRef<EditRuleModalRef, EditRuleModalProps>(({
                 if (checkedNotify[name + 1] === 'sms') {
                   return (<Card key={key}>
                     <div style={{ color: '#666', fontSize: '14px' }} className="mb10">
-                      sms短信
+                      {t('sms短信')}
                     </div>
                     <Form.Item
                       {...field}
-                      label="手机号"
+                      label={t('手机号')}
                       name={[name, 'option', 'phoneNumber']}
-                      rules={[{ required: true, message: '不能为空' }]}
+                      rules={[{ required: true, message: t('不能为空') }]}
                     >
-                      <Input addonBefore="+86" placeholder="请输入手机号" />
+                      <Input addonBefore="+86" placeholder={t('请输入手机号')} />
                     </Form.Item>
                     <Form.Item
                       {...field}
                       label={
                         <div>
-                          <span>生效时间</span>&nbsp;
+                          <span>{t('生效时间')}</span>&nbsp;
                           <Tooltip
                             placement="rightTop"
-                            title="该告警规则仅在生效时间段内发送邮件通知。"
+                            title={t('该告警规则仅在生效时间段内发送邮件通知。')}
                           >
                             <QuestionCircleTwoTone />
                           </Tooltip>
                         </div>
                       }
                       name={[name, 'start_effect_time']}
-                      rules={[{ required: true, message: '不能为空' }]}
+                      rules={[{ required: true, message: t('不能为空') }]}
                       style={{ float: 'left' }}
                     >
                       <TimePicker
-                        placeholder="请输入开始时间"
+                        placeholder={t('请输入开始时间')}
                         // defaultOpenValue={dayjs('00:00:00', 'HH:mm:ss')}
                         format={dateFormat}
                       />
@@ -668,10 +669,10 @@ export const EditRuleModal = forwardRef<EditRuleModalRef, EditRuleModalProps>(({
                       {...field}
                       label=""
                       name={[name, 'end_effect_time']}
-                      rules={[{ required: true, message: '不能为空' }]}
+                      rules={[{ required: true, message: t('不能为空') }]}
                     >
                       <TimePicker
-                        placeholder="请输入结束时间"
+                        placeholder={t('请输入结束时间')}
                         // defaultOpenValue={dayjs('00:00:00', 'HH:mm:ss')}
                         format={dateFormat}
                         style={{ marginTop: '28px' }}
@@ -682,35 +683,46 @@ export const EditRuleModal = forwardRef<EditRuleModalRef, EditRuleModalProps>(({
                 if (checkedNotify[name + 1] === '企业微信机器人') {
                   return (<Card key={key} className="mt10">
                     <div style={{ color: '#666', fontSize: '14px' }} className="mb10">
-                      企业微信机器人
+                      {t('企业微信机器人')}
                     </div>
                     <Form.Item
                       {...field}
-                      label="通知地址"
-                      name={[name, 'option', 'webhook']}
-                      rules={[{ required: true, message: '不能为空' }]}
+                      label={t('通知语言')}
+                      name={[name, 'option', 'lang']}
                     >
-                      <Input addonBefore="webhook" placeholder="请输入" />
+                      <Select
+                        allowClear
+                        placeholder={t('跟随默认')}
+                        options={LOCALES.map(item => ({ value: item.value, label: item.label }))}
+                      />
+                    </Form.Item>
+                    <Form.Item
+                      {...field}
+                      label={t('通知地址')}
+                      name={[name, 'option', 'webhook']}
+                      rules={[{ required: true, message: t('不能为空') }]}
+                    >
+                      <Input addonBefore="webhook" placeholder={t('请输入')} />
                     </Form.Item>
                     <Form.Item
                       {...field}
                       label={
                         <div>
-                          <span>生效时间</span>&nbsp;
+                          <span>{t('生效时间')}</span>&nbsp;
                           <Tooltip
                             placement="rightTop"
-                            title="该告警规则仅在生效时间段内发送邮件通知。"
+                            title={t('该告警规则仅在生效时间段内发送邮件通知。')}
                           >
                             <QuestionCircleTwoTone />
                           </Tooltip>
                         </div>
                       }
                       name={[name, 'start_effect_time']}
-                      rules={[{ required: true, message: '不能为空' }]}
+                      rules={[{ required: true, message: t('不能为空') }]}
                       style={{ float: 'left' }}
                     >
                       <TimePicker
-                        placeholder="请输入开始时间"
+                        placeholder={t('请输入开始时间')}
                         // defaultOpenValue={dayjs('00:00:00', 'HH:mm:ss')}
                         format={dateFormat}
                       />
@@ -724,10 +736,10 @@ export const EditRuleModal = forwardRef<EditRuleModalRef, EditRuleModalProps>(({
                       {...field}
                       label=""
                       name={[name, 'end_effect_time']}
-                      rules={[{ required: true, message: '不能为空' }]}
+                      rules={[{ required: true, message: t('不能为空') }]}
                     >
                       <TimePicker
-                        placeholder="请输入结束时间"
+                        placeholder={t('请输入结束时间')}
                         // defaultOpenValue={dayjs('00:00:00', 'HH:mm:ss')}
                         format={dateFormat}
                         style={{ marginTop: '28px' }}
@@ -738,35 +750,46 @@ export const EditRuleModal = forwardRef<EditRuleModalRef, EditRuleModalProps>(({
                 if (checkedNotify[name + 1] === '钉钉机器人') {
                   return (<Card key={key} className="mt10">
                     <div style={{ color: '#666', fontSize: '14px' }} className="mb10">
-                      钉钉机器人
+                      {t('钉钉机器人')}
                     </div>
                     <Form.Item
                       {...field}
-                      label="通知地址"
-                      name={[name, 'option', 'webhook']}
-                      rules={[{ required: true, message: '不能为空' }]}
+                      label={t('通知语言')}
+                      name={[name, 'option', 'lang']}
                     >
-                      <Input addonBefore="webhook" placeholder="请输入" />
+                      <Select
+                        allowClear
+                        placeholder={t('跟随默认')}
+                        options={LOCALES.map(item => ({ value: item.value, label: item.label }))}
+                      />
+                    </Form.Item>
+                    <Form.Item
+                      {...field}
+                      label={t('通知地址')}
+                      name={[name, 'option', 'webhook']}
+                      rules={[{ required: true, message: t('不能为空') }]}
+                    >
+                      <Input addonBefore="webhook" placeholder={t('请输入')} />
                     </Form.Item>
                     <Form.Item
                       {...field}
                       label={
                         <div>
-                          <span>生效时间</span>&nbsp;
+                          <span>{t('生效时间')}</span>&nbsp;
                           <Tooltip
                             placement="rightTop"
-                            title="该告警规则仅在生效时间段内发送邮件通知。"
+                            title={t('该告警规则仅在生效时间段内发送邮件通知。')}
                           >
                             <QuestionCircleTwoTone />
                           </Tooltip>
                         </div>
                       }
                       name={[name, 'start_effect_time']}
-                      rules={[{ required: true, message: '不能为空' }]}
+                      rules={[{ required: true, message: t('不能为空') }]}
                       style={{ float: 'left' }}
                     >
                       <TimePicker
-                        placeholder="请输入开始时间"
+                        placeholder={t('请输入开始时间')}
                         // defaultOpenValue={dayjs('00:00:00', 'HH:mm:ss')}
                         format={dateFormat}
                       />
@@ -780,10 +803,10 @@ export const EditRuleModal = forwardRef<EditRuleModalRef, EditRuleModalProps>(({
                       {...field}
                       label=""
                       name={[name, 'end_effect_time']}
-                      rules={[{ required: true, message: '不能为空' }]}
+                      rules={[{ required: true, message: t('不能为空') }]}
                     >
                       <TimePicker
-                        placeholder="请输入结束时间"
+                        placeholder={t('请输入结束时间')}
                         // defaultOpenValue={dayjs('00:00:00', 'HH:mm:ss')}
                         format={dateFormat}
                         style={{ marginTop: '28px' }}
@@ -794,35 +817,35 @@ export const EditRuleModal = forwardRef<EditRuleModalRef, EditRuleModalProps>(({
                 if (checkedNotify[name + 1] === '飞书机器人') {
                   return (<Card key={key} className="mt10">
                     <div style={{ color: '#666', fontSize: '14px' }} className="mb10">
-                      飞书机器人
+                      {t('飞书机器人')}
                     </div>
                     <Form.Item
-                      label="通知地址"
+                      label={t('通知地址')}
                       {...field}
                       name={[name, 'option', 'webhook']}
-                      rules={[{ required: true, message: '不能为空' }]}
+                      rules={[{ required: true, message: t('不能为空') }]}
                     >
-                      <Input addonBefore="webhook" placeholder="请输入" />
+                      <Input addonBefore="webhook" placeholder={t('请输入')} />
                     </Form.Item>
                     <Form.Item
                       {...field}
                       label={
                         <div>
-                          <span>生效时间</span>&nbsp;
+                          <span>{t('生效时间')}</span>&nbsp;
                           <Tooltip
                             placement="rightTop"
-                            title="该告警规则仅在生效时间段内发送邮件通知。"
+                            title={t('该告警规则仅在生效时间段内发送邮件通知。')}
                           >
                             <QuestionCircleTwoTone />
                           </Tooltip>
                         </div>
                       }
                       name={[name, 'start_effect_time']}
-                      rules={[{ required: true, message: '不能为空' }]}
+                      rules={[{ required: true, message: t('不能为空') }]}
                       style={{ float: 'left' }}
                     >
                       <TimePicker
-                        placeholder="请输入开始时间"
+                        placeholder={t('请输入开始时间')}
                         // defaultOpenValue={dayjs('00:00:00', 'HH:mm:ss')}
                         format={dateFormat}
                       />
@@ -836,10 +859,10 @@ export const EditRuleModal = forwardRef<EditRuleModalRef, EditRuleModalProps>(({
                       {...field}
                       label=""
                       name={[name, 'end_effect_time']}
-                      rules={[{ required: true, message: '不能为空' }]}
+                      rules={[{ required: true, message: t('不能为空') }]}
                     >
                       <TimePicker
-                        placeholder="请输入结束时间"
+                        placeholder={t('请输入结束时间')}
                         // defaultOpenValue={dayjs('00:00:00', 'HH:mm:ss')}
                         format={dateFormat}
                         style={{ marginTop: '28px' }}
@@ -850,35 +873,35 @@ export const EditRuleModal = forwardRef<EditRuleModalRef, EditRuleModalProps>(({
                 if (checkedNotify[name + 1] === 'API接口') {
                   return (<Card key={key} className="mt10">
                     <div style={{ color: '#666', fontSize: '14px' }} className="mb10">
-                      API接口
+                      {t('API接口')}
                     </div>
                     <Form.Item
-                      label="通知地址"
+                      label={t('通知地址')}
                       {...field}
                       name={[name, 'option', 'webhook']}
-                      rules={[{ required: true, message: '不能为空' }]}
+                      rules={[{ required: true, message: t('不能为空') }]}
                     >
-                      <Input addonBefore="post" placeholder="请输入" />
+                      <Input addonBefore="post" placeholder={t('请输入')} />
                     </Form.Item>
                     <Form.Item
                       {...field}
                       label={
                         <div>
-                          <span>生效时间</span>&nbsp;
+                          <span>{t('生效时间')}</span>&nbsp;
                           <Tooltip
                             placement="rightTop"
-                            title="该告警规则仅在生效时间段内发送邮件通知。"
+                            title={t('该告警规则仅在生效时间段内发送邮件通知。')}
                           >
                             <QuestionCircleTwoTone />
                           </Tooltip>
                         </div>
                       }
                       name={[name, 'start_effect_time']}
-                      rules={[{ required: true, message: '不能为空' }]}
+                      rules={[{ required: true, message: t('不能为空') }]}
                       style={{ float: 'left' }}
                     >
                       <TimePicker
-                        placeholder="请输入开始时间"
+                        placeholder={t('请输入开始时间')}
                         // defaultOpenValue={dayjs('00:00:00', 'HH:mm:ss')}
                         format={dateFormat}
                       />
@@ -892,10 +915,10 @@ export const EditRuleModal = forwardRef<EditRuleModalRef, EditRuleModalProps>(({
                       {...field}
                       label=""
                       name={[name, 'end_effect_time']}
-                      rules={[{ required: true, message: '不能为空' }]}
+                      rules={[{ required: true, message: t('不能为空') }]}
                     >
                       <TimePicker
-                        placeholder="请输入结束时间"
+                        placeholder={t('请输入结束时间')}
                         // defaultOpenValue={dayjs('00:00:00', 'HH:mm:ss')}
                         format={dateFormat}
                         style={{ marginTop: '28px' }}

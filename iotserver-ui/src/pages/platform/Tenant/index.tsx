@@ -31,6 +31,7 @@ import {
   Tenant,
 } from '@/api'
 import { useAuth } from '@/utils/auth'
+import { t } from '@/i18n'
 
 const { useMessage } = message
 
@@ -52,7 +53,7 @@ interface TenantFormValues {
 }
 
 /** 配额：0 表示不限 */
-const quotaText = (value: number) => (value > 0 ? String(value) : '不限')
+const quotaText = (value: number) => (value > 0 ? String(value) : t('不限'))
 
 const TenantPage: React.FC = () => {
   const [messageApi, contextHolder] = useMessage()
@@ -161,7 +162,7 @@ const TenantPage: React.FC = () => {
         resp = await addTenant({ ...payload, code: (values.code || '').trim() })
       }
       if (resp.success) {
-        messageApi.open({ type: 'success', content: editing ? '修改成功' : '新增成功' })
+        messageApi.open({ type: 'success', content: editing ? t('修改成功') : t('新增成功') })
         setModalOpen(false)
         loadData()
       } else {
@@ -175,7 +176,7 @@ const TenantPage: React.FC = () => {
   const handleDelete = async (id: string) => {
     const resp = await deleteTenant(id)
     if (resp.success) {
-      messageApi.open({ type: 'success', content: '删除成功' })
+      messageApi.open({ type: 'success', content: t('删除成功') })
       loadData()
     } else {
       messageApi.open({ type: 'error', content: resp.errorMsg })
@@ -186,7 +187,7 @@ const TenantPage: React.FC = () => {
     // 后端是整行更新，未提交的字段会被清空，所以带上原值只改状态
     const resp = await updateTenant({ ...record, status: checked ? 1 : 0 })
     if (resp.success) {
-      messageApi.open({ type: 'success', content: checked ? '已启用' : '已停用' })
+      messageApi.open({ type: 'success', content: checked ? t('已启用') : t('已停用') })
       loadData()
     } else {
       messageApi.open({ type: 'error', content: resp.errorMsg })
@@ -194,10 +195,10 @@ const TenantPage: React.FC = () => {
   }
 
   const columns: ColumnsType<Tenant> = [
-    { title: '租户名称', dataIndex: 'name', width: 200 },
-    { title: '编码', dataIndex: 'code', width: 140, render: (value: string) => value || '-' },
+    { title: t('租户名称'), dataIndex: 'name', width: 200 },
+    { title: t('编码'), dataIndex: 'code', width: 140, render: (value: string) => value || '-' },
     {
-      title: '联系人/电话',
+      title: t('联系人/电话'),
       dataIndex: 'contactName',
       width: 180,
       render: (value: string, record) => (
@@ -208,22 +209,22 @@ const TenantPage: React.FC = () => {
       ),
     },
     {
-      title: '到期时间',
+      title: t('到期时间'),
       dataIndex: 'expireAt',
       width: 190,
       render: (value: number) => {
-        if (!value) return <Tag color="blue">永久</Tag>
+        if (!value) return <Tag color="blue">{t('永久')}</Tag>
         const expired = value < Date.now()
         return (
           <Space size={4}>
             <span>{dayjs(value).format('YYYY-MM-DD HH:mm:ss')}</span>
-            {expired && <Tag color="error">已过期</Tag>}
+            {expired && <Tag color="error">{t('已过期')}</Tag>}
           </Space>
         )
       },
     },
     {
-      title: '配额（设备/网关/用户）',
+      title: t('配额（设备/网关/用户）'),
       key: 'quota',
       width: 200,
       render: (_, record) => (
@@ -233,41 +234,41 @@ const TenantPage: React.FC = () => {
       ),
     },
     {
-      title: '状态',
+      title: t('状态'),
       dataIndex: 'status',
-      width: 90,
+      width: 120,
       render: (value: number, record) => (
         <Switch
           checked={value === 1}
           disabled={!canEdit}
-          checkedChildren="启用"
-          unCheckedChildren="停用"
+          checkedChildren={t('启用')}
+          unCheckedChildren={t('停用')}
           onChange={checked => handleStatusChange(record, checked)}
         />
       ),
     },
     {
-      title: '创建时间',
+      title: t('创建时间'),
       dataIndex: 'created',
       width: 180,
       render: (value: number) => (value ? dayjs(value).format('YYYY-MM-DD HH:mm:ss') : '-'),
     },
     {
-      title: '操作',
+      title: t('操作'),
       key: 'action',
       width: 140,
       fixed: 'right',
       render: (_, record) => (
         <Space size={4}>
-          {canEdit && <Button type="link" size="small" onClick={() => openEdit(record)}>编辑</Button>}
+          {canEdit && <Button type="link" size="small" onClick={() => openEdit(record)}>{t('编辑')}</Button>}
           {canRemove && (
             <Popconfirm
-              title="确认删除该租户？删除后该租户下的业务数据不会级联清除。"
+              title={t('确认删除该租户？删除后该租户下的业务数据不会级联清除。')}
               onConfirm={() => handleDelete(record.id)}
-              okText="确定"
-              cancelText="取消"
+              okText={t('确定')}
+              cancelText={t('取消')}
             >
-              <Button type="link" size="small" danger>删除</Button>
+              <Button type="link" size="small" danger>{t('删除')}</Button>
             </Popconfirm>
           )}
         </Space>
@@ -280,7 +281,7 @@ const TenantPage: React.FC = () => {
     return (
       <Card className="admin-page">
         {contextHolder}
-        <Empty description="无租户列表查看权限" />
+        <Empty description={t('无租户列表查看权限')} />
       </Card>
     )
   }
@@ -289,22 +290,22 @@ const TenantPage: React.FC = () => {
     <Card className="admin-page">
       {contextHolder}
       <Form form={searchForm} layout="inline" style={{ marginBottom: 16, rowGap: 8 }}>
-        <Form.Item name="name" label="租户名称">
-          <Input placeholder="请输入租户名称" allowClear style={{ width: 180 }} />
+        <Form.Item name="name" label={t('租户名称')}>
+          <Input placeholder={t('请输入租户名称')} allowClear style={{ width: 180 }} />
         </Form.Item>
-        <Form.Item name="code" label="编码">
-          <Input placeholder="请输入编码" allowClear style={{ width: 160 }} />
+        <Form.Item name="code" label={t('编码')}>
+          <Input placeholder={t('请输入编码')} allowClear style={{ width: 160 }} />
         </Form.Item>
-        <Form.Item name="status" label="状态">
-          <Select placeholder="全部" allowClear style={{ width: 120 }}>
-            <Select.Option value="1">启用</Select.Option>
-            <Select.Option value="0">停用</Select.Option>
+        <Form.Item name="status" label={t('状态')}>
+          <Select placeholder={t('全部')} allowClear style={{ width: 120 }}>
+            <Select.Option value="1">{t('启用')}</Select.Option>
+            <Select.Option value="0">{t('停用')}</Select.Option>
           </Select>
         </Form.Item>
         <Form.Item>
           <Space>
-            <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>查询</Button>
-            <Button icon={<ReloadOutlined />} onClick={handleReset}>重置</Button>
+            <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>{t('查询')}</Button>
+            <Button icon={<ReloadOutlined />} onClick={handleReset}>{t('重置')}</Button>
           </Space>
         </Form.Item>
       </Form>
@@ -312,7 +313,7 @@ const TenantPage: React.FC = () => {
       <Row justify="space-between" style={{ marginBottom: 12 }}>
         <Col>
           <Space>
-            {canAdd && <Button type="primary" icon={<PlusOutlined />} onClick={openAdd}>新增租户</Button>}
+            {canAdd && <Button type="primary" icon={<PlusOutlined />} onClick={openAdd}>{t('新增租户')}</Button>}
           </Space>
         </Col>
       </Row>
@@ -329,7 +330,7 @@ const TenantPage: React.FC = () => {
           size: 'small',
           showQuickJumper: true,
           showSizeChanger: true,
-          showTotal: t => `共 ${t} 条`,
+          showTotal: total => t('共 {{count}} 条', { count: total }),
           total,
           current: pagination.current,
           pageSize: pagination.pageSize,
@@ -342,10 +343,10 @@ const TenantPage: React.FC = () => {
 
       <Modal
         open={modalOpen}
-        title={editing ? '编辑租户' : '新增租户'}
+        title={editing ? t('编辑租户') : t('新增租户')}
         width={640}
-        okText="确定"
-        cancelText="取消"
+        okText={t('确定')}
+        cancelText={t('取消')}
         maskClosable={false}
         confirmLoading={submitting}
         onOk={handleSubmit}
@@ -359,86 +360,86 @@ const TenantPage: React.FC = () => {
           <Row gutter={12}>
             <Col span={12}>
               <Form.Item
-                label="租户名称"
+                label={t('租户名称')}
                 name="name"
-                rules={[{ required: true, message: '请输入租户名称' }]}
+                rules={[{ required: true, message: t('请输入租户名称') }]}
               >
-                <Input placeholder="请输入租户名称" />
+                <Input placeholder={t('请输入租户名称')} />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item
-                label="编码"
+                label={t('编码')}
                 name="code"
-                tooltip="小写字母/数字/下划线，2~32 位；创建后不可修改"
+                tooltip={t('小写字母/数字/下划线，2~32 位；创建后不可修改')}
                 rules={editing
                   ? []
                   : [
-                    { required: true, message: '请输入编码' },
-                    { pattern: CODE_PATTERN, message: '只允许小写字母/数字/下划线，2~32 位' },
+                    { required: true, message: t('请输入编码') },
+                    { pattern: CODE_PATTERN, message: t('只允许小写字母/数字/下划线，2~32 位') },
                   ]}
               >
                 {/* 编码由后端创建后固定，编辑时只读展示 */}
-                <Input placeholder="如 customer_01" disabled={!!editing} />
+                <Input placeholder={t('如 customer_01')} disabled={!!editing} />
               </Form.Item>
             </Col>
           </Row>
           <Row gutter={12}>
             <Col span={8}>
-              <Form.Item label="联系人" name="contactName">
-                <Input placeholder="请输入联系人" />
+              <Form.Item label={t('联系人')} name="contactName">
+                <Input placeholder={t('请输入联系人')} />
               </Form.Item>
             </Col>
             <Col span={8}>
-              <Form.Item label="联系电话" name="contactPhone">
-                <Input placeholder="请输入联系电话" />
+              <Form.Item label={t('联系电话')} name="contactPhone">
+                <Input placeholder={t('请输入联系电话')} />
               </Form.Item>
             </Col>
             <Col span={8}>
-              <Form.Item label="联系邮箱" name="contactEmail">
-                <Input placeholder="请输入联系邮箱" />
+              <Form.Item label={t('联系邮箱')} name="contactEmail">
+                <Input placeholder={t('请输入联系邮箱')} />
               </Form.Item>
             </Col>
           </Row>
           <Row gutter={12}>
             <Col span={12}>
-              <Form.Item label="到期时间" name="expireAt" tooltip="留空表示永久有效">
+              <Form.Item label={t('到期时间')} name="expireAt" tooltip={t('留空表示永久有效')}>
                 <DatePicker
                   showTime
                   style={{ width: '100%' }}
-                  placeholder="留空表示永久"
+                  placeholder={t('留空表示永久')}
                   format="YYYY-MM-DD HH:mm:ss"
                 />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item label="状态" name="status">
+              <Form.Item label={t('状态')} name="status">
                 <Radio.Group>
-                  <Radio value={1}>启用</Radio>
-                  <Radio value={0}>停用</Radio>
+                  <Radio value={1}>{t('启用')}</Radio>
+                  <Radio value={0}>{t('停用')}</Radio>
                 </Radio.Group>
               </Form.Item>
             </Col>
           </Row>
           <Row gutter={12}>
             <Col span={8}>
-              <Form.Item label="设备配额" name="maxDevices" tooltip="0 表示不限">
+              <Form.Item label={t('设备配额')} name="maxDevices" tooltip={t('0 表示不限')}>
                 <InputNumber min={0} precision={0} style={{ width: '100%' }} placeholder="0" />
               </Form.Item>
             </Col>
             <Col span={8}>
-              <Form.Item label="网关配额" name="maxGateways" tooltip="0 表示不限">
+              <Form.Item label={t('网关配额')} name="maxGateways" tooltip={t('0 表示不限')}>
                 <InputNumber min={0} precision={0} style={{ width: '100%' }} placeholder="0" />
               </Form.Item>
             </Col>
             <Col span={8}>
-              <Form.Item label="用户配额" name="maxUsers" tooltip="0 表示不限">
+              <Form.Item label={t('用户配额')} name="maxUsers" tooltip={t('0 表示不限')}>
                 <InputNumber min={0} precision={0} style={{ width: '100%' }} placeholder="0" />
               </Form.Item>
             </Col>
           </Row>
-          <Form.Item label="备注" name="remark">
-            <Input.TextArea rows={2} placeholder="请输入备注" />
+          <Form.Item label={t('备注')} name="remark">
+            <Input.TextArea rows={2} placeholder={t('请输入备注')} />
           </Form.Item>
         </Form>
       </Modal>

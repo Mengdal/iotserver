@@ -2,6 +2,7 @@ import React from 'react'
 import { Button, Card, Dropdown, MenuProps } from 'antd'
 import { CopyOutlined, DeleteOutlined, MoreOutlined, SettingOutlined } from '@ant-design/icons'
 import './index.less'
+import { t, tt } from '@/i18n'
 
 /**
  * 组件操作：统一走 actions + id。
@@ -58,7 +59,7 @@ const WidgetCard: React.FC<WidgetCardProps> = ({
       menuItems.push({
         key: 'configure',
         icon: <SettingOutlined />,
-        label: '配置本组件',
+        label: t('配置本组件'),
         onClick: () => onConfigure && onConfigure(id),
       })
     }
@@ -67,7 +68,7 @@ const WidgetCard: React.FC<WidgetCardProps> = ({
       menuItems.push({
         key: 'duplicate',
         icon: <CopyOutlined />,
-        label: '复制组件',
+        label: t('复制组件'),
         onClick: () => actions.duplicate && actions.duplicate(id),
       })
     }
@@ -76,7 +77,7 @@ const WidgetCard: React.FC<WidgetCardProps> = ({
       menuItems.push({
         key: 'delete',
         icon: <DeleteOutlined />,
-        label: '删除组件',
+        label: t('删除组件'),
         danger: true,
         onClick: () => actions.remove && actions.remove(id),
       })
@@ -94,7 +95,8 @@ const WidgetCard: React.FC<WidgetCardProps> = ({
       size="small"
       className={classes}
       style={style}
-      title={<span>{title || ''}</span>}
+      // 标题来自看板配置（数据），词条里有对应英文时跟着语言变
+      title={<span>{tt(title)}</span>}
       extra={menuItems.length > 0
         ? (
           <Dropdown menu={{ items: menuItems }} trigger={['click']}>

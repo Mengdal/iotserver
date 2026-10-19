@@ -2,6 +2,7 @@ import { Button, Drawer, Form, Input, InputNumber, message, Select, Space } from
 import { CloseOutlined, MinusCircleOutlined, PlusOutlined } from '@ant-design/icons'
 import React, { forwardRef, useCallback, useImperativeHandle, useState } from 'react'
 import { addResource, editResource, HttpResource } from '@/api'
+import { t } from '@/i18n'
 
 const { useForm } = Form
 
@@ -53,7 +54,7 @@ export const AddHttpModal = forwardRef<AddHttpModalRef, AddHttpModalProps>(({ on
 
   return (
     <Drawer
-      title={record ? '修改实例' : '添加实例'}
+      title={record ? t('修改实例') : t('添加实例')}
       placement="right"
       open={isModalOpen}
       width={550}
@@ -85,7 +86,7 @@ export const AddHttpModal = forwardRef<AddHttpModalRef, AddHttpModalProps>(({ on
                     editResource(values)
                       .then(resp => {
                         if (resp.success) {
-                          message.success('修改成功')
+                          message.success(t('修改成功'))
                           handleClose()
                           onFinish()
                         } else {
@@ -98,7 +99,7 @@ export const AddHttpModal = forwardRef<AddHttpModalRef, AddHttpModalProps>(({ on
                     addResource(values)
                       .then(resp => {
                         if (resp.success) {
-                          message.success('添加成功')
+                          message.success(t('添加成功'))
                           handleClose()
                           onFinish()
                         } else {
@@ -110,8 +111,8 @@ export const AddHttpModal = forwardRef<AddHttpModalRef, AddHttpModalProps>(({ on
                   }
                 })
             }}
-          >确定</Button>
-          <Button onClick={handleClose}>取消</Button>
+          >{t('确定')}</Button>
+          <Button onClick={handleClose}>{t('取消')}</Button>
         </Space>
       }
     >
@@ -127,24 +128,24 @@ export const AddHttpModal = forwardRef<AddHttpModalRef, AddHttpModalProps>(({ on
         }}
       >
         <Form.Item
-          label="实例名称"
+          label={t('实例名称')}
           name="name"
           rules={[
             {
               required: true,
               validator (rule, value, callback) {
                 if (!value) {
-                  callback('请输入实例名称')
+                  callback(t('请输入实例名称'))
                 } else if (/^[a-zA-Z\u4e00-\u9fa5][a-zA-Z0-9\u4e00-\u9fa5_-]{0,31}$/.test(value)) {
                   callback()
                 } else {
-                  callback('1-32位字符，支持中文、英文、数字及特殊字符_-，必须以英文或中文字符开头')
+                  callback(t('1-32位字符，支持中文、英文、数字及特殊字符_-，必须以英文或中文字符开头'))
                 }
               },
             },
           ]}
         >
-          <Input placeholder="1-32位字符，支持中文、英文、数字及特殊字符_-，必须以英文或中文字符开头"></Input>
+          <Input placeholder={t('1-32位字符，支持中文、英文、数字及特殊字符_-，必须以英文或中文字符开头')}></Input>
         </Form.Item>
         <Form.Item
           label="URL"
@@ -154,21 +155,21 @@ export const AddHttpModal = forwardRef<AddHttpModalRef, AddHttpModalProps>(({ on
               required: true,
               validator (rule, value, callback) {
                 if (!value) {
-                  callback('请输入')
+                  callback(t('请输入'))
                 }
                 callback()
               },
             },
           ]}
         >
-          <Input placeholder="请输入需要推送的服务地址，以http://或https://开头"></Input>
+          <Input placeholder={t('请输入需要推送的服务地址，以http://或https://开头')}></Input>
         </Form.Item>
         <Form.Item
           label="HTTP method"
           name={['option', 'method']}
         >
           <Select
-            placeholder="请选择"
+            placeholder={t('请选择')}
             onChange={handleChange}
             options={[
               { value: 'get', label: 'GET' },
@@ -185,7 +186,7 @@ export const AddHttpModal = forwardRef<AddHttpModalRef, AddHttpModalProps>(({ on
           name={['option', 'bodyType']}
         >
           <Select
-            placeholder="请选择"
+            placeholder={t('请选择')}
             onChange={handleChange}
             options={[
               { value: 'none', label: 'none' },
@@ -202,7 +203,7 @@ export const AddHttpModal = forwardRef<AddHttpModalRef, AddHttpModalProps>(({ on
           label="Timeout(ms)"
           name={['option', 'timeout']}
         >
-          <InputNumber placeholder="请输入" style={{ width: '100%' }} />
+          <InputNumber placeholder={t('请输入')} style={{ width: '100%' }} />
         </Form.Item>
         <Form.Item label="HTTP headers">
           <Form.List name={['option', 'headers']}>
@@ -215,14 +216,14 @@ export const AddHttpModal = forwardRef<AddHttpModalRef, AddHttpModalProps>(({ on
                       label="Key"
                       name={[name, 'key']}
                     >
-                      <Input placeholder="请输入" />
+                      <Input placeholder={t('请输入')} />
                     </Form.Item>
                     <Form.Item
                       {...restField}
                       label="Value"
                       name={[name, 'value']}
                     >
-                      <Input placeholder="请输入" />
+                      <Input placeholder={t('请输入')} />
                     </Form.Item>
                     <MinusCircleOutlined onClick={() => remove(name)} />
                   </Space>

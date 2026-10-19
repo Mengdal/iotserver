@@ -3,6 +3,7 @@ import { Tabs, Card } from 'antd'
 import CustomDrive from './CustomDrive'
 import DriveMarket from './DriveMarket'
 import './style.less'
+import { t } from '@/i18n'
 
 export interface DriveImageProps {
 
@@ -35,12 +36,12 @@ const DriveImage: React.FC<DriveImageProps> = () => {
           items={[
             {
               key: '1',
-              label: '自定义',
+              label: t('自定义'),
               children: <CustomDrive></CustomDrive>,
             },
             {
               key: '2',
-              label: '驱动市场',
+              label: t('驱动市场'),
               children: <DriveMarket></DriveMarket>,
             },
           ]}

@@ -7,6 +7,7 @@ import { useTableRequest } from '@/hooks'
 import { AdvanceBreadcrumb } from '@/components/Breadcrumb'
 import 'dayjs/locale/zh-cn'
 import { useParams } from 'react-router-dom'
+import { t } from '@/i18n'
 
 const { RangePicker } = DatePicker
 export interface LinkageLogProps {
@@ -37,11 +38,11 @@ const LinkageLog: React.FC<LinkageLogProps> = () => {
     <>
       <AdvanceBreadcrumb
         hasBack
-        title="联动日志"
-        describe="平台提供场景日志功能，可以通过场景联动日志查看场景触发时间、服务调用结果。"
+        title={t('联动日志')}
+        describe={t('平台提供场景日志功能，可以通过场景联动日志查看场景触发时间、服务调用结果。')}
         breadcrumb={[
-          { label: '场景联动', to: '/advanced/scene/linkage' },
-          { label: '联动日志', to: '' },
+          { label: t('场景联动'), to: '/advanced/scene/linkage' },
+          { label: t('联动日志'), to: '' },
         ]}
         background={require('@/assets/images/head-bg.8b029587.png')}
       />
@@ -55,14 +56,14 @@ const LinkageLog: React.FC<LinkageLogProps> = () => {
               style={{ width: 300 }}
               showTime={{ format: 'HH:mm:ss' }}
               format="YYYY-MM-DD HH:mm:ss"
-              placeholder={['开始时间', '结束时间']}
+              placeholder={[t('开始时间'), t('结束时间')]}
             />
           </Form.Item>
           <Form.Item>
-            <Button type="primary" onClick={search}>查询</Button>
+            <Button type="primary" onClick={search}>{t('查询')}</Button>
           </Form.Item>
           <Form.Item>
-            <Button type="default" onClick={reset}>重置</Button>
+            <Button type="default" onClick={reset}>{t('重置')}</Button>
           </Form.Item>
         </Form>
       </Card>
@@ -75,10 +76,10 @@ const LinkageLog: React.FC<LinkageLogProps> = () => {
           rowKey="id"
           size="small"
           columns={[
-            { title: '联动规则名称', key: 'name', dataIndex: 'name' },
-            { title: '执行结果', key: 'exec_res', dataIndex: 'exec_res' },
+            { title: t('联动规则名称'), key: 'name', dataIndex: 'name' },
+            { title: t('执行结果'), key: 'exec_res', dataIndex: 'exec_res' },
             {
-              title: '触发时间',
+              title: t('触发时间'),
               key: 'created',
               dataIndex: 'created',
               render (value) {

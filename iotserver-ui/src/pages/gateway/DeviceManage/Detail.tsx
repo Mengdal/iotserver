@@ -11,6 +11,7 @@ import { DetailTab3 } from './components/Tab3'
 import './style.less'
 import dayjs from 'dayjs'
 import { ProductInfo } from './types'
+import { t } from '@/i18n'
 
 const { Text, Link } = Typography
 
@@ -72,20 +73,20 @@ export const DeviceDetail:React.FC<DeviceDetailProps> = () => {
         hasBack
         title={
           <div className="flex-center">
-            <Text style={{ fontSize: 17 }} copyable>{detail?.name || '设备详情'}</Text>
+            <Text style={{ fontSize: 17 }} copyable>{detail?.name || t('设备详情')}</Text>
           </div>
         }
-        describe="设备详情提供设备基础信息及物模型相关数据（包括设备属性功能记录、事件记录及服务调用记录）查询。"
+        describe={t('设备详情提供设备基础信息及物模型相关数据（包括设备属性功能记录、事件记录及服务调用记录）查询。')}
         background={require('@/assets/images/head-bg.8b029587.png')}
         breadcrumb={[
-          { label: '设备管理', to: '/gateway/device/manage' },
-          { label: `设备详情 [ ${detail?.name || ''} ]`, to: '' },
+          { label: t('设备管理'), to: '/gateway/device/manage' },
+          { label: t('设备详情 [ {{p1}} ]', { p1: detail?.name || '' }), to: '' },
         ]}
       />
       <Card className="product-info">
         <Descriptions
           className="product-info__descriptions"
-          title={'设备信息'}
+          title={t('设备信息')}
           column={3}
           labelStyle={{ fontSize: 12, color: '#8a949c' }}
           contentStyle={{ fontSize: 12 }}
@@ -102,7 +103,7 @@ export const DeviceDetail:React.FC<DeviceDetailProps> = () => {
                 deviceSyncSingle({ device_id: params.id! })
                   .then((resp) => {
                     if (resp.success) {
-                      message.success('同步成功')
+                      message.success(t('同步成功'))
                       loadDetail()
                     } else {
                       message.error(resp.errorMsg)
@@ -113,10 +114,10 @@ export const DeviceDetail:React.FC<DeviceDetailProps> = () => {
                     setSubmitting(false)
                   })
               }}
-            >同步设备</Button>
+            >{t('同步设备')}</Button>
           }
         >
-          <Descriptions.Item label="设备所属产品">
+          <Descriptions.Item label={t('设备所属产品')}>
             <Link
               style={{ fontSize: 12 }}
               onClick={() => {
@@ -124,21 +125,21 @@ export const DeviceDetail:React.FC<DeviceDetailProps> = () => {
               }}
             >{detail?.product_name}</Link>
           </Descriptions.Item>
-          <Descriptions.Item label="设备状态" span={2}>
+          <Descriptions.Item label={t('设备状态')} span={2}>
             <Badge color={{
               在线: 'green',
               离线: 'gray',
               禁用: 'red',
               未激活: 'orange',
             }[detail?.status as string] || 'gray'} />
-            <Text className="ml5" style={{ fontSize: 12 }}>{detail?.status || '未知'}</Text>
+            <Text className="ml5" style={{ fontSize: 12 }}>{detail?.status || t('未知')}</Text>
           </Descriptions.Item>
-          <Descriptions.Item label="设备名称">{detail?.name}</Descriptions.Item>
-          <Descriptions.Item label="设备ID" span={2}>
+          <Descriptions.Item label={t('设备名称')}>{detail?.name}</Descriptions.Item>
+          <Descriptions.Item label={t('设备ID')} span={2}>
             <Text style={{ fontSize: 12 }} copyable>{detail?.id}</Text>
           </Descriptions.Item>
-          <Descriptions.Item label="平台">{detail?.platform}</Descriptions.Item>
-          <Descriptions.Item label="设备密钥" span={2}>
+          <Descriptions.Item label={t('平台')}>{detail?.platform}</Descriptions.Item>
+          <Descriptions.Item label={t('设备密钥')} span={2}>
             {
               detail?.secret && (
                 <>
@@ -161,25 +162,25 @@ export const DeviceDetail:React.FC<DeviceDetailProps> = () => {
               )
             }
           </Descriptions.Item>
-          <Descriptions.Item label="关联驱动名称">{detail?.device_service_name}</Descriptions.Item>
+          <Descriptions.Item label={t('关联驱动名称')}>{detail?.device_service_name}</Descriptions.Item>
           {
             isCloudDevice && (
-              <Descriptions.Item label="云端设备标识" span={2}>
+              <Descriptions.Item label={t('云端设备标识')} span={2}>
                 <Text style={{ fontSize: 12 }} copyable>{detail?.cloud_device_id}</Text>
               </Descriptions.Item>
             )
           }
-          <Descriptions.Item label="最近在线时间">
+          <Descriptions.Item label={t('最近在线时间')}>
             {detail?.last_online_time ? dayjs(detail?.last_online_time).format('YYYY-MM-DD HH:mm:ss') : '-'}
           </Descriptions.Item>
           {
             isCloudDevice && (
-              <Descriptions.Item label="最后一次同步时间">
+              <Descriptions.Item label={t('最后一次同步时间')}>
                 {detail?.last_sync_time ? dayjs(detail?.last_sync_time).format('YYYY-MM-DD HH:mm:ss') : '-'}
               </Descriptions.Item>
             )
           }
-          <Descriptions.Item label="描述">{detail?.description}</Descriptions.Item>
+          <Descriptions.Item label={t('描述')}>{detail?.description}</Descriptions.Item>
         </Descriptions>
       </Card>
       <Tabs
@@ -191,17 +192,17 @@ export const DeviceDetail:React.FC<DeviceDetailProps> = () => {
         items={[
           {
             key: '1',
-            label: '属性',
+            label: t('属性'),
             children: <DetailTab1></DetailTab1>,
           },
           {
             key: '2',
-            label: '事件记录',
+            label: t('事件记录'),
             children: <DetailTab2 events={productInfo?.events || []}></DetailTab2>,
           },
           {
             key: '3',
-            label: '服务记录',
+            label: t('服务记录'),
             children: <DetailTab3 actions={productInfo?.actions || []}></DetailTab3>,
           },
         ]}

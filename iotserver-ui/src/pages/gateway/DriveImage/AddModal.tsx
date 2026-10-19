@@ -4,6 +4,7 @@ import { CloseOutlined } from '@ant-design/icons'
 import { addDeviceLibraries, editDeviceLibraries } from '@/api'
 import { DockerConfigModal, DockerConfigModalRef } from './DockerConfigModal'
 import { DeviceLibraries } from '@/api/device-libraries'
+import { t } from '@/i18n'
 
 const { useForm } = Form
 const { TextArea } = Input
@@ -43,7 +44,7 @@ export const AddModal = forwardRef<AddModalRef, AddModalProps>(({ onFinish }, re
 
   return (
     <Drawer
-      title={record ? '编辑镜像' : '新增镜像'}
+      title={record ? t('编辑镜像') : t('新增镜像')}
       placement="right"
       open={isModalOpen}
       width={550}
@@ -72,7 +73,7 @@ export const AddModal = forwardRef<AddModalRef, AddModalProps>(({ onFinish }, re
                       docker_config_id: values.docker_config_id,
                     }).then(resp => {
                       if (resp.success) {
-                        message.success('编辑成功')
+                        message.success(t('编辑成功'))
                         handleClose()
                         onFinish()
                       } else {
@@ -85,7 +86,7 @@ export const AddModal = forwardRef<AddModalRef, AddModalProps>(({ onFinish }, re
                     addDeviceLibraries(values)
                       .then(resp => {
                         if (resp.success) {
-                          message.success('添加成功')
+                          message.success(t('添加成功'))
                           handleClose()
                           onFinish()
                         } else {
@@ -97,71 +98,71 @@ export const AddModal = forwardRef<AddModalRef, AddModalProps>(({ onFinish }, re
                   }
                 })
             }}
-          >确定</Button>
-          <Button onClick={handleClose}>取消</Button>
+          >{t('确定')}</Button>
+          <Button onClick={handleClose}>{t('取消')}</Button>
         </Space>
       }
     >
       <Form form={form} layout="vertical">
         <Form.Item
-          label="驱动名称"
+          label={t('驱动名称')}
           name="name"
-          rules={[{ required: true, message: '请输入驱动名称' }]}
+          rules={[{ required: true, message: t('请输入驱动名称') }]}
         >
-          <Input placeholder="请输入驱动名称"></Input>
+          <Input placeholder={t('请输入驱动名称')}></Input>
         </Form.Item>
         <Form.Item
-          label="容器名称"
+          label={t('容器名称')}
           name="container_name"
           validateFirst
           rules={[
-            { required: true, message: '请输入容器名称' },
+            { required: true, message: t('请输入容器名称') },
             {
               validator (rule, value, callback) {
                 if (/^[a-z]{1,23}$/.test(value)) {
                   callback()
                 } else {
-                  callback('必须为⼩写字⺟，⻓度⼩于12')
+                  callback(t('必须为⼩写字⺟，⻓度⼩于12'))
                 }
               },
             },
           ]}
         >
-          <Input placeholder="请输入容器名称" disabled={!!record}></Input>
+          <Input placeholder={t('请输入容器名称')} disabled={!!record}></Input>
         </Form.Item>
         <Form.Item
-          label="协议"
+          label={t('协议')}
           name="protocol"
-          rules={[{ required: true, message: '请输入协议' }]}
+          rules={[{ required: true, message: t('请输入协议') }]}
         >
-          <Input placeholder="请输入协议"></Input>
+          <Input placeholder={t('请输入协议')}></Input>
         </Form.Item>
         <Form.Item
-          label="镜像仓库地址"
+          label={t('镜像仓库地址')}
           name="docker_config_id"
-          rules={[{ required: true, message: '请选择仓库镜像' }]}
+          rules={[{ required: true, message: t('请选择仓库镜像') }]}
         >
           <DockerConfigModal ref={dockerConfigModalRef} />
         </Form.Item>
         <Form.Item
-          label="驱动标识"
+          label={t('驱动标识')}
           name="docker_repo_name"
-          rules={[{ required: true, message: '请输入驱动标识' }]}
+          rules={[{ required: true, message: t('请输入驱动标识') }]}
         >
-          <Input placeholder="请输入驱动标识" disabled={!!record}></Input>
+          <Input placeholder={t('请输入驱动标识')} disabled={!!record}></Input>
         </Form.Item>
         <Form.Item
-          label="版本"
+          label={t('版本')}
           name="version"
-          rules={[{ required: true, message: '请输入版本' }]}
+          rules={[{ required: true, message: t('请输入版本') }]}
         >
-          <Input placeholder="请输入版本" disabled={!!record}></Input>
+          <Input placeholder={t('请输入版本')} disabled={!!record}></Input>
         </Form.Item>
         <Form.Item
-          label="描述"
+          label={t('描述')}
           name="description"
         >
-          <TextArea placeholder="请输入描述" rows={4}></TextArea>
+          <TextArea placeholder={t('请输入描述')} rows={4}></TextArea>
         </Form.Item>
       </Form>
     </Drawer>

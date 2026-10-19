@@ -9,6 +9,7 @@ import { AddModal, AddModalRef } from './AddModal'
 import { UpdateModal } from './UpdateModal'
 import { WebSocketProvider } from '@/components/WebSocket'
 import { DeviceLibraries } from '@/api/device-libraries'
+import { t } from '@/i18n'
 
 const { Text } = Typography
 const { useMessage } = message
@@ -32,13 +33,13 @@ const CustomDrive: React.FC<CustomDriveProps> = () => {
       <AddModal ref={addModalRef} onFinish={reload}></AddModal>
       <Form layout="inline" className="ml20" form={form}>
         <Form.Item key="name" name="name">
-          <Input placeholder="驱动镜像名称"></Input>
+          <Input placeholder={t('驱动镜像名称')}></Input>
         </Form.Item>
         <Form.Item>
-          <Button type="primary" onClick={search}>查询</Button>
+          <Button type="primary" onClick={search}>{t('查询')}</Button>
         </Form.Item>
         <Form.Item>
-          <Button type="default" onClick={reset}>重置</Button>
+          <Button type="default" onClick={reset}>{t('重置')}</Button>
         </Form.Item>
       </Form>
       <Card className="m20" size="small">
@@ -48,7 +49,7 @@ const CustomDrive: React.FC<CustomDriveProps> = () => {
             onClick={() => {
               addModalRef.current?.open()
             }}
-          ><PlusOutlined />新增</Button>
+          ><PlusOutlined />{t('新增')}</Button>
         </Space>
         <Table
           loading={loading}
@@ -58,20 +59,20 @@ const CustomDrive: React.FC<CustomDriveProps> = () => {
           rowKey="id"
           size="small"
           columns={[
-            { title: '镜像编号', key: 'id', dataIndex: 'id' },
-            { title: '镜像名称', key: 'name', dataIndex: 'name' },
+            { title: t('镜像编号'), key: 'id', dataIndex: 'id' },
+            { title: t('镜像名称'), key: 'name', dataIndex: 'name' },
             {
-              title: '类型',
+              title: t('类型'),
               key: 'support_versions',
               dataIndex: 'support_versions',
               render (value, { support_versions }) {
-                return support_versions[0]?.is_default ? <Tag color="green">官方</Tag> : <Tag color="blue">自定义</Tag>
+                return support_versions[0]?.is_default ? <Tag color="green">{t('官方')}</Tag> : <Tag color="blue">{t('自定义')}</Tag>
               },
             },
-            { title: '版本', key: 'version', dataIndex: 'version' },
-            { title: '协议', key: 'protocol', dataIndex: 'protocol' },
+            { title: t('版本'), key: 'version', dataIndex: 'version' },
+            { title: t('协议'), key: 'protocol', dataIndex: 'protocol' },
             {
-              title: '状态',
+              title: t('状态'),
               key: 'operate_status',
               dataIndex: 'operate_status',
               render (value, { operate_status }) {
@@ -82,7 +83,7 @@ const CustomDrive: React.FC<CustomDriveProps> = () => {
               },
             },
             {
-              title: '创建时间',
+              title: t('创建时间'),
               key: 'created',
               dataIndex: 'created',
               width: 170,
@@ -91,7 +92,7 @@ const CustomDrive: React.FC<CustomDriveProps> = () => {
               },
             },
             {
-              title: '操作',
+              title: t('操作'),
               key: 'action',
               dataIndex: 'action',
               width: 170,
@@ -110,17 +111,17 @@ const CustomDrive: React.FC<CustomDriveProps> = () => {
                       onClick={() => {
                         addModalRef.current?.open(record)
                       }}
-                    >编辑</Typography.Link>
+                    >{t('编辑')}</Typography.Link>
                     <Popconfirm
-                      title="此操作将永久删除该条记录, 是否继续?"
-                      okText="确定"
-                      cancelText="取消"
+                      title={t('此操作将永久删除该条记录, 是否继续?')}
+                      okText={t('确定')}
+                      cancelText={t('取消')}
                       placement="topRight"
                       onConfirm={() => {
                         deleteDeviceLibraries(record?.id)
                           .then(resp => {
                             if (resp.success) {
-                              messageApi.open({ type: 'success', content: '删除成功' })
+                              messageApi.open({ type: 'success', content: t('删除成功') })
                               reload()
                             } else {
                               messageApi.open({ type: 'error', content: resp.errorMsg })
@@ -128,7 +129,7 @@ const CustomDrive: React.FC<CustomDriveProps> = () => {
                           })
                       }}
                     >
-                      <Typography.Link>删除</Typography.Link>
+                      <Typography.Link>{t('删除')}</Typography.Link>
                     </Popconfirm>
                   </Space>
                 )

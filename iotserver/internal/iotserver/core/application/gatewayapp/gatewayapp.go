@@ -3,7 +3,6 @@ package gatewayapp
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"strings"
 	"time"
 
@@ -94,7 +93,7 @@ func (app *gatewayApp) GatewayAdd(ctx context.Context, req dtos.GatewayAddReques
 	}
 	sn := strings.TrimSpace(req.Sn)
 	if sn == "" {
-		return res, errort.NewCommonErr(errort.DefaultReqParamsError, fmt.Errorf("网关序列号不能为空"))
+		return res, errort.NewCommonErr(errort.DefaultReqParamsError, errort.NewMessageErr("网关序列号不能为空", nil))
 	}
 	g, err := app.dbClient.WithCtx(ctx).AddGateway(models.Gateway{
 		Name:   strings.TrimSpace(req.Name),
@@ -173,7 +172,7 @@ func (app *gatewayApp) GatewayPushConfig(ctx context.Context, req dtos.GatewayCo
 		return 0, err
 	}
 	if !json.Valid([]byte(req.Config)) {
-		return 0, errort.NewCommonErr(errort.DefaultReqParamsError, fmt.Errorf("配置必须是合法 JSON"))
+		return 0, errort.NewCommonErr(errort.DefaultReqParamsError, errort.NewMessageErr("配置必须是合法 JSON", nil))
 	}
 	version := g.ConfigVersion + 1
 	if err = db.UpdateGatewayConfig(g.Id, req.Config, version); err != nil {
@@ -200,7 +199,7 @@ func (app *gatewayApp) GatewayCommand(ctx context.Context, req dtos.GatewayComma
 	case "restart", "ota", "sync":
 	default:
 		return errort.NewCommonErr(errort.DefaultReqParamsError,
-			fmt.Errorf("不支持的命令 %s（可选 restart/ota/sync）", req.Command))
+			errort.NewMessageErr("不支持的命令 {{.p1}}（可选 restart/ota/sync）", map[string]interface{}{"p1": req.Command}))
 	}
 	g, err := app.dbClient.WithCtx(ctx).GatewayById(req.Id)
 	if err != nil {
@@ -212,7 +211,7 @@ func (app *gatewayApp) GatewayCommand(ctx context.Context, req dtos.GatewayComma
 	}
 	if strings.TrimSpace(req.Payload) != "" {
 		if !json.Valid([]byte(req.Payload)) {
-			return errort.NewCommonErr(errort.DefaultReqParamsError, fmt.Errorf("命令参数必须是合法 JSON"))
+			return errort.NewCommonErr(errort.DefaultReqParamsError, errort.NewMessageErr("命令参数必须是合法 JSON", nil))
 		}
 		body["payload"] = json.RawMessage(req.Payload)
 	}

@@ -15,6 +15,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"iotserver/internal/pkg/errort"
 	"net"
 	"net/http"
 	"strconv"
@@ -53,7 +54,7 @@ func checkTargetAddr(hostPort string) error {
 	}
 	host = strings.Trim(host, "[]")
 	if host == "" {
-		return fmt.Errorf("目标地址为空")
+		return errort.NewMessageErr("目标地址为空", nil)
 	}
 	if ip := net.ParseIP(host); ip != nil {
 		return denyIP(ip)
@@ -73,7 +74,7 @@ func checkTargetAddr(hostPort string) error {
 func denyIP(ip net.IP) error {
 	for _, n := range deniedNets {
 		if n.Contains(ip) {
-			return fmt.Errorf("目标地址 %s 属于云元数据/链路本地网段，禁止访问", ip)
+			return errort.NewMessageErr("目标地址 {{.p1}} 属于云元数据/链路本地网段，禁止访问", map[string]interface{}{"p1": ip})
 		}
 	}
 	return nil
@@ -109,7 +110,7 @@ func Check(resourceType string, option map[string]interface{}) error {
 	case verifySemaphore <- struct{}{}:
 		defer func() { <-verifySemaphore }()
 	case <-time.After(defaultTimeout):
-		return fmt.Errorf("验证任务排队超时，请稍后重试")
+		return errort.NewMessageErr("验证任务排队超时，请稍后重试", nil)
 	}
 	switch constants.DataResourceType(resourceType) {
 	case constants.HttpResource:
@@ -123,7 +124,7 @@ func Check(resourceType string, option map[string]interface{}) error {
 	case constants.TDengineResource:
 		return checkTDengine(option)
 	default:
-		return fmt.Errorf("不支持的资源类型: %s", resourceType)
+		return errort.NewMessageErr("不支持的资源类型: {{.p1}}", map[string]interface{}{"p1": resourceType})
 	}
 }
 
@@ -131,10 +132,10 @@ func Check(resourceType string, option map[string]interface{}) error {
 func checkHTTP(option map[string]interface{}) error {
 	rawURL := str(option, "url")
 	if rawURL == "" {
-		return fmt.Errorf("缺少 URL")
+		return errort.NewMessageErr("缺少 URL", nil)
 	}
 	if !strings.HasPrefix(rawURL, "http://") && !strings.HasPrefix(rawURL, "https://") {
-		return fmt.Errorf("URL 必须以 http:// 或 https:// 开头")
+		return errort.NewMessageErr("URL 必须以 http:// 或 https:// 开头", nil)
 	}
 
 	method := strings.ToUpper(str(option, "method"))
@@ -153,7 +154,7 @@ func checkHTTP(option map[string]interface{}) error {
 	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, method, rawURL, body)
 	if err != nil {
-		return fmt.Errorf("请求构造失败: %v", err)
+		return errort.NewMessageErr("请求构造失败: {{.p1}}", map[string]interface{}{"p1": err})
 	}
 	for key, value := range mapOf(option, "headers") {
 		req.Header.Set(key, fmt.Sprintf("%v", value))
@@ -162,7 +163,7 @@ func checkHTTP(option map[string]interface{}) error {
 	client := newHTTPClient(timeout)
 	resp, err := client.Do(req)
 	if err != nil {
-		return fmt.Errorf("请求失败: %v", err)
+		return errort.NewMessageErr("请求失败: {{.p1}}", map[string]interface{}{"p1": err})
 	}
 	defer resp.Body.Close()
 	_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 4096))
@@ -170,14 +171,14 @@ func checkHTTP(option map[string]interface{}) error {
 	if resp.StatusCode >= 200 && resp.StatusCode < 400 {
 		return nil
 	}
-	return fmt.Errorf("服务返回状态码 %d", resp.StatusCode)
+	return errort.NewMessageErr("服务返回状态码 {{.p1}}", map[string]interface{}{"p1": resp.StatusCode})
 }
 
 // checkMQTT 建立真实 MQTT 连接
 func checkMQTT(option map[string]interface{}) error {
 	server := str(option, "server")
 	if server == "" {
-		return fmt.Errorf("缺少服务地址")
+		return errort.NewMessageErr("缺少服务地址", nil)
 	}
 	broker := server
 	if !strings.Contains(broker, "://") {
@@ -215,10 +216,10 @@ func checkMQTT(option map[string]interface{}) error {
 
 	token := client.Connect()
 	if !token.WaitTimeout(timeout) {
-		return fmt.Errorf("连接超时")
+		return errort.NewMessageErr("连接超时", nil)
 	}
 	if err := token.Error(); err != nil {
-		return fmt.Errorf("连接失败: %v", err)
+		return errort.NewMessageErr("连接失败: {{.p1}}", map[string]interface{}{"p1": err})
 	}
 	client.Disconnect(200)
 	return nil
@@ -228,7 +229,7 @@ func checkMQTT(option map[string]interface{}) error {
 func checkKafka(option map[string]interface{}) error {
 	brokers := splitList(str(option, "brokers"))
 	if len(brokers) == 0 {
-		return fmt.Errorf("缺少 brokers")
+		return errort.NewMessageErr("缺少 brokers", nil)
 	}
 	// 所有 broker 共享一份整体预算，避免 N 个 broker 时总耗时 = N × timeout
 	deadline := time.Now().Add(timeoutOf(option))
@@ -237,12 +238,12 @@ func checkKafka(option map[string]interface{}) error {
 		remain := time.Until(deadline)
 		if remain <= 0 {
 			if lastErr == nil {
-				lastErr = fmt.Errorf("验证超时")
+				lastErr = errort.NewMessageErr("验证超时", nil)
 			}
 			break
 		}
 		if err := dialTCP(broker, remain); err != nil {
-			lastErr = fmt.Errorf("%s 不可达: %v", broker, err)
+			lastErr = errort.NewMessageErr("{{.p1}} 不可达: {{.p2}}", map[string]interface{}{"p1": broker, "p2": err})
 			continue
 		}
 		return nil
@@ -254,7 +255,7 @@ func checkKafka(option map[string]interface{}) error {
 func checkInfluxDB(option map[string]interface{}) error {
 	addr := str(option, "addr")
 	if addr == "" {
-		return fmt.Errorf("缺少服务地址")
+		return errort.NewMessageErr("缺少服务地址", nil)
 	}
 	if !strings.Contains(addr, "://") {
 		addr = "http://" + addr
@@ -265,7 +266,7 @@ func checkInfluxDB(option map[string]interface{}) error {
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, strings.TrimRight(addr, "/")+"/ping", nil)
 	if err != nil {
-		return fmt.Errorf("请求构造失败: %v", err)
+		return errort.NewMessageErr("请求构造失败: {{.p1}}", map[string]interface{}{"p1": err})
 	}
 	if v := str(option, "username"); v != "" {
 		req.SetBasicAuth(v, str(option, "password"))
@@ -273,14 +274,14 @@ func checkInfluxDB(option map[string]interface{}) error {
 	client := newHTTPClient(timeout)
 	resp, err := client.Do(req)
 	if err != nil {
-		return fmt.Errorf("请求失败: %v", err)
+		return errort.NewMessageErr("请求失败: {{.p1}}", map[string]interface{}{"p1": err})
 	}
 	defer resp.Body.Close()
 	_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 1024))
 	if resp.StatusCode >= 200 && resp.StatusCode < 400 {
 		return nil
 	}
-	return fmt.Errorf("服务返回状态码 %d", resp.StatusCode)
+	return errort.NewMessageErr("服务返回状态码 {{.p1}}", map[string]interface{}{"p1": resp.StatusCode})
 }
 
 // checkTDengine 通过 taosAdapter 的 REST 接口验证连通性。
@@ -289,7 +290,7 @@ func checkInfluxDB(option map[string]interface{}) error {
 func checkTDengine(option map[string]interface{}) error {
 	host := str(option, "host")
 	if host == "" {
-		return fmt.Errorf("缺少主机地址")
+		return errort.NewMessageErr("缺少主机地址", nil)
 	}
 	port := intOf(option, "port")
 	if port <= 0 {
@@ -311,19 +312,19 @@ func checkTDengine(option map[string]interface{}) error {
 	url := fmt.Sprintf("http://%s:%d/rest/sql", host, port)
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, body)
 	if err != nil {
-		return fmt.Errorf("请求构造失败: %v", err)
+		return errort.NewMessageErr("请求构造失败: {{.p1}}", map[string]interface{}{"p1": err})
 	}
 	req.SetBasicAuth(user, str(option, "password"))
 	req.Header.Set("Content-Type", "text/plain")
 
 	resp, err := newHTTPClient(timeout).Do(req)
 	if err != nil {
-		return fmt.Errorf("连接失败: %v", err)
+		return errort.NewMessageErr("连接失败: {{.p1}}", map[string]interface{}{"p1": err})
 	}
 	defer resp.Body.Close()
 	respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return fmt.Errorf("服务返回状态码 %d", resp.StatusCode)
+		return errort.NewMessageErr("服务返回状态码 {{.p1}}", map[string]interface{}{"p1": resp.StatusCode})
 	}
 	// taosAdapter 用 {"code":0,...} 表示成功
 	var result struct {
@@ -331,10 +332,10 @@ func checkTDengine(option map[string]interface{}) error {
 		Desc string `json:"desc"`
 	}
 	if err = json.Unmarshal(respBody, &result); err != nil {
-		return fmt.Errorf("响应解析失败: %v", err)
+		return errort.NewMessageErr("响应解析失败: {{.p1}}", map[string]interface{}{"p1": err})
 	}
 	if result.Code != 0 {
-		return fmt.Errorf("TDengine 返回错误: %s", result.Desc)
+		return errort.NewMessageErr("TDengine 返回错误: {{.p1}}", map[string]interface{}{"p1": result.Desc})
 	}
 	return nil
 }
@@ -345,10 +346,10 @@ func checkTDengine(option map[string]interface{}) error {
 func dialTCP(address string, timeout time.Duration) error {
 	address = strings.TrimSpace(address)
 	if address == "" {
-		return fmt.Errorf("地址为空")
+		return errort.NewMessageErr("地址为空", nil)
 	}
 	if !strings.Contains(address, ":") {
-		return fmt.Errorf("地址缺少端口: %s", address)
+		return errort.NewMessageErr("地址缺少端口: {{.p1}}", map[string]interface{}{"p1": address})
 	}
 	if err := checkTargetAddr(address); err != nil {
 		return err

@@ -6,10 +6,12 @@ import { buildMenus, buildMenusFromBackend, isExternalLink } from '@/routes/menu
 import { resolvePageMeta, resolvePageTitle } from '@/routes/pageMeta'
 import { AdvanceBreadcrumb } from '@/components/Breadcrumb'
 import { useBrand } from '@/components/Brand'
+import LanguageSwitcher from '@/components/LanguageSwitcher'
 import type { BackendMenuItem, SubMenuType } from '@/routes/menus'
 import './style.less'
 import { clearUser, getCurrentTenantId, getUser, setCurrentTenantId, setUser } from '@/utils/auth'
 import { changePassword, getTenants, getUserGetInfo, updateUserProfile, Tenant } from '@/api'
+import { t } from '@/i18n'
 
 const { Header, Content, Sider } = Layout
 const { useForm } = Form
@@ -169,7 +171,7 @@ const MainLayout: React.FC = () => {
     changePassword(values)
       .then(resp => {
         if (resp.success) {
-          messageApi.open({ type: 'success', content: '修改成功' })
+          messageApi.open({ type: 'success', content: t('修改成功') })
           setIsModalOpen(false)
           form.resetFields()
           setTimeout(() => {
@@ -205,7 +207,7 @@ const MainLayout: React.FC = () => {
     const values = await profileForm.validateFields()
     updateUserProfile(values).then(resp => {
       if (resp.success) {
-        messageApi.open({ type: 'success', content: '保存成功' })
+        messageApi.open({ type: 'success', content: t('保存成功') })
         setIsProfileOpen(false)
         const stored = getUser()
         if (stored?.user) {
@@ -221,11 +223,11 @@ const MainLayout: React.FC = () => {
   const items: MenuProps['items'] = [
     {
       key: 'profile',
-      label: <div onClick={openProfile}>个人中心</div>,
+      label: <div onClick={openProfile}>{t('个人中心')}</div>,
     },
     {
       key: 'password',
-      label: <div onClick={showModal}>修改密码</div>,
+      label: <div onClick={showModal}>{t('修改密码')}</div>,
     },
     {
       key: 'logout',
@@ -236,7 +238,7 @@ const MainLayout: React.FC = () => {
             navigate('/auth/login')
           }}
         >
-          退出登录
+          {t('退出登录')}
         </div>
       ),
     },
@@ -251,10 +253,10 @@ const MainLayout: React.FC = () => {
   // 租户切换器选项：空值 = 平台视图（不带 x-tenant-id，查看全部租户）
   // 兜底再判一次数组：这个 useMemo 一旦抛错会整页白屏（曾因接口返回分页对象踩过）
   const tenantOptions = useMemo(() => [
-    { value: '', label: '全部租户（平台视图）' },
+    { value: '', label: t('全部租户（平台视图）') },
     ...(Array.isArray(tenants) ? tenants : []).map(item => ({
       value: item.id,
-      label: `${item.name}（${item.code}）${item.status === 1 ? '' : ' 已停用'}`,
+      label: `${item.name}（${item.code}）${item.status === 1 ? '' : t(' 已停用')}`,
     })),
   ], [tenants])
 
@@ -280,19 +282,20 @@ const MainLayout: React.FC = () => {
           <div></div>
           {platformAdmin && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: '13px', color: 'rgba(0, 0, 0, 0.65)' }}>当前租户</span>
+              <span style={{ fontSize: '13px', color: 'rgba(0, 0, 0, 0.65)' }}>{t('当前租户')}</span>
               <Select
                 size="small"
                 showSearch
                 optionFilterProp="label"
                 style={{ width: 220 }}
                 value={currentTenantId}
-                placeholder="全部租户（平台视图）"
+                placeholder={t('全部租户（平台视图）')}
                 options={tenantOptions}
                 onChange={handleTenantChange}
               />
             </div>
           )}
+          <LanguageSwitcher />
           <Dropdown
             menu={{ items }}
             placement="bottom"
@@ -356,43 +359,43 @@ const MainLayout: React.FC = () => {
         open={isModalOpen}
         onOk={handleOk}
         onCancel={handleCancel}
-        okText="确定"
-        cancelText="取消"
+        okText={t('确定')}
+        cancelText={t('取消')}
         maskClosable={false}
-        title="修改密码"
+        title={t('修改密码')}
       >
         <Form form={form} layout="vertical" style={{ marginTop: '20px' }}>
           <Form.Item
-            label="原密码"
+            label={t('原密码')}
             name="currentPassword"
-            rules={[{ required: true, message: '请输入' }]}
+            rules={[{ required: true, message: t('请输入') }]}
           >
-            <Input placeholder="请输入原密码" />
+            <Input placeholder={t('请输入原密码')} />
           </Form.Item>
           <Form.Item
-            label="新密码"
+            label={t('新密码')}
             name="newPassword"
-            rules={[{ required: true, message: '请输入' }, { min: 6, message: '密码长度不能少于 6 位' }]}
+            rules={[{ required: true, message: t('请输入') }, { min: 6, message: t('密码长度不能少于 6 位') }]}
           >
-            <Input.Password placeholder="请输入新密码" />
+            <Input.Password placeholder={t('请输入新密码')} />
           </Form.Item>
           <Form.Item
-            label="确认密码"
+            label={t('确认密码')}
             name="newPassword1"
             dependencies={['newPassword']}
             rules={[
-              { required: true, message: '请输入' },
+              { required: true, message: t('请输入') },
               ({ getFieldValue }) => ({
                 validator (_, value) {
                   if (!value || getFieldValue('newPassword') === value) {
                     return Promise.resolve()
                   }
-                  return Promise.reject(new Error('两次密码输入不一致'))
+                  return Promise.reject(new Error(t('两次密码输入不一致')))
                 },
               }),
             ]}
           >
-            <Input.Password placeholder="请输入确认密码" />
+            <Input.Password placeholder={t('请输入确认密码')} />
           </Form.Item>
         </Form>
       </Modal>
@@ -401,23 +404,23 @@ const MainLayout: React.FC = () => {
         open={isProfileOpen}
         onOk={handleProfileOk}
         onCancel={() => setIsProfileOpen(false)}
-        okText="保存"
-        cancelText="取消"
+        okText={t('保存')}
+        cancelText={t('取消')}
         maskClosable={false}
-        title="个人资料"
+        title={t('个人资料')}
       >
         <Form form={profileForm} layout="vertical" style={{ marginTop: '20px' }}>
-          <Form.Item label="账号" name="username">
+          <Form.Item label={t('账号')} name="username">
             <Input disabled />
           </Form.Item>
-          <Form.Item label="昵称" name="nickname" rules={[{ required: true, message: '请输入昵称' }]}>
-            <Input placeholder="请输入昵称" />
+          <Form.Item label={t('昵称')} name="nickname" rules={[{ required: true, message: t('请输入昵称') }]}>
+            <Input placeholder={t('请输入昵称')} />
           </Form.Item>
-          <Form.Item label="邮箱" name="email">
-            <Input placeholder="请输入邮箱" />
+          <Form.Item label={t('邮箱')} name="email">
+            <Input placeholder={t('请输入邮箱')} />
           </Form.Item>
-          <Form.Item label="手机号" name="phone">
-            <Input placeholder="请输入手机号" />
+          <Form.Item label={t('手机号')} name="phone">
+            <Input placeholder={t('请输入手机号')} />
           </Form.Item>
         </Form>
       </Modal>

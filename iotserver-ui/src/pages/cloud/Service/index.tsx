@@ -5,6 +5,7 @@ import { OperateStatusMap } from '@/utils/statusMap'
 import { cloudService } from '@/api'
 
 import './style.less'
+import { t } from '@/i18n'
 
 const { useMessage } = message
 
@@ -82,7 +83,7 @@ const ServiceMarket: React.FC<ServiceMarketProps> = () => {
                           onClick={() => {
                             window.open(item.manual)
                           }}
-                        >手册</Button>
+                        >{t('手册')}</Button>
                         {(
                           item.operate_status === 'default'
                           || item.operate_status === 'uninstall'
@@ -95,13 +96,13 @@ const ServiceMarket: React.FC<ServiceMarketProps> = () => {
                             onClick={async () => {
                               // loading 用 duration:0（不自动关），成功/失败时用同一个 key 替换掉它；
                               // 每条路径都必须 settle，否则会一直转
-                              messageApi.open({ duration: 0, key, type: 'loading', content: '正在下载镜像，请稍候…' })
+                              messageApi.open({ duration: 0, key, type: 'loading', content: t('正在下载镜像，请稍候…') })
                               updateItemStatus(item.id, 'installing')
 
                               try {
                                 // ws 未就绪时 send 会 reject，不能用 ws?.send(...).then：
                                 // 那样 ws 为空时会静默什么都不做，看着像"点了没反应"
-                                if (!ws) throw new Error('WebSocket 未连接，请刷新页面后重试')
+                                if (!ws) throw new Error(t('WebSocket 未连接，请刷新页面后重试'))
 
                                 const resp = await ws.send({
                                   code: 20001,
@@ -111,18 +112,18 @@ const ServiceMarket: React.FC<ServiceMarketProps> = () => {
                                   },
                                 })
                                 if (resp.data.success) {
-                                  messageApi.open({ key, type: 'success', content: resp.data.successMsg || '下载成功' })
+                                  messageApi.open({ key, type: 'success', content: resp.data.successMsg || t('下载成功') })
                                 } else {
-                                  messageApi.open({ key, type: 'error', content: resp.data.errorMsg || '下载失败' })
+                                  messageApi.open({ key, type: 'error', content: resp.data.errorMsg || t('下载失败') })
                                 }
                                 // 后端没回状态时退回 default，避免按钮卡在 loading
                                 updateItemStatus(item.id, resp.data.result?.operate_status || 'default')
                               } catch (e: any) {
-                                messageApi.open({ key, type: 'error', content: `下载失败：${e?.message || '未知错误'}` })
+                                messageApi.open({ key, type: 'error', content: t('下载失败：{{p1}}', { p1: e?.message || t('未知错误') }) })
                                 updateItemStatus(item.id, 'default')
                               }
                             }}
-                          >下载</Button>
+                          >{t('下载')}</Button>
                         )}
                       </Space>
 

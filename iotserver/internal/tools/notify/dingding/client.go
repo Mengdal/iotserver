@@ -16,13 +16,19 @@ package dingding
 
 import (
 	"bytes"
-	"fmt"
+
 	"github.com/kirinlabs/HttpRequest"
+
 	"iotserver/internal/models"
 	"iotserver/internal/pkg/constants"
+	"iotserver/internal/pkg/i18n"
 	"iotserver/internal/pkg/logger"
-	"strings"
 )
+
+// dingDingAlertTemplate 告警通知正文。
+// 中文原文就是词条 ID（见 internal/pkg/i18n），英文译文在 locales/en.go；
+// lang 为空时按默认语言输出中文。
+const dingDingAlertTemplate = "# 设备触发告警 \n\n设备名称：{{.p1}} \n\n告警规则名称：{{.p2}} \n\n触发方式：{{.p3}} \n\n"
 
 type DingDingClient struct {
 	lc logger.LoggingClient
@@ -34,20 +40,18 @@ func NewDingDingClient(lc logger.LoggingClient) *DingDingClient {
 	}
 }
 
-func dingDingTemplate(trigger constants.Trigger, deviceName string, ruleName string) string {
-	// 字符串拼接
-	var rst strings.Builder
-	rst.WriteString("# 设备触发告警 \n\n")
-	rst.WriteString(fmt.Sprintf("设备名称：%s \n\n", deviceName))
-	rst.WriteString(fmt.Sprintf("告警规则名称：%s \n\n", ruleName))
-	rst.WriteString(fmt.Sprintf("触发方式：%s \n\n", string(trigger)))
-	return rst.String()
+func dingDingTemplate(trigger constants.Trigger, deviceName string, ruleName string, lang string) string {
+	return i18n.Trans(lang, dingDingAlertTemplate, map[string]interface{}{
+		"p1": deviceName,
+		"p2": ruleName,
+		"p3": i18n.Trans(lang, string(trigger), nil),
+	})
 }
 
-func (d *DingDingClient) Send(webhook string, rule models.Rule, device models.Device, product models.Product, ruleName string) {
+func (d *DingDingClient) Send(webhook string, rule models.Rule, device models.Device, product models.Product, ruleName string, lang string) {
 	req := HttpRequest.NewRequest()
 	req.JSON()
-	resp, err := req.Post(webhook, bytes.NewBuffer([]byte(dingDingTemplate(rule.Trigger, device.Name, ruleName))))
+	resp, err := req.Post(webhook, bytes.NewBuffer([]byte(dingDingTemplate(rule.Trigger, device.Name, ruleName, lang))))
 	if err != nil {
 		d.lc.Errorf("dingding send alert message error:", err.Error())
 	}

@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import { Button, Table } from 'antd'
 import { PlusOutlined } from '@ant-design/icons'
 import { StructForm, StructFormRef } from './StructForm'
+import { t } from '@/i18n'
 
 export interface StructTableData {
   id: string
@@ -55,12 +56,12 @@ export const Struct: React.FC<StructProps> = ({ showView, disabled, value = [], 
             dataSource={dataSource}
             pagination={false}
             columns={[
-              { dataIndex: 'name', title: '名称' },
-              { dataIndex: 'code', title: '标识符' },
-              { dataIndex: 'struct_type', title: '数据类型' },
+              { dataIndex: 'name', title: t('名称') },
+              { dataIndex: 'code', title: t('标识符') },
+              { dataIndex: 'struct_type', title: t('数据类型') },
               {
                 dataIndex: 'action',
-                title: '操作',
+                title: t('操作'),
                 width: 140,
                 render (value, record) {
                   return (
@@ -72,7 +73,7 @@ export const Struct: React.FC<StructProps> = ({ showView, disabled, value = [], 
                           onClick={() => {
                             structFormRef.current?.open(record, true)
                           }}
-                        >查看</span>
+                        >{t('查看')}</span>
                       }
                       <Button
                         type="link"
@@ -81,7 +82,7 @@ export const Struct: React.FC<StructProps> = ({ showView, disabled, value = [], 
                         onClick={() => {
                           structFormRef.current?.open(record)
                         }}
-                      >编辑</Button>
+                      >{t('编辑')}</Button>
                       <Button
                         type="link"
                         className="p0 ml10"
@@ -89,7 +90,7 @@ export const Struct: React.FC<StructProps> = ({ showView, disabled, value = [], 
                         onClick={() => {
                           setDataSource(dataSource.filter(item => item.id !== record.id))
                         }}
-                      >删除</Button>
+                      >{t('删除')}</Button>
                     </>
                   )
                 },
@@ -105,7 +106,7 @@ export const Struct: React.FC<StructProps> = ({ showView, disabled, value = [], 
         onClick={() => {
           structFormRef.current?.open()
         }}
-      >添加参数</Button>
+      >{t('添加参数')}</Button>
     </>
   )
 }

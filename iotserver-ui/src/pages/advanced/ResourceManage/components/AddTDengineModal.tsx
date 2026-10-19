@@ -2,6 +2,7 @@ import { Button, Drawer, Form, Input, InputNumber, message, Select, Space } from
 import { CloseOutlined } from '@ant-design/icons'
 import React, { forwardRef, useCallback, useImperativeHandle, useState } from 'react'
 import { addResource, editResource, TDengineResource } from '@/api'
+import { t } from '@/i18n'
 
 const { useForm } = Form
 
@@ -38,7 +39,7 @@ export const AddTDengineModal = forwardRef<AddTDengineModalRef, AddTDengineModal
 
   return (
     <Drawer
-      title={record ? '修改实例' : '添加实例'}
+      title={record ? t('修改实例') : t('添加实例')}
       placement="right"
       open={isModalOpen}
       width={550}
@@ -65,7 +66,7 @@ export const AddTDengineModal = forwardRef<AddTDengineModalRef, AddTDengineModal
                     editResource(values)
                       .then(resp => {
                         if (resp.success) {
-                          message.success('修改成功')
+                          message.success(t('修改成功'))
                           handleClose()
                           onFinish()
                         } else {
@@ -78,7 +79,7 @@ export const AddTDengineModal = forwardRef<AddTDengineModalRef, AddTDengineModal
                     addResource(values)
                       .then(resp => {
                         if (resp.success) {
-                          message.success('添加成功')
+                          message.success(t('添加成功'))
                           handleClose()
                           onFinish()
                         } else {
@@ -90,8 +91,8 @@ export const AddTDengineModal = forwardRef<AddTDengineModalRef, AddTDengineModal
                   }
                 })
             }}
-          >确定</Button>
-          <Button onClick={handleClose}>取消</Button>
+          >{t('确定')}</Button>
+          <Button onClick={handleClose}>{t('取消')}</Button>
         </Space>
       }
     >
@@ -112,76 +113,76 @@ export const AddTDengineModal = forwardRef<AddTDengineModalRef, AddTDengineModal
         }}
       >
         <Form.Item
-          label="实例名称"
+          label={t('实例名称')}
           name="name"
           rules={[
             {
               required: true,
               validator (rule, value, callback) {
                 if (!value) {
-                  callback('请输入实例名称')
+                  callback(t('请输入实例名称'))
                 } else if (/^[a-zA-Z\u4e00-\u9fa5][a-zA-Z0-9\u4e00-\u9fa5_-]{0,31}$/.test(value)) {
                   callback()
                 } else {
-                  callback('1-32位字符，支持中文、英文、数字及特殊字符_-，必须以英文或中文字符开头')
+                  callback(t('1-32位字符，支持中文、英文、数字及特殊字符_-，必须以英文或中文字符开头'))
                 }
               },
             },
           ]}
         >
-          <Input placeholder="1-32位字符，支持中文、英文、数字及特殊字符_-，必须以英文或中文字符开头"></Input>
+          <Input placeholder={t('1-32位字符，支持中文、英文、数字及特殊字符_-，必须以英文或中文字符开头')}></Input>
         </Form.Item>
         <Form.Item
           label="Host"
           name={['option', 'host']}
         >
-          <Input placeholder="请输入"></Input>
+          <Input placeholder={t('请输入')}></Input>
         </Form.Item>
         <Form.Item
           label="Port"
           name={['option', 'port']}
-          rules={[{ required: true, message: '不能为空' }]}
+          rules={[{ required: true, message: t('不能为空') }]}
         >
-          <InputNumber placeholder="请输入" style={{ width: '100%' }}/>
+          <InputNumber placeholder={t('请输入')} style={{ width: '100%' }}/>
         </Form.Item>
         <Form.Item
           label="User"
           name={['option', 'user']}
         >
-          <Input placeholder="请输入"></Input>
+          <Input placeholder={t('请输入')}></Input>
         </Form.Item>
         <Form.Item
           label="Password"
           name={['option', 'password']}
         >
-          <Input placeholder="请输入"></Input>
+          <Input placeholder={t('请输入')}></Input>
         </Form.Item>
         <Form.Item
           label="Database"
           name={['option', 'database']}
-          rules={[{ required: true, message: '不能为空' }]}
+          rules={[{ required: true, message: t('不能为空') }]}
         >
-          <Input placeholder="请输入"></Input>
+          <Input placeholder={t('请输入')}></Input>
         </Form.Item>
         <Form.Item
           label="Table"
           name={['option', 'table']}
-          rules={[{ required: true, message: '不能为空' }]}
+          rules={[{ required: true, message: t('不能为空') }]}
         >
-          <Input placeholder="请输入"></Input>
+          <Input placeholder={t('请输入')}></Input>
         </Form.Item>
         <Form.Item
           label="Fields"
           name={['option', 'fields']}
         >
-          <Input placeholder="请输入"></Input>
+          <Input placeholder={t('请输入')}></Input>
         </Form.Item>
         <Form.Item
           label="ProvideTs"
           name={['option', 'provideTs']}
         >
           <Select
-            placeholder="请选择"
+            placeholder={t('请选择')}
             options={[
               { value: true, label: 'true' },
               { value: false, label: 'false' },
@@ -191,28 +192,28 @@ export const AddTDengineModal = forwardRef<AddTDengineModalRef, AddTDengineModal
         <Form.Item
           label="TsFieldName"
           name={['option', 'tsFieldName']}
-          rules={[{ required: true, message: '不能为空' }]}
+          rules={[{ required: true, message: t('不能为空') }]}
         >
-          <Input placeholder="请输入"></Input>
+          <Input placeholder={t('请输入')}></Input>
         </Form.Item>
         <Form.Item
           label="STable"
           name={['option', 'sTable']}
         >
-          <Input placeholder="请输入"></Input>
+          <Input placeholder={t('请输入')}></Input>
         </Form.Item>
         <Form.Item
           label="TagFields"
           name={['option', 'tagFields']}
-          rules={[{ required: !!sTable, message: '不能为空' }]}
+          rules={[{ required: !!sTable, message: t('不能为空') }]}
         >
-          <Input placeholder="请输入"></Input>
+          <Input placeholder={t('请输入')}></Input>
         </Form.Item>
         <Form.Item
           label="TableDataField"
           name={['option', 'tableDataField']}
         >
-          <Input placeholder="请输入"></Input>
+          <Input placeholder={t('请输入')}></Input>
         </Form.Item>
       </Form>
     </Drawer>

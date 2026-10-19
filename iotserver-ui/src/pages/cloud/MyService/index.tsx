@@ -9,6 +9,7 @@ import { LogModal, LogModalRef } from './LogModal'
 import { AuthorizationModal, AuthorizationModalRef } from './AuthorizationModal'
 import { RunStatusMap } from '@/utils/statusMap'
 import { CloudInstance } from '@/api/cloud-instance'
+import { t } from '@/i18n'
 
 const { Text } = Typography
 
@@ -56,25 +57,25 @@ const MyService: React.FC<MyServiceProps> = () => {
           pagination={pagination}
           columns={[
             {
-              title: '插件编号',
+              title: t('插件编号'),
               dataIndex: 'id',
               key: 'id',
             },
             {
-              title: '插件名称',
+              title: t('插件名称'),
               dataIndex: 'name',
               key: 'name',
             },
             {
-              title: '插件类型',
+              title: t('插件类型'),
               dataIndex: 'is_internal',
               key: 'is_internal',
               render (value, record) {
-                return record.is_internal ? <Tag color="success">官方</Tag> : <Tag color="processing">自定义</Tag>
+                return record.is_internal ? <Tag color="success">{t('官方')}</Tag> : <Tag color="processing">{t('自定义')}</Tag>
               },
             },
             {
-              title: '状态',
+              title: t('状态'),
               dataIndex: 'run_status',
               key: 'run_status',
               render (value) {
@@ -83,7 +84,7 @@ const MyService: React.FC<MyServiceProps> = () => {
               },
             },
             {
-              title: '创建时间',
+              title: t('创建时间'),
               dataIndex: 'created',
               key: 'created',
               render (value) {
@@ -91,7 +92,7 @@ const MyService: React.FC<MyServiceProps> = () => {
               },
             },
             {
-              title: '操作',
+              title: t('操作'),
               dataIndex: 'action',
               key: 'action',
               render (value, record) {
@@ -101,9 +102,9 @@ const MyService: React.FC<MyServiceProps> = () => {
                       trigger={['click']}
                       menu={{
                         items: [
-                          { label: '启动', key: 'start' },
-                          { label: '停止', key: 'stop' },
-                          { label: '授权', key: 'authorization' },
+                          { label: t('启动'), key: 'start' },
+                          { label: t('停止'), key: 'stop' },
+                          { label: t('授权'), key: 'authorization' },
                         ],
                         onClick ({ key }) {
                           if (['start', 'stop'].includes(key)) {
@@ -124,14 +125,14 @@ const MyService: React.FC<MyServiceProps> = () => {
                             if (Array.isArray(template) && template.length) {
                               authorizationModalRef.current?.open(record)
                             } else {
-                              message.warning('暂无授权配置')
+                              message.warning(t('暂无授权配置'))
                             }
                           }
                         },
                       }}
                     >
                       <Typography.Link>
-                        操作
+                        {t('操作')}
                         <DownOutlined className="ml5" style={{ fontSize: 9 }} />
                       </Typography.Link>
                     </Dropdown>
@@ -139,11 +140,11 @@ const MyService: React.FC<MyServiceProps> = () => {
                       onClick={() => {
                         logModalRef.current?.open(record.id)
                       }}
-                    >日志</Typography.Link>
+                    >{t('日志')}</Typography.Link>
                     <Popconfirm
-                      title="此操作将永久删除关联的产品以及设备, 是否继续?"
-                      okText="确定"
-                      cancelText="取消"
+                      title={t('此操作将永久删除关联的产品以及设备, 是否继续?')}
+                      okText={t('确定')}
+                      cancelText={t('取消')}
                       placement="topRight"
                       onConfirm={() => {
                         send({
@@ -154,7 +155,7 @@ const MyService: React.FC<MyServiceProps> = () => {
                         })
                       }}
                     >
-                      <Typography.Link>删除</Typography.Link>
+                      <Typography.Link>{t('删除')}</Typography.Link>
                     </Popconfirm>
                   </Space>
                 )

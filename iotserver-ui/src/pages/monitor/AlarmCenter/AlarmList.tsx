@@ -7,6 +7,7 @@ import { Pie } from '@ant-design/plots'
 import { AlertPlate } from './types'
 import { ArrowsAltOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
+import { t, tt } from '@/i18n'
 
 const { Text } = Typography
 const { useMessage } = message
@@ -147,7 +148,7 @@ const AlarmList: React.FC<AlarmListProps> = ({
     alertTreated(vaules)
       .then(resp => {
         if (resp.success) {
-          messageApi.open({ type: 'success', content: '处理成功' })
+          messageApi.open({ type: 'success', content: t('处理成功') })
           setOpen(false)
           reload()
         } else {
@@ -185,23 +186,23 @@ const AlarmList: React.FC<AlarmListProps> = ({
         </Col>
         <Col flex="0 1 370px">
           <div style={{ marginLeft: '60px' }}>
-            <div style={{ color: '#aaa' }}>告警数（7日）</div>
+            <div style={{ color: '#aaa' }}>{t('告警数（7日）')}</div>
             <div style={{ fontSize: '20px', fontWeight: 600 }} className="mt15">{alertLevel.total}</div>
             <Row className="mt15">
               <Col span={6}>
-                <div style={{ color: colorMap['紧急'] }}>紧急 {alertLevel.urgentPercent}</div>
+                <div style={{ color: colorMap['紧急'] }}>{t('紧急')} {alertLevel.urgentPercent}</div>
                 <div style={{ fontSize: '20px' }} className="mt10">{alertLevel.urgent}</div>
               </Col>
               <Col span={6}>
-                <div style={{ color: colorMap['重要'] }}>重要 {alertLevel.importantPercent}</div>
+                <div style={{ color: colorMap['重要'] }}>{t('重要')} {alertLevel.importantPercent}</div>
                 <div style={{ fontSize: '20px' }} className="mt10">{alertLevel.important}</div>
               </Col>
               <Col span={6}>
-                <div style={{ color: colorMap['次要'] }}>次要 {alertLevel.secondaryPercent}</div>
+                <div style={{ color: colorMap['次要'] }}>{t('次要')} {alertLevel.secondaryPercent}</div>
                 <div style={{ fontSize: '20px' }} className="mt10">{alertLevel.secondary}</div>
               </Col>
               <Col span={6}>
-                <div style={{ color: colorMap['提示'] }}>提示 {alertLevel.promptPercent}</div>
+                <div style={{ color: colorMap['提示'] }}>{t('提示')} {alertLevel.promptPercent}</div>
                 <div style={{ fontSize: '20px' }} className="mt10">{alertLevel.prompt}</div>
               </Col>
             </Row>
@@ -212,47 +213,47 @@ const AlarmList: React.FC<AlarmListProps> = ({
       <Form layout="inline" className="ml20 mt20" form={form}>
         <Form.Item key="alert_level" name="alert_level">
           <Select
-            placeholder="告警级别"
-            style={{ width: 90 }}
+            placeholder={t('告警级别')}
+            style={{ width: 150 }}
             allowClear
             options={[
-              { value: '', label: '全部' },
-              { value: '紧急', label: '紧急' },
-              { value: '重要', label: '重要' },
-              { value: '次要', label: '次要' },
-              { value: '提示', label: '提示' },
+              { value: '', label: t('全部') },
+              { value: '紧急', label: t('紧急') },
+              { value: '重要', label: t('重要') },
+              { value: '次要', label: t('次要') },
+              { value: '提示', label: t('提示') },
             ]}
           />
         </Form.Item>
         <Form.Item key="status" name="status">
           <Select
-            placeholder="告警状态"
-            style={{ width: 90 }}
+            placeholder={t('告警状态')}
+            style={{ width: 150 }}
             allowClear
             options={[
-              { value: '', label: '全部' },
-              { value: '未处理', label: '未处理' },
-              { value: '已处理', label: '已处理' },
-              { value: '忽略', label: '忽略' },
+              { value: '', label: t('全部') },
+              { value: '未处理', label: t('未处理') },
+              { value: '已处理', label: t('已处理') },
+              { value: '忽略', label: t('忽略') },
             ]}
           />
         </Form.Item>
         <Form.Item key="name" name="name">
-          <Input style={{ width: 220 }} addonBefore="告警规则名称" allowClear placeholder="请输入搜索内容"></Input>
+          <Input style={{ width: 220 }} addonBefore={t('告警规则名称')} allowClear placeholder={t('请输入搜索内容')}></Input>
         </Form.Item>
-        <Form.Item key="trigger_time" name="trigger_time" label="触发时间">
+        <Form.Item key="trigger_time" name="trigger_time" label={t('触发时间')}>
           <RangePicker
             style={{ width: 300 }}
             showTime={{ format: 'HH:mm:ss' }}
             format="YYYY-MM-DD HH:mm:ss"
-            placeholder={['开始时间', '结束时间']}
+            placeholder={[t('开始时间'), t('结束时间')]}
           />
         </Form.Item>
         <Form.Item>
-          <Button type="primary" onClick={search}>查询</Button>
+          <Button type="primary" onClick={search}>{t('查询')}</Button>
         </Form.Item>
         <Form.Item>
-          <Button type="default" onClick={reset}>重置</Button>
+          <Button type="default" onClick={reset}>{t('重置')}</Button>
         </Form.Item>
       </Form>
       <Card className="m20" size="small">
@@ -264,8 +265,8 @@ const AlarmList: React.FC<AlarmListProps> = ({
           rowKey="id"
           size="small"
           columns={[
-            { title: '告警ID', key: 'id', dataIndex: 'id', width: '6em' },
-            { title: '告警规则名称', key: 'name', dataIndex: 'name', width: '8em' },
+            { title: t('告警ID'), key: 'id', dataIndex: 'id', width: '6em' },
+            { title: t('告警规则名称'), key: 'name', dataIndex: 'name', width: '8em' },
             // {
             //   title: '触发告警数据',
             //   key: 'alert_result',
@@ -283,9 +284,9 @@ const AlarmList: React.FC<AlarmListProps> = ({
             //       : '-'
             //   },
             // },
-            { title: '告警等级', key: 'alert_level', dataIndex: 'alert_level', width: 70 },
+            { title: t('告警等级'), key: 'alert_level', dataIndex: 'alert_level', width: 90, render: (value: string) => tt(value) },
             {
-              title: '触发时间',
+              title: t('触发时间'),
               key: 'trigger_time',
               dataIndex: 'trigger_time',
               width: 80,
@@ -294,7 +295,7 @@ const AlarmList: React.FC<AlarmListProps> = ({
               },
             },
             {
-              title: '处理时间',
+              title: t('处理时间'),
               key: 'treated_time',
               dataIndex: 'treated_time',
               width: 80,
@@ -303,7 +304,7 @@ const AlarmList: React.FC<AlarmListProps> = ({
               },
             },
             {
-              title: '告警状态',
+              title: t('告警状态'),
               key: 'status',
               dataIndex: 'status',
               width: '6em',
@@ -321,7 +322,7 @@ const AlarmList: React.FC<AlarmListProps> = ({
               },
             },
             {
-              title: '处理结果',
+              title: t('处理结果'),
               key: 'message',
               dataIndex: 'message',
               ellipsis: true,
@@ -338,7 +339,7 @@ const AlarmList: React.FC<AlarmListProps> = ({
               },
             },
             {
-              title: '操作',
+              title: t('操作'),
               key: 'action',
               dataIndex: 'action',
               width: '8em',
@@ -348,17 +349,17 @@ const AlarmList: React.FC<AlarmListProps> = ({
                     <Typography.Link
                       disabled={record.status === '已处理'}
                       onClick={() => showModal(record)}
-                    >处理</Typography.Link>
+                    >{t('处理')}</Typography.Link>
                     <Popconfirm
-                      title="此操作将忽略该条记录, 是否继续?"
-                      okText="确定"
-                      cancelText="取消"
+                      title={t('此操作将忽略该条记录, 是否继续?')}
+                      okText={t('确定')}
+                      cancelText={t('取消')}
                       placement="topRight"
                       onConfirm={() => {
                         alertIgnore(record?.id)
                           .then(resp => {
                             if (resp.success) {
-                              messageApi.open({ type: 'success', content: '操作成功' })
+                              messageApi.open({ type: 'success', content: t('操作成功') })
                               reload()
                               console.log('操作成功')
                             } else {
@@ -367,14 +368,14 @@ const AlarmList: React.FC<AlarmListProps> = ({
                           })
                       }}
                     >
-                      <Typography.Link disabled={record.status === '忽略'}>忽略</Typography.Link>
+                      <Typography.Link disabled={record.status === '忽略'}>{t('忽略')}</Typography.Link>
                     </Popconfirm>
                     <Typography.Link
                       onClick={() => {
                         const { code, device_id, trigger, end_at, start_at } = JSON.parse((record as any).alert_result)
                         navigate(`/gateway/device/detail/${encodeURIComponent(device_id)}?code=${encodeURIComponent(code)}&trigger=${encodeURIComponent(trigger)}&end_at=${encodeURIComponent(end_at)}&start_at=${encodeURIComponent(start_at)}`)
                       }}
-                    >数据定位</Typography.Link>
+                    >{t('数据定位')}</Typography.Link>
                   </Space>
                 )
               },
@@ -386,18 +387,18 @@ const AlarmList: React.FC<AlarmListProps> = ({
         open={open}
         onOk={handleOk}
         onCancel={handleCancel}
-        okText="确定"
-        cancelText="取消"
+        okText={t('确定')}
+        cancelText={t('取消')}
         maskClosable={false}
       >
         <Form form={form} layout="vertical">
           <Form.Item
-            label="处理意见"
+            label={t('处理意见')}
             name="message"
-            rules={[{ required: true, message: '请输入处理意见' }]}
+            rules={[{ required: true, message: t('请输入处理意见') }]}
           >
             <TextArea
-              placeholder="请输入处理意见"
+              placeholder={t('请输入处理意见')}
               rows={4}>
             </TextArea>
           </Form.Item>

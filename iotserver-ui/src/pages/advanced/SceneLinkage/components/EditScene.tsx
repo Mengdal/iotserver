@@ -7,6 +7,7 @@ import useRequest from '@/hooks/useRequest'
 import useFormDependencies from '@/hooks/useFormDependencies'
 import SelectWeekDays from './SelectWeekDays'
 import RequestSelect from './RequestSelect'
+import { t } from '@/i18n'
 
 const { useForm } = Form
 
@@ -227,8 +228,8 @@ export const EditScene = forwardRef<EditSceneRef, EditSceneProps>(
     )
 
     const DeviceStatusOptions = [
-      { label: '在线', value: '在线' },
-      { label: '离线', value: '离线' },
+      { label: t('在线'), value: '在线' },
+      { label: t('离线'), value: '离线' },
     ]
 
     const computCodeType = useCallback(
@@ -417,7 +418,7 @@ export const EditScene = forwardRef<EditSceneRef, EditSceneProps>(
 
     return (
       <Drawer
-        title="编辑场景"
+        title={t('编辑场景')}
         placement="right"
         open={isModalOpen}
         width={1000}
@@ -469,7 +470,7 @@ export const EditScene = forwardRef<EditSceneRef, EditSceneProps>(
                   editScene(params)
                     .then((resp) => {
                       if (resp.success) {
-                        message.success('编辑成功')
+                        message.success(t('编辑成功'))
                         handleClose()
                         onFinish()
                       } else {
@@ -482,9 +483,9 @@ export const EditScene = forwardRef<EditSceneRef, EditSceneProps>(
                 })
               }}
             >
-              确定
+              {t('确定')}
             </Button>
-            <Button onClick={handleClose}>取消</Button>
+            <Button onClick={handleClose}>{t('取消')}</Button>
           </Space>
         }
       >
@@ -509,22 +510,22 @@ export const EditScene = forwardRef<EditSceneRef, EditSceneProps>(
           initialValues={initialValues}
         >
           <Card
-            title="触发条件"
+            title={t('触发条件')}
             style={{ boxShadow: '0 0 6px 1px rgb(0 0 0 / 14%)' }}
           >
             <Row gutter={15}>
               <Col span={6}>
                 <Form.Item
-                  label="触发方式"
+                  label={t('触发方式')}
                   name={['conditions', 'condition_type']}
-                  rules={[{ required: true, message: '不能为空' }]}
+                  rules={[{ required: true, message: t('不能为空') }]}
                 >
                   <Select
-                    placeholder="请选择"
+                    placeholder={t('请选择')}
                     onChange={typeChange}
                     options={[
-                      { value: 'notify', label: '设备触发' },
-                      { value: 'timer', label: '定时触发' },
+                      { value: 'notify', label: t('设备触发') },
+                      { value: 'timer', label: t('定时触发') },
                     ]}
                   />
                 </Form.Item>
@@ -537,29 +538,29 @@ export const EditScene = forwardRef<EditSceneRef, EditSceneProps>(
                         <Form.Item
                           // label="触发方式"
                           name={['conditions', 'option', 'trigger']}
-                          rules={[{ required: true, message: '不能为空' }]}
+                          rules={[{ required: true, message: t('不能为空') }]}
                         >
                           <Select
                             style={{ marginTop: '28px' }}
-                            placeholder="请选择"
+                            placeholder={t('请选择')}
                             onChange={triggerChange}
                             allowClear
                             options={[
-                              { value: '设备数据触发', label: '设备数据触发' },
-                              { value: '设备事件触发', label: '设备事件触发' },
-                              { value: '设备状态触发', label: '设备状态触发' },
+                              { value: '设备数据触发', label: t('设备数据触发') },
+                              { value: '设备事件触发', label: t('设备事件触发') },
+                              { value: '设备状态触发', label: t('设备状态触发') },
                             ]}
                           />
                         </Form.Item>
                       </Col>
                       <Col span={6}>
                         <Form.Item
-                          label="产品"
+                          label={t('产品')}
                           name={['conditions', 'option', 'product_id']}
-                          rules={[{ required: true, message: '不能为空' }]}
+                          rules={[{ required: true, message: t('不能为空') }]}
                         >
                           <Select
-                            placeholder="请选择"
+                            placeholder={t('请选择')}
                             // onChange={productChange}
                             onChange={(id) => {
                               productChange(id)
@@ -589,12 +590,12 @@ export const EditScene = forwardRef<EditSceneRef, EditSceneProps>(
                       </Col>
                       <Col span={6}>
                         <Form.Item
-                          label="设备"
+                          label={t('设备')}
                           name={['conditions', 'option', 'device_id']}
-                          rules={[{ required: true, message: '不能为空' }]}
+                          rules={[{ required: true, message: t('不能为空') }]}
                         >
                           <Select
-                            placeholder="请选择"
+                            placeholder={t('请选择')}
                             // onChange={deviceChange}
                             onChange={(id) => {
                               const item = devicesTypeApi.data.find(
@@ -634,11 +635,11 @@ export const EditScene = forwardRef<EditSceneRef, EditSceneProps>(
                           }
                           label={
                             trigger === '设备数据触发'
-                              ? '功能'
+                              ? t('功能')
                               : trigger === '设备事件触发'
-                                ? '事件'
+                                ? t('事件')
                                 : trigger === '设备状态触发'
-                                  ? '设备状态'
+                                  ? t('设备状态')
                                   : ''
                           }
                           name={
@@ -646,10 +647,10 @@ export const EditScene = forwardRef<EditSceneRef, EditSceneProps>(
                               ? ['conditions', 'option', 'status']
                               : ['conditions', 'option', 'code']
                           }
-                          rules={[{ required: true, message: '不能为空' }]}
+                          rules={[{ required: true, message: t('不能为空') }]}
                         >
                           <Select
-                            placeholder="请选择"
+                            placeholder={t('请选择')}
                             onChange={codeChange}
                             loading={productTypeApi.loading}
 
@@ -670,38 +671,38 @@ export const EditScene = forwardRef<EditSceneRef, EditSceneProps>(
                         <>
                           <Col span={6}>
                             <Form.Item
-                              label="取值类型"
+                              label={t('取值类型')}
                               name={['conditions', 'option', 'value_type']}
-                              rules={[{ required: true, message: '不能为空' }]}
+                              rules={[{ required: true, message: t('不能为空') }]}
                             >
                               <Select
-                                placeholder="选择取值类型"
+                                placeholder={t('选择取值类型')}
                                 allowClear
                                 options={[
-                                  { value: 'original', label: '原始值' },
-                                  { value: 'avg', label: '平均值' },
-                                  { value: 'max', label: '最大值' },
-                                  { value: 'min', label: '最小值' },
-                                  { value: 'mum', label: '求和值' },
+                                  { value: 'original', label: t('原始值') },
+                                  { value: 'avg', label: t('平均值') },
+                                  { value: 'max', label: t('最大值') },
+                                  { value: 'min', label: t('最小值') },
+                                  { value: 'mum', label: t('求和值') },
                                 ]}
                               />
                             </Form.Item>
                           </Col>
                           <Col span={6}>
                             <Form.Item
-                              label="取值周期"
+                              label={t('取值周期')}
                               name={['conditions', 'option', 'value_cycle']}
-                              rules={[{ required: true, message: '不能为空' }]}
+                              rules={[{ required: true, message: t('不能为空') }]}
                             >
                               <Select
-                                placeholder="选择取值周期"
+                                placeholder={t('选择取值周期')}
                                 allowClear
                                 options={[
-                                  { value: '1分钟周期', label: '1分钟周期' },
-                                  { value: '5分钟周期', label: '5分钟周期' },
-                                  { value: '15分钟周期', label: '15分钟周期' },
-                                  { value: '30分钟周期', label: '30分钟周期' },
-                                  { value: '60分钟周期', label: '60分钟周期' },
+                                  { value: '1分钟周期', label: t('1分钟周期') },
+                                  { value: '5分钟周期', label: t('5分钟周期') },
+                                  { value: '15分钟周期', label: t('15分钟周期') },
+                                  { value: '30分钟周期', label: t('30分钟周期') },
+                                  { value: '60分钟周期', label: t('60分钟周期') },
                                 ]}
                               />
                             </Form.Item>
@@ -710,14 +711,14 @@ export const EditScene = forwardRef<EditSceneRef, EditSceneProps>(
                             <Row>
                               <Col span={10}>
                                 <Form.Item
-                                  label="判断条件"
+                                  label={t('判断条件')}
                                   name="decide_condition_1"
                                   rules={[
-                                    { required: true, message: '不能为空' },
+                                    { required: true, message: t('不能为空') },
                                   ]}
                                 >
                                   <Select
-                                    placeholder="请选择"
+                                    placeholder={t('请选择')}
                                     // onChange={decideChange}
                                     allowClear
                                     options={[
@@ -736,13 +737,13 @@ export const EditScene = forwardRef<EditSceneRef, EditSceneProps>(
                                   label=""
                                   name="decide_condition_2"
                                   rules={[
-                                    { required: true, message: '不能为空' },
+                                    { required: true, message: t('不能为空') },
                                   ]}
                                 >
                                   <Input
                                     style={{ marginTop: '28px' }}
                                     allowClear
-                                    placeholder="请输入"
+                                    placeholder={t('请输入')}
                                   />
                                 </Form.Item>
                               </Col>
@@ -753,16 +754,16 @@ export const EditScene = forwardRef<EditSceneRef, EditSceneProps>(
                       {['bool'].includes(codeType) && (
                         <Col span={6}>
                           <Form.Item
-                            label="判断条件"
+                            label={t('判断条件')}
                             name={[
                               'conditions',
                               'option',
                               'decide_condition_bool',
                             ]}
-                            rules={[{ required: true, message: '不能为空' }]}
+                            rules={[{ required: true, message: t('不能为空') }]}
                           >
                             <Select
-                              placeholder="请选择"
+                              placeholder={t('请选择')}
                               allowClear
                               options={[
                                 { value: 'true', label: 'True' },
@@ -775,36 +776,36 @@ export const EditScene = forwardRef<EditSceneRef, EditSceneProps>(
                       {['text'].includes(codeType) && (
                         <Col span={6}>
                           <Form.Item
-                            label="判断条件"
+                            label={t('判断条件')}
                             name={[
                               'conditions',
                               'option',
                               'decide_condition_text',
                             ]}
-                            rules={[{ required: true, message: '不能为空' }]}
+                            rules={[{ required: true, message: t('不能为空') }]}
                           >
-                            <Input placeholder="请输入"></Input>
+                            <Input placeholder={t('请输入')}></Input>
                           </Form.Item>
                         </Col>
                       )}
                       {['enum'].includes(codeType) && (
                         <Col span={6}>
                           <Form.Item
-                            label="判断条件"
+                            label={t('判断条件')}
                             name={[
                               'conditions',
                               'option',
                               'decide_condition_enum',
                             ]}
-                            rules={[{ required: true, message: '不能为空' }]}
+                            rules={[{ required: true, message: t('不能为空') }]}
                           >
                             <Select
-                              placeholder="请选择"
+                              placeholder={t('请选择')}
                               allowClear
                               options={[
-                                { value: '0', label: '红' },
-                                { value: '1', label: '绿' },
-                                { value: '2', label: '蓝' },
+                                { value: '0', label: t('红') },
+                                { value: '1', label: t('绿') },
+                                { value: '2', label: t('蓝') },
                               ]}
                             />
                           </Form.Item>
@@ -817,7 +818,7 @@ export const EditScene = forwardRef<EditSceneRef, EditSceneProps>(
                       <Col span={18}>
                         <Form.Item
                           name={['conditions', 'option', 'cron_expression']}
-                          rules={[{ required: true, message: '不能为空' }]}
+                          rules={[{ required: true, message: t('不能为空') }]}
                         >
                           <SelectWeekDays style={{ marginTop: '28px' }} />
                         </Form.Item>
@@ -828,7 +829,7 @@ export const EditScene = forwardRef<EditSceneRef, EditSceneProps>(
             </Row>
           </Card>
           <Card
-            title="执行动作"
+            title={t('执行动作')}
             className="mt20"
             style={{ boxShadow: '0 0 6px 1px rgb(0 0 0 / 14%)' }}
           >
@@ -838,7 +839,7 @@ export const EditScene = forwardRef<EditSceneRef, EditSceneProps>(
                   {fields.map(({ name, ...restField }) => (
                     <div key={name}>
                       <div className="mb10">
-                        动作{name + 1}
+                        {t('动作')}{name + 1}
                         <MinusCircleOutlined
                           onClick={() => remove(name)}
                           style={{ float: 'right' }}
@@ -849,13 +850,13 @@ export const EditScene = forwardRef<EditSceneRef, EditSceneProps>(
                           <Form.Item
                             {...restField}
                             name={[name, 'type']}
-                            rules={[{ required: true, message: '不能为空' }]}
+                            rules={[{ required: true, message: t('不能为空') }]}
                           >
                             <Select
-                              placeholder="选择动作类型"
+                              placeholder={t('选择动作类型')}
                               // onChange={}
                               options={[
-                                { value: '设备执行', label: '设备执行' },
+                                { value: '设备执行', label: t('设备执行') },
                               ]}
                             />
                           </Form.Item>
@@ -868,13 +869,13 @@ export const EditScene = forwardRef<EditSceneRef, EditSceneProps>(
                                   {...restField}
                                   name={[name, 'select']}
                                   rules={[
-                                    { required: true, message: '不能为空' },
+                                    { required: true, message: t('不能为空') },
                                   ]}
                                 >
                                   <Select
-                                    placeholder="选择产品/分组"
+                                    placeholder={t('选择产品/分组')}
                                     options={[
-                                      { value: '选择产品', label: '选择产品' },
+                                      { value: '选择产品', label: t('选择产品') },
                                     ]}
                                   />
                                 </Form.Item>
@@ -892,11 +893,11 @@ export const EditScene = forwardRef<EditSceneRef, EditSceneProps>(
                                   {...restField}
                                   name={[name, 'product_id']}
                                   rules={[
-                                    { required: true, message: '不能为空' },
+                                    { required: true, message: t('不能为空') },
                                   ]}
                                 >
                                   <Select
-                                    placeholder="选择产品"
+                                    placeholder={t('选择产品')}
                                     onChange={(id) => {
                                       actionProductChange(id, name)
                                       const item = productTypeApi.data.find(
@@ -937,7 +938,7 @@ export const EditScene = forwardRef<EditSceneRef, EditSceneProps>(
                                   {...restField}
                                   name={[name, 'device_id']}
                                   rules={[
-                                    { required: true, message: '不能为空' },
+                                    { required: true, message: t('不能为空') },
                                   ]}
                                 >
                                   {/* <Select
@@ -963,7 +964,7 @@ export const EditScene = forwardRef<EditSceneRef, EditSceneProps>(
                                     options={devicesTypeApi.data}
                                   /> */}
                                   <RequestSelect
-                                    placeholder="选择设备"
+                                    placeholder={t('选择设备')}
                                     api={getDevice}
                                     params={{ product_id: actions?.[name]?.product_id }}
                                     formatData={(data) => (data.list || []).map((item: { name: any; id: any }) => ({
@@ -1001,7 +1002,7 @@ export const EditScene = forwardRef<EditSceneRef, EditSceneProps>(
                                   {...restField}
                                   name={[name, 'code']}
                                   rules={[
-                                    { required: true, message: '不能为空' },
+                                    { required: true, message: t('不能为空') },
                                   ]}
                                 >
                                   {/* <Select
@@ -1013,7 +1014,7 @@ export const EditScene = forwardRef<EditSceneRef, EditSceneProps>(
                                     options={propertyOptions}
                                   /> */}
                                   <RequestSelect
-                                    placeholder="选择功能"
+                                    placeholder={t('选择功能')}
                                     api={getProductInfo}
                                     params={actions?.[name]?.product_id}
                                     formatData={(productInfo) => (productInfo?.properties || [])
@@ -1054,10 +1055,10 @@ export const EditScene = forwardRef<EditSceneRef, EditSceneProps>(
                                   {...restField}
                                   name={[name, 'value']}
                                   rules={[
-                                    { required: true, message: '不能为空' },
+                                    { required: true, message: t('不能为空') },
                                   ]}
                                 >
-                                  <Input allowClear placeholder="数值：" />
+                                  <Input allowClear placeholder={t('数值：')} />
                                 </Form.Item>
                               </Col>
                             )
@@ -1074,11 +1075,11 @@ export const EditScene = forwardRef<EditSceneRef, EditSceneProps>(
                                   {...restField}
                                   name={[name, 'value']}
                                   rules={[
-                                    { required: true, message: '不能为空' },
+                                    { required: true, message: t('不能为空') },
                                   ]}
                                 >
                                   <Select
-                                    placeholder="请选择"
+                                    placeholder={t('请选择')}
                                     allowClear
                                     options={[
                                       { value: 'true', label: 'True' },
@@ -1101,16 +1102,16 @@ export const EditScene = forwardRef<EditSceneRef, EditSceneProps>(
                                   {...restField}
                                   name={[name, 'value']}
                                   rules={[
-                                    { required: true, message: '不能为空' },
+                                    { required: true, message: t('不能为空') },
                                   ]}
                                 >
                                   <Select
-                                    placeholder="请选择"
+                                    placeholder={t('请选择')}
                                     allowClear
                                     options={[
-                                      { value: '0', label: '红' },
-                                      { value: '1', label: '绿' },
-                                      { value: '2', label: '蓝' },
+                                      { value: '0', label: t('红') },
+                                      { value: '1', label: t('绿') },
+                                      { value: '2', label: t('蓝') },
                                     ]}
                                   />
                                 </Form.Item>
@@ -1132,7 +1133,7 @@ export const EditScene = forwardRef<EditSceneRef, EditSceneProps>(
                         block
                         icon={<PlusOutlined />}
                       >
-                        添加
+                        {t('添加')}
                       </Button>
                     </Form.Item>
                   )}

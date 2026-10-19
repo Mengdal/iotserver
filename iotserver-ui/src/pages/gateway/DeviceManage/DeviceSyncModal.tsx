@@ -4,6 +4,7 @@ import { Badge, Form, message, Modal, Select } from 'antd'
 import { DeviceServers } from '@/api/device-servers'
 import { deviceSync, useGetCloudInstance } from '@/api'
 import { RunStatusMap } from '@/utils/statusMap'
+import { t } from '@/i18n'
 
 const { useForm } = Form
 
@@ -38,12 +39,12 @@ export const DeviceSyncModal = forwardRef<DeviceSyncModalRef, DeviceSyncModalPro
 
   return (
     <Modal
-      title="设备同步"
+      title={t('设备同步')}
       maskClosable={false}
       open={isModalOpen}
       destroyOnClose
-      cancelText="取消"
-      okText="确定"
+      cancelText={t('取消')}
+      okText={t('确定')}
       okButtonProps={{ disabled: submitting, loading: submitting }}
       onOk={() => {
         form.validateFields().then(values => {
@@ -53,7 +54,7 @@ export const DeviceSyncModal = forwardRef<DeviceSyncModalRef, DeviceSyncModalPro
             driver_instance_id: values.driver_instance_id,
           }).then(resp => {
             if (resp.success) {
-              message.success('设备同步成功')
+              message.success(t('设备同步成功'))
               handleClose()
               onFinish?.()
             } else {
@@ -70,12 +71,12 @@ export const DeviceSyncModal = forwardRef<DeviceSyncModalRef, DeviceSyncModalPro
     >
       <Form form={form} layout="vertical">
         <Form.Item
-          label="关联平台"
+          label={t('关联平台')}
           name="cloud_instance_id"
-          rules={[{ required: true, message: '请选择关联平台' }]}
+          rules={[{ required: true, message: t('请选择关联平台') }]}
         >
           <Select
-            placeholder="请选择关联平台"
+            placeholder={t('请选择关联平台')}
             options={cloudInstanceOptions.map(item => ({
               value: item.id,
               label:
@@ -89,11 +90,11 @@ export const DeviceSyncModal = forwardRef<DeviceSyncModalRef, DeviceSyncModalPro
           ></Select>
         </Form.Item>
         <Form.Item
-          label="关联驱动"
+          label={t('关联驱动')}
           name="driver_instance_id"
         >
           <Select
-            placeholder="请选择关联驱动"
+            placeholder={t('请选择关联驱动')}
             options={options.map(i => ({ label: i.name, value: i.id }))}
           ></Select>
         </Form.Item>

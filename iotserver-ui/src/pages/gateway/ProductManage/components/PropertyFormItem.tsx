@@ -5,6 +5,7 @@ import { intValidator, stringValidator, TypeSpecMap } from '../helper'
 import { ThingModelUnit, TypeSpec } from '../types'
 import { Struct } from './Struct'
 import { Enum } from './Enum'
+import { t } from '@/i18n'
 
 const { Text } = Typography
 
@@ -32,21 +33,21 @@ export const PropertyFormItem: React.FC<PropertyFormItemProps> = (props) => {
   return (
     <>
       <Form.Item
-        label={type === 'array' ? '元素类型' : '数据类型'}
+        label={type === 'array' ? t('元素类型') : t('数据类型')}
         name={typeName}
-        rules={[{ required: true, message: type === 'array' ? '请选择元素类型' : '请选择数据类型' }]}
+        rules={[{ required: true, message: type === 'array' ? t('请选择元素类型') : t('请选择数据类型') }]}
       >
-        <Select placeholder="请选择" options={options}></Select>
+        <Select placeholder={t('请选择')} options={options}></Select>
       </Form.Item>
       {
         type === 'array' && (
           <Form.Item
-            label="元素个数"
+            label={t('元素个数')}
             name="size"
             required
             rules={[{ validator: intValidator }]}
           >
-            <InputNumber style={{ width: '100%' }} placeholder="请输入元素个数" precision={0} min={0} />
+            <InputNumber style={{ width: '100%' }} placeholder={t('请输入元素个数')} precision={0} min={0} />
           </Form.Item>
         )
       }
@@ -60,21 +61,21 @@ export const PropertyFormItem: React.FC<PropertyFormItemProps> = (props) => {
           if (typeNameValue === 'int' || typeNameValue === 'float') {
             return (
               <>
-                <Form.Item label="定义取值范围">
+                <Form.Item label={t('定义取值范围')}>
                   <Space.Compact block>
                     <Form.Item
                       name="min"
                       className="mb0"
                       style={{ flex: 1 }}
                       rules={[
-                        { required: true, message: '请输入最小值' },
+                        { required: true, message: t('请输入最小值') },
                         typeNameValue === 'int'
-                          ? { pattern: /^-?\d+$/, message: '输入整数' }
-                          : { pattern: /^-?\d+(\.\d{1,2})?$/, message: '输入数字，最多两位小数' },
+                          ? { pattern: /^-?\d+$/, message: t('输入整数') }
+                          : { pattern: /^-?\d+(\.\d{1,2})?$/, message: t('输入数字，最多两位小数') },
                       ]}
                     >
                       {/* <InputNumber style={{ width: '100%' }} placeholder="最小值" precision={typeNameValue === 'int' ? 0 : 1}/> */}
-                      <Input placeholder="最小值" />
+                      <Input placeholder={t('最小值')} />
                     </Form.Item>
                     <Input
                       className="site-input-split"
@@ -86,26 +87,26 @@ export const PropertyFormItem: React.FC<PropertyFormItemProps> = (props) => {
                       className="mb0"
                       style={{ flex: 1 }}
                       rules={[
-                        { required: true, message: '请输入最大值' },
+                        { required: true, message: t('请输入最大值') },
                         typeNameValue === 'int'
-                          ? { pattern: /^-?\d+$/, message: '输入整数' }
-                          : { pattern: /^-?\d+(\.\d{1,2})?$/, message: '输入数字，最多两位小数' },
+                          ? { pattern: /^-?\d+$/, message: t('输入整数') }
+                          : { pattern: /^-?\d+(\.\d{1,2})?$/, message: t('输入数字，最多两位小数') },
                       ]}
                     >
                       {/* <InputNumber style={{ width: '100%' }} placeholder="最大值" precision={typeNameValue === 'int' ? 0 : 1} /> */}
-                      <Input placeholder="最大值" />
+                      <Input placeholder={t('最大值')} />
                     </Form.Item>
                   </Space.Compact>
                 </Form.Item>
                 <Form.Item
-                  label="步长"
+                  label={t('步长')}
                   name="step"
                   // rules={[{ required: true, message: '请输入步长' }]}
                   rules={[
-                    { required: true, message: '请输入步长' },
+                    { required: true, message: t('请输入步长') },
                     typeNameValue === 'int'
-                      ? { pattern: /^-?\d+$/, message: '输入整数' }
-                      : { pattern: /^-?\d+(\.\d{1,2})?$/, message: '输入数字，最多两位小数' },
+                      ? { pattern: /^-?\d+$/, message: t('输入整数') }
+                      : { pattern: /^-?\d+(\.\d{1,2})?$/, message: t('输入数字，最多两位小数') },
                   ]}
                 >
                   {/* <InputNumber
@@ -114,15 +115,15 @@ export const PropertyFormItem: React.FC<PropertyFormItemProps> = (props) => {
                     min={typeNameValue === 'int' ? 1 : 0}
                     precision={typeNameValue === 'int' ? 0 : 1}
                   /> */}
-                  <Input placeholder="请输入步长" />
+                  <Input placeholder={t('请输入步长')} />
                 </Form.Item>
                 <Form.Item
-                  label="单位"
+                  label={t('单位')}
                   name="unitObj"
                   // rules={[{ required: true, message: '请选择标准品类' }]}
                 >
                   <Select
-                    placeholder="请选择"
+                    placeholder={t('请选择')}
                     showSearch
                     options={unitOptions.map(({ id, unit_name, symbol }) => {
                       return {
@@ -138,14 +139,14 @@ export const PropertyFormItem: React.FC<PropertyFormItemProps> = (props) => {
 
           if (typeNameValue === 'bool') {
             return (
-              <Form.Item label="布尔值" className="m0">
+              <Form.Item label={t('布尔值')} className="m0">
                 <Form.Item
                   label="true"
                   name="1"
                   required
                   rules={[{ validator: stringValidator }]}
                 >
-                  <Input placeholder="1-20位, 中文、英文、数字及特殊字符_-, 必须以中文、英文或数字开头" />
+                  <Input placeholder={t('1-20位, 中文、英文、数字及特殊字符_-, 必须以中文、英文或数字开头')} />
                 </Form.Item>
                 <Form.Item
                   label="false"
@@ -153,7 +154,7 @@ export const PropertyFormItem: React.FC<PropertyFormItemProps> = (props) => {
                   required
                   rules={[{ validator: stringValidator }]}
                 >
-                  <Input placeholder="1-20位, 中文、英文、数字及特殊字符_-, 必须以中文、英文或数字开头" />
+                  <Input placeholder={t('1-20位, 中文、英文、数字及特殊字符_-, 必须以中文、英文或数字开头')} />
                 </Form.Item>
               </Form.Item>
             )
@@ -162,14 +163,14 @@ export const PropertyFormItem: React.FC<PropertyFormItemProps> = (props) => {
           if (typeNameValue === 'text') {
             return (
               <Form.Item
-                label="数据长度"
+                label={t('数据长度')}
                 name="length"
-                rules={[{ required: true, message: '请输入数据长度' }]}
+                rules={[{ required: true, message: t('请输入数据长度') }]}
               >
                 <InputNumber
                   style={{ width: '100%' }}
-                  addonAfter="字符"
-                  placeholder="整数, 单位: 字符"
+                  addonAfter={t('字符')}
+                  placeholder={t('整数, 单位: 字符')}
                   precision={0}
                   min={0}
                   // max={256}
@@ -180,8 +181,8 @@ export const PropertyFormItem: React.FC<PropertyFormItemProps> = (props) => {
 
           if (typeNameValue === 'date') {
             return (
-              <Form.Item label="时间格式">
-                <Input placeholder="整数类型Int64的UTC时间戳(毫秒)" disabled />
+              <Form.Item label={t('时间格式')}>
+                <Input placeholder={t('整数类型Int64的UTC时间戳(毫秒)')} disabled />
               </Form.Item>
             )
           }
@@ -193,8 +194,8 @@ export const PropertyFormItem: React.FC<PropertyFormItemProps> = (props) => {
                 name="enumObject"
                 label={
                   <>
-                    <Text className="mr20">枚举项</Text>
-                    <Text type="secondary">最多100项</Text>
+                    <Text className="mr20">{t('枚举项')}</Text>
+                    <Text type="secondary">{t('最多100项')}</Text>
                   </>
                 }
               >
@@ -212,9 +213,9 @@ export const PropertyFormItem: React.FC<PropertyFormItemProps> = (props) => {
                   {
                     validator (rule, value, callback) {
                       if (!value || (Array.isArray(value) && !value.length)) {
-                        callback('请至少添加一个参数')
+                        callback(t('请至少添加一个参数'))
                       } else if (value.length > 20) {
-                        callback('最多支持50个参数')
+                        callback(t('最多支持50个参数'))
                       } else {
                         callback()
                       }
@@ -223,8 +224,8 @@ export const PropertyFormItem: React.FC<PropertyFormItemProps> = (props) => {
                 ]}
                 label={
                   <>
-                    <Text className="mr20">{type === 'array' ? '元素结构' : 'JSON对象'}</Text>
-                    <Text type="secondary">最多20项</Text>
+                    <Text className="mr20">{type === 'array' ? t('元素结构') : t('JSON对象')}</Text>
+                    <Text type="secondary">{t('最多20项')}</Text>
                   </>
                 }
               >

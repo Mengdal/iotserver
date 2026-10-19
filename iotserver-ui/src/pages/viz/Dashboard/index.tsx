@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { Alert, Card, Spin } from 'antd'
 import CanvasBoard from '@/components/CanvasBoard'
 import { getVizBoards, VizBoard } from '@/api'
+import { t } from '@/i18n'
 
 /**
  * 数据看板：展示「看板管理」里设为**数据看板整页**的那块看板，按保存的布局只读渲染。
@@ -15,7 +16,7 @@ const VizDashboardPage: React.FC = () => {
     getVizBoards()
       .then((resp) => {
         if (!resp.success) {
-          setError(resp.errorMsg || '看板加载失败')
+          setError(resp.errorMsg || t('看板加载失败'))
           return
         }
         const all = resp.result.list || []
@@ -23,10 +24,10 @@ const VizDashboardPage: React.FC = () => {
         if (def) {
           setBoard(def)
         } else {
-          setError('还没有看板，去「看板管理」新建一块')
+          setError(t('还没有看板，去「看板管理」新建一块'))
         }
       })
-      .catch((e: any) => setError(e?.message || '看板加载失败'))
+      .catch((e: any) => setError(e?.message || t('看板加载失败')))
       .finally(() => setLoading(false))
   }, [])
 
@@ -41,7 +42,7 @@ const VizDashboardPage: React.FC = () => {
   if (error) {
     return (
       <Card className="admin-page">
-        <Alert type="info" showIcon message="数据看板尚未就绪" description={error} />
+        <Alert type="info" showIcon message={t('数据看板尚未就绪')} description={error} />
       </Card>
     )
   }
@@ -49,7 +50,7 @@ const VizDashboardPage: React.FC = () => {
   if (!board) {
     return (
       <Card className="admin-page">
-        <Alert type="info" showIcon message="数据看板尚未就绪" description="还没有可展示的看板，去「看板管理」新建一块" />
+        <Alert type="info" showIcon message={t('数据看板尚未就绪')} description={t('还没有可展示的看板，去「看板管理」新建一块')} />
       </Card>
     )
   }

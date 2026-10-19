@@ -30,6 +30,7 @@ import { DeviceProperty, ReportDaum, getDeviceProperty, getHistoryProperty } fro
 import { DevicesType } from '@/api/devices'
 import { useAuth } from '@/utils/auth'
 import * as P from '@/routes/permissions'
+import { t } from '@/i18n'
 
 const { RangePicker } = DatePicker
 const { Text, Title } = Typography
@@ -65,29 +66,29 @@ const MAX_POINTS = 1000
 
 /** 聚合时间选项（对齐参考站：不聚合 + 12 档间隔） */
 const AGG_INTERVALS = [
-  { label: '不聚合', value: 'none', seconds: 0 },
-  { label: '30秒', value: '30s', seconds: 30 },
-  { label: '1分钟', value: '1m', seconds: 60 },
-  { label: '2分钟', value: '2m', seconds: 120 },
-  { label: '5分钟', value: '5m', seconds: 300 },
-  { label: '10分钟', value: '10m', seconds: 600 },
-  { label: '30分钟', value: '30m', seconds: 1800 },
-  { label: '1小时', value: '1h', seconds: 3600 },
-  { label: '3小时', value: '3h', seconds: 10800 },
-  { label: '6小时', value: '6h', seconds: 21600 },
-  { label: '12小时', value: '12h', seconds: 43200 },
-  { label: '1天', value: '1d', seconds: 86400 },
+  { label: t('不聚合'), value: 'none', seconds: 0 },
+  { label: t('30秒'), value: '30s', seconds: 30 },
+  { label: t('1分钟'), value: '1m', seconds: 60 },
+  { label: t('2分钟'), value: '2m', seconds: 120 },
+  { label: t('5分钟'), value: '5m', seconds: 300 },
+  { label: t('10分钟'), value: '10m', seconds: 600 },
+  { label: t('30分钟'), value: '30m', seconds: 1800 },
+  { label: t('1小时'), value: '1h', seconds: 3600 },
+  { label: t('3小时'), value: '3h', seconds: 10800 },
+  { label: t('6小时'), value: '6h', seconds: 21600 },
+  { label: t('12小时'), value: '12h', seconds: 43200 },
+  { label: t('1天'), value: '1d', seconds: 86400 },
 ]
 
 /** 聚合方法：前 4 种对齐参考站，后 3 种用于文本/枚举型属性 */
 const AGG_METHODS = [
-  { label: '平均数', value: 'avg' },
-  { label: '最大值', value: 'max' },
-  { label: '最小值', value: 'min' },
-  { label: '求和', value: 'sum' },
-  { label: '计数', value: 'count' },
-  { label: '首值', value: 'first' },
-  { label: '末值', value: 'last' },
+  { label: t('平均数'), value: 'avg' },
+  { label: t('最大值'), value: 'max' },
+  { label: t('最小值'), value: 'min' },
+  { label: t('求和'), value: 'sum' },
+  { label: t('计数'), value: 'count' },
+  { label: t('首值'), value: 'first' },
+  { label: t('末值'), value: 'last' },
 ]
 
 /** 需要数值型属性的聚合方法 */
@@ -218,12 +219,12 @@ const HistoryQueryPage: React.FC = () => {
   const handleSearch = async () => {
     const validRows = rows.filter(row => row.deviceId && row.code)
     if (validRows.length === 0) {
-      messageApi.open({ type: 'warning', content: '请至少选择一组「设备 + 参数」' })
+      messageApi.open({ type: 'warning', content: t('请至少选择一组「设备 + 参数」') })
       return
     }
     const [start, end] = form.getFieldValue('range') || []
     if (!start || !end) {
-      messageApi.open({ type: 'warning', content: '请选择时间范围' })
+      messageApi.open({ type: 'warning', content: t('请选择时间范围') })
       return
     }
 
@@ -250,7 +251,7 @@ const HistoryQueryPage: React.FC = () => {
           aggMethod: currentAgg?.method,
         })
         if (!resp.success) {
-          messageApi.open({ type: 'error', content: resp.errorMsg || '查询失败' })
+          messageApi.open({ type: 'error', content: resp.errorMsg || t('查询失败') })
           continue
         }
         const list = resp.result?.list || []
@@ -279,7 +280,7 @@ const HistoryQueryPage: React.FC = () => {
       setChartData(points)
       setTableData(tableRows)
       if (points.length === 0) {
-        messageApi.open({ type: 'info', content: '所选时间范围内没有数据' })
+        messageApi.open({ type: 'info', content: t('所选时间范围内没有数据') })
       }
     } finally {
       setLoading(false)
@@ -289,10 +290,10 @@ const HistoryQueryPage: React.FC = () => {
   /** 导出 CSV（带 BOM，Excel 直接打开不乱码） */
   const handleExport = () => {
     if (tableData.length === 0) {
-      messageApi.open({ type: 'warning', content: '暂无可导出的数据' })
+      messageApi.open({ type: 'warning', content: t('暂无可导出的数据') })
       return
     }
-    const header = ['设备名称', '属性名称', '属性值', '单位', '时间']
+    const header = [t('设备名称'), t('属性名称'), t('属性值'), t('单位'), t('时间')]
     const lines = tableData.map(row => [
       row.deviceName,
       row.propertyName,
@@ -305,17 +306,17 @@ const HistoryQueryPage: React.FC = () => {
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
-    link.download = `历史数据_${currentAgg ? `${currentAgg.label.replace(/ · /g, '')}_` : ''}${dayjs().format('YYYYMMDDHHmmss')}.csv`
+    link.download = t('历史数据_{{p1}}{{p2}}.csv', { p1: currentAgg ? `${currentAgg.label.replace(/ · /g, '')}_` : '', p2: dayjs().format('YYYYMMDDHHmmss') })
     link.click()
     URL.revokeObjectURL(url)
-    messageApi.open({ type: 'success', content: `已导出 ${tableData.length} 条` })
+    messageApi.open({ type: 'success', content: t('已导出 {{count}} 条', { count: tableData.length }) })
   }
 
   const columns: ColumnsType<HistoryRow> = [
-    { title: '设备名称', dataIndex: 'deviceName', key: 'deviceName', width: 220, ellipsis: true },
-    { title: '属性名称', dataIndex: 'propertyName', key: 'propertyName', width: 180 },
+    { title: t('设备名称'), dataIndex: 'deviceName', key: 'deviceName', width: 220, ellipsis: true },
+    { title: t('属性名称'), dataIndex: 'propertyName', key: 'propertyName', width: 180 },
     {
-      title: '属性值',
+      title: t('属性值'),
       dataIndex: 'value',
       key: 'value',
       width: 160,
@@ -325,7 +326,7 @@ const HistoryQueryPage: React.FC = () => {
       },
     },
     {
-      title: currentAgg ? '时间（桶起始）' : '时间',
+      title: currentAgg ? t('时间（桶起始）') : t('时间'),
       dataIndex: 'time',
       key: 'time',
       width: 220,
@@ -355,9 +356,9 @@ const HistoryQueryPage: React.FC = () => {
   return (
     <Card className="admin-page">
       {contextHolder}
-      <Title level={5} style={{ marginBottom: 4 }}>历史查询</Title>
+      <Title level={5} style={{ marginBottom: 4 }}>{t('历史查询')}</Title>
       <Text type="secondary">
-        历史查询功能支持单个设备属性查询，同时也支持多设备不同属性查询用作对比，结果以折线图和表格的形式展示，并且支持导出。
+        {t('历史查询功能支持单个设备属性查询，同时也支持多设备不同属性查询用作对比，结果以折线图和表格的形式展示，并且支持导出。')}
       </Text>
       <div style={{ height: 16 }} />
 
@@ -366,9 +367,9 @@ const HistoryQueryPage: React.FC = () => {
         <Space align="end" size={12} wrap style={{ marginBottom: 12 }}>
           <Form.Item
             name="range"
-            label="时间范围"
+            label={t('时间范围')}
             initialValue={[dayjs().add(-24, 'hours'), dayjs()]}
-            rules={[{ required: true, message: '请选择时间范围' }]}
+            rules={[{ required: true, message: t('请选择时间范围') }]}
             style={{ marginBottom: 0 }}
           >
             <RangePicker
@@ -376,14 +377,14 @@ const HistoryQueryPage: React.FC = () => {
               showTime={{ hideDisabledOptions: true }}
               style={{ width: 420 }}
               presets={[
-                { label: '最近1小时', value: [dayjs().add(-1, 'hours'), dayjs()] },
-                { label: '最近24小时', value: [dayjs().add(-24, 'hours'), dayjs()] },
-                { label: '最近7天', value: [dayjs().add(-7, 'days'), dayjs()] },
-                { label: '最近30天', value: [dayjs().add(-30, 'days'), dayjs()] },
+                { label: t('最近1小时'), value: [dayjs().add(-1, 'hours'), dayjs()] },
+                { label: t('最近24小时'), value: [dayjs().add(-24, 'hours'), dayjs()] },
+                { label: t('最近7天'), value: [dayjs().add(-7, 'days'), dayjs()] },
+                { label: t('最近30天'), value: [dayjs().add(-30, 'days'), dayjs()] },
               ]}
             />
           </Form.Item>
-          <Form.Item label="聚合时间" className="history-agg-time" style={{ marginBottom: 0 }}>
+          <Form.Item label={t('聚合时间')} className="history-agg-time" style={{ marginBottom: 0 }}>
             <Select
               value={aggTime}
               style={{ width: 110 }}
@@ -400,7 +401,7 @@ const HistoryQueryPage: React.FC = () => {
             />
           </Form.Item>
           {aggTime !== 'none' && (
-            <Form.Item label="聚合方法" className="history-agg-method" style={{ marginBottom: 0 }}>
+            <Form.Item label={t('聚合方法')} className="history-agg-method" style={{ marginBottom: 0 }}>
               <Select
                 value={aggMethod}
                 style={{ width: 110 }}
@@ -411,12 +412,12 @@ const HistoryQueryPage: React.FC = () => {
           )}
           <Space size={8} style={{ marginBottom: 4 }} wrap>
             <Button type="primary" icon={<SearchOutlined />} loading={loading} disabled={!canQuery} onClick={handleSearch}>
-              查询
+              {t('查询')}
             </Button>
-            <Button icon={<ReloadOutlined />} onClick={handleReset}>重置</Button>
-            <Button icon={<DownloadOutlined />} disabled={tableData.length === 0} onClick={handleExport}>导出</Button>
+            <Button icon={<ReloadOutlined />} onClick={handleReset}>{t('重置')}</Button>
+            <Button icon={<DownloadOutlined />} disabled={tableData.length === 0} onClick={handleExport}>{t('导出')}</Button>
             <Text type="secondary" style={{ fontSize: 12 }}>
-              单次最多返回 {MAX_POINTS} {currentAgg ? '个聚合桶/组' : '条/组'}
+              {t('单次最多返回')} {MAX_POINTS} {currentAgg ? t('个聚合桶/组') : t('条/组')}
             </Text>
           </Space>
         </Space>
@@ -425,11 +426,11 @@ const HistoryQueryPage: React.FC = () => {
           <Row className="history-query-row" gutter={12} key={row.key} align="bottom" style={{ marginBottom: 8 }}>
             <Col span={6}>
               <Form.Item
-                label={index === 0 ? '产品' : ''}
+                label={index === 0 ? t('产品') : ''}
                 style={{ marginBottom: 8 }}
               >
                 <Select
-                  placeholder="请选择产品（可搜索）"
+                  placeholder={t('请选择产品（可搜索）')}
                   allowClear
                   showSearch
                   optionFilterProp="label"
@@ -443,9 +444,9 @@ const HistoryQueryPage: React.FC = () => {
               </Form.Item>
             </Col>
             <Col span={6}>
-              <Form.Item label={index === 0 ? '设备' : ''} style={{ marginBottom: 8 }}>
+              <Form.Item label={index === 0 ? t('设备') : ''} style={{ marginBottom: 8 }}>
                 <Select
-                  placeholder="请选择设备（可搜索）"
+                  placeholder={t('请选择设备（可搜索）')}
                   allowClear
                   showSearch
                   optionFilterProp="label"
@@ -460,9 +461,9 @@ const HistoryQueryPage: React.FC = () => {
               </Form.Item>
             </Col>
             <Col span={6}>
-              <Form.Item label={index === 0 ? '参数' : ''} style={{ marginBottom: 8 }}>
+              <Form.Item label={index === 0 ? t('参数') : ''} style={{ marginBottom: 8 }}>
                 <Select
-                  placeholder={row.deviceId ? '请选择参数' : '请先选择设备'}
+                  placeholder={row.deviceId ? t('请选择参数') : t('请先选择设备')}
                   allowClear
                   disabled={!row.deviceId}
                   value={row.code}
@@ -477,9 +478,9 @@ const HistoryQueryPage: React.FC = () => {
             <Col span={6}>
               <Form.Item label={index === 0 ? ' ' : ''} style={{ marginBottom: 8 }}>
                 <Space>
-                  <Button icon={<PlusOutlined />} onClick={handleAddRow}>添加</Button>
+                  <Button icon={<PlusOutlined />} onClick={handleAddRow}>{t('添加')}</Button>
                   {rows.length > 1 && (
-                    <Button danger icon={<DeleteOutlined />} onClick={() => handleRemoveRow(row.key)}>删除</Button>
+                    <Button danger icon={<DeleteOutlined />} onClick={() => handleRemoveRow(row.key)}>{t('删除')}</Button>
                   )}
                 </Space>
               </Form.Item>
@@ -494,19 +495,19 @@ const HistoryQueryPage: React.FC = () => {
       <Spin spinning={loading}>
         <Card
           size="small"
-          title={currentAgg ? `趋势对比（${currentAgg.label}）` : '趋势对比'}
+          title={currentAgg ? t('趋势对比（{{label}}）', { label: currentAgg.label }) : t('趋势对比')}
           bodyStyle={{ paddingTop: 8 }}
         >
           {chartData.length > 0
             ? <Line data={chartData} {...chartConfig} />
-            : <Empty description={searched ? '暂无数据' : '请选择设备与参数后查询'} image={Empty.PRESENTED_IMAGE_SIMPLE} />}
+            : <Empty description={searched ? t('暂无数据') : t('请选择设备与参数后查询')} image={Empty.PRESENTED_IMAGE_SIMPLE} />}
         </Card>
 
         <div style={{ height: 16 }} />
 
         <Card
           size="small"
-          title={`数据明细${currentAgg ? `（${currentAgg.label}）` : ''}${tableData.length > 0 ? `（共 ${tableData.length} 条）` : ''}`}
+          title={t('数据明细{{p1}}{{p2}}', { p1: currentAgg ? `（${currentAgg.label}）` : '', p2: tableData.length > 0 ? t('（共 {{count}} 条）', { count: tableData.length }) : '' })}
         >
           <Table<HistoryRow>
             rowKey="key"
@@ -519,7 +520,7 @@ const HistoryQueryPage: React.FC = () => {
               size: 'small',
               showQuickJumper: true,
               showSizeChanger: true,
-              showTotal: total => `共 ${total} 条`,
+              showTotal: total => t('共 {{count}} 条', { count: total }),
               defaultPageSize: 10,
             }}
           />

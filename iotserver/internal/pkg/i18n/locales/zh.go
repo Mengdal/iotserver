@@ -62,7 +62,7 @@ func GetZhMessages() []*i18n.Message {
 		},
 		{
 			ID:    "10015",
-			Other: ``,
+			Other: `未知错误`,
 		},
 		{
 			ID:    "10016",
@@ -225,6 +225,10 @@ func GetZhMessages() []*i18n.Message {
 			Other: `驱动实例未启动，请求无响应`,
 		},
 		{
+			ID:    "20307",
+			Other: `指定的实例正在运行或停止中，请稍后`,
+		},
+		{
 			ID:    "20308",
 			Other: `驱动实例启动失败`,
 		},
@@ -289,10 +293,6 @@ func GetZhMessages() []*i18n.Message {
 		{
 			ID:    "20413",
 			Other: `设备未与驱动解绑，请先解绑在进行绑定`,
-		},
-		{
-			ID:    "20414",
-			Other: `设备平台与驱动平台不一致`,
 		},
 		{
 			ID:    "20414",
@@ -626,14 +626,6 @@ func GetZhMessages() []*i18n.Message {
 		{
 			ID:    "device.import.IsIPC",
 			Other: "是否为IPC设备[false/true]",
-		},
-		{
-			ID:    "20901",
-			Other: "同步物模型失败",
-		},
-		{
-			ID:    "20902",
-			Other: "同步物模型需绑定子设备",
 		},
 
 		/*********************** string 翻译 ***********************/

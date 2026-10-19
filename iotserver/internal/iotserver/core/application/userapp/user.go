@@ -15,6 +15,7 @@ import (
 	pkgcontainer "iotserver/internal/pkg/container"
 	"iotserver/internal/pkg/di"
 	"iotserver/internal/pkg/errort"
+	"iotserver/internal/pkg/i18n"
 	"iotserver/internal/pkg/logger"
 	"iotserver/internal/pkg/middleware"
 	"iotserver/internal/pkg/seed"
@@ -28,7 +29,7 @@ import (
 
 const (
 	DefaultUserName = "admin"
-	DefaultLang     = "en"
+	DefaultLang     = "zh-CN"
 )
 
 var _ interfaces.UserItf = new(userApp)
@@ -398,6 +399,22 @@ func (uapp *userApp) CurrentUserProfile(ctx context.Context, username string) (d
 	res.Roles = loginUser.Roles
 	res.Admin = loginUser.Admin
 	return res, nil
+}
+
+// UpdateCurrentUserLang 个人中心-切换语言：存到账号上，换设备登录也能保持一致。
+func (uapp *userApp) UpdateCurrentUserLang(ctx context.Context, username string, req dtos.UpdateLangRequest) error {
+	lang := i18n.NormalizeLang(req.Lang)
+	if lang == "" {
+		return errort.NewCommonErr(errort.DefaultReqParamsError,
+			errort.NewMessageErr("不支持的语言: {{.p1}}", map[string]interface{}{"p1": req.Lang}))
+	}
+	user, err := uapp.dbClient.WithCtx(ctx).GetUserByUserName(username)
+	if err != nil {
+		return err
+	}
+	user.Lang = lang
+	user.Modified = nowMilli()
+	return uapp.dbClient.WithCtx(ctx).UpdateUser(user)
 }
 
 // UpdateCurrentUserProfile 个人中心-修改资料

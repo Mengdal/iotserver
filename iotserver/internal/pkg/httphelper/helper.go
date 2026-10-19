@@ -26,7 +26,7 @@ func RenderFail(ctx context.Context, err error, w http.ResponseWriter, lc logger
 	resp := CommonResponse{
 		Result:    []interface{}{},
 		Success:   false,
-		ErrorMsg:  i18n.TransCode(ctx, errw.Code(), errorParams(errw)),
+		ErrorMsg:  i18n.TransCode(ctx, errw.Code(), errorParams(ctx, errw)),
 		ErrorCode: errw.Code(),
 	}
 
@@ -35,7 +35,13 @@ func RenderFail(ctx context.Context, err error, w http.ResponseWriter, lc logger
 
 // errorParams 把错误自身的 message 作为 info 传给 i18n 模板，
 // 供带参数的文案（如「密码长度不能少于 {{.info}} 位」）渲染出具体数值。
-func errorParams(errw errort.CommonEdgeX) map[string]interface{} {
+//
+// 错误链里如果带的是 errort.NewMessageErr（文案本身就是词条 ID），
+// 就按请求语言翻译一次再塞进 info —— 这样中文/英文都能拿到正确的细节文案。
+func errorParams(ctx context.Context, errw errort.CommonEdgeX) map[string]interface{} {
+	if msg, ok := i18n.LocalizeError(ctx, errw); ok {
+		return map[string]interface{}{"info": msg}
+	}
 	msg := errw.Message()
 	if msg == "" {
 		return nil
@@ -49,7 +55,7 @@ func RenderFailNoLog(ctx context.Context, err error, w http.ResponseWriter) {
 	resp := CommonResponse{
 		Result:    []interface{}{},
 		Success:   false,
-		ErrorMsg:  i18n.TransCode(ctx, errw.Code(), errorParams(errw)),
+		ErrorMsg:  i18n.TransCode(ctx, errw.Code(), errorParams(ctx, errw)),
 		ErrorCode: errw.Code(),
 	}
 	encode(resp, w)

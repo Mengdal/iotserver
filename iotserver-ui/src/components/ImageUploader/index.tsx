@@ -2,6 +2,7 @@ import React, { useCallback, useState } from 'react'
 import { Button, Modal, Space, Upload, message } from 'antd'
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons'
 import type { RcFile } from 'antd/es/upload'
+import { t } from '@/i18n'
 
 const { useMessage } = message
 
@@ -62,11 +63,11 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ value, onChange, width = 
 
   const beforeUpload = useCallback(async (file: RcFile) => {
     if (!/^image\//.test(file.type)) {
-      messageApi.open({ type: 'error', content: '只能上传图片文件' })
+      messageApi.open({ type: 'error', content: t('只能上传图片文件') })
       return Upload.LIST_IGNORE
     }
     if (file.size > 5 * 1024 * 1024) {
-      messageApi.open({ type: 'error', content: '图片不能超过 5MB' })
+      messageApi.open({ type: 'error', content: t('图片不能超过 5MB') })
       return Upload.LIST_IGNORE
     }
     const raw = await readAsDataURL(file)
@@ -113,8 +114,8 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ value, onChange, width = 
                     fontSize: 12,
                   }}
                 >
-                  <span style={{ cursor: 'pointer' }} onClick={() => setPreviewOpen(true)}>预览</span>
-                  <span style={{ cursor: 'pointer' }} onClick={() => onChange?.('')}>删除</span>
+                  <span style={{ cursor: 'pointer' }} onClick={() => setPreviewOpen(true)}>{t('预览')}</span>
+                  <span style={{ cursor: 'pointer' }} onClick={() => onChange?.('')}>{t('删除')}</span>
                 </div>
               )}
             </>
@@ -123,7 +124,7 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ value, onChange, width = 
             <Upload accept="image/*" showUploadList={false} beforeUpload={beforeUpload} disabled={disabled}>
               <div style={{ textAlign: 'center', color: '#8c8c8c', cursor: disabled ? 'not-allowed' : 'pointer' }}>
                 <PlusOutlined style={{ fontSize: 18 }} />
-                <div style={{ fontSize: 12, marginTop: 4 }}>选择图片</div>
+                <div style={{ fontSize: 12, marginTop: 4 }}>{t('选择图片')}</div>
               </div>
             </Upload>
           )}
@@ -132,13 +133,13 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ value, onChange, width = 
       {value && !disabled && (
         <Space direction="vertical" size={4}>
           <Upload accept="image/*" showUploadList={false} beforeUpload={beforeUpload}>
-            <Button size="small">替换</Button>
+            <Button size="small">{t('替换')}</Button>
           </Upload>
-          <Button size="small" danger icon={<DeleteOutlined />} onClick={() => onChange?.('')}>删除</Button>
+          <Button size="small" danger icon={<DeleteOutlined />} onClick={() => onChange?.('')}>{t('删除')}</Button>
         </Space>
       )}
 
-      <Modal open={previewOpen} footer={null} onCancel={() => setPreviewOpen(false)} title="预览">
+      <Modal open={previewOpen} footer={null} onCancel={() => setPreviewOpen(false)} title={t('预览')}>
         <img src={value} alt="preview" style={{ width: '100%' }} />
       </Modal>
     </Space>

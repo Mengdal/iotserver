@@ -4,6 +4,7 @@ import { CloseOutlined } from '@ant-design/icons'
 import { CategorySelect, CategoryPresetOption } from './CategorySelect'
 import { addProduct } from '@/api'
 import { StandardFuncModal, StandardFuncModalRef } from './StandardFuncModal'
+import { t } from '@/i18n'
 
 const { useForm } = Form
 const { TextArea } = Input
@@ -64,7 +65,7 @@ export const AddModal = forwardRef<AddModalRef, AddModalProps>(({ onFinish }, re
 
   return (
     <Drawer
-      title="创建产品"
+      title={t('创建产品')}
       placement="right"
       open={isModalOpen}
       width={550}
@@ -92,7 +93,7 @@ export const AddModal = forwardRef<AddModalRef, AddModalProps>(({ onFinish }, re
                   addProduct(values)
                     .then(resp => {
                       if (resp.success) {
-                        message.success('添加成功')
+                        message.success(t('添加成功'))
                         handleClose()
                         onFinish()
                       } else {
@@ -103,19 +104,19 @@ export const AddModal = forwardRef<AddModalRef, AddModalProps>(({ onFinish }, re
                     })
                 })
             }}
-          >确定</Button>
-          <Button onClick={handleClose}>取消</Button>
+          >{t('确定')}</Button>
+          <Button onClick={handleClose}>{t('取消')}</Button>
         </Space>
       }
     >
       <StandardFuncModal ref={standardFuncModalRef} />
       <Form form={form} layout="vertical">
         <Form.Item
-          label="产品名称"
+          label={t('产品名称')}
           name="name"
-          rules={[{ required: true, message: '请输入产品名称' }]}
+          rules={[{ required: true, message: t('请输入产品名称') }]}
         >
-          <Input placeholder="请输入产品名称"></Input>
+          <Input placeholder={t('请输入产品名称')}></Input>
         </Form.Item>
         {/* <Form.Item
           label="云平台"
@@ -128,14 +129,14 @@ export const AddModal = forwardRef<AddModalRef, AddModalProps>(({ onFinish }, re
           ></Select>
         </Form.Item> */}
         <Form.Item
-          label="所属品类"
+          label={t('所属品类')}
           name="category_template_id"
-          extra="选择标准品类时, 需从系统生成的品类列表中选择一个品类"
-          rules={[{ required: true, message: '请选择所属品类' }]}
+          extra={t('选择标准品类时, 需从系统生成的品类列表中选择一个品类')}
+          rules={[{ required: true, message: t('请选择所属品类') }]}
         >
           <Radio.Group >
-            <Radio value="0">标准品类</Radio>
-            <Radio value="1">自定义品类</Radio>
+            <Radio value="0">{t('标准品类')}</Radio>
+            <Radio value="1">{t('自定义品类')}</Radio>
           </Radio.Group>
         </Form.Item>
         <Form.Item
@@ -150,9 +151,9 @@ export const AddModal = forwardRef<AddModalRef, AddModalProps>(({ onFinish }, re
             return getFieldValue('category_template_id') === '0'
               ? (
                 <Form.Item
-                  label="选择标准品类"
+                  label={t('选择标准品类')}
                   name="category_template_id2"
-                  rules={[{ required: true, message: '请选择标准品类' }]}
+                  rules={[{ required: true, message: t('请选择标准品类') }]}
                   extra={category_template_id2
                     && <div className="mt10">
                       <Typography.Link
@@ -160,7 +161,7 @@ export const AddModal = forwardRef<AddModalRef, AddModalProps>(({ onFinish }, re
                           standardFuncModalRef.current?.open(categoryKeyRef.current)
                         }}
                       >
-                        查看功能
+                        {t('查看功能')}
                       </Typography.Link>
                     </div>
                   }
@@ -200,70 +201,70 @@ export const AddModal = forwardRef<AddModalRef, AddModalProps>(({ onFinish }, re
           }}
         </Form.Item>
         <Form.Item
-          label="节点类型"
+          label={t('节点类型')}
           name="node_type"
-          rules={[{ required: true, message: '请选择节点类型' }]}
+          rules={[{ required: true, message: t('请选择节点类型') }]}
         >
           <Select
-            placeholder="请选择"
+            placeholder={t('请选择')}
             options={[
-              { label: '直连设备', value: '直连设备' },
-              { label: '网关设备', value: '网关设备' },
-              { label: '网关子设备', value: '网关子设备' },
+              { label: t('直连设备'), value: '直连设备' },
+              { label: t('网关设备'), value: '网关设备' },
+              { label: t('网关子设备'), value: '网关子设备' },
             ]}
           ></Select>
         </Form.Item>
         <Form.Item
-          label="接入网关协议"
+          label={t('接入网关协议')}
           name="protocol"
-          rules={[{ required: true, message: '请选择接入网关协议' }]}
+          rules={[{ required: true, message: t('请选择接入网关协议') }]}
         >
           <Select
-            placeholder="请选择"
+            placeholder={t('请选择')}
             options={[
               { label: 'MQTT', value: 'MQTT' },
               { label: 'HTTP', value: 'HTTP' },
-              { label: '其他', value: '其他' },
+              { label: t('其他'), value: '其他' },
             ]}
           ></Select>
         </Form.Item>
         <Form.Item
-          label="数据格式"
+          label={t('数据格式')}
           name="data_format"
-          rules={[{ required: true, message: '请选择数据格式' }]}
+          rules={[{ required: true, message: t('请选择数据格式') }]}
         >
           <Select
-            placeholder="请选择"
+            placeholder={t('请选择')}
             options={[
-              { label: '标准物模型', value: '标准物模型' },
+              { label: t('标准物模型'), value: '标准物模型' },
               // { label: '二进制/透传', value: '二进制/透传' },
             ]}
           ></Select>
         </Form.Item>
         <Form.Item
-          label="网络类型"
+          label={t('网络类型')}
           name="net_type"
-          rules={[{ required: true, message: '请选择网络类型' }]}
+          rules={[{ required: true, message: t('请选择网络类型') }]}
         >
           <Radio.Group >
-            <Radio value="以太网">以太网</Radio>
-            <Radio value="蜂窝">蜂窝</Radio>
+            <Radio value="以太网">{t('以太网')}</Radio>
+            <Radio value="蜂窝">{t('蜂窝')}</Radio>
             <Radio value="WIFI">WIFI</Radio>
             <Radio value="NB">NB</Radio>
-            <Radio value="其他">其他</Radio>
+            <Radio value="其他">{t('其他')}</Radio>
           </Radio.Group>
         </Form.Item>
         <Form.Item
-          label="工厂"
+          label={t('工厂')}
           name="factory"
         >
-          <Input placeholder="请输入"></Input>
+          <Input placeholder={t('请输入')}></Input>
         </Form.Item>
         <Form.Item
-          label="产品描述"
+          label={t('产品描述')}
           name="description"
         >
-          <TextArea placeholder="请输入产品描述" rows={4}></TextArea>
+          <TextArea placeholder={t('请输入产品描述')} rows={4}></TextArea>
         </Form.Item>
       </Form>
     </Drawer>

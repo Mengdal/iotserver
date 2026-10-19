@@ -16,6 +16,7 @@
 package gatewayingest
 
 import (
+	"iotserver/internal/pkg/errort"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -163,7 +164,7 @@ func (s *Service) Start() error {
 		func(ctx context.Context) { s.lc.Info("gateway mqtt connected") },
 		func(ctx context.Context, msg dtos.CallbackMessage) { s.lc.Info("gateway mqtt disconnected") })
 	if err != nil {
-		return fmt.Errorf("网关接入 MQTT 连接失败: %w", err)
+		return errort.NewMessageErr("网关接入 MQTT 连接失败: {{.p1}}", map[string]interface{}{"p1": err})
 	}
 	s.mqttClient = client
 	gatewaymqtt.SetPublisher(s)
@@ -187,14 +188,14 @@ func (s *Service) config() *coreConfig.ConfigurationStruct {
 func (s *Service) HandleMessage(topic string, payload []byte) error {
 	sn, kind, ok := ParseTopic(topic)
 	if !ok {
-		return fmt.Errorf("非法的网关主题: %s", topic)
+		return errort.NewMessageErr("非法的网关主题: {{.p1}}", map[string]interface{}{"p1": topic})
 	}
 	// 平台作用域：此刻还没有租户上下文，先靠 SN 定位网关（SN 全局唯一）
 	platformCtx := tenant.Platform(context.Background())
 	gateway, err := s.dbClient.WithCtx(platformCtx).GatewayBySn(sn)
 	if err != nil {
 		// 未注册网关：记录后拒绝，避免任意设备注入数据
-		return fmt.Errorf("未注册的网关 sn=%s", sn)
+		return errort.NewMessageErr("未注册的网关 sn={{.p1}}", map[string]interface{}{"p1": sn})
 	}
 	// 之后的读写都在该网关所属租户的作用域内进行
 	tenantCtx := tenant.With(platformCtx, tenant.Context{TenantID: gateway.TenantId, Platform: false})
@@ -209,14 +210,14 @@ func (s *Service) HandleMessage(topic string, payload []byte) error {
 	case "batch":
 		return s.handleData(tenantCtx, gateway, payload)
 	default:
-		return fmt.Errorf("未知的上行类型: %s", kind)
+		return errort.NewMessageErr("未知的上行类型: {{.p1}}", map[string]interface{}{"p1": kind})
 	}
 }
 
 func (s *Service) handleStatus(ctx context.Context, g models.Gateway, payload []byte) error {
 	var msg GatewayStatusMessage
 	if err := json.Unmarshal(payload, &msg); err != nil {
-		return fmt.Errorf("状态报文解析失败: %w", err)
+		return errort.NewMessageErr("状态报文解析失败: {{.p1}}", map[string]interface{}{"p1": err})
 	}
 	if msg.Ts <= 0 {
 		msg.Ts = time.Now().UnixMilli()
@@ -231,7 +232,7 @@ func (s *Service) handleStatus(ctx context.Context, g models.Gateway, payload []
 func (s *Service) handleData(ctx context.Context, g models.Gateway, payload []byte) error {
 	var msg GatewayUplinkMessage
 	if err := json.Unmarshal(payload, &msg); err != nil {
-		return fmt.Errorf("数据报文解析失败: %w", err)
+		return errort.NewMessageErr("数据报文解析失败: {{.p1}}", map[string]interface{}{"p1": err})
 	}
 	if msg.Ts <= 0 {
 		msg.Ts = time.Now().UnixMilli()
@@ -306,7 +307,7 @@ func (s *Service) handleData(ctx context.Context, g models.Gateway, payload []by
 // ingestRecord 把一条记录转换成平台既有的物模型批量上报消息并落库
 func (s *Service) ingestRecord(ctx context.Context, g models.Gateway, record GatewayUplinkRecord, fallbackTs int64) (int, error) {
 	if strings.TrimSpace(record.DeviceKey) == "" {
-		return 0, fmt.Errorf("记录缺少 deviceKey")
+		return 0, errort.NewMessageErr("记录缺少 deviceKey", nil)
 	}
 	device, err := s.resolveDevice(ctx, g, record.DeviceKey, record.ProductKey)
 	if err != nil {
@@ -371,7 +372,7 @@ func (s *Service) resolveDevice(ctx context.Context, g models.Gateway, deviceKey
 	if d, dErr := s.dbClient.WithCtx(ctx).DeviceBySn(deviceKey); dErr == nil {
 		return d, nil
 	}
-	return models.Device{}, fmt.Errorf("网关 %s 上报的设备 %s 未注册（productKey=%s）", g.Sn, deviceKey, productKey)
+	return models.Device{}, errort.NewMessageErr("网关 {{.p1}} 上报的设备 {{.p2}} 未注册（productKey={{.p3}}）", map[string]interface{}{"p1": g.Sn, "p2": deviceKey, "p3": productKey})
 }
 
 // ParseTopic 解析上行主题，返回网关 SN 与类型

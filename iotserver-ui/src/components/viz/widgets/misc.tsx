@@ -2,6 +2,7 @@ import React from 'react'
 import { Alert } from 'antd'
 import { AppstoreOutlined, LineChartOutlined } from '@ant-design/icons'
 import type { VizWidgetManifest } from '../types'
+import { t } from '@/i18n'
 
 /**
  * 早期图表组件（type=chart）
@@ -11,7 +12,7 @@ import type { VizWidgetManifest } from '../types'
  */
 export const legacyChartManifest: VizWidgetManifest = {
   type: 'chart',
-  label: '图表（已下线）',
+  label: t('图表（已下线）'),
   icon: <LineChartOutlined />,
   defaultSize: { w: 6, h: 6 },
   defaultConfig: () => ({}),
@@ -19,8 +20,8 @@ export const legacyChartManifest: VizWidgetManifest = {
     <Alert
       type="info"
       showIcon
-      message="这个图表组件已下线"
-      description="原来的数据源已移除。可以删掉它，改用「数值 / 仪表盘 / 折线图 / 表格」重新绑定设备数据。"
+      message={t('这个图表组件已下线')}
+      description={t('原来的数据源已移除。可以删掉它，改用「数值 / 仪表盘 / 折线图 / 表格」重新绑定设备数据。')}
     />
   ),
 }
@@ -31,7 +32,7 @@ export const legacyChartManifest: VizWidgetManifest = {
  */
 export const containerManifest: VizWidgetManifest = {
   type: 'container',
-  label: '容器',
+  label: t('容器'),
   icon: <AppstoreOutlined />,
   // 容器留大一点，方便往里拖
   defaultSize: { w: 12, h: 10 },

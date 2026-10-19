@@ -4,6 +4,7 @@ import { languageSdk } from '@/api'
 
 import './style.less'
 import useRequest from '@/hooks/useRequest'
+import { t } from '@/i18n'
 
 // const { useMessage } = message
 
@@ -21,7 +22,7 @@ const Documents: React.FC<DocumentsProps> = () => {
     <>
       <div className="my-service p20">
         <Card bordered>
-          <div className="mb20" style={{ fontSize: '14px', fontWeight: '600' }}>产品文档</div>
+          <div className="mb20" style={{ fontSize: '14px', fontWeight: '600' }}>{t('产品文档')}</div>
           <Row>
             {languageSdkApi.data?.doc?.addr
               ? (
@@ -40,7 +41,7 @@ const Documents: React.FC<DocumentsProps> = () => {
               )
               : null}
           </Row>
-          <div className="mb20 mt20" style={{ fontSize: '14px', fontWeight: '600' }}>设备接入SDK</div>
+          <div className="mb20 mt20" style={{ fontSize: '14px', fontWeight: '600' }}>{t('设备接入SDK')}</div>
           <Row gutter={15}>
             {languageSdkApi.data?.sdk_language?.map((item: any) => {
               return (
@@ -59,7 +60,7 @@ const Documents: React.FC<DocumentsProps> = () => {
                           window.open(item.addr)
                         }}
                       >
-                        查看工具包
+                        {t('查看工具包')}
                       </Button>
                     </div>
                   </Card>

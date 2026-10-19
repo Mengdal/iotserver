@@ -18,7 +18,6 @@ package gateway
 
 import (
 	"encoding/json"
-	"fmt"
 	"strings"
 	"time"
 
@@ -219,15 +218,15 @@ func (w *vizWidget) normalizeConfig(spec vizWidgetSpec) error {
 	}
 	for i, s := range series {
 		if strings.TrimSpace(s.DeviceId) == "" || strings.TrimSpace(s.Code) == "" {
-			return fmt.Errorf("第 %d 条数据序列缺少设备或属性", i+1)
+			return errort.NewMessageErr("第 {{.p1}} 条数据序列缺少设备或属性", map[string]interface{}{"p1": i + 1})
 		}
 	}
 	raw, err := json.Marshal(w.Config)
 	if err != nil {
-		return fmt.Errorf("配置无法序列化：%s", err.Error())
+		return errort.NewMessageErr("配置无法序列化：{{.p1}}", map[string]interface{}{"p1": err.Error()})
 	}
 	if len(raw) > vizConfigMaxLen {
-		return fmt.Errorf("配置过大（上限 %d 字节）", vizConfigMaxLen)
+		return errort.NewMessageErr("配置过大（上限 {{.p1}} 字节）", map[string]interface{}{"p1": vizConfigMaxLen})
 	}
 	return nil
 }
@@ -244,20 +243,20 @@ func vizSeriesFromConfig(config map[string]interface{}) ([]vizSeriesRef, error) 
 	}
 	if list, ok := raw.([]vizSeriesRef); ok {
 		if len(list) > vizMaxSeriesPerWidget {
-			return nil, fmt.Errorf("最多绑定 %d 条数据序列", vizMaxSeriesPerWidget)
+			return nil, errort.NewMessageErr("最多绑定 {{.p1}} 条数据序列", map[string]interface{}{"p1": vizMaxSeriesPerWidget})
 		}
 		return list, nil
 	}
 	buf, err := json.Marshal(raw)
 	if err != nil {
-		return nil, fmt.Errorf("series 格式有误")
+		return nil, errort.NewMessageErr("series 格式有误", nil)
 	}
 	var list []vizSeriesRef
 	if err := json.Unmarshal(buf, &list); err != nil {
-		return nil, fmt.Errorf("series 格式有误")
+		return nil, errort.NewMessageErr("series 格式有误", nil)
 	}
 	if len(list) > vizMaxSeriesPerWidget {
-		return nil, fmt.Errorf("最多绑定 %d 条数据序列", vizMaxSeriesPerWidget)
+		return nil, errort.NewMessageErr("最多绑定 {{.p1}} 条数据序列", map[string]interface{}{"p1": vizMaxSeriesPerWidget})
 	}
 	return list, nil
 }
@@ -315,19 +314,19 @@ func (cv *vizCanvas) normalize(boardName string) error {
 	var walk func(list []vizWidget, depth int) error
 	walk = func(list []vizWidget, depth int) error {
 		if len(list) > 0 && depth > vizMaxNestDepth {
-			return fmt.Errorf("组件嵌套最多 %d 层", vizMaxNestDepth)
+			return errort.NewMessageErr("组件嵌套最多 {{.p1}} 层", map[string]interface{}{"p1": vizMaxNestDepth})
 		}
 		for i := range list {
 			w := &list[i]
 			total++
 			if total > vizMaxWidgets {
-				return fmt.Errorf("一块看板最多 %d 个组件", vizMaxWidgets)
+				return errort.NewMessageErr("一块看板最多 {{.p1}} 个组件", map[string]interface{}{"p1": vizMaxWidgets})
 			}
 			if strings.TrimSpace(w.Id) == "" {
 				w.Id = uuid.NewString()
 			}
 			if _, dup := seen[w.Id]; dup {
-				return fmt.Errorf("组件 id 重复：%s", w.Id)
+				return errort.NewMessageErr("组件 id 重复：{{.p1}}", map[string]interface{}{"p1": w.Id})
 			}
 			seen[w.Id] = struct{}{}
 
@@ -336,7 +335,7 @@ func (cv *vizCanvas) normalize(boardName string) error {
 			switch {
 			case w.Type == vizWidgetText:
 				if len([]rune(strings.TrimSpace(w.Text))) > vizTextMaxLen {
-					return fmt.Errorf("文本组件超过 %d 字", vizTextMaxLen)
+					return errort.NewMessageErr("文本组件超过 {{.p1}} 字", map[string]interface{}{"p1": vizTextMaxLen})
 				}
 				w.Config = nil
 			case !known:
@@ -345,10 +344,10 @@ func (cv *vizCanvas) normalize(boardName string) error {
 				// 容器与数据类组件都不带正文
 				w.Text = ""
 				if err := w.normalizeConfig(spec); err != nil {
-					return fmt.Errorf("组件「%s」%s", vizWidgetTitle(*w, boardName), err.Error())
+					return errort.NewMessageErr("组件「{{.p1}}」{{.p2}}", map[string]interface{}{"p1": vizWidgetTitle(*w, boardName), "p2": err.Error()})
 				}
 				if !spec.HasChildren && len(w.Children) > 0 {
-					return fmt.Errorf("组件「%s」不能包含子组件", vizWidgetTitle(*w, boardName))
+					return errort.NewMessageErr("组件「{{.p1}}」不能包含子组件", map[string]interface{}{"p1": vizWidgetTitle(*w, boardName)})
 				}
 			}
 
@@ -454,7 +453,7 @@ type vizBoardDetailResponse struct {
 func (ctl *controller) VizBoardDetail(c *gin.Context) {
 	boardId := strings.TrimSpace(c.Param("boardId"))
 	if boardId == "" {
-		httphelper.RenderFail(c, errort.NewCommonErr(errort.DefaultReqParamsError, fmt.Errorf("boardId 不能为空")), c.Writer, ctl.lc)
+		httphelper.RenderFail(c, errort.NewCommonErr(errort.DefaultReqParamsError, errort.NewMessageErr("boardId 不能为空", nil)), c.Writer, ctl.lc)
 		return
 	}
 	for _, rec := range ctl.loadVizBoards(c) {
@@ -473,7 +472,7 @@ func (ctl *controller) VizBoardDetail(c *gin.Context) {
 		return
 	}
 	httphelper.RenderFail(c, errort.NewCommonErr(errort.DefaultSystemError,
-		fmt.Errorf("看板不存在：%s", boardId)), c.Writer, ctl.lc)
+		errort.NewMessageErr("看板不存在：{{.p1}}", map[string]interface{}{"p1": boardId})), c.Writer, ctl.lc)
 }
 
 // newVizBoardId 平台内看板 ID
@@ -492,7 +491,7 @@ func touchVizBoard(rec *vizBoardRecord) {
 func (ctl *controller) createCanvasBoard(c *gin.Context, req vizBoardSaveRequest) {
 	name := strings.TrimSpace(req.Name)
 	if name == "" {
-		httphelper.RenderFail(c, errort.NewCommonErr(errort.DefaultReqParamsError, fmt.Errorf("name 不能为空")), c.Writer, ctl.lc)
+		httphelper.RenderFail(c, errort.NewCommonErr(errort.DefaultReqParamsError, errort.NewMessageErr("name 不能为空", nil)), c.Writer, ctl.lc)
 		return
 	}
 	cv := req.Canvas
@@ -536,7 +535,7 @@ func (ctl *controller) updateCanvasBoard(c *gin.Context, boardId string, req viz
 	if index < 0 {
 		vizBoardsMutex.Unlock()
 		httphelper.RenderFail(c, errort.NewCommonErr(errort.DefaultSystemError,
-			fmt.Errorf("看板不存在：%s", boardId)), c.Writer, ctl.lc)
+			errort.NewMessageErr("看板不存在：{{.p1}}", map[string]interface{}{"p1": boardId})), c.Writer, ctl.lc)
 		return
 	}
 

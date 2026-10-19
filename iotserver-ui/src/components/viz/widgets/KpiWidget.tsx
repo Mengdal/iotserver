@@ -6,6 +6,7 @@ import type { VizWidgetManifest, VizWidgetSettingsProps } from '../types'
 import { formatTime, formatValue, latestPoint, seriesLabel, seriesUnit } from '../format'
 import DataBindingEditor from './MetricsEditor'
 import { SettingGroup, SettingRow } from './SettingsLayout'
+import { t, tt } from '@/i18n'
 
 const { Text } = Typography
 
@@ -25,7 +26,7 @@ const KpiWidget: React.FC<{ config: KpiConfig; ctx: any }> = ({ config, ctx }) =
   // 绑了指标就按指标展示；没绑指标走原来的设备测点路径（历史看板行为不变）
   const useMetric = !!metricKey
   if (!useMetric && (!config.series || config.series.length === 0)) {
-    return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="还没绑定数据（右上角菜单 → 配置本组件）" />
+    return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t('还没绑定数据（右上角菜单 → 配置本组件）')} />
   }
   if (ctx.loading && !series && !metric) return <div style={{ textAlign: 'center', paddingTop: 12 }}><Spin /></div>
 
@@ -33,15 +34,15 @@ const KpiWidget: React.FC<{ config: KpiConfig; ctx: any }> = ({ config, ctx }) =
     const unit = ((metric && metric.unit) || config.unit || '').trim()
     return (
       <div style={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: 4 }}>
-        <Text type="secondary" style={{ fontSize: 12 }} ellipsis>{metric ? (metric.label || metricKey) : metricKey}</Text>
+        <Text type="secondary" style={{ fontSize: 12 }} ellipsis>{tt(metric ? (metric.label || metricKey) : metricKey)}</Text>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
           <span style={{ fontSize: 34, fontWeight: 600, lineHeight: 1.1 }}>
             {metric ? formatValue(metric.value, config.decimals) : '--'}
           </span>
-          {unit ? <Text type="secondary" style={{ fontSize: 14 }}>{unit}</Text> : null}
+          {unit ? <Text type="secondary" style={{ fontSize: 14 }}>{tt(unit)}</Text> : null}
         </div>
         <Text type="secondary" style={{ fontSize: 12 }}>
-          {metric ? '实时统计' : '暂无数据'}
+          {metric ? t('实时统计') : t('暂无数据')}
         </Text>
       </div>
     )
@@ -53,15 +54,15 @@ const KpiWidget: React.FC<{ config: KpiConfig; ctx: any }> = ({ config, ctx }) =
   const unit = seriesUnit(series, config.unit)
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: 4 }}>
-      <Text type="secondary" style={{ fontSize: 12 }} ellipsis>{seriesLabel(series)}</Text>
+      <Text type="secondary" style={{ fontSize: 12 }} ellipsis>{tt(seriesLabel(series))}</Text>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
         <span style={{ fontSize: 34, fontWeight: 600, lineHeight: 1.1 }}>
           {formatValue(point ? point.value : undefined, config.decimals)}
         </span>
-        {unit ? <Text type="secondary" style={{ fontSize: 14 }}>{unit}</Text> : null}
+        {unit ? <Text type="secondary" style={{ fontSize: 14 }}>{tt(unit)}</Text> : null}
       </div>
       <Text type="secondary" style={{ fontSize: 12 }}>
-        {point ? formatTime(point.time) : '暂无数据'}
+        {point ? formatTime(point.time) : t('暂无数据')}
       </Text>
     </div>
   )
@@ -69,7 +70,7 @@ const KpiWidget: React.FC<{ config: KpiConfig; ctx: any }> = ({ config, ctx }) =
 
 const KpiSettings: React.FC<VizWidgetSettingsProps<KpiConfig>> = ({ config, onChange }) => (
   <>
-    <SettingGroup title="数据绑定">
+    <SettingGroup title={t('数据绑定')}>
       <DataBindingEditor
         single
         series={config.series || []}
@@ -77,8 +78,8 @@ const KpiSettings: React.FC<VizWidgetSettingsProps<KpiConfig>> = ({ config, onCh
         onChange={patch => onChange(patch)}
       />
     </SettingGroup>
-    <SettingGroup title="显示设置">
-      <SettingRow label="小数位">
+    <SettingGroup title={t('显示设置')}>
+      <SettingRow label={t('小数位')}>
         <InputNumber
           min={0}
           max={6}
@@ -87,10 +88,10 @@ const KpiSettings: React.FC<VizWidgetSettingsProps<KpiConfig>> = ({ config, onCh
           onChange={v => onChange({ decimals: Number(v) || 0 })}
         />
       </SettingRow>
-      <SettingRow label="单位">
+      <SettingRow label={t('单位')}>
         <Input
           style={{ width: '100%' }}
-          placeholder="留空用属性/指标单位"
+          placeholder={t('留空用属性/指标单位')}
           value={config.unit || ''}
           onChange={e => onChange({ unit: e.target.value })}
         />
@@ -101,7 +102,7 @@ const KpiSettings: React.FC<VizWidgetSettingsProps<KpiConfig>> = ({ config, onCh
 
 export const kpiManifest: VizWidgetManifest<KpiConfig> = {
   type: 'kpi',
-  label: '数值',
+  label: t('数值'),
   icon: <FieldNumberOutlined />,
   defaultSize: { w: 3, h: 4 },
   minSize: { w: 1, h: 2 },

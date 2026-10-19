@@ -4,6 +4,7 @@ import { getSiteInfo, SiteInfo } from '@/api'
 /** 系统默认素材：未上传时回退到这些内置资源 */
 import defaultLogo from '@/assets/images/logo-hex.svg'
 import defaultLoginBackground from '@/assets/images/background.png'
+import { t } from '@/i18n'
 const DEFAULT_LOGO = defaultLogo as string
 const DEFAULT_LOGIN_BACKGROUND = defaultLoginBackground as string
 const DEFAULT_FAVICON = '/favicon.ico'
@@ -11,12 +12,12 @@ const DEFAULT_FAVICON = '/favicon.ico'
 const DEFAULT_LOGIN_LOGO = DEFAULT_LOGO
 
 const DEFAULT_SITE: SiteInfo = {
-  name: 'iotserver 物联网平台',
+  name: t('iotserver 物联网平台'),
   logo: '',
   favicon: '',
   loginBackground: '',
   copyright: '© iotserver',
-  description: 'iotserver 物联网平台',
+  description: t('iotserver 物联网平台'),
 }
 
 interface BrandContextValue {
@@ -96,8 +97,10 @@ export const BrandProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // 登录页等「未进入主框架」的页面，标题统一为「登录 - 系统名称」
   useEffect(() => {
     const name = site.name || 'iotserver'
-    if (!document.title || document.title === '登录') {
-      document.title = `登录 - ${name}`
+    const loginTitle = t('登录')
+    // index.html 里的初始标题是中文的「登录」，英文环境下也要认出「还没设置过标题」
+    if (!document.title || document.title === '登录' || document.title === loginTitle) {
+      document.title = t('登录 - {{name}}', { name: name })
     }
   }, [site.name])
 

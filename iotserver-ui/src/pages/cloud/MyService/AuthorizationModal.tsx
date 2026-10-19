@@ -3,6 +3,7 @@ import { Form, Modal, Input, Switch, Select, message } from 'antd'
 import { cloudInstanceAuthorization } from '@/api'
 import { useStateCallback } from '@/hooks'
 import { CloudInstance } from '@/api/cloud-instance'
+import { t } from '@/i18n'
 
 const { useForm } = Form
 
@@ -62,12 +63,12 @@ export const AuthorizationModal = forwardRef<AuthorizationModalRef, Authorizatio
 
   return (
     <Modal
-      title="服务授权"
+      title={t('服务授权')}
       open={isModalOpen}
       maskClosable={false}
       destroyOnClose
-      cancelText="取消"
-      okText="确定"
+      cancelText={t('取消')}
+      okText={t('确定')}
       onCancel={handleClose}
       onOk={() => {
         form.validateFields()
@@ -76,14 +77,14 @@ export const AuthorizationModal = forwardRef<AuthorizationModalRef, Authorizatio
               cloudInstanceAuthorization<any>(record?.id, resp)
                 .then((result) => {
                   if (result.success) {
-                    message.success('操作成功')
+                    message.success(t('操作成功'))
                     handleClose()
                     onFinish()
                   } else {
                     message.error(result.errorMsg)
                   }
                 }).catch((err) => {
-                  message.error('操作失败')
+                  message.error(t('操作失败'))
                   console.log(err)
                 })
             }
@@ -109,7 +110,7 @@ export const AuthorizationModal = forwardRef<AuthorizationModalRef, Authorizatio
           })
         }
         <Form.Item
-          label="开启日志"
+          label={t('开启日志')}
           name={['instance_log_config', 'log_switch']}
           valuePropName="checked"
           required
@@ -126,14 +127,14 @@ export const AuthorizationModal = forwardRef<AuthorizationModalRef, Authorizatio
             return getFieldValue('instance_log_config')?.log_switch
               ? (
                 <Form.Item
-                  label="日志输出类型"
+                  label={t('日志输出类型')}
                   name={['instance_log_config', 'log_filter']}
-                  rules={[{ required: true, message: '请选择日志输出类型' }]}
+                  rules={[{ required: true, message: t('请选择日志输出类型') }]}
                 >
-                  <Select allowClear mode="multiple" placeholder="请选择日志输出类型">
-                    <Select.Option key={'property_report'}>设备属性上报</Select.Option>
-                    <Select.Option key={'event_report'}>设备事件上报</Select.Option>
-                    <Select.Option key={'action_reveice'}>云端命令下发</Select.Option>
+                  <Select allowClear mode="multiple" placeholder={t('请选择日志输出类型')}>
+                    <Select.Option key={'property_report'}>{t('设备属性上报')}</Select.Option>
+                    <Select.Option key={'event_report'}>{t('设备事件上报')}</Select.Option>
+                    <Select.Option key={'action_reveice'}>{t('云端命令下发')}</Select.Option>
                   </Select>
                 </Form.Item>
               )

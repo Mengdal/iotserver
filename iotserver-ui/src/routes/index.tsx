@@ -36,6 +36,7 @@ import BoardManage from '@/pages/viz/BoardManage'
 import VizView from '@/pages/viz/View'
 
 import { Empty } from 'antd'
+import { t } from '@/i18n'
 
 // 看板编辑器用到 gridstack（体积较大），按需加载
 const BoardEdit = React.lazy(() => import('@/pages/viz/BoardEdit'))
@@ -197,7 +198,7 @@ const router = createBrowserRouter([
       {
         path: '/viz/boards/:id/edit',
         element: (
-          <React.Suspense fallback={<div style={{ padding: 48, textAlign: 'center' }}>加载看板…</div>}>
+          <React.Suspense fallback={<div style={{ padding: 48, textAlign: 'center' }}>{t('加载看板…')}</div>}>
             <BoardEdit />
           </React.Suspense>
         ),

@@ -35,7 +35,7 @@ package vizmetricsapp
 
 import (
 	"context"
-	"fmt"
+	"iotserver/internal/pkg/errort"
 	"math"
 	"runtime"
 	"sort"
@@ -347,10 +347,10 @@ const dailySeriesMaxDays = 90
 func QuerySeries(db interfaces.DBClient, key string, q SeriesQuery) ([]SeriesPoint, error) {
 	def, ok := findDef(key)
 	if !ok {
-		return nil, fmt.Errorf("未登记的指标：%s", strings.TrimSpace(key))
+		return nil, errort.NewMessageErr("未登记的指标：{{.p1}}", map[string]interface{}{"p1": strings.TrimSpace(key)})
 	}
 	if def.series == nil {
-		return nil, fmt.Errorf("指标 %s 不是时序指标", def.Key)
+		return nil, errort.NewMessageErr("指标 {{.p1}} 不是时序指标", map[string]interface{}{"p1": def.Key})
 	}
 	return def.series(db, q)
 }
@@ -363,7 +363,7 @@ func QuerySeries(db interfaces.DBClient, key string, q SeriesQuery) ([]SeriesPoi
 // 窗口内的聚合参数（AggInterval/MaxPoints）对按天口径无意义，忽略。
 func queryMsgGatherDaily(db interfaces.DBClient, q SeriesQuery) ([]SeriesPoint, error) {
 	if db == nil {
-		return nil, fmt.Errorf("数据库客户端为空")
+		return nil, errort.NewMessageErr("数据库客户端为空", nil)
 	}
 	endTs := time.Now().UnixMilli()
 	if q.To > 0 {
@@ -417,7 +417,7 @@ func queryMsgGatherDaily(db interfaces.DBClient, q SeriesQuery) ([]SeriesPoint, 
 // 采集器还没出过数据（刚部署）时返回 (nil, nil)。
 func latestSystemMetrics(db interfaces.DBClient) (*dtos.SystemMetrics, error) {
 	if db == nil {
-		return nil, fmt.Errorf("数据库客户端为空")
+		return nil, errort.NewMessageErr("数据库客户端为空", nil)
 	}
 	now := time.Now().UnixMilli()
 	rows, err := db.GetSystemMetrics(now-10*time.Minute.Milliseconds(), now)
@@ -442,7 +442,7 @@ func latestSystemMetrics(db interfaces.DBClient) (*dtos.SystemMetrics, error) {
 func systemTrend(pick func(dtos.SystemMetrics) float64) func(db interfaces.DBClient, q SeriesQuery) ([]SeriesPoint, error) {
 	return func(db interfaces.DBClient, q SeriesQuery) ([]SeriesPoint, error) {
 		if db == nil {
-			return nil, fmt.Errorf("数据库客户端为空")
+			return nil, errort.NewMessageErr("数据库客户端为空", nil)
 		}
 		to := q.To
 		if to <= 0 {
@@ -511,11 +511,11 @@ func systemLoadPercent(sys *dtos.SystemMetrics) float64 {
 func collect(_ context.Context, db interfaces.DBClient, platform bool) (counts, error) {
 	var c counts
 	if db == nil {
-		return c, fmt.Errorf("数据库客户端为空")
+		return c, errort.NewMessageErr("数据库客户端为空", nil)
 	}
 	gdb := db.GetDBInstance()
 	if gdb == nil {
-		return c, fmt.Errorf("数据库连接为空")
+		return c, errort.NewMessageErr("数据库连接为空", nil)
 	}
 
 	var err error
@@ -587,7 +587,7 @@ func countTable(db *gorm.DB, table, where string, args ...interface{}) (int64, e
 		q = q.Where(where, args...)
 	}
 	if err := q.Count(&n).Error; err != nil {
-		return 0, fmt.Errorf("统计 %s 失败：%w", table, err)
+		return 0, errort.NewMessageErr("统计 {{.p1}} 失败：{{.p2}}", map[string]interface{}{"p1": table, "p2": err})
 	}
 	return n, nil
 }
@@ -599,7 +599,7 @@ func sumTable(db *gorm.DB, table, column, where string, args ...interface{}) (in
 		q = q.Where(where, args...)
 	}
 	if err := q.Scan(&row).Error; err != nil {
-		return 0, fmt.Errorf("统计 %s 失败：%w", table, err)
+		return 0, errort.NewMessageErr("统计 {{.p1}} 失败：{{.p2}}", map[string]interface{}{"p1": table, "p2": err})
 	}
 	return row.Total, nil
 }

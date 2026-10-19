@@ -11,6 +11,7 @@ import { useVizMetricDefs } from '@/components/viz/widgets/MetricsEditor'
 import { isPlatformView } from '@/utils/platformViewGuard'
 import { flattenVizTree, groupByParent, isVizContainer } from '@/utils/vizTree'
 import './index.less'
+import { t } from '@/i18n'
 
 interface CanvasBoardProps {
   /** 看板 ID（二选一） */
@@ -72,10 +73,10 @@ const CanvasBoard: React.FC<CanvasBoardProps> = ({ boardId, board: boardProp, cl
         if (resp.success) {
           setBoard(resp.result)
         } else {
-          setError(resp.errorMsg || '看板加载失败')
+          setError(resp.errorMsg || t('看板加载失败'))
         }
       })
-      .catch((e: any) => setError(e?.message || '看板加载失败'))
+      .catch((e: any) => setError(e?.message || t('看板加载失败')))
       .finally(() => setLoading(false))
   }, [boardId, boardProp])
 
@@ -83,13 +84,13 @@ const CanvasBoard: React.FC<CanvasBoardProps> = ({ boardId, board: boardProp, cl
     return <div style={{ padding: 48, textAlign: 'center' }}><Spin /></div>
   }
   if (error) {
-    return <Alert type="error" showIcon message="看板加载失败" description={error} />
+    return <Alert type="error" showIcon message={t('看板加载失败')} description={error} />
   }
   if (!board) {
-    return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="没有配置看板" />
+    return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t('没有配置看板')} />
   }
   if (visibleWidgets.length === 0) {
-    return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="这块看板还没有组件，去「看板管理」里搭建" />
+    return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t('这块看板还没有组件，去「看板管理」里搭建')} />
   }
 
   const cols = (board.canvas && board.canvas.cols) || 12
@@ -121,7 +122,7 @@ const CanvasBoard: React.FC<CanvasBoardProps> = ({ boardId, board: boardProp, cl
     if (isVizContainer(w)) {
       return (
         <div className="canvas-board__container">
-          <div className="canvas-board__container-title">{w.title || '容器'}</div>
+          <div className="canvas-board__container-title">{w.title || t('容器')}</div>
           <div className="canvas-board__container-body">
             <GridCanvas
               boardKey={`${boardKey}:${w.id}`}
@@ -147,7 +148,7 @@ const CanvasBoard: React.FC<CanvasBoardProps> = ({ boardId, board: boardProp, cl
   return (
     <div className={`canvas-board${className ? ` ${className}` : ''}`}>
       {data.error && !disableData
-        ? <Alert type="warning" showIcon style={{ marginBottom: 8 }} message="部分数据获取失败" description={data.error} />
+        ? <Alert type="warning" showIcon style={{ marginBottom: 8 }} message={t('部分数据获取失败')} description={data.error} />
         : null}
       <GridCanvas
         boardKey={boardKey}

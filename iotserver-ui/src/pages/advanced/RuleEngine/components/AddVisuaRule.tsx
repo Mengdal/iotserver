@@ -3,6 +3,7 @@ import { CloseOutlined } from '@ant-design/icons'
 import React, { forwardRef, useCallback, useImperativeHandle, useState } from 'react'
 import { addRuleEngine } from '@/api'
 import { DeviceLibraries } from '@/api/device-libraries'
+import { t } from '@/i18n'
 
 const { useForm } = Form
 const { TextArea } = Input
@@ -41,7 +42,7 @@ export const AddVisuaRule = forwardRef<AddVisuaRuleRef, AddVisuaRuleProps>(({ on
 
   return (
     <Drawer
-      title={record ? '编辑规则' : '添加规则'}
+      title={record ? t('编辑规则') : t('添加规则')}
       placement="right"
       open={isModalOpen}
       width={550}
@@ -66,7 +67,7 @@ export const AddVisuaRule = forwardRef<AddVisuaRuleRef, AddVisuaRuleProps>(({ on
                     addRuleEngine(values)
                       .then(resp => {
                         if (resp.success) {
-                          message.success('修改成功')
+                          message.success(t('修改成功'))
                           handleClose()
                           onFinish()
                         } else {
@@ -79,7 +80,7 @@ export const AddVisuaRule = forwardRef<AddVisuaRuleRef, AddVisuaRuleProps>(({ on
                     addRuleEngine(values)
                       .then(resp => {
                         if (resp.success) {
-                          message.success('添加成功')
+                          message.success(t('添加成功'))
                           handleClose()
                           onFinish()
                         } else {
@@ -91,40 +92,40 @@ export const AddVisuaRule = forwardRef<AddVisuaRuleRef, AddVisuaRuleProps>(({ on
                   }
                 })
             }}
-          >确定</Button>
-          <Button onClick={handleClose}>取消</Button>
+          >{t('确定')}</Button>
+          <Button onClick={handleClose}>{t('取消')}</Button>
         </Space>
       }
     >
       <Form form={form} layout="vertical">
         <Form.Item
-          label="规则名称"
+          label={t('规则名称')}
           name="name"
           rules={[
             {
               required: true,
               validator (rule, value, callback) {
                 if (!value) {
-                  callback('请输入规则名称')
+                  callback(t('请输入规则名称'))
                 } else if (/^[a-zA-Z\u4e00-\u9fa5][a-zA-Z0-9\u4e00-\u9fa5_-]{0,31}$/.test(value)) {
                   callback()
                 } else {
-                  callback('1-32位字符，支持中文、英文、数字及特殊字符_-，必须以英文或中文字符开头')
+                  callback(t('1-32位字符，支持中文、英文、数字及特殊字符_-，必须以英文或中文字符开头'))
                 }
               },
             },
           ]}
         >
-          <Input placeholder="1-32位字符，支持中文、英文、数字及特殊字符_-，必须以英文或中文字符开头"></Input>
+          <Input placeholder={t('1-32位字符，支持中文、英文、数字及特殊字符_-，必须以英文或中文字符开头')}></Input>
         </Form.Item>
         <Form.Item
-          label="规则描述"
+          label={t('规则描述')}
           name="description"
         >
           <TextArea
             showCount
             maxLength={100}
-            placeholder="0-100个字符"
+            placeholder={t('0-100个字符')}
             rows={4}></TextArea>
         </Form.Item>
       </Form>

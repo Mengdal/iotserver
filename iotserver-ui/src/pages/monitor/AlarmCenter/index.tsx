@@ -3,6 +3,7 @@ import { Tabs, Card } from 'antd'
 import AlarmList from './AlarmList'
 import AlarmRules from './AlarmRules'
 import './style.less'
+import { t } from '@/i18n'
 // import { ReloadOutlined } from '@ant-design/icons'
 
 export interface AlarmCenterProps {
@@ -33,12 +34,12 @@ const AlarmCenterList: React.FC<AlarmCenterProps> = () => {
           items={[
             {
               key: '1',
-              label: '告警列表',
+              label: t('告警列表'),
               children: <AlarmList></AlarmList>,
             },
             {
               key: '2',
-              label: '告警规则',
+              label: t('告警规则'),
               children: <AlarmRules></AlarmRules>,
             },
           ]}

@@ -61,7 +61,7 @@ func (app *tenantApp) TenantAdd(ctx context.Context, req dtos.TenantAddRequest) 
 	code := strings.ToLower(strings.TrimSpace(req.Code))
 	if !tenantCodePattern.MatchString(code) {
 		return res, errort.NewCommonErr(errort.DefaultReqParamsError,
-			fmt.Errorf("租户编码只允许小写字母/数字/下划线，长度 2~32"))
+			errort.NewMessageErr("租户编码只允许小写字母/数字/下划线，长度 2~32", nil))
 	}
 	tc, err := app.dbClient.WithCtx(ctx).AddTenant(models.Tenant{
 		Code:          code,
@@ -159,9 +159,7 @@ func (app *tenantApp) TenantDelete(ctx context.Context, id string) error {
 		return err
 	}
 	if users+devices+gateways+products+boards > 0 {
-		return errort.NewCommonErr(errort.AppTenantNotEmpty, fmt.Errorf(
-			"该租户下仍有 %d 个用户、%d 台设备、%d 台网关、%d 个产品、%d 个看板，请先清理",
-			users, devices, gateways, products, boards))
+		return errort.NewCommonErr(errort.AppTenantNotEmpty, errort.NewMessageErr("该租户下仍有 {{.p1}} 个用户、{{.p2}} 台设备、{{.p3}} 台网关、{{.p4}} 个产品、{{.p5}} 个看板，请先清理", map[string]interface{}{"p1": users, "p2": devices, "p3": gateways, "p4": products, "p5": boards}))
 	}
 	if err = app.dbClient.WithCtx(ctx).DeleteTenant(id); err != nil {
 		return err

@@ -11,6 +11,7 @@ import { ProductActions, ProductEvents, ProductInfo, ProductProperties, ProductT
 import { get } from 'lodash'
 import './style.less'
 import { productRelease, productUnrelease } from '@/api/devices'
+import { t } from '@/i18n'
 
 const { Text, Link } = Typography
 const { useForm, useWatch } = Form
@@ -74,8 +75,8 @@ const ProductDetail = () => {
       ></DetailModal>
       <AdvanceBreadcrumb
         hasBack
-        title="产品管理"
-        describe="产品物模型是对同一类设备的数字化抽象描述，描述该类设备是什么，能做什么，能对外提供哪些服务，它包括属性、事件、服务三种功能类型。"
+        title={t('产品管理')}
+        describe={t('产品物模型是对同一类设备的数字化抽象描述，描述该类设备是什么，能做什么，能对外提供哪些服务，它包括属性、事件、服务三种功能类型。')}
         background={require('@/assets/images/head-bg.8b029587.png')}
       />
       <Card className="product-info">
@@ -87,15 +88,15 @@ const ProductDetail = () => {
               title={<>
                 {productInfo?.name}
                 <Popconfirm
-                  title={productInfo?.status === '已发布' ? '是否确认取消发布？' : '是否确认发布？'}
-                  okText="确认"
-                  cancelText="取消"
+                  title={productInfo?.status === '已发布' ? t('是否确认取消发布？') : t('是否确认发布？')}
+                  okText={t('确认')}
+                  cancelText={t('取消')}
                   onConfirm={() => {
                     if (productInfo?.status === '已发布') {
                       productUnrelease(productInfo?.id || '')
                         .then(resp => {
                           if (resp.success) {
-                            messageApi.open({ type: 'success', content: '取消发布成功' })
+                            messageApi.open({ type: 'success', content: t('取消发布成功') })
                             loadProductInfo()
                           } else {
                             messageApi.open({ type: 'error', content: resp.errorMsg })
@@ -105,7 +106,7 @@ const ProductDetail = () => {
                       productRelease(productInfo?.id || '')
                         .then(resp => {
                           if (resp.success) {
-                            messageApi.open({ type: 'success', content: '发布成功' })
+                            messageApi.open({ type: 'success', content: t('发布成功') })
                             loadProductInfo()
                           } else {
                             messageApi.open({ type: 'error', content: resp.errorMsg })
@@ -118,8 +119,8 @@ const ProductDetail = () => {
                     className="ml20"
                     size="small"
                   >
-                    {productInfo?.status === '已发布' && <Space><CheckCircleFilled style={{ color: '#55af70' }} />已发布</Space>}
-                    {productInfo?.status === '未发布' && <Space><MinusCircleFilled style={{ color: '#87909d' }} />未发布</Space>}
+                    {productInfo?.status === '已发布' && <Space><CheckCircleFilled style={{ color: '#55af70' }} />{t('已发布')}</Space>}
+                    {productInfo?.status === '未发布' && <Space><MinusCircleFilled style={{ color: '#87909d' }} />{t('未发布')}</Space>}
                   </Button>
                 </Popconfirm>
               </>}
@@ -137,7 +138,7 @@ const ProductDetail = () => {
                     productSync({ product_id: params.id! })
                       .then((resp) => {
                         if (resp.success) {
-                          message.success('同步成功')
+                          message.success(t('同步成功'))
                           loadProductInfo()
                         } else {
                           message.error(resp.errorMsg)
@@ -148,21 +149,21 @@ const ProductDetail = () => {
                         setSubmitting(false)
                       })
                   }}
-                >同步产品</Button>
+                >{t('同步产品')}</Button>
               }
               labelStyle={{ fontSize: 12, color: '#8a949c' }}
               contentStyle={{ fontSize: 12 }}
             >
-              <Descriptions.Item label="产品ID"><Text copyable>{productInfo?.id}</Text></Descriptions.Item>
-              {isCloudProduct && <Descriptions.Item label="云端产品标识"><Text copyable>{productInfo?.cloud_product_id}</Text></Descriptions.Item>}
-              <Descriptions.Item label="节点类型">{productInfo?.node_type}</Descriptions.Item>
-              <Descriptions.Item label="数据来源">{productInfo?.platform}</Descriptions.Item>
-              <Descriptions.Item label="数据格式">{productInfo?.data_format}</Descriptions.Item>
-              <Descriptions.Item label="协议类型">{productInfo?.protocol}</Descriptions.Item>
-              <Descriptions.Item label="创建时间">{dayjs(productInfo?.created_at).format('YYYY-MM-DD HH:mm:ss')}</Descriptions.Item>
-              <Descriptions.Item label="厂商名称">{productInfo?.factory}</Descriptions.Item>
-              {isCloudProduct && <Descriptions.Item label="最后一次同步时间">{dayjs(productInfo?.last_sync_time).format('YYYY-MM-DD HH:mm:ss')}</Descriptions.Item>}
-              <Descriptions.Item label="描述">{productInfo?.description}</Descriptions.Item>
+              <Descriptions.Item label={t('产品ID')}><Text copyable>{productInfo?.id}</Text></Descriptions.Item>
+              {isCloudProduct && <Descriptions.Item label={t('云端产品标识')}><Text copyable>{productInfo?.cloud_product_id}</Text></Descriptions.Item>}
+              <Descriptions.Item label={t('节点类型')}>{productInfo?.node_type}</Descriptions.Item>
+              <Descriptions.Item label={t('数据来源')}>{productInfo?.platform}</Descriptions.Item>
+              <Descriptions.Item label={t('数据格式')}>{productInfo?.data_format}</Descriptions.Item>
+              <Descriptions.Item label={t('协议类型')}>{productInfo?.protocol}</Descriptions.Item>
+              <Descriptions.Item label={t('创建时间')}>{dayjs(productInfo?.created_at).format('YYYY-MM-DD HH:mm:ss')}</Descriptions.Item>
+              <Descriptions.Item label={t('厂商名称')}>{productInfo?.factory}</Descriptions.Item>
+              {isCloudProduct && <Descriptions.Item label={t('最后一次同步时间')}>{dayjs(productInfo?.last_sync_time).format('YYYY-MM-DD HH:mm:ss')}</Descriptions.Item>}
+              <Descriptions.Item label={t('描述')}>{productInfo?.description}</Descriptions.Item>
             </Descriptions>
           </div>
         </div>
@@ -176,18 +177,18 @@ const ProductDetail = () => {
           >
             <Form.Item key="type" name="type">
               <Select
-                placeholder="请选择云平台"
+                placeholder={t('请选择云平台')}
                 style={{ minWidth: 180 }}
                 options={[
-                  { label: '功能类型 (全部)', value: '' },
-                  { label: '属性', value: 'property' },
-                  { label: '事件', value: 'event' },
-                  { label: '服务', value: 'action' },
+                  { label: t('功能类型 (全部)'), value: '' },
+                  { label: t('属性'), value: 'property' },
+                  { label: t('事件'), value: 'event' },
+                  { label: t('服务'), value: 'action' },
                 ]}
               />
             </Form.Item>
             <Form.Item key="name" name="name">
-              <Input allowClear placeholder="请输入产品名称搜索"></Input>
+              <Input allowClear placeholder={t('请输入产品名称搜索')}></Input>
             </Form.Item>
           </Form>
           {
@@ -197,7 +198,7 @@ const ProductDetail = () => {
                 onClick={() => {
                   deatilModalRef.current?.open()
                 }}
-              ><PlusOutlined />添加物模型</Button>
+              ><PlusOutlined />{t('添加物模型')}</Button>
             )
           }
         </Space>
@@ -210,12 +211,12 @@ const ProductDetail = () => {
             size: 'small',
             showSizeChanger: true,
             showQuickJumper: true,
-            showTotal: (total) => `共 ${total} 条`,
+            showTotal: (total) => t('共 {{count}} 条', { count: total }),
             total: dataSource.length,
           }}
           columns={[
             {
-              title: '功能类型',
+              title: t('功能类型'),
               key: 'type',
               dataIndex: 'type',
               render (value, record) {
@@ -227,10 +228,10 @@ const ProductDetail = () => {
                 )
               },
             },
-            { title: '功能名称', key: 'name', dataIndex: 'name' },
-            { title: '标识符', key: 'code', dataIndex: 'code' },
+            { title: t('功能名称'), key: 'name', dataIndex: 'name' },
+            { title: t('标识符'), key: 'code', dataIndex: 'code' },
             {
-              title: '数据类型',
+              title: t('数据类型'),
               key: 'type_spec_type',
               dataIndex: 'type_spec_type',
               render (value, record) {
@@ -239,7 +240,7 @@ const ProductDetail = () => {
               },
             },
             {
-              title: '数据定义',
+              title: t('数据定义'),
               key: 'type_spec_specs',
               dataIndex: 'type_spec_specs',
               render (value, record) {
@@ -247,11 +248,11 @@ const ProductDetail = () => {
                 const specs = get<ProductThingModelType, string, string>(record, 'type_spec.specs', '{}') as TypeSpec
 
                 if (type === 'array') {
-                  return '数组个数: ' + JSON.parse(specs)?.size
+                  return t('数组个数: ') + JSON.parse(specs)?.size
                 } else if (type === 'text') {
-                  return '数据长度: ' + JSON.parse(specs)?.length
+                  return t('数据长度: ') + JSON.parse(specs)?.length
                 } else if (type === 'date') {
-                  return '整数类型Int64的UTC时间戳 (毫秒)'
+                  return t('整数类型Int64的UTC时间戳 (毫秒)')
                 } else if (type === 'bool' || type === 'enum') {
                   return Object.entries(JSON.parse(specs))
                     .map(([k, v]) => `${k}-${v}`)
@@ -260,9 +261,9 @@ const ProductDetail = () => {
                   const specsObj = JSON.parse(specs)
                   return (
                     <>
-                      <div>取值范围: {specsObj?.min}-{specsObj?.max}</div>
-                      <div>步长: {specsObj?.step}</div>
-                      <div>单位: {specsObj?.unit} ({specsObj?.unitName})</div>
+                      <div>{t('取值范围:')} {specsObj?.min}-{specsObj?.max}</div>
+                      <div>{t('步长:')} {specsObj?.step}</div>
+                      <div>{t('单位:')} {specsObj?.unit} ({specsObj?.unitName})</div>
                     </>
                   )
                 }
@@ -270,7 +271,7 @@ const ProductDetail = () => {
               },
             },
             {
-              title: '操作',
+              title: t('操作'),
               key: 'action',
               dataIndex: 'action',
               render (value, record) {
@@ -280,11 +281,11 @@ const ProductDetail = () => {
                       onClick={() => {
                         deatilModalRef.current?.open(record)
                       }}
-                    >查看</Link>
+                    >{t('查看')}</Link>
                     <Popconfirm
-                      title="此操作将永久删除该记录, 是否继续?"
-                      okText="删除"
-                      cancelText="取消"
+                      title={t('此操作将永久删除该记录, 是否继续?')}
+                      okText={t('删除')}
+                      cancelText={t('取消')}
                       placement="topRight"
                       onConfirm={() => {
                         deleteThingModel({
@@ -292,7 +293,7 @@ const ProductDetail = () => {
                           thing_model_type: record?.type,
                         }).then(resp => {
                           if (resp.success) {
-                            message.success('删除成功')
+                            message.success(t('删除成功'))
                             loadProductInfo()
                           } else {
                             message.error(resp?.errorMsg)
@@ -300,7 +301,7 @@ const ProductDetail = () => {
                         })
                       }}
                     >
-                      <Typography.Link>删除</Typography.Link>
+                      <Typography.Link>{t('删除')}</Typography.Link>
                     </Popconfirm>
                   </Space>
                 )

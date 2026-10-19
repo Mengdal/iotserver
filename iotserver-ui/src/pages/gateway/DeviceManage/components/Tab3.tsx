@@ -7,6 +7,7 @@ import { useParams } from 'react-router-dom'
 import { RangeValue } from './Tab1Modal'
 import { DeviceService } from '@/api/device-thingmodel'
 import { useTableRequest } from '@/hooks'
+import { t } from '@/i18n'
 
 const { RangePicker } = DatePicker
 const { useForm } = Form
@@ -92,14 +93,14 @@ export const DetailTab3: React.FC<DetailTab3Props> = ({ actions }) => {
         <Form.Item name="code">
           <Select
             style={{ width: 150 }}
-            placeholder="请选择标识符"
+            placeholder={t('请选择标识符')}
             options={actions.map(({ code }) => ({ value: code, label: code }))}
           />
         </Form.Item>
         <Form.Item name="range">
           <RangePicker
             format="YYYY-MM-DD HH:mm:ss"
-            placeholder={['开始日期', '结束日期']}
+            placeholder={[t('开始日期'), t('结束日期')]}
             // onCalendarChange={val => setDates(val)}
             onOpenChange={(open) => {
               if (open) {
@@ -143,9 +144,9 @@ export const DetailTab3: React.FC<DetailTab3Props> = ({ actions }) => {
             //   }
             // }}
             presets={[
-              { label: '最近1小时', value: [dayjs().add(-1, 'hours'), dayjs()] },
-              { label: '最近3小时', value: [dayjs().add(-3, 'hours'), dayjs()] },
-              { label: '最近24小时', value: [dayjs().add(-24, 'hours'), dayjs()] },
+              { label: t('最近1小时'), value: [dayjs().add(-1, 'hours'), dayjs()] },
+              { label: t('最近3小时'), value: [dayjs().add(-3, 'hours'), dayjs()] },
+              { label: t('最近24小时'), value: [dayjs().add(-24, 'hours'), dayjs()] },
             ]}
             // renderExtraFooter={() => {
             //   return (
@@ -163,10 +164,10 @@ export const DetailTab3: React.FC<DetailTab3Props> = ({ actions }) => {
               // load()
               search()
             }}
-          >查询</Button>
+          >{t('查询')}</Button>
           <Button className="ml10" onClick={() => {
             form.resetFields()
-          }}>重置</Button>
+          }}>{t('重置')}</Button>
         </Form.Item>
       </Form>
       <Table
@@ -179,17 +180,17 @@ export const DetailTab3: React.FC<DetailTab3Props> = ({ actions }) => {
         dataSource={dataSource?.map((i, id) => ({ id, ...i }))}
         columns={[
           {
-            title: '时间',
+            title: t('时间'),
             key: 'report_time',
             dataIndex: 'report_time',
             render (value) {
               return dayjs(value).format('YYYY-MM-DD HH:mm:ss')
             },
           },
-          { title: '标识符', key: 'code', dataIndex: 'code' },
-          { title: '服务名称', key: 'service_name', dataIndex: 'service_name' },
+          { title: t('标识符'), key: 'code', dataIndex: 'code' },
+          { title: t('服务名称'), key: 'service_name', dataIndex: 'service_name' },
           {
-            title: '输入参数',
+            title: t('输入参数'),
             key: 'input_data',
             dataIndex: 'input_data',
             render (value) {
@@ -197,7 +198,7 @@ export const DetailTab3: React.FC<DetailTab3Props> = ({ actions }) => {
             },
           },
           {
-            title: '输出参数',
+            title: t('输出参数'),
             key: 'output_data',
             dataIndex: 'output_data',
             render (value) {

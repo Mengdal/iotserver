@@ -303,7 +303,7 @@ func (app *ruleEngineApp) RuleEngineStop(ctx context.Context, id string) error {
 // checkParam 校验名称与绑定资源，返回资源实体
 func (app *ruleEngineApp) checkParam(name, dataResourceId, resourceType string) (models.DataResource, error) {
 	if len([]rune(dataResourceId)) > 64 {
-		return models.DataResource{}, errort.NewCommonErr(errort.DefaultReqParamsError, fmt.Errorf("数据资源ID非法"))
+		return models.DataResource{}, errort.NewCommonErr(errort.DefaultReqParamsError, errort.NewMessageErr("数据资源ID非法", nil))
 	}
 	if !valid.Name(name) {
 		return models.DataResource{}, errort.NewCommonErr(errort.DefaultNameSpecialCharacters,
@@ -311,13 +311,13 @@ func (app *ruleEngineApp) checkParam(name, dataResourceId, resourceType string) 
 	}
 	if strings.TrimSpace(dataResourceId) == "" {
 		return models.DataResource{}, errort.NewCommonErr(errort.DefaultReqParamsError,
-			fmt.Errorf("请选择数据资源"))
+			errort.NewMessageErr("请选择数据资源", nil))
 	}
 	// 平台作用域：系统路径，不按租户过滤
 	resource, err := app.dbClient.WithCtx(tenant.Platform(context.Background())).DataResourceById(dataResourceId)
 	if err != nil {
 		return models.DataResource{}, errort.NewCommonErr(errort.InvalidSource,
-			fmt.Errorf("数据资源 %s 不存在或已被删除", dataResourceId))
+			errort.NewMessageErr("数据资源 {{.p1}} 不存在或已被删除", map[string]interface{}{"p1": dataResourceId}))
 	}
 	// 前端单选值优先，其次以资源的真实类型为准
 	if strings.TrimSpace(resourceType) != "" && resourceType != resource.Type {
@@ -444,10 +444,10 @@ func (app *ruleEngineApp) syncStatus() {
 func checkTextLen(description, sql string) error {
 	if len([]rune(description)) > maxDescriptionLen {
 		return errort.NewCommonErr(errort.DefaultReqParamsError,
-			fmt.Errorf("规则描述长度不能超过 %d 个字符", maxDescriptionLen))
+			errort.NewMessageErr("规则描述长度不能超过 {{.p1}} 个字符", map[string]interface{}{"p1": maxDescriptionLen}))
 	}
 	if len(sql) > maxSqlLen {
-		return errort.NewCommonErr(errort.DefaultReqParamsError, fmt.Errorf("规则SQL过长"))
+		return errort.NewCommonErr(errort.DefaultReqParamsError, errort.NewMessageErr("规则SQL过长", nil))
 	}
 	return nil
 }

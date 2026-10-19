@@ -29,6 +29,7 @@ import {
   SysMenu,
 } from '@/api'
 import { useAuth } from '@/utils/auth'
+import { t } from '@/i18n'
 
 const { useMessage } = message
 
@@ -40,7 +41,7 @@ interface MenuTreeNode {
 
 function toTreeData (list: SysMenu[]): MenuTreeNode[] {
   return list.map(item => {
-    const node: MenuTreeNode = { key: item.id, title: item.menuType === 'F' ? `${item.name}（按钮）` : item.name }
+    const node: MenuTreeNode = { key: item.id, title: item.menuType === 'F' ? t('{{name}}（按钮）', { name: item.name }) : item.name }
     if (item.children && item.children.length > 0) {
       node.children = toTreeData(item.children)
     }
@@ -61,10 +62,10 @@ function collectKeys (list: SysMenu[]): string[] {
 }
 
 const dataScopeOptions = [
-  { label: '全部数据', value: '1' },
-  { label: '本部门数据', value: '2' },
-  { label: '本部门及以下数据', value: '3' },
-  { label: '仅本人数据', value: '4' },
+  { label: t('全部数据'), value: '1' },
+  { label: t('本部门数据'), value: '2' },
+  { label: t('本部门及以下数据'), value: '3' },
+  { label: t('仅本人数据'), value: '4' },
 ]
 
 const SysRolePage: React.FC = () => {
@@ -154,7 +155,7 @@ const SysRolePage: React.FC = () => {
       ? await updateSysRole({ ...values, id: editing.id })
       : await addSysRole(values)
     if (resp.success) {
-      messageApi.open({ type: 'success', content: editing ? '修改成功' : '新增成功' })
+      messageApi.open({ type: 'success', content: editing ? t('修改成功') : t('新增成功') })
       setModalOpen(false)
       loadData()
     } else {
@@ -165,7 +166,7 @@ const SysRolePage: React.FC = () => {
   const handleDelete = async (ids: string[]) => {
     const resp = await deleteSysRole(ids)
     if (resp.success) {
-      messageApi.open({ type: 'success', content: '删除成功' })
+      messageApi.open({ type: 'success', content: t('删除成功') })
       setSelectedRowKeys([])
       loadData()
     } else {
@@ -202,7 +203,7 @@ const SysRolePage: React.FC = () => {
     const menuIds = Array.from(new Set([...checkedKeys, ...halfCheckedKeys]))
     const resp = await setRoleMenus(menuRole.id, menuIds)
     if (resp.success) {
-      messageApi.open({ type: 'success', content: '授权成功' })
+      messageApi.open({ type: 'success', content: t('授权成功') })
       setMenuModalOpen(false)
       loadData()
     } else {
@@ -211,40 +212,40 @@ const SysRolePage: React.FC = () => {
   }
 
   const columns: ColumnsType<SysRole> = [
-    { title: '角色名称', dataIndex: 'name', width: 180 },
-    { title: '权限字符', dataIndex: 'roleKey', width: 160, render: (value: string) => <Tag color="blue">{value}</Tag> },
-    { title: '显示顺序', dataIndex: 'sort', width: 100 },
+    { title: t('角色名称'), dataIndex: 'name', width: 180 },
+    { title: t('权限字符'), dataIndex: 'roleKey', width: 160, render: (value: string) => <Tag color="blue">{value}</Tag> },
+    { title: t('显示顺序'), dataIndex: 'sort', width: 100 },
     {
-      title: '数据范围',
+      title: t('数据范围'),
       dataIndex: 'dataScope',
       width: 160,
       render: (value: string) => dataScopeOptions.find(item => item.value === value)?.label || value || '-',
     },
     {
-      title: '状态',
+      title: t('状态'),
       dataIndex: 'status',
       width: 90,
-      render: (value: number) => (value === 1 ? <Tag color="success">正常</Tag> : <Tag color="default">停用</Tag>),
+      render: (value: number) => (value === 1 ? <Tag color="success">{t('正常')}</Tag> : <Tag color="default">{t('停用')}</Tag>),
     },
-    { title: '备注', dataIndex: 'remark', ellipsis: true, render: (value: string) => value || '-' },
+    { title: t('备注'), dataIndex: 'remark', ellipsis: true, render: (value: string) => value || '-' },
     {
-      title: '创建时间',
+      title: t('创建时间'),
       dataIndex: 'created',
       width: 180,
       render: (value: number) => (value ? dayjs(value).format('YYYY-MM-DD HH:mm:ss') : '-'),
     },
     {
-      title: '操作',
+      title: t('操作'),
       key: 'action',
       width: 200,
       fixed: 'right',
       render: (_, record) => (
         <Space size={4}>
-          {canEdit && <Button type="link" size="small" onClick={() => openEdit(record)}>编辑</Button>}
-          {canEdit && <Button type="link" size="small" onClick={() => openMenus(record)}>菜单权限</Button>}
+          {canEdit && <Button type="link" size="small" onClick={() => openEdit(record)}>{t('编辑')}</Button>}
+          {canEdit && <Button type="link" size="small" onClick={() => openMenus(record)}>{t('菜单权限')}</Button>}
           {canRemove && record.roleKey !== 'admin' && (
-            <Popconfirm title="确认删除该角色？" onConfirm={() => handleDelete([record.id])} okText="确定" cancelText="取消">
-              <Button type="link" size="small" danger>删除</Button>
+            <Popconfirm title={t('确认删除该角色？')} onConfirm={() => handleDelete([record.id])} okText={t('确定')} cancelText={t('取消')}>
+              <Button type="link" size="small" danger>{t('删除')}</Button>
             </Popconfirm>
           )}
         </Space>
@@ -256,16 +257,16 @@ const SysRolePage: React.FC = () => {
     <Card className="admin-page">
       {contextHolder}
       <Form form={form} layout="inline" style={{ marginBottom: 16, rowGap: 8 }}>
-        <Form.Item name="nameLike" label="角色名称">
-          <Input placeholder="请输入角色名称" allowClear style={{ width: 180 }} />
+        <Form.Item name="nameLike" label={t('角色名称')}>
+          <Input placeholder={t('请输入角色名称')} allowClear style={{ width: 180 }} />
         </Form.Item>
-        <Form.Item name="roleKey" label="权限字符">
-          <Input placeholder="请输入权限字符" allowClear style={{ width: 180 }} />
+        <Form.Item name="roleKey" label={t('权限字符')}>
+          <Input placeholder={t('请输入权限字符')} allowClear style={{ width: 180 }} />
         </Form.Item>
-        <Form.Item name="status" label="状态">
-          <Select placeholder="全部" allowClear style={{ width: 120 }}>
-            <Select.Option value="1">正常</Select.Option>
-            <Select.Option value="0">停用</Select.Option>
+        <Form.Item name="status" label={t('状态')}>
+          <Select placeholder={t('全部')} allowClear style={{ width: 120 }}>
+            <Select.Option value="1">{t('正常')}</Select.Option>
+            <Select.Option value="0">{t('停用')}</Select.Option>
           </Select>
         </Form.Item>
         <Form.Item>
@@ -278,7 +279,7 @@ const SysRolePage: React.FC = () => {
                 loadData(1, pagination.pageSize)
               }}
             >
-              查询
+              {t('查询')}
             </Button>
             <Button
               icon={<ReloadOutlined />}
@@ -288,23 +289,23 @@ const SysRolePage: React.FC = () => {
                 loadData(1, pagination.pageSize)
               }}
             >
-              重置
+              {t('重置')}
             </Button>
           </Space>
         </Form.Item>
       </Form>
 
       <Space style={{ marginBottom: 12 }}>
-        {canAdd && <Button type="primary" icon={<PlusOutlined />} onClick={openAdd}>新增角色</Button>}
+        {canAdd && <Button type="primary" icon={<PlusOutlined />} onClick={openAdd}>{t('新增角色')}</Button>}
         {canRemove && (
           <Popconfirm
-            title={`确认删除选中的 ${selectedRowKeys.length} 个角色？`}
+            title={t('确认删除选中的 {{count}} 个角色？', { count: selectedRowKeys.length })}
             onConfirm={() => handleDelete(selectedRowKeys as string[])}
-            okText="确定"
-            cancelText="取消"
+            okText={t('确定')}
+            cancelText={t('取消')}
             disabled={selectedRowKeys.length === 0}
           >
-            <Button danger disabled={selectedRowKeys.length === 0}>批量删除</Button>
+            <Button danger disabled={selectedRowKeys.length === 0}>{t('批量删除')}</Button>
           </Popconfirm>
         )}
       </Space>
@@ -326,7 +327,7 @@ const SysRolePage: React.FC = () => {
           size: 'small',
           showQuickJumper: true,
           showSizeChanger: true,
-          showTotal: t => `共 ${t} 条`,
+          showTotal: total => t('共 {{count}} 条', { count: total }),
           total,
           current: pagination.current,
           pageSize: pagination.pageSize,
@@ -339,45 +340,45 @@ const SysRolePage: React.FC = () => {
 
       <Drawer
         open={modalOpen}
-        title={editing ? '编辑角色' : '新增角色'}
+        title={editing ? t('编辑角色') : t('新增角色')}
         placement="right"
         width={640}
         onClose={() => setModalOpen(false)}
         footer={
           <Space style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <Button onClick={() => setModalOpen(false)}>取消</Button>
-            <Button type="primary" onClick={handleSubmit}>确定</Button>
+            <Button onClick={() => setModalOpen(false)}>{t('取消')}</Button>
+            <Button type="primary" onClick={handleSubmit}>{t('确定')}</Button>
           </Space>
         }
       >
         <Form form={editForm} layout="vertical">
-          <Form.Item label="角色名称" name="name" rules={[{ required: true, message: '请输入角色名称' }]}>
-            <Input placeholder="请输入角色名称" />
+          <Form.Item label={t('角色名称')} name="name" rules={[{ required: true, message: t('请输入角色名称') }]}>
+            <Input placeholder={t('请输入角色名称')} />
           </Form.Item>
           <Form.Item
-            label="权限字符"
+            label={t('权限字符')}
             name="roleKey"
-            extra="同一租户内不可重复（不同租户可以同名）；填 admin 表示该租户的超级管理员：菜单全给、权限拉满，且不可停用/删除"
+            extra={t('同一租户内不可重复（不同租户可以同名）；填 admin 表示该租户的超级管理员：菜单全给、权限拉满，且不可停用/删除')}
             rules={[
-              { required: true, message: '请输入权限字符' },
-              { pattern: /^[A-Za-z0-9_:.-]+$/, message: '只能包含字母、数字与 _ : . -' },
+              { required: true, message: t('请输入权限字符') },
+              { pattern: /^[A-Za-z0-9_:.-]+$/, message: t('只能包含字母、数字与 _ : . -') },
             ]}
           >
-            <Input placeholder="例如 operator" />
+            <Input placeholder={t('例如 operator')} />
           </Form.Item>
-          <Form.Item label="显示顺序" name="sort">
+          <Form.Item label={t('显示顺序')} name="sort">
             <InputNumber min={0} style={{ width: '100%' }} />
           </Form.Item>
-          <Form.Item label="数据范围" name="dataScope">
+          <Form.Item label={t('数据范围')} name="dataScope">
             <Select options={dataScopeOptions} />
           </Form.Item>
-          <Form.Item label="状态" name="status">
+          <Form.Item label={t('状态')} name="status">
             <Select>
-              <Select.Option value={1}>正常</Select.Option>
-              <Select.Option value={0}>停用</Select.Option>
+              <Select.Option value={1}>{t('正常')}</Select.Option>
+              <Select.Option value={0}>{t('停用')}</Select.Option>
             </Select>
           </Form.Item>
-          <Form.Item label="菜单权限" name="menuIds">
+          <Form.Item label={t('菜单权限')} name="menuIds">
             <Tree
               checkable
               selectable={false}
@@ -393,22 +394,22 @@ const SysRolePage: React.FC = () => {
               }}
             />
           </Form.Item>
-          <Form.Item label="备注" name="remark">
-            <Input.TextArea rows={2} placeholder="请输入备注" />
+          <Form.Item label={t('备注')} name="remark">
+            <Input.TextArea rows={2} placeholder={t('请输入备注')} />
           </Form.Item>
         </Form>
       </Drawer>
 
       <Drawer
         open={menuModalOpen}
-        title={`菜单权限${menuRole ? ` - ${menuRole.name}` : ''}`}
+        title={t('菜单权限{{p1}}', { p1: menuRole ? ` - ${menuRole.name}` : '' })}
         placement="right"
         width={520}
         onClose={() => setMenuModalOpen(false)}
         footer={
           <Space style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <Button onClick={() => setMenuModalOpen(false)}>取消</Button>
-            <Button type="primary" onClick={handleSaveMenus}>保存</Button>
+            <Button onClick={() => setMenuModalOpen(false)}>{t('取消')}</Button>
+            <Button type="primary" onClick={handleSaveMenus}>{t('保存')}</Button>
           </Space>
         }
       >

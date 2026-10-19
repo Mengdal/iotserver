@@ -3,6 +3,7 @@ import { Form, Drawer, Input, Button, Space, message } from 'antd'
 import { CloseOutlined } from '@ant-design/icons'
 import { addDockerConfigs, editDockerConfigs } from '@/api'
 import { DockerConfigs } from './DockerConfigModal'
+import { t } from '@/i18n'
 
 const { useForm } = Form
 
@@ -39,7 +40,7 @@ export const AddImageModal = forwardRef<AddImageModalRef, AddImageModalProps>(({
 
   return (
     <Drawer
-      title={record ? '镜像仓库编辑' : '新增镜像仓库'}
+      title={record ? t('镜像仓库编辑') : t('新增镜像仓库')}
       placement="right"
       open={isModalOpen}
       width={550}
@@ -64,7 +65,7 @@ export const AddImageModal = forwardRef<AddImageModalRef, AddImageModalProps>(({
                     editDockerConfigs(record.id, { id: record.id, ...values })
                       .then(resp => {
                         if (resp.success) {
-                          message.success('编辑成功')
+                          message.success(t('编辑成功'))
                           handleClose()
                           onFinish()
                         } else {
@@ -77,7 +78,7 @@ export const AddImageModal = forwardRef<AddImageModalRef, AddImageModalProps>(({
                     addDockerConfigs(values)
                       .then(resp => {
                         if (resp.success) {
-                          message.success('添加成功')
+                          message.success(t('添加成功'))
                           handleClose()
                           onFinish()
                         } else {
@@ -89,31 +90,31 @@ export const AddImageModal = forwardRef<AddImageModalRef, AddImageModalProps>(({
                   }
                 })
             }}
-          >确定</Button>
-          <Button onClick={handleClose}>取消</Button>
+          >{t('确定')}</Button>
+          <Button onClick={handleClose}>{t('取消')}</Button>
         </Space>
       }
     >
       <Form form={form} layout="vertical">
         <Form.Item
-          label="镜像地址"
+          label={t('镜像地址')}
           name="address"
-          rules={[{ required: true, message: '请输入镜像地址' }]}
+          rules={[{ required: true, message: t('请输入镜像地址') }]}
         >
-          <Input placeholder="请输入镜像地址"></Input>
+          <Input placeholder={t('请输入镜像地址')}></Input>
         </Form.Item>
         <Form.Item
-          label="账号"
+          label={t('账号')}
           name="account"
         >
-          <Input placeholder="请输入账号"></Input>
+          <Input placeholder={t('请输入账号')}></Input>
         </Form.Item>
         <Form.Item
-          label="密码"
+          label={t('密码')}
           name="password"
         >
           <Input.Password
-            placeholder="请输入密码"
+            placeholder={t('请输入密码')}
           ></Input.Password>
         </Form.Item>
       </Form>

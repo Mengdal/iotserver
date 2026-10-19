@@ -13,6 +13,7 @@ import (
 	pkgcontainer "iotserver/internal/pkg/container"
 	"iotserver/internal/pkg/di"
 	"iotserver/internal/pkg/errort"
+	"iotserver/internal/pkg/i18n"
 	"iotserver/internal/pkg/logger"
 	"iotserver/internal/pkg/tenant"
 	"iotserver/internal/pkg/valid"
@@ -189,9 +190,14 @@ func (app *resourceApp) DataResourceVerify(ctx context.Context, id string) (dtos
 		return dtos.DataResourceVerifyResponse{}, err
 	}
 
-	resp := dtos.DataResourceVerifyResponse{Health: health, Message: "验证成功"}
+	resp := dtos.DataResourceVerifyResponse{Health: health, Message: i18n.Trans(i18n.GetLang(ctx), "验证成功", nil)}
 	if checkErr != nil {
-		resp.Message = checkErr.Error()
+		// healthcheck 返回的是带词条的错误，按请求语言渲染；其它错误原样透出
+		if msg, ok := i18n.LocalizeError(ctx, checkErr); ok {
+			resp.Message = msg
+		} else {
+			resp.Message = checkErr.Error()
+		}
 		app.lc.Warnf("data resource %s(%s) verify failed: %v", resource.Name, resource.Type, checkErr)
 	}
 	return resp, nil
@@ -206,7 +212,7 @@ func validate(name, resourceType string, option map[string]interface{}) error {
 	}
 	if !isValidType(resourceType) {
 		return errort.NewCommonErr(errort.DefaultReqParamsError,
-			fmt.Errorf("不支持的资源类型: %s", resourceType))
+			errort.NewMessageErr("不支持的资源类型: {{.p1}}", map[string]interface{}{"p1": resourceType}))
 	}
 	if err := checkOptionSize(option); err != nil {
 		return err
@@ -219,7 +225,7 @@ func validate(name, resourceType string, option map[string]interface{}) error {
 	}
 	if len(missing) > 0 {
 		return errort.NewCommonErr(errort.DefaultReqParamsError,
-			fmt.Errorf("缺少必填参数: %s", strings.Join(missing, ", ")))
+			errort.NewMessageErr("缺少必填参数: {{.p1}}", map[string]interface{}{"p1": strings.Join(missing, ", ")}))
 	}
 	return nil
 }
@@ -228,12 +234,12 @@ func validate(name, resourceType string, option map[string]interface{}) error {
 func checkOptionSize(option map[string]interface{}) error {
 	if len(option) > maxOptionFields {
 		return errort.NewCommonErr(errort.DefaultReqParamsError,
-			fmt.Errorf("连接参数项过多（最多 %d 项）", maxOptionFields))
+			errort.NewMessageErr("连接参数项过多（最多 {{.p1}} 项）", map[string]interface{}{"p1": maxOptionFields}))
 	}
 	for key, value := range option {
 		if text, ok := value.(string); ok && len([]rune(text)) > maxOptionFieldLen {
 			return errort.NewCommonErr(errort.DefaultReqParamsError,
-				fmt.Errorf("连接参数 %s 过长（最多 %d 个字符）", key, maxOptionFieldLen))
+				errort.NewMessageErr("连接参数 {{.p1}} 过长（最多 {{.p2}} 个字符）", map[string]interface{}{"p1": key, "p2": maxOptionFieldLen}))
 		}
 	}
 	return nil

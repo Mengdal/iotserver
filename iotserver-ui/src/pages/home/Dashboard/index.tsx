@@ -4,6 +4,7 @@ import { Button, Empty, Spin } from 'antd'
 import { getVizBoards, VizBoard } from '@/api'
 import CanvasBoard from '@/components/CanvasBoard'
 import './index.less'
+import { t } from '@/i18n'
 
 /**
  * 首页：整页渲染「首页看板」（看板管理里设为首页看板的那块；新装由内置种子自带，
@@ -22,9 +23,9 @@ const Dashboard: React.FC = () => {
     getVizBoards()
       .then((resp) => {
         if (resp.success) setBoard((resp.result.list || []).find(b => b.isHome))
-        else setError(resp.errorMsg || '看板加载失败')
+        else setError(resp.errorMsg || t('看板加载失败'))
       })
-      .catch((e: any) => setError(e?.message || '看板加载失败'))
+      .catch((e: any) => setError(e?.message || t('看板加载失败')))
       .finally(() => setLoading(false))
   }, [])
 
@@ -37,9 +38,9 @@ const Dashboard: React.FC = () => {
       <div className="dashboard">
         <Empty
           image={Empty.PRESENTED_IMAGE_SIMPLE}
-          description={error || '还没有首页看板：去「看板管理」新建一块，并设为首页看板'}
+          description={error || t('还没有首页看板：去「看板管理」新建一块，并设为首页看板')}
         >
-          <Button type="primary" onClick={() => navigate('/viz/boards')}>去看板管理</Button>
+          <Button type="primary" onClick={() => navigate('/viz/boards')}>{t('去看板管理')}</Button>
         </Empty>
       </div>
     )

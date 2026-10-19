@@ -1,4 +1,5 @@
 import React from 'react'
+import { tt } from '@/i18n'
 import { Tabs, Card } from 'antd'
 import HttpPush from './HttpPush1'
 import MessageMQTT from './MessageMQTT'
@@ -40,7 +41,8 @@ const ResourceManage: React.FC<ResourceManageProps> = () => {
           type="card"
           items={(typeResource.data || []).map((label: typeEnum, key: number) => ({
             key,
-            label,
+            // 类型来自后端（HTTP推送 / 消息队列Kafka 等），词条里有就翻
+            label: tt(label),
             children: typeComponent[label],
           }))}
         />

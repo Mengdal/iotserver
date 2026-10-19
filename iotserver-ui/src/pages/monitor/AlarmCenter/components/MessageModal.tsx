@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react'
 import { Form, message, Input, Popconfirm, Typography } from 'antd'
 // import { WebSocketContext } from '@/components/WebSocket'
 import { AlertList, alertTreated } from '@/api/alarmList'
+import { t } from '@/i18n'
 
 const { useForm } = Form
 
@@ -37,11 +38,11 @@ export const MessageModal: React.FC<MessageModalProps> = ({ record, onFinish }) 
       title={(
         <Form form={form} layout="vertical">
           <Form.Item
-            label="处理意见"
+            label={t('处理意见')}
             name="message"
-            rules={[{ required: true, message: '请输入处理意见' }]}
+            rules={[{ required: true, message: t('请输入处理意见') }]}
           >
-            <Input allowClear placeholder="请输入处理意见"></Input>
+            <Input allowClear placeholder={t('请输入处理意见')}></Input>
           </Form.Item>
         </Form>
       )}
@@ -55,7 +56,7 @@ export const MessageModal: React.FC<MessageModalProps> = ({ record, onFinish }) 
             alertTreated(values)
               .then(resp => {
                 if (resp.success) {
-                  message.success('处理成功')
+                  message.success(t('处理成功'))
                   handleClose()
                   onFinish()
                 } else {
@@ -67,8 +68,8 @@ export const MessageModal: React.FC<MessageModalProps> = ({ record, onFinish }) 
           })
       }}
       onCancel={handleClose}
-      okText="确定"
-      cancelText="取消"
+      okText={t('确定')}
+      cancelText={t('取消')}
     >
       <Typography.Link
         onClick={() => {
@@ -77,7 +78,7 @@ export const MessageModal: React.FC<MessageModalProps> = ({ record, onFinish }) 
         }}
         disabled={record.status === '已处理'}
       >
-        处理
+        {t('处理')}
       </Typography.Link>
     </Popconfirm>
   </>

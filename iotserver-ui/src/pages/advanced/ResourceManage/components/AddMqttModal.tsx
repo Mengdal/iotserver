@@ -2,6 +2,7 @@ import { Button, Drawer, Form, Input, message, Select, Space } from 'antd'
 import { CloseOutlined } from '@ant-design/icons'
 import React, { forwardRef, useCallback, useImperativeHandle, useState } from 'react'
 import { addResource, editResource, MqttResource } from '@/api'
+import { t } from '@/i18n'
 
 const { useForm } = Form
 
@@ -43,7 +44,7 @@ export const AddMqttModal = forwardRef<AddMqttModalRef, AddMqttModalProps>(({ on
 
   return (
     <Drawer
-      title={record ? '修改实例' : '添加实例'}
+      title={record ? t('修改实例') : t('添加实例')}
       placement="right"
       open={isModalOpen}
       width={550}
@@ -70,7 +71,7 @@ export const AddMqttModal = forwardRef<AddMqttModalRef, AddMqttModalProps>(({ on
                     editResource(values)
                       .then(resp => {
                         if (resp.success) {
-                          message.success('修改成功')
+                          message.success(t('修改成功'))
                           handleClose()
                           onFinish()
                         } else {
@@ -83,7 +84,7 @@ export const AddMqttModal = forwardRef<AddMqttModalRef, AddMqttModalProps>(({ on
                     addResource(values)
                       .then(resp => {
                         if (resp.success) {
-                          message.success('添加成功')
+                          message.success(t('添加成功'))
                           handleClose()
                           onFinish()
                         } else {
@@ -95,8 +96,8 @@ export const AddMqttModal = forwardRef<AddMqttModalRef, AddMqttModalProps>(({ on
                   }
                 })
             }}
-          >确定</Button>
-          <Button onClick={handleClose}>取消</Button>
+          >{t('确定')}</Button>
+          <Button onClick={handleClose}>{t('取消')}</Button>
         </Space>
       }
     >
@@ -105,51 +106,51 @@ export const AddMqttModal = forwardRef<AddMqttModalRef, AddMqttModalProps>(({ on
         layout="vertical"
       >
         <Form.Item
-          label="实例名称"
+          label={t('实例名称')}
           name="name"
           rules={[
             {
               required: true,
               validator (rule, value, callback) {
                 if (!value) {
-                  callback('请输入实例名称')
+                  callback(t('请输入实例名称'))
                 } else if (/^[a-zA-Z\u4e00-\u9fa5][a-zA-Z0-9\u4e00-\u9fa5_-]{0,31}$/.test(value)) {
                   callback()
                 } else {
-                  callback('1-32位字符，支持中文、英文、数字及特殊字符_-，必须以英文或中文字符开头')
+                  callback(t('1-32位字符，支持中文、英文、数字及特殊字符_-，必须以英文或中文字符开头'))
                 }
               },
             },
           ]}
         >
-          <Input placeholder="1-32位字符，支持中文、英文、数字及特殊字符_-，必须以英文或中文字符开头"></Input>
+          <Input placeholder={t('1-32位字符，支持中文、英文、数字及特殊字符_-，必须以英文或中文字符开头')}></Input>
         </Form.Item>
         <Form.Item
           label="MQTT broker address"
           name={['option', 'server']}
-          rules={[{ required: true, message: '不能为空' }]}
+          rules={[{ required: true, message: t('不能为空') }]}
         >
-          <Input placeholder="请输入"></Input>
+          <Input placeholder={t('请输入')}></Input>
         </Form.Item>
         <Form.Item
           label="MQTT topic"
           name={['option', 'topic']}
-          rules={[{ required: true, message: '不能为空' }]}
+          rules={[{ required: true, message: t('不能为空') }]}
         >
-          <Input placeholder="请输入"></Input>
+          <Input placeholder={t('请输入')}></Input>
         </Form.Item>
         <Form.Item
           label="MQTT client"
           name={['option', 'clientId']}
         >
-          <Input placeholder="请输入"></Input>
+          <Input placeholder={t('请输入')}></Input>
         </Form.Item>
         <Form.Item
           label="MQTT protocol version"
           name={['option', 'protocolVersion']}
         >
           <Select
-            placeholder="请选择"
+            placeholder={t('请选择')}
             onChange={handleChange}
             options={[
               { value: '3.1', label: '3.1' },
@@ -162,7 +163,7 @@ export const AddMqttModal = forwardRef<AddMqttModalRef, AddMqttModalProps>(({ on
           name={['option', 'qos']}
         >
           <Select
-            placeholder="请选择"
+            placeholder={t('请选择')}
             onChange={handleChange}
             options={[
               { value: 0, label: '0' },
@@ -175,13 +176,13 @@ export const AddMqttModal = forwardRef<AddMqttModalRef, AddMqttModalProps>(({ on
           label="Username"
           name={['option', 'username']}
         >
-          <Input placeholder="请输入"></Input>
+          <Input placeholder={t('请输入')}></Input>
         </Form.Item>
         <Form.Item
           label="Password"
           name={['option', 'password']}
         >
-          <Input placeholder="请输入"></Input>
+          <Input placeholder={t('请输入')}></Input>
         </Form.Item>
       </Form>
     </Drawer>

@@ -527,3 +527,12 @@ export function getSiteInfo<T = SiteInfo> () {
     method: 'get',
   })
 }
+
+/** 保存当前用户的语言偏好（跟随账号） */
+export function updateUserLang (lang: string) {
+  return httpRequest<any, CommonResponse<any>>({
+    url: '/api/v1/user/lang',
+    method: 'put',
+    data: { lang },
+  })
+}

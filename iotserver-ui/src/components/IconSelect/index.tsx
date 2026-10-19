@@ -75,6 +75,7 @@ import {
   UserOutlined,
   WifiOutlined,
 } from '@ant-design/icons'
+import { t } from '@/i18n'
 
 interface IconGroup {
   title: string
@@ -87,7 +88,7 @@ interface IconGroup {
  */
 const ICON_GROUPS: IconGroup[] = [
   {
-    title: '导航与布局',
+    title: t('导航与布局'),
     icons: [
       ['home', <HomeOutlined />],
       ['dashboard', <DashboardOutlined />],
@@ -103,7 +104,7 @@ const ICON_GROUPS: IconGroup[] = [
     ],
   },
   {
-    title: '系统与权限',
+    title: t('系统与权限'),
     icons: [
       ['setting', <SettingOutlined />],
       ['tool', <ToolOutlined />],
@@ -124,7 +125,7 @@ const ICON_GROUPS: IconGroup[] = [
     ],
   },
   {
-    title: '数据与监控',
+    title: t('数据与监控'),
     icons: [
       ['database', <DatabaseOutlined />],
       ['hdd', <HddOutlined />],
@@ -153,7 +154,7 @@ const ICON_GROUPS: IconGroup[] = [
     ],
   },
   {
-    title: '设备与文档',
+    title: t('设备与文档'),
     icons: [
       ['desktop', <DesktopOutlined />],
       ['laptop', <LaptopOutlined />],
@@ -220,7 +221,7 @@ export interface IconSelectProps {
 const IconSelect: React.FC<IconSelectProps> = ({
   value,
   onChange,
-  placeholder = '请选择图标',
+  placeholder = t('请选择图标'),
   disabled,
 }) => (
   <Select

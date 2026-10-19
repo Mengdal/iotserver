@@ -14,6 +14,7 @@ import { isPlatformOnlyMetric } from '../platformScope'
 import { MetricsEditor, useVizMetricDefs } from './MetricsEditor'
 import { SettingGroup, SettingRow, SETTINGS_ITEM_LABEL_WIDTH } from './SettingsLayout'
 import './stats.less'
+import { t, tt } from '@/i18n'
 
 const { Text } = Typography
 
@@ -60,30 +61,30 @@ const ICONS: Record<string, React.ReactNode> = {
 }
 
 const ICON_OPTIONS = [
-  { label: '产品', value: 'appstore' },
-  { label: '设备', value: 'devices' },
-  { label: '网关', value: 'gateway' },
-  { label: '告警', value: 'alert' },
-  { label: '通知', value: 'bell' },
-  { label: '数值', value: 'number' },
-  { label: '趋势', value: 'chart' },
-  { label: '用户', value: 'user' },
-  { label: '连接', value: 'wifi' },
-  { label: '能耗', value: 'bolt' },
-  { label: '数据', value: 'db' },
-  { label: '时间', value: 'clock' },
+  { label: t('产品'), value: 'appstore' },
+  { label: t('设备'), value: 'devices' },
+  { label: t('网关'), value: 'gateway' },
+  { label: t('告警'), value: 'alert' },
+  { label: t('通知'), value: 'bell' },
+  { label: t('数值'), value: 'number' },
+  { label: t('趋势'), value: 'chart' },
+  { label: t('用户'), value: 'user' },
+  { label: t('连接'), value: 'wifi' },
+  { label: t('能耗'), value: 'bolt' },
+  { label: t('数据'), value: 'db' },
+  { label: t('时间'), value: 'clock' },
 ]
 
 /** 预置色调：与 stats.less 里的 --blue/--cyan/... 对应 */
 const TONES = ['blue', 'cyan', 'green', 'orange', 'purple', 'red']
 
 const TONE_OPTIONS = [
-  { label: '蓝', value: 'blue' },
-  { label: '青', value: 'cyan' },
-  { label: '绿', value: 'green' },
-  { label: '橙', value: 'orange' },
-  { label: '紫', value: 'purple' },
-  { label: '红', value: 'red' },
+  { label: t('蓝'), value: 'blue' },
+  { label: t('青'), value: 'cyan' },
+  { label: t('绿'), value: 'green' },
+  { label: t('橙'), value: 'orange' },
+  { label: t('紫'), value: 'purple' },
+  { label: t('红'), value: 'red' },
 ]
 
 /** 全部绑定的指标 key（主指标 + 子项），去重 */
@@ -120,7 +121,7 @@ const StatsWidget: React.FC<{ config: StatsConfig; ctx: any }> = ({ config, ctx 
   }, [ctx.data])
 
   if (tiles.length === 0) {
-    return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="还没配置统计块（右上角菜单 → 配置本组件）" />
+    return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t('还没配置统计块（右上角菜单 → 配置本组件）')} />
   }
   if (ctx.loading && values.size === 0) return <div style={{ textAlign: 'center', paddingTop: 12 }}><Spin /></div>
 
@@ -136,23 +137,23 @@ const StatsWidget: React.FC<{ config: StatsConfig; ctx: any }> = ({ config, ctx 
           <div key={index} className={`stats-widget__tile stats-widget__tile--${tone}`}>
             <div className="stats-widget__head">
               <span className="stats-widget__icon">{ICONS[tile.icon || ''] || <FieldNumberOutlined />}</span>
-              <span className="stats-widget__title">{tile.label || (main && main.label) || '未命名'}</span>
+              <span className="stats-widget__title">{tt(tile.label) || tt(main && main.label) || t('未命名')}</span>
             </div>
             <div className="stats-widget__value">
               {tile.metric ? fmt(main) : '--'}
-              {main && main.unit ? <span className="stats-widget__unit">{main.unit}</span> : null}
+              {main && main.unit ? <span className="stats-widget__unit">{tt(main.unit)}</span> : null}
             </div>
             <div className="stats-widget__foot">
               {(tile.tags || []).map((tag, tagIndex) => {
                 const v = tag.metric ? values.get(tag.metric) : undefined
                 return (
                   <span className="stats-widget__tag" key={tagIndex}>
-                    {tag.label || '子项'}
-                    <b>{tag.metric ? `${fmt(v)}${(v && v.unit) || ''}` : '--'}</b>
+                    {tt(tag.label) || t('子项')}
+                    <b>{tag.metric ? `${fmt(v)}${tt(v && v.unit)}` : '--'}</b>
                   </span>
                 )
               })}
-              {tile.note ? <span className="stats-widget__note">{tile.note}</span> : null}
+              {tile.note ? <span className="stats-widget__note">{tt(tile.note)}</span> : null}
             </div>
           </div>
         )
@@ -174,7 +175,7 @@ const StatsSettings: React.FC<VizWidgetSettingsProps<StatsConfig>> = ({ config, 
 
   return (
     <SettingGroup
-      title="统计块"
+      title={t('统计块')}
       extra={(
         <Button
           type="link"
@@ -182,24 +183,24 @@ const StatsSettings: React.FC<VizWidgetSettingsProps<StatsConfig>> = ({ config, 
           icon={<PlusOutlined />}
           onClick={() => onChange({ tiles: tiles.concat([{ label: '', metric: '', tags: [] }]) })}
         >
-          添加
+          {t('添加')}
         </Button>
       )}
     >
-      <SettingRow hint="每块显示一个指标；子项可再绑指标（如「本地 / 第三方」）。" />
+      <SettingRow hint={t('每块显示一个指标；子项可再绑指标（如「本地 / 第三方」）。')} />
       {tiles.length === 0
-        ? <Text type="secondary" style={{ fontSize: 12 }}>还没有统计块，点右上角「添加」。</Text>
+        ? <Text type="secondary" style={{ fontSize: 12 }}>{t('还没有统计块，点右上角「添加」。')}</Text>
         : null}
       {tiles.map((tile, index) => (
         <div className="viz-settings__item" key={index}>
-          <SettingRow label="标题" labelWidth={SETTINGS_ITEM_LABEL_WIDTH}>
+          <SettingRow label={t('标题')} labelWidth={SETTINGS_ITEM_LABEL_WIDTH}>
             <Input
               style={{ flex: 1, minWidth: 0 }}
-              placeholder="如：产品数"
+              placeholder={t('如：产品数')}
               value={tile.label}
               onChange={e => patchTile(index, { label: e.target.value })}
             />
-            <Tooltip title="删除这块">
+            <Tooltip title={t('删除这块')}>
               <Button
                 danger
                 type="text"
@@ -208,18 +209,18 @@ const StatsSettings: React.FC<VizWidgetSettingsProps<StatsConfig>> = ({ config, 
               />
             </Tooltip>
           </SettingRow>
-          <SettingRow label="指标" labelWidth={SETTINGS_ITEM_LABEL_WIDTH}>
+          <SettingRow label={t('指标')} labelWidth={SETTINGS_ITEM_LABEL_WIDTH}>
             <MetricsEditor
               single
               value={tile.metric ? [tile.metric] : []}
               onChange={next => patchTile(index, { metric: next[0] || '' })}
             />
           </SettingRow>
-          <SettingRow label="样式" labelWidth={SETTINGS_ITEM_LABEL_WIDTH}>
+          <SettingRow label={t('样式')} labelWidth={SETTINGS_ITEM_LABEL_WIDTH}>
             <Select
               style={{ flex: 1, minWidth: 0 }}
               allowClear
-              placeholder="图标"
+              placeholder={t('图标')}
               value={tile.icon || undefined}
               options={ICON_OPTIONS}
               onChange={(v: string) => patchTile(index, { icon: v || '' })}
@@ -233,10 +234,10 @@ const StatsSettings: React.FC<VizWidgetSettingsProps<StatsConfig>> = ({ config, 
           </SettingRow>
           {(tile.tags || []).map((tag, tagIndex) => (
             // 第一行给标签、后续行留空位（' ' 保持标签列宽度，控件才能对齐）
-            <SettingRow key={tagIndex} label={tagIndex === 0 ? '子项' : ' '} labelWidth={SETTINGS_ITEM_LABEL_WIDTH}>
+            <SettingRow key={tagIndex} label={tagIndex === 0 ? t('子项') : ' '} labelWidth={SETTINGS_ITEM_LABEL_WIDTH}>
               <Input
                 style={{ width: 76 }}
-                placeholder="名称"
+                placeholder={t('名称')}
                 value={tag.label}
                 onChange={e => patchTag(index, tagIndex, { label: e.target.value })}
               />
@@ -263,13 +264,13 @@ const StatsSettings: React.FC<VizWidgetSettingsProps<StatsConfig>> = ({ config, 
               icon={<PlusOutlined />}
               onClick={() => patchTile(index, { tags: (tile.tags || []).concat([{ label: '', metric: '' }]) })}
             >
-              添加子项
+              {t('添加子项')}
             </Button>
           </SettingRow>
-          <SettingRow label="脚注" labelWidth={SETTINGS_ITEM_LABEL_WIDTH}>
+          <SettingRow label={t('脚注')} labelWidth={SETTINGS_ITEM_LABEL_WIDTH}>
             <Input
               style={{ flex: 1, minWidth: 0 }}
-              placeholder="可选，如：数据统计截止昨日 24 时"
+              placeholder={t('可选，如：数据统计截止昨日 24 时')}
               value={tile.note || ''}
               onChange={e => patchTile(index, { note: e.target.value })}
             />
@@ -282,7 +283,7 @@ const StatsSettings: React.FC<VizWidgetSettingsProps<StatsConfig>> = ({ config, 
 
 export const statsManifest: VizWidgetManifest<StatsConfig> = {
   type: 'stats',
-  label: '统计卡',
+  label: t('统计卡'),
   icon: <FundOutlined />,
   defaultSize: { w: 12, h: 5 },
   minSize: { w: 3, h: 3 },

@@ -45,6 +45,7 @@ import {
 } from '@/pages/gateway/ProductManage/types'
 import { useAuth } from '@/utils/auth'
 import * as P from '@/routes/permissions'
+import { t, tt } from '@/i18n'
 
 const { useMessage } = message
 const { Text } = Typography
@@ -167,39 +168,39 @@ const isEmptyValue = (value: unknown) => value === null || value === undefined |
 
 /** 功能类型标签：属性类型(绿) / 事件类型(火山) / 服务类型(蓝) */
 const TYPE_META: Record<RowType, { text: string, color: string }> = {
-  property: { text: '属性类型', color: 'green' },
-  event: { text: '事件类型', color: 'volcano' },
-  action: { text: '服务类型', color: 'blue' },
+  property: { text: t('属性类型'), color: 'green' },
+  event: { text: t('事件类型'), color: 'volcano' },
+  action: { text: t('服务类型'), color: 'blue' },
 }
 
 /** 属性数据类型：后端英文枚举 → 中文 */
 const DATA_TYPE_TEXT: Record<string, string> = {
-  TEXT: '字符串',
-  FLOAT: '浮点型',
-  INT: '整数型',
-  BOOL: '布尔型',
-  ENUM: '枚举型',
-  DATE: '时间型',
+  TEXT: t('字符串'),
+  FLOAT: t('浮点型'),
+  INT: t('整数型'),
+  BOOL: t('布尔型'),
+  ENUM: t('枚举型'),
+  DATE: t('时间型'),
 }
 
 /** 表单可选数据类型（提交英文枚举） */
 const DATA_TYPE_OPTIONS = [
-  { value: 'TEXT', label: '字符串' },
-  { value: 'FLOAT', label: '浮点型' },
-  { value: 'INT', label: '整数型' },
-  { value: 'BOOL', label: '布尔型' },
-  { value: 'ENUM', label: '枚举型' },
+  { value: 'TEXT', label: t('字符串') },
+  { value: 'FLOAT', label: t('浮点型') },
+  { value: 'INT', label: t('整数型') },
+  { value: 'BOOL', label: t('布尔型') },
+  { value: 'ENUM', label: t('枚举型') },
 ]
 
 const EVENT_TYPE: Record<string, string> = {
-  ALERT: '告警',
-  INFO: '信息',
-  ERROR: '错误',
+  ALERT: t('告警'),
+  INFO: t('信息'),
+  ERROR: t('错误'),
 }
 
 const CALL_TYPE: Record<string, string> = {
-  ASYNC: '异步',
-  SYNC: '同步',
+  ASYNC: t('异步'),
+  SYNC: t('同步'),
 }
 
 const NUMERIC_TYPE = ['INT', 'FLOAT', 'DOUBLE']
@@ -213,11 +214,11 @@ const propertyDefinition = (property: ThingModelProperty): string[] => {
     if (!specs) return []
     const lines: string[] = []
     if (!isEmptyValue(specs.min) || !isEmptyValue(specs.max)) {
-      lines.push(`取值范围: ${isEmptyValue(specs.min) ? '' : specs.min}-${isEmptyValue(specs.max) ? '' : specs.max}`)
+      lines.push(t('取值范围: {{p1}}-{{p2}}', { p1: isEmptyValue(specs.min) ? '' : specs.min, p2: isEmptyValue(specs.max) ? '' : specs.max }))
     }
-    if (!isEmptyValue(specs.step)) lines.push(`步长: ${specs.step}`)
+    if (!isEmptyValue(specs.step)) lines.push(t('步长: {{step}}', { step: specs.step }))
     if (!isEmptyValue(specs.unit)) {
-      lines.push(`单位: ${specs.unit}${isEmptyValue(specs.unitName) ? '' : ` (${specs.unitName})`}`)
+      lines.push(t('单位: {{unit}}{{p2}}', { unit: specs.unit, p2: isEmptyValue(specs.unitName) ? '' : ` (${specs.unitName})` }))
     }
     return lines
   }
@@ -228,7 +229,7 @@ const propertyDefinition = (property: ThingModelProperty): string[] => {
   }
   if (dataType === 'TEXT') {
     const length = property.dataSpecs?.length
-    return isEmptyValue(length) ? [] : [`数据长度: ${length}`]
+    return isEmptyValue(length) ? [] : [t('数据长度: {{count}}', { count: length })]
   }
   return []
 }
@@ -261,7 +262,7 @@ const buildThingRows = (thingModel: ThingModel | null): ThingRow[] => {
       rwFlag: '',
       eventType: item.eventType || '',
       callType: '',
-      definition: [`输出参数 ${asArray(item.outputData).length} 个`],
+      definition: [t('输出参数 {{count}} 个', { count: asArray(item.outputData).length })],
       raw: item as Record<string, any>,
     })
   })
@@ -275,7 +276,7 @@ const buildThingRows = (thingModel: ThingModel | null): ThingRow[] => {
       rwFlag: '',
       eventType: '',
       callType: item.callType || '',
-      definition: [`入参 ${asArray(item.inputParams).length} 个`],
+      definition: [t('入参 {{count}} 个', { count: asArray(item.inputParams).length })],
       raw: item as Record<string, any>,
     })
   })
@@ -487,10 +488,10 @@ const SolutionCenterPage: React.FC = () => {
       if (resp.success) {
         setSolutions(resp.result || [])
       } else {
-        messageApi.open({ type: 'error', content: resp.errorMsg || '方案列表加载失败' })
+        messageApi.open({ type: 'error', content: resp.errorMsg || t('方案列表加载失败') })
       }
     } catch (error) {
-      messageApi.open({ type: 'error', content: '方案列表加载失败，请稍后重试' })
+      messageApi.open({ type: 'error', content: t('方案列表加载失败，请稍后重试') })
     } finally {
       setLoading(false)
     }
@@ -509,7 +510,7 @@ const SolutionCenterPage: React.FC = () => {
   /** 分类页签：行业去重排序 + 末尾「自定义」 */
   const industryTabs = useMemo(() => {
     const set = new Set<string>()
-    solutions.forEach(item => set.add(item.industry || '未分类'))
+    solutions.forEach(item => set.add(item.industry || t('未分类')))
     const list = Array.from(set).sort((a, b) => a.localeCompare(b, 'zh-Hans-CN'))
     return [...list, CUSTOM_TAB]
   }, [solutions])
@@ -526,7 +527,7 @@ const SolutionCenterPage: React.FC = () => {
   /** 当前页签下的方案（不含搜索） */
   const tabSolutions = useMemo(() => {
     if (activeTab === CUSTOM_TAB) return solutions.filter(item => !item.builtIn)
-    return solutions.filter(item => (item.industry || '未分类') === activeTab)
+    return solutions.filter(item => (item.industry || t('未分类')) === activeTab)
   }, [solutions, activeTab])
 
   /** 左侧列表：有搜索词时按方案名称或行业匹配全量，否则用当前页签全量 */
@@ -598,9 +599,9 @@ const SolutionCenterPage: React.FC = () => {
   const handleThingModelSubmit = async (
     payload: BaseThingModelType,
   ): Promise<{ success: boolean, errorMsg?: string }> => {
-    if (!currentSolution) return { success: false, errorMsg: '请先选择左侧方案' }
+    if (!currentSolution) return { success: false, errorMsg: t('请先选择左侧方案') }
     const built = buildSolutionThingModelItem(payload)
-    if (!built) return { success: false, errorMsg: '不支持的功能类型' }
+    if (!built) return { success: false, errorMsg: t('不支持的功能类型') }
     try {
       const resp = await addSolutionThingModelItem(currentSolution.key, {
         type: built.type,
@@ -612,7 +613,7 @@ const SolutionCenterPage: React.FC = () => {
       }
       return { success: resp.success, errorMsg: resp.errorMsg }
     } catch (error) {
-      return { success: false, errorMsg: '物模型添加失败，请稍后重试' }
+      return { success: false, errorMsg: t('物模型添加失败，请稍后重试') }
     }
   }
 
@@ -706,14 +707,14 @@ const SolutionCenterPage: React.FC = () => {
         item,
       })
       if (resp.success) {
-        messageApi.open({ type: 'success', content: '编辑成功' })
+        messageApi.open({ type: 'success', content: t('编辑成功') })
         await loadSolutions()
         setFormOpen(false)
       } else {
-        messageApi.open({ type: 'error', content: resp.errorMsg || '保存失败，请稍后重试' })
+        messageApi.open({ type: 'error', content: resp.errorMsg || t('保存失败，请稍后重试') })
       }
     } catch (error) {
-      messageApi.open({ type: 'error', content: '保存失败，请稍后重试' })
+      messageApi.open({ type: 'error', content: t('保存失败，请稍后重试') })
     } finally {
       setFormSubmitting(false)
     }
@@ -727,13 +728,13 @@ const SolutionCenterPage: React.FC = () => {
         identifier: row.identifier,
       })
       if (resp.success) {
-        messageApi.open({ type: 'success', content: '删除成功' })
+        messageApi.open({ type: 'success', content: t('删除成功') })
         await loadSolutions()
       } else {
-        messageApi.open({ type: 'error', content: resp.errorMsg || '删除失败，请稍后重试' })
+        messageApi.open({ type: 'error', content: resp.errorMsg || t('删除失败，请稍后重试') })
       }
     } catch (error) {
-      messageApi.open({ type: 'error', content: '删除失败，请稍后重试' })
+      messageApi.open({ type: 'error', content: t('删除失败，请稍后重试') })
     }
   }
 
@@ -741,15 +742,15 @@ const SolutionCenterPage: React.FC = () => {
 
   const columns: ColumnsType<ThingRow> = [
     {
-      title: '功能类型',
+      title: t('功能类型'),
       dataIndex: 'type',
       width: 110,
       render: (value: RowType) => <Tag color={TYPE_META[value].color}>{TYPE_META[value].text}</Tag>,
     },
-    { title: '功能名称', dataIndex: 'name', width: 180, ellipsis: true },
-    { title: '标识符', dataIndex: 'identifier', width: 180, ellipsis: true },
+    { title: t('功能名称'), dataIndex: 'name', width: 180, ellipsis: true },
+    { title: t('标识符'), dataIndex: 'identifier', width: 180, ellipsis: true },
     {
-      title: '数据类型',
+      title: t('数据类型'),
       key: 'dataType',
       width: 110,
       render: (_, record) => {
@@ -761,13 +762,13 @@ const SolutionCenterPage: React.FC = () => {
       },
     },
     {
-      title: '读写类型',
+      title: t('读写类型'),
       key: 'rwFlag',
       width: 100,
       render: (_, record) => (record.type === 'property' ? (record.rwFlag || '-') : '-'),
     },
     {
-      title: '数据定义',
+      title: t('数据定义'),
       key: 'definition',
       render: (_, record) => (record.definition.length
         ? (
@@ -778,23 +779,23 @@ const SolutionCenterPage: React.FC = () => {
         : '-'),
     },
     {
-      title: '操作',
+      title: t('操作'),
       key: 'action',
       width: 160,
       fixed: 'right',
       render: (_, record) => (
         <Space split={<Text type="secondary">/</Text>}>
-          <Typography.Link onClick={() => openView(record)}>查看</Typography.Link>
-          {canTslEdit && <Typography.Link onClick={() => openEdit(record)}>编辑</Typography.Link>}
+          <Typography.Link onClick={() => openView(record)}>{t('查看')}</Typography.Link>
+          {canTslEdit && <Typography.Link onClick={() => openEdit(record)}>{t('编辑')}</Typography.Link>}
           {canTslRemove && (
             <Popconfirm
-              title="此操作将永久删除该记录, 是否继续?"
-              okText="删除"
-              cancelText="取消"
+              title={t('此操作将永久删除该记录, 是否继续?')}
+              okText={t('删除')}
+              cancelText={t('取消')}
               placement="topRight"
               onConfirm={() => handleDelete(record)}
             >
-              <Typography.Link>删除</Typography.Link>
+              <Typography.Link>{t('删除')}</Typography.Link>
             </Popconfirm>
           )}
         </Space>
@@ -807,57 +808,57 @@ const SolutionCenterPage: React.FC = () => {
     return (
       <Card className="admin-page">
         {contextHolder}
-        <Empty description="无方案列表查看权限" />
+        <Empty description={t('无方案列表查看权限')} />
       </Card>
     )
   }
 
   const tableEmpty = currentSolution
-    ? (thingModel ? <Empty description="该方案暂无物模型预设" /> : <Empty description="物模型预设无法解析" />)
-    : <Empty description="请先选择左侧方案" />
+    ? (thingModel ? <Empty description={t('该方案暂无物模型预设')} /> : <Empty description={t('物模型预设无法解析')} />)
+    : <Empty description={t('请先选择左侧方案')} />
 
   /** 编辑弹层表单：按功能类型切换额外字段 */
   const renderItemForm = () => (
     <Form form={itemForm} layout="vertical">
-      <Form.Item label="功能类型" name="type" rules={[{ required: true, message: '请选择功能类型' }]}>
+      <Form.Item label={t('功能类型')} name="type" rules={[{ required: true, message: t('请选择功能类型') }]}>
         <Radio.Group
           disabled
           onChange={event => setFormType(event.target.value as RowType)}
         >
-          <Radio value="property">属性</Radio>
-          <Radio value="event">事件</Radio>
-          <Radio value="action">服务</Radio>
+          <Radio value="property">{t('属性')}</Radio>
+          <Radio value="event">{t('事件')}</Radio>
+          <Radio value="action">{t('服务')}</Radio>
         </Radio.Group>
       </Form.Item>
       <Form.Item
-        label="功能名称"
+        label={t('功能名称')}
         name="name"
-        rules={[{ required: true, message: '请输入功能名称' }]}
+        rules={[{ required: true, message: t('请输入功能名称') }]}
       >
-        <Input placeholder="请输入功能名称" maxLength={64} />
+        <Input placeholder={t('请输入功能名称')} maxLength={64} />
       </Form.Item>
       <Form.Item
-        label="标识符"
+        label={t('标识符')}
         name="identifier"
-        rules={[{ required: true, message: '请输入标识符' }]}
-        tooltip="标识符不可修改"
+        rules={[{ required: true, message: t('请输入标识符') }]}
+        tooltip={t('标识符不可修改')}
       >
-        <Input placeholder="请输入标识符" maxLength={64} disabled />
+        <Input placeholder={t('请输入标识符')} maxLength={64} disabled />
       </Form.Item>
-      <Form.Item label="描述" name="description">
-        <Input.TextArea rows={2} placeholder="请输入描述" maxLength={200} />
+      <Form.Item label={t('描述')} name="description">
+        <Input.TextArea rows={2} placeholder={t('请输入描述')} maxLength={200} />
       </Form.Item>
 
       {formType === 'property' && (
         <>
           <Form.Item
-            label="数据类型"
+            label={t('数据类型')}
             name="dataType"
-            rules={[{ required: true, message: '请选择数据类型' }]}
+            rules={[{ required: true, message: t('请选择数据类型') }]}
           >
-            <Select options={DATA_TYPE_OPTIONS} placeholder="请选择数据类型" />
+            <Select options={DATA_TYPE_OPTIONS} placeholder={t('请选择数据类型')} />
           </Form.Item>
-          <Form.Item label="读写类型" name="rwFlag" rules={[{ required: true, message: '请选择读写类型' }]}>
+          <Form.Item label={t('读写类型')} name="rwFlag" rules={[{ required: true, message: t('请选择读写类型') }]}>
             <Select
               options={[
                 { value: 'R', label: 'R' },
@@ -873,22 +874,22 @@ const SolutionCenterPage: React.FC = () => {
                 return (
                   <>
                     <Space style={{ display: 'flex' }} align="start">
-                      <Form.Item label="最小值" name="min">
-                        <InputNumber style={{ width: 150 }} placeholder="最小值" />
+                      <Form.Item label={t('最小值')} name="min">
+                        <InputNumber style={{ width: 150 }} placeholder={t('最小值')} />
                       </Form.Item>
-                      <Form.Item label="最大值" name="max">
-                        <InputNumber style={{ width: 150 }} placeholder="最大值" />
+                      <Form.Item label={t('最大值')} name="max">
+                        <InputNumber style={{ width: 150 }} placeholder={t('最大值')} />
                       </Form.Item>
-                      <Form.Item label="步长" name="step">
-                        <InputNumber style={{ width: 150 }} placeholder="步长" />
+                      <Form.Item label={t('步长')} name="step">
+                        <InputNumber style={{ width: 150 }} placeholder={t('步长')} />
                       </Form.Item>
                     </Space>
                     <Space style={{ display: 'flex' }} align="start">
-                      <Form.Item label="单位" name="unit">
-                        <Input style={{ width: 150 }} placeholder="如 %" />
+                      <Form.Item label={t('单位')} name="unit">
+                        <Input style={{ width: 150 }} placeholder={t('如 %')} />
                       </Form.Item>
-                      <Form.Item label="单位名称" name="unitName">
-                        <Input style={{ width: 150 }} placeholder="如 百分比" />
+                      <Form.Item label={t('单位名称')} name="unitName">
+                        <Input style={{ width: 150 }} placeholder={t('如 百分比')} />
                       </Form.Item>
                     </Space>
                   </>
@@ -904,22 +905,22 @@ const SolutionCenterPage: React.FC = () => {
                             <Form.Item
                               {...restField}
                               name={[name, 'name']}
-                              rules={[{ required: true, message: '请输入枚举名称' }]}
+                              rules={[{ required: true, message: t('请输入枚举名称') }]}
                             >
-                              <Input style={{ width: 170 }} placeholder="枚举名称，如 开" />
+                              <Input style={{ width: 170 }} placeholder={t('枚举名称，如 开')} />
                             </Form.Item>
                             <Form.Item
                               {...restField}
                               name={[name, 'value']}
-                              rules={[{ required: true, message: '请输入枚举值' }]}
+                              rules={[{ required: true, message: t('请输入枚举值') }]}
                             >
-                              <Input style={{ width: 170 }} placeholder="枚举值，如 1" />
+                              <Input style={{ width: 170 }} placeholder={t('枚举值，如 1')} />
                             </Form.Item>
                             <MinusCircleOutlined onClick={() => remove(name)} />
                           </Space>
                         ))}
                         <Button type="dashed" block icon={<PlusOutlined />} onClick={() => add()}>
-                          添加枚举项
+                          {t('添加枚举项')}
                         </Button>
                       </>
                     )}
@@ -928,8 +929,8 @@ const SolutionCenterPage: React.FC = () => {
               }
               if (dataType === 'TEXT') {
                 return (
-                  <Form.Item label="数据长度" name="length">
-                    <InputNumber min={1} precision={0} style={{ width: 200 }} placeholder="如 1024" />
+                  <Form.Item label={t('数据长度')} name="length">
+                    <InputNumber min={1} precision={0} style={{ width: 200 }} placeholder={t('如 1024')} />
                   </Form.Item>
                 )
               }
@@ -941,15 +942,15 @@ const SolutionCenterPage: React.FC = () => {
 
       {formType === 'event' && (
         <Form.Item
-          label="事件类型"
+          label={t('事件类型')}
           name="eventType"
-          rules={[{ required: true, message: '请选择事件类型' }]}
+          rules={[{ required: true, message: t('请选择事件类型') }]}
         >
           <Select
             options={[
-              { value: 'ALERT', label: '告警' },
-              { value: 'INFO', label: '信息' },
-              { value: 'ERROR', label: '错误' },
+              { value: 'ALERT', label: t('告警') },
+              { value: 'INFO', label: t('信息') },
+              { value: 'ERROR', label: t('错误') },
             ]}
           />
         </Form.Item>
@@ -957,14 +958,14 @@ const SolutionCenterPage: React.FC = () => {
 
       {formType === 'action' && (
         <Form.Item
-          label="调用方式"
+          label={t('调用方式')}
           name="callType"
-          rules={[{ required: true, message: '请选择调用方式' }]}
+          rules={[{ required: true, message: t('请选择调用方式') }]}
         >
           <Select
             options={[
-              { value: 'ASYNC', label: '异步' },
-              { value: 'SYNC', label: '同步' },
+              { value: 'ASYNC', label: t('异步') },
+              { value: 'SYNC', label: t('同步') },
             ]}
           />
         </Form.Item>
@@ -990,7 +991,7 @@ const SolutionCenterPage: React.FC = () => {
             allowClear
             value={searchText}
             onChange={event => setSearchText(event.target.value)}
-            placeholder="搜索分类..."
+            placeholder={t('搜索分类...')}
             prefix={<SearchOutlined style={{ color: 'rgba(0,0,0,0.35)' }} />}
             style={{ width: 460, maxWidth: '100%', height: 40, borderRadius: 20 }}
           />,
@@ -1002,7 +1003,7 @@ const SolutionCenterPage: React.FC = () => {
         <Tabs
           activeKey={activeTab}
           onChange={setActiveTab}
-          items={industryTabs.map(key => ({ key, label: key }))}
+          items={industryTabs.map(key => ({ key, label: tt(key) }))}
         />
       )}
 
@@ -1020,7 +1021,7 @@ const SolutionCenterPage: React.FC = () => {
           }}
         >
           {listSolutions.length === 0
-            ? <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无方案" />
+            ? <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t('暂无方案')} />
             : listSolutions.map(item => {
               const selected = item.key === selectedKey
               return (
@@ -1067,17 +1068,17 @@ const SolutionCenterPage: React.FC = () => {
                 onChange={setFuncType}
                 style={{ minWidth: 180 }}
                 options={[
-                  { value: '', label: '功能类型 (全部)' },
-                  { value: 'property', label: '属性' },
-                  { value: 'event', label: '事件' },
-                  { value: 'action', label: '服务' },
+                  { value: '', label: t('功能类型 (全部)') },
+                  { value: 'property', label: t('属性') },
+                  { value: 'event', label: t('事件') },
+                  { value: 'action', label: t('服务') },
                 ]}
               />
               <Input
                 allowClear
                 value={keyword}
                 onChange={event => setKeyword(event.target.value)}
-                placeholder="请输入名称搜索"
+                placeholder={t('请输入名称搜索')}
                 style={{ width: 220 }}
               />
             </Space>
@@ -1089,7 +1090,7 @@ const SolutionCenterPage: React.FC = () => {
                   disabled={!currentSolution}
                   onClick={() => detailModalRef.current?.open()}
                 >
-                  添加物模型
+                  {t('添加物模型')}
                 </Button>
               )}
               <Button
@@ -1098,7 +1099,7 @@ const SolutionCenterPage: React.FC = () => {
                 disabled={!canApply || !currentSolution}
                 onClick={goCreateProduct}
               >
-                创建产品
+                {t('创建产品')}
               </Button>
             </Space>
           </div>
@@ -1117,7 +1118,7 @@ const SolutionCenterPage: React.FC = () => {
               showSizeChanger: true,
               pageSizeOptions: ['10', '20', '50'],
               showQuickJumper: true,
-              showTotal: total => `共 ${total} 条`,
+              showTotal: total => t('共 {{count}} 条', { count: total }),
               onChange: (nextPage, nextPageSize) => {
                 setPage(nextPage)
                 setPageSize(nextPageSize)
@@ -1131,10 +1132,10 @@ const SolutionCenterPage: React.FC = () => {
       {/* ===== 6) 编辑物模型：产品抽屉有 record 时只读，故编辑保留自有表单 ===== */}
       <Modal
         open={formOpen}
-        title="编辑物模型"
+        title={t('编辑物模型')}
         width={640}
-        okText="保存"
-        cancelText="取消"
+        okText={t('保存')}
+        cancelText={t('取消')}
         maskClosable={false}
         confirmLoading={formSubmitting}
         onOk={handleItemSubmit}

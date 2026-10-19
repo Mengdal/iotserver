@@ -2,7 +2,6 @@ package gateway
 
 import (
 	"errors"
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -45,7 +44,7 @@ func (ctl *controller) SystemBackup(c *gin.Context) {
 	exporter, ok := resourceContainer.DataDBClientFrom(ctl.dic.Get).(interfaces.DatabaseExporter)
 	if !ok {
 		httphelper.RenderFail(c, errort.NewCommonErr(errort.DefaultSystemError,
-			fmt.Errorf("当前数据层不支持在线导出")), c.Writer, lc)
+			errort.NewMessageErr("当前数据层不支持在线导出", nil)), c.Writer, lc)
 		return
 	}
 

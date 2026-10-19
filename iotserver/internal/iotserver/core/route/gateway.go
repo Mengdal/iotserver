@@ -243,6 +243,8 @@ func RegisterGateway(engine *gin.Engine, dic *di.Container) {
 		// 个人中心
 		v1Auth.GET("user/profile", ctl.Perm(middleware.PermUserQuery), ctl.UserProfile)
 		v1Auth.PUT("user/profile", ctl.UserProfileUpdate)
+		// 语言偏好：切换语言时前端调它，换设备登录也能保持一致
+		v1Auth.PUT("user/lang", ctl.UserLangUpdate)
 		v1Auth.GET("user/getinfo", ctl.UserGetInfo)
 
 		// 用户管理

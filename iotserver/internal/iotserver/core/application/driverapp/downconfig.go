@@ -104,7 +104,7 @@ func (app *driverLibApp) DownConfigDel(ctx context.Context, id string) error {
 	}
 
 	if total > 0 {
-		return errort.NewCommonEdgeX(errort.DockerConfigMustDeleteDeviceLibrary, "请先删除绑定此配置的驱动", nil)
+		return errort.NewCommonErr(errort.DockerConfigMustDeleteDeviceLibrary, errort.NewMessageErr("请先删除绑定此配置的驱动", nil))
 	}
 
 	err = app.dbClient.WithCtx(ctx).DockerConfigDelete(dc.Id)

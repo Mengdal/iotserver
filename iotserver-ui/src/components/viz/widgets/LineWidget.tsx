@@ -7,6 +7,7 @@ import type { VizWidgetManifest, VizWidgetSettingsProps } from '../types'
 import { toSeriesRows } from '../format'
 import DataBindingEditor from './MetricsEditor'
 import { SettingGroup, SettingRow } from './SettingsLayout'
+import { t } from '@/i18n'
 
 const { Text } = Typography
 
@@ -28,30 +29,30 @@ export interface LineConfig {
 }
 
 const RANGE_OPTIONS = [
-  { label: '近 1 小时', value: '1h' },
-  { label: '近 24 小时', value: '24h' },
-  { label: '近 7 天', value: '7d' },
-  { label: '近 30 天', value: '30d' },
-  { label: '不限', value: 'all' },
+  { label: t('近 1 小时'), value: '1h' },
+  { label: t('近 24 小时'), value: '24h' },
+  { label: t('近 7 天'), value: '7d' },
+  { label: t('近 30 天'), value: '30d' },
+  { label: t('不限'), value: 'all' },
 ]
 
 const INTERVAL_OPTIONS = [
-  { label: '不聚合（原始点）', value: 0 },
-  { label: '1 分钟', value: 60 },
-  { label: '5 分钟', value: 300 },
-  { label: '15 分钟', value: 900 },
-  { label: '1 小时', value: 3600 },
-  { label: '1 天', value: 86400 },
+  { label: t('不聚合（原始点）'), value: 0 },
+  { label: t('1 分钟'), value: 60 },
+  { label: t('5 分钟'), value: 300 },
+  { label: t('15 分钟'), value: 900 },
+  { label: t('1 小时'), value: 3600 },
+  { label: t('1 天'), value: 86400 },
 ]
 
 const METHOD_OPTIONS = [
-  { label: '平均', value: 'avg' },
-  { label: '最大', value: 'max' },
-  { label: '最小', value: 'min' },
-  { label: '合计', value: 'sum' },
-  { label: '次数', value: 'count' },
-  { label: '第一个', value: 'first' },
-  { label: '最后一个', value: 'last' },
+  { label: t('平均'), value: 'avg' },
+  { label: t('最大'), value: 'max' },
+  { label: t('最小'), value: 'min' },
+  { label: t('合计'), value: 'sum' },
+  { label: t('次数'), value: 'count' },
+  { label: t('第一个'), value: 'first' },
+  { label: t('最后一个'), value: 'last' },
 ]
 
 const LineWidget: React.FC<{ config: LineConfig; ctx: any }> = ({ config, ctx }) => {
@@ -62,13 +63,13 @@ const LineWidget: React.FC<{ config: LineConfig; ctx: any }> = ({ config, ctx })
   const errors = series.filter((s: any) => s.error)
 
   if (!hasBinding) {
-    return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="还没绑定数据（右上角菜单 → 配置本组件）" />
+    return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t('还没绑定数据（右上角菜单 → 配置本组件）')} />
   }
   if (ctx.loading && rows.length === 0) return <div style={{ textAlign: 'center', paddingTop: 12 }}><Spin /></div>
   if (errors.length > 0 && rows.length === 0) {
     return <Text type="danger">{errors.map((s: any) => `${s.name || s.code}: ${s.error}`).join('；')}</Text>
   }
-  if (rows.length === 0) return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="时间范围内没有数据" />
+  if (rows.length === 0) return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t('时间范围内没有数据')} />
 
   // 折线/面积同源（G2Plot），只有填充差异：一个变量切图型，下面这组配置两者共用
   const Chart: React.ComponentType<any> = config.fill ? Area : Line
@@ -95,7 +96,7 @@ const LineWidget: React.FC<{ config: LineConfig; ctx: any }> = ({ config, ctx })
 
 const LineSettings: React.FC<VizWidgetSettingsProps<LineConfig>> = ({ config, onChange }) => (
   <>
-    <SettingGroup title="数据绑定">
+    <SettingGroup title={t('数据绑定')}>
       <DataBindingEditor
         series={config.series || []}
         metrics={config.metrics}
@@ -103,8 +104,8 @@ const LineSettings: React.FC<VizWidgetSettingsProps<LineConfig>> = ({ config, on
         onChange={patch => onChange(patch)}
       />
     </SettingGroup>
-    <SettingGroup title="显示设置">
-      <SettingRow label="时间范围">
+    <SettingGroup title={t('显示设置')}>
+      <SettingRow label={t('时间范围')}>
         <Select
           style={{ width: '100%' }}
           value={config.timeRange || '24h'}
@@ -112,7 +113,7 @@ const LineSettings: React.FC<VizWidgetSettingsProps<LineConfig>> = ({ config, on
           onChange={v => onChange({ timeRange: v })}
         />
       </SettingRow>
-      <SettingRow label="聚合间隔">
+      <SettingRow label={t('聚合间隔')}>
         <Select
           style={{ width: '100%' }}
           value={config.aggInterval ?? 0}
@@ -121,8 +122,8 @@ const LineSettings: React.FC<VizWidgetSettingsProps<LineConfig>> = ({ config, on
         />
       </SettingRow>
       <SettingRow
-        label="聚合方法"
-        hint={config.aggInterval ? '聚合由数据层按时间桶计算，返回点数上限 2000' : undefined}
+        label={t('聚合方法')}
+        hint={config.aggInterval ? t('聚合由数据层按时间桶计算，返回点数上限 2000') : undefined}
       >
         <Select
           style={{ width: '100%' }}
@@ -132,16 +133,16 @@ const LineSettings: React.FC<VizWidgetSettingsProps<LineConfig>> = ({ config, on
           disabled={!config.aggInterval}
         />
       </SettingRow>
-      <SettingRow label="图例" inline>
+      <SettingRow label={t('图例')} inline>
         <Switch size="small" checked={config.showLegend !== false} onChange={v => onChange({ showLegend: v })} />
       </SettingRow>
-      <SettingRow label="平滑" inline>
+      <SettingRow label={t('平滑')} inline>
         <Switch size="small" checked={!!config.smooth} onChange={v => onChange({ smooth: v })} />
       </SettingRow>
-      <SettingRow label="面积填充" inline>
+      <SettingRow label={t('面积填充')} inline>
         <Switch size="small" checked={!!config.fill} onChange={v => onChange({ fill: v })} />
       </SettingRow>
-      <SettingRow label="堆叠" inline>
+      <SettingRow label={t('堆叠')} inline>
         <Switch size="small" checked={!!config.stacked} onChange={v => onChange({ stacked: v })} />
       </SettingRow>
     </SettingGroup>
@@ -150,7 +151,7 @@ const LineSettings: React.FC<VizWidgetSettingsProps<LineConfig>> = ({ config, on
 
 export const lineManifest: VizWidgetManifest<LineConfig> = {
   type: 'line',
-  label: '折线图',
+  label: t('折线图'),
   icon: <LineChartOutlined />,
   defaultSize: { w: 8, h: 8 },
   minSize: { w: 3, h: 4 },

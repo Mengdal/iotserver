@@ -432,7 +432,7 @@ func (uapp *userApp) SysMenuAdd(ctx context.Context, req dtos.SysMenuAddRequest)
 		// 允许把自建菜单挂在平台菜单下；但不能挂到其他租户的菜单下
 		if !menuInScope(parent, target) {
 			return errort.NewCommonErr(errort.AppPermissionDenied,
-				fmt.Errorf("父菜单 %s 不在当前作用域内", parentId))
+				errort.NewMessageErr("父菜单 {{.p1}} 不在当前作用域内", map[string]interface{}{"p1": parentId}))
 		}
 	}
 	menu := models.Menu{
@@ -490,7 +490,7 @@ func (uapp *userApp) SysMenuUpdate(ctx context.Context, req dtos.SysMenuUpdateRe
 		}
 		if !menuInScope(parent, target) {
 			return errort.NewCommonErr(errort.AppPermissionDenied,
-				fmt.Errorf("父菜单 %s 不在当前作用域内", parentId))
+				errort.NewMessageErr("父菜单 {{.p1}} 不在当前作用域内", map[string]interface{}{"p1": parentId}))
 		}
 		// 防止把父节点挂到自己的子节点下
 		descendants, dErr := uapp.menuDescendants(req.Id, target)
@@ -671,7 +671,7 @@ func (uapp *userApp) checkMenusExist(ctx context.Context, menuIds []string) erro
 	for _, m := range menus {
 		if !menuInScope(m, target) {
 			return errort.NewCommonErr(errort.AppPermissionDenied,
-				fmt.Errorf("菜单 %s 不属于当前作用域，不能授权", m.Id))
+				errort.NewMessageErr("菜单 {{.p1}} 不属于当前作用域，不能授权", map[string]interface{}{"p1": m.Id}))
 		}
 	}
 	return nil
@@ -685,7 +685,7 @@ func (uapp *userApp) SysMenuPrefSave(ctx context.Context, req dtos.SysMenuPrefSa
 	target := targetTenant(ctx)
 	if target == "" {
 		return errort.NewCommonErr(errort.DefaultReqParamsError,
-			fmt.Errorf("菜单定制属于租户视图，请先切换到租户后再操作"))
+			errort.NewMessageErr("菜单定制属于租户视图，请先切换到租户后再操作", nil))
 	}
 	db := uapp.dbClient.WithCtx(ctx)
 	menu, err := db.SysMenuById(req.MenuId)
@@ -743,7 +743,7 @@ func (uapp *userApp) SysMenuPrefs(ctx context.Context) ([]dtos.SysMenuPrefRespon
 func (uapp *userApp) SysMenuTenantReset(ctx context.Context, tenantId string) error {
 	if !isPlatformAdminCtx(ctx) {
 		return errort.NewCommonErr(errort.AppPermissionDenied,
-			fmt.Errorf("只有平台管理员可以重置租户菜单定制"))
+			errort.NewMessageErr("只有平台管理员可以重置租户菜单定制", nil))
 	}
 	tenantId = strings.TrimSpace(tenantId)
 	if tenantId == "" {

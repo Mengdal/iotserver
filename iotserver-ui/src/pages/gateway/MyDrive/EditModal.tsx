@@ -5,6 +5,7 @@ import { CloseOutlined } from '@ant-design/icons'
 import { RunStatusMap } from '@/utils/statusMap'
 import { editDeviceServers } from '@/api'
 import { DeviceServers } from '@/api/device-servers'
+import { t } from '@/i18n'
 
 const { useForm } = Form
 const { TextArea } = Input
@@ -64,7 +65,7 @@ export const EditModal = forwardRef<EditModalRef, EditModalProps>(({ onSuccess }
 
   return (
     <Drawer
-      title={'编辑实例'}
+      title={t('编辑实例')}
       placement="right"
       open={isModalOpen}
       width={550}
@@ -96,7 +97,7 @@ export const EditModal = forwardRef<EditModalRef, EditModalProps>(({ onSuccess }
                     if (resp?.success) {
                       handleClose()
                       onSuccess?.()
-                      message.success({ content: '编辑成功' })
+                      message.success({ content: t('编辑成功') })
                     }
                   }).finally(() => {
                     setSubmitting(false)
@@ -106,48 +107,48 @@ export const EditModal = forwardRef<EditModalRef, EditModalProps>(({ onSuccess }
                 console.log(values)
               })
             }}
-          >确定</Button>
-          <Button onClick={handleClose}>取消</Button>
+          >{t('确定')}</Button>
+          <Button onClick={handleClose}>{t('取消')}</Button>
         </Space>
       }
     >
       <Form form={form} layout="vertical">
         <Form.Item
-          label="驱动名称"
+          label={t('驱动名称')}
           name="instance_name"
-          rules={[{ required: true, message: '请输入实例名称' }]}
+          rules={[{ required: true, message: t('请输入实例名称') }]}
         >
-          <Input placeholder="请输入实例名称" disabled></Input>
+          <Input placeholder={t('请输入实例名称')} disabled></Input>
         </Form.Item>
         <Form.Item
-          label="镜像名称"
+          label={t('镜像名称')}
           name="image_name"
           validateFirst
-          rules={[{ required: true, message: '请输入镜像名称' }]}
+          rules={[{ required: true, message: t('请输入镜像名称') }]}
         >
-          <Input placeholder="请输入镜像名称" disabled></Input>
+          <Input placeholder={t('请输入镜像名称')} disabled></Input>
         </Form.Item>
         <Form.Item
-          label="镜像编号"
+          label={t('镜像编号')}
           name="id"
         >
-          <Input placeholder="请输入镜像编号" disabled></Input>
+          <Input placeholder={t('请输入镜像编号')} disabled></Input>
         </Form.Item>
         <Form.Item
-          label="协议"
+          label={t('协议')}
           name="protocol"
         >
-          <Input placeholder="请输入协议" disabled></Input>
+          <Input placeholder={t('请输入协议')} disabled></Input>
         </Form.Item>
         <Form.Item
-          label="版本"
+          label={t('版本')}
           name="version"
-          rules={[{ required: true, message: '请选择版本' }]}
+          rules={[{ required: true, message: t('请选择版本') }]}
         >
-          <Input placeholder="请选择版本" disabled></Input>
+          <Input placeholder={t('请选择版本')} disabled></Input>
         </Form.Item>
         <Form.Item
-          label="状态"
+          label={t('状态')}
           name="operate_status"
         >
           <Badge
@@ -156,7 +157,7 @@ export const EditModal = forwardRef<EditModalRef, EditModalProps>(({ onSuccess }
           />
         </Form.Item>
         <Form.Item
-          label="Docker启动参数"
+          label={t('Docker启动参数')}
           name="docker_params_switch"
           valuePropName="checked"
         >
@@ -173,16 +174,16 @@ export const EditModal = forwardRef<EditModalRef, EditModalProps>(({ onSuccess }
               ? (
                 <Form.Item
                   name="docker_params"
-                  rules={[{ required: true, message: '请输入Docker启动参数' }]}
+                  rules={[{ required: true, message: t('请输入Docker启动参数') }]}
                 >
-                  <TextArea placeholder="请输入Docker启动参数"></TextArea>
+                  <TextArea placeholder={t('请输入Docker启动参数')}></TextArea>
                 </Form.Item>
               )
               : null
           }}
         </Form.Item>
         <Form.Item
-          label="自定义参数"
+          label={t('自定义参数')}
           name="expertMode"
           valuePropName="checked"
         >
@@ -199,7 +200,7 @@ export const EditModal = forwardRef<EditModalRef, EditModalProps>(({ onSuccess }
               ? (
                 <Form.Item
                   name="expertModeContent"
-                  rules={[{ required: true, message: '请输入参数' }]}
+                  rules={[{ required: true, message: t('请输入参数') }]}
                 >
                   <MonacoEditor
                     height="500"
@@ -209,7 +210,7 @@ export const EditModal = forwardRef<EditModalRef, EditModalProps>(({ onSuccess }
                       monaco.editor.onDidChangeMarkers(([uri]) => {
                         const markers = monaco.editor.getModelMarkers({ resource: uri })
                         if (markers.length) {
-                          form.setFields([{ name: 'expertModeContent', errors: ['请输入正确的 json 格式'], validating: true }])
+                          form.setFields([{ name: 'expertModeContent', errors: [t('请输入正确的 json 格式')], validating: true }])
                         }
                       })
                       monaco.languages.json.jsonDefaults.setDiagnosticsOptions({

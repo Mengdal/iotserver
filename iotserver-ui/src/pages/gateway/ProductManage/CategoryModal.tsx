@@ -5,6 +5,7 @@ import { categoryTemplate } from '@/api'
 import { useTableRequest } from '@/hooks'
 import { CategoryTemplate } from './types'
 import { StandardFuncModal, StandardFuncModalRef } from './StandardFuncModal'
+import { t } from '@/i18n'
 
 const { Text } = Typography
 
@@ -39,7 +40,7 @@ export const CategoryModal = forwardRef<CategoryModalRef, CategoryModalProps>(({
 
   return (
     <Drawer
-      title={'选择品类'}
+      title={t('选择品类')}
       placement="right"
       open={isModalOpen}
       width={550}
@@ -51,7 +52,7 @@ export const CategoryModal = forwardRef<CategoryModalRef, CategoryModalProps>(({
       extra={<CloseOutlined onClick={handleClose} />}
       footer={
         <Space>
-          <Button onClick={handleClose}>取消</Button>
+          <Button onClick={handleClose}>{t('取消')}</Button>
         </Space>
       }
     >
@@ -60,13 +61,13 @@ export const CategoryModal = forwardRef<CategoryModalRef, CategoryModalProps>(({
       />
       <Form layout="inline" form={form} className="mb20">
         <Form.Item key="category_name" name="category_name">
-          <Input placeholder="输入品类名称"></Input>
+          <Input placeholder={t('输入品类名称')}></Input>
         </Form.Item>
         <Form.Item>
-          <Button type="primary" onClick={search}>查询</Button>
+          <Button type="primary" onClick={search}>{t('查询')}</Button>
         </Form.Item>
         <Form.Item>
-          <Button type="default" onClick={reset}>重置</Button>
+          <Button type="default" onClick={reset}>{t('重置')}</Button>
         </Form.Item>
       </Form>
       <Table
@@ -77,10 +78,10 @@ export const CategoryModal = forwardRef<CategoryModalRef, CategoryModalProps>(({
         rowKey="id"
         size="small"
         columns={[
-          { title: '品类名称', key: 'category_name', dataIndex: 'category_name' },
-          { title: '所属场景', key: 'scene', dataIndex: 'scene' },
+          { title: t('品类名称'), key: 'category_name', dataIndex: 'category_name' },
+          { title: t('所属场景'), key: 'scene', dataIndex: 'scene' },
           {
-            title: '操作',
+            title: t('操作'),
             key: 'action',
             dataIndex: 'action',
             render (value, record) {
@@ -91,12 +92,12 @@ export const CategoryModal = forwardRef<CategoryModalRef, CategoryModalProps>(({
                       onChange?.(record)
                       handleClose()
                     }}
-                  >选择</Typography.Link>
+                  >{t('选择')}</Typography.Link>
                   <Typography.Link
                     onClick={() => {
                       standardFuncModalRef.current?.open(record.category_key)
                     }}
-                  >查看标准物模型</Typography.Link>
+                  >{t('查看标准物模型')}</Typography.Link>
                 </Space>
               )
             },

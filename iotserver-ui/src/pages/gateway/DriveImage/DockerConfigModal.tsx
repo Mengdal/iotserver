@@ -4,6 +4,7 @@ import { CloseOutlined, PlusOutlined, EditOutlined } from '@ant-design/icons'
 import { deleteDockerConfigs, getDockerConfigs } from '@/api'
 import { useTableRequest } from '@/hooks'
 import { AddImageModal, AddImageModalRef } from './AddImageModal'
+import { t } from '@/i18n'
 
 const { Text, Link } = Typography
 
@@ -47,7 +48,7 @@ export const DockerConfigModal = forwardRef<DockerConfigModalRef, DockerConfigMo
   return (
     <>
       <Drawer
-        title="镜像仓库管理"
+        title={t('镜像仓库管理')}
         placement="right"
         open={isModalOpen}
         width={600}
@@ -64,12 +65,12 @@ export const DockerConfigModal = forwardRef<DockerConfigModalRef, DockerConfigMo
                 onChange?.(selectedRowKeys[0])
                 setIsModalOpen(false)
               }}
-            >确定</Button>
+            >{t('确定')}</Button>
             <Button
               onClick={() => {
                 setIsModalOpen(false)
               }}
-            >取消</Button>
+            >{t('取消')}</Button>
           </Space>
         }
         onClose={() => {
@@ -83,7 +84,7 @@ export const DockerConfigModal = forwardRef<DockerConfigModalRef, DockerConfigMo
           onClick={() => {
             addImageModalRef.current?.open()
           }}
-        ><PlusOutlined />新增</Button>
+        ><PlusOutlined />{t('新增')}</Button>
         <Table
           loading={loading}
           dataSource={dataSource}
@@ -101,11 +102,11 @@ export const DockerConfigModal = forwardRef<DockerConfigModalRef, DockerConfigMo
             },
           }}
           columns={[
-            { title: '编号', key: 'id', dataIndex: 'id' },
-            { title: '镜像地址', key: 'address', dataIndex: 'address' },
-            { title: '账号', key: 'account', dataIndex: 'account' },
+            { title: t('编号'), key: 'id', dataIndex: 'id' },
+            { title: t('镜像地址'), key: 'address', dataIndex: 'address' },
+            { title: t('账号'), key: 'account', dataIndex: 'account' },
             {
-              title: '操作',
+              title: t('操作'),
               key: 'action',
               dataIndex: 'action',
               width: 100,
@@ -117,17 +118,17 @@ export const DockerConfigModal = forwardRef<DockerConfigModalRef, DockerConfigMo
                       onClick={() => {
                         addImageModalRef.current?.open(record)
                       }}
-                    >编辑</Typography.Link>
+                    >{t('编辑')}</Typography.Link>
                     <Popconfirm
-                      title="此操作将永久删除该条记录, 是否继续?"
-                      okText="确定"
-                      cancelText="取消"
+                      title={t('此操作将永久删除该条记录, 是否继续?')}
+                      okText={t('确定')}
+                      cancelText={t('取消')}
                       placement="topRight"
                       onConfirm={() => {
                         deleteDockerConfigs(record?.id)
                           .then(resp => {
                             if (resp.success) {
-                              message.success('删除成功')
+                              message.success(t('删除成功'))
                               reload()
                             } else {
                               message.error(resp.errorMsg)
@@ -135,7 +136,7 @@ export const DockerConfigModal = forwardRef<DockerConfigModalRef, DockerConfigMo
                           })
                       }}
                     >
-                      <Typography.Link>删除</Typography.Link>
+                      <Typography.Link>{t('删除')}</Typography.Link>
                     </Popconfirm>
                   </Space>
                 )
@@ -152,7 +153,7 @@ export const DockerConfigModal = forwardRef<DockerConfigModalRef, DockerConfigMo
               setIsModalOpen(true)
             }}
           >
-            { selectText ? <>{selectText}<EditOutlined className="ml10" /></> : '请选择仓库镜像' }
+            { selectText ? <>{selectText}<EditOutlined className="ml10" /></> : t('请选择仓库镜像') }
           </Link>
       }
 

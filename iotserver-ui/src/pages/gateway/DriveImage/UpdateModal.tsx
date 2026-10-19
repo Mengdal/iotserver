@@ -2,6 +2,7 @@ import React, { useCallback, useContext, useEffect, useState } from 'react'
 import { Form, Popconfirm, Typography, Select, message } from 'antd'
 import { WebSocketContext } from '@/components/WebSocket'
 import { DeviceLibraries } from '@/api/device-libraries'
+import { t } from '@/i18n'
 
 const { useForm } = Form
 
@@ -37,13 +38,13 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({ record, selectedRowKey
       title={(
         <Form form={form} layout="vertical">
           <Form.Item
-            label="镜像版本"
+            label={t('镜像版本')}
             name="version"
-            rules={[{ required: true, message: '请输入镜像版本' }]}
+            rules={[{ required: true, message: t('请输入镜像版本') }]}
           >
             <Select
               style={{ width: 200 }}
-              placeholder="请输入镜像版本"
+              placeholder={t('请输入镜像版本')}
               mode="tags"
               options={
                 record.support_versions.map(item => ({
@@ -85,8 +86,8 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({ record, selectedRowKey
           })
       }}
       onCancel={handleClose}
-      okText="确定"
-      cancelText="取消"
+      okText={t('确定')}
+      cancelText={t('取消')}
     >
       <Typography.Link
         onClick={() => {
@@ -94,7 +95,7 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({ record, selectedRowKey
           setOpen(true)
         }}
       >
-        { record.operate_status === 'installed' ? '更新' : '下载' }
+        { record.operate_status === 'installed' ? t('更新') : t('下载') }
       </Typography.Link>
     </Popconfirm>
 

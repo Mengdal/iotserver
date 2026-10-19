@@ -7,6 +7,7 @@ import { getDeviceProperty, DeviceProperty } from '@/api/device-thingmodel'
 import { getDeviceDetail } from '@/api/device'
 import type { VizSeriesRef } from '@/api'
 import { SettingRow, SETTINGS_ITEM_LABEL_WIDTH } from './SettingsLayout'
+import { t } from '@/i18n'
 
 const { Text } = Typography
 
@@ -122,7 +123,7 @@ const SeriesEditor: React.FC<SeriesEditorProps> = ({ value, onChange, max = 20, 
   return (
     <div className="viz-settings__items">
       {series.length === 0
-        ? <Text type="secondary" style={{ fontSize: 12 }}>还没有绑定数据，点下面「添加数据」。</Text>
+        ? <Text type="secondary" style={{ fontSize: 12 }}>{t('还没有绑定数据，点下面「添加数据」。')}</Text>
         : null}
 
       {series.map((s, index) => {
@@ -132,10 +133,10 @@ const SeriesEditor: React.FC<SeriesEditorProps> = ({ value, onChange, max = 20, 
         }))
         return (
           <div key={index} className="viz-settings__item">
-            <SettingRow label="设备" labelWidth={SETTINGS_ITEM_LABEL_WIDTH}>
+            <SettingRow label={t('设备')} labelWidth={SETTINGS_ITEM_LABEL_WIDTH}>
               <Select
                 style={{ width: '100%' }}
-                placeholder="选择设备"
+                placeholder={t('选择设备')}
                 showSearch
                 filterOption={false}
                 value={s.deviceId || undefined}
@@ -146,10 +147,10 @@ const SeriesEditor: React.FC<SeriesEditorProps> = ({ value, onChange, max = 20, 
                 onChange={(v: string) => onDeviceChange(index, v)}
               />
             </SettingRow>
-            <SettingRow label="属性" labelWidth={SETTINGS_ITEM_LABEL_WIDTH}>
+            <SettingRow label={t('属性')} labelWidth={SETTINGS_ITEM_LABEL_WIDTH}>
               <Select
                 style={{ width: '100%' }}
-                placeholder={s.deviceId ? '选择属性' : '先选设备'}
+                placeholder={s.deviceId ? t('选择属性') : t('先选设备')}
                 showSearch
                 optionFilterProp="label"
                 value={s.code || undefined}
@@ -159,15 +160,15 @@ const SeriesEditor: React.FC<SeriesEditorProps> = ({ value, onChange, max = 20, 
                 onChange={(v: string) => patch(index, { code: v })}
               />
             </SettingRow>
-            <SettingRow label="图例" labelWidth={SETTINGS_ITEM_LABEL_WIDTH}>
+            <SettingRow label={t('图例')} labelWidth={SETTINGS_ITEM_LABEL_WIDTH}>
               <Input
                 style={{ flex: 1, minWidth: 0 }}
-                placeholder="默认「设备名·属性名」"
+                placeholder={t('默认「设备名·属性名」')}
                 value={s.name || ''}
                 disabled={disabled}
                 onChange={e => patch(index, { name: e.target.value })}
               />
-              <Tooltip title="删除这条数据">
+              <Tooltip title={t('删除这条数据')}>
                 <Button
                   danger
                   type="text"
@@ -188,10 +189,10 @@ const SeriesEditor: React.FC<SeriesEditorProps> = ({ value, onChange, max = 20, 
           onClick={add}
           disabled={disabled || series.length >= max || (single && series.length >= 1)}
         >
-          添加数据
+          {t('添加数据')}
         </Button>
         {series.length > 0
-          ? <Text type="secondary" style={{ fontSize: 12 }}>已绑定 {series.length} 条（上限 {max}）</Text>
+          ? <Text type="secondary" style={{ fontSize: 12 }}>{t('已绑定')} {series.length} {t('条（上限')} {max}）</Text>
           : null}
       </div>
     </div>

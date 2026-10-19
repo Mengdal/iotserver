@@ -19,7 +19,6 @@ package gateway
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"strings"
 	"sync"
 	"time"
@@ -147,7 +146,7 @@ func (ctl *controller) VizDeviceQuery(c *gin.Context) {
 	var req vizDataRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		httphelper.RenderFail(c, errort.NewCommonErr(errort.DefaultReqParamsError,
-			fmt.Errorf("请求体格式有误：%s", err.Error())), c.Writer, ctl.lc)
+			errort.NewMessageErr("请求体格式有误：{{.p1}}", map[string]interface{}{"p1": err.Error()})), c.Writer, ctl.lc)
 		return
 	}
 	if len(req.Items) == 0 {
@@ -156,7 +155,7 @@ func (ctl *controller) VizDeviceQuery(c *gin.Context) {
 	}
 	if len(req.Items) > vizDataMaxItems {
 		httphelper.RenderFail(c, errort.NewCommonErr(errort.DefaultReqParamsError,
-			fmt.Errorf("一次最多查询 %d 个组件", vizDataMaxItems)), c.Writer, ctl.lc)
+			errort.NewMessageErr("一次最多查询 {{.p1}} 个组件", map[string]interface{}{"p1": vizDataMaxItems})), c.Writer, ctl.lc)
 		return
 	}
 	total := 0
@@ -167,12 +166,12 @@ func (ctl *controller) VizDeviceQuery(c *gin.Context) {
 	}
 	if total > vizDataMaxSeries {
 		httphelper.RenderFail(c, errort.NewCommonErr(errort.DefaultReqParamsError,
-			fmt.Errorf("一次最多查询 %d 条数据序列", vizDataMaxSeries)), c.Writer, ctl.lc)
+			errort.NewMessageErr("一次最多查询 {{.p1}} 条数据序列", map[string]interface{}{"p1": vizDataMaxSeries})), c.Writer, ctl.lc)
 		return
 	}
 	if metricsTotal > vizDataMaxMetrics {
 		httphelper.RenderFail(c, errort.NewCommonErr(errort.DefaultReqParamsError,
-			fmt.Errorf("一次最多查询 %d 个指标", vizDataMaxMetrics)), c.Writer, ctl.lc)
+			errort.NewMessageErr("一次最多查询 {{.p1}} 个指标", map[string]interface{}{"p1": vizDataMaxMetrics})), c.Writer, ctl.lc)
 		return
 	}
 

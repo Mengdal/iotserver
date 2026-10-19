@@ -19,6 +19,7 @@ import type { MenuItemType, SubMenuType } from 'antd/es/menu/hooks/useItems'
 import { renderMenuIcon } from '@/components/IconSelect'
 import { USER_KEY } from '@/utils/auth'
 import * as P from './permissions'
+import { t } from '@/i18n'
 
 /**
  * 菜单定义
@@ -34,75 +35,75 @@ export interface AppMenuItem {
 
 const menus: AppMenuItem[] = [
   {
-    label: '首页',
+    label: t('首页'),
     key: '/home/dashboard',
     icon: <DashboardOutlined />,
     perm: P.HomeView,
   },
   {
     // 平台管理员专属（后端菜单整组 platform_only，租户用户收不到这一组）
-    label: '平台管理',
+    label: t('平台管理'),
     key: '/platform',
     icon: <SafetyOutlined />,
     children: [
-      { label: '租户管理', key: '/platform/tenant', perm: P.PlatformTenantList },
-      { label: '系统配置', key: '/platform/sysSet', icon: <ToolOutlined />, perm: P.ConfigList },
+      { label: t('租户管理'), key: '/platform/tenant', perm: P.PlatformTenantList },
+      { label: t('系统配置'), key: '/platform/sysSet', icon: <ToolOutlined />, perm: P.ConfigList },
     ],
   },
   {
-    label: '设备接入',
+    label: t('设备接入'),
     key: '/gateway',
     icon: <GlobalOutlined />,
     children: [
-      { label: '产品管理', key: '/gateway/product/manage', perm: P.ProductList },
-      { label: '设备管理', key: '/gateway/device/manage', perm: P.DeviceList },
-      { label: '网关管理', key: '/gateway/gateway/manage', perm: P.GatewayList },
-      { label: '方案中心', key: '/solution/center', perm: P.SolutionList },
+      { label: t('产品管理'), key: '/gateway/product/manage', perm: P.ProductList },
+      { label: t('设备管理'), key: '/gateway/device/manage', perm: P.DeviceList },
+      { label: t('网关管理'), key: '/gateway/gateway/manage', perm: P.GatewayList },
+      { label: t('方案中心'), key: '/solution/center', perm: P.SolutionList },
     ],
   },
   {
     // 驱动管理与「设备接入」同级（侧边栏层级以「菜单管理」为准）
-    label: '驱动管理',
+    label: t('驱动管理'),
     key: '/drive',
     icon: <CloudServerOutlined />,
     children: [
-      { label: '驱动镜像', key: '/gateway/drive/image', perm: P.ImageList },
-      { label: '我的驱动', key: '/gateway/my/drive', perm: P.DriveList },
+      { label: t('驱动镜像'), key: '/gateway/drive/image', perm: P.ImageList },
+      { label: t('我的驱动'), key: '/gateway/my/drive', perm: P.DriveList },
     ],
   },
   {
-    label: '数据中心',
+    label: t('数据中心'),
     key: '/data',
     icon: <DatabaseOutlined />,
     children: [
-      { label: '历史查询', key: '/data/history', perm: P.DeviceQuery },
+      { label: t('历史查询'), key: '/data/history', perm: P.DeviceQuery },
     ],
   },
   {
-    label: '运维监控',
+    label: t('运维监控'),
     key: '/monitor',
     icon: <FieldTimeOutlined />,
     children: [
-      { label: '系统监控', key: '/monitor/systemMonitor', perm: P.MonitorView },
-      { label: '告警中心', key: '/monitor/alarmCenter/list', perm: P.AlertList },
+      { label: t('系统监控'), key: '/monitor/systemMonitor', perm: P.MonitorView },
+      { label: t('告警中心'), key: '/monitor/alarmCenter/list', perm: P.AlertList },
     ],
   },
   {
     // 顶层目录叫「系统管理」，与其下的「系统配置」菜单区分开（与后端菜单一致）
-    label: '系统管理',
+    label: t('系统管理'),
     key: '/admin',
     icon: <SettingOutlined />,
     children: [
-      { label: '用户管理', key: '/admin/sysUser', icon: <UserOutlined />, perm: P.UserList },
-      { label: '角色管理', key: '/admin/sysRole', icon: <TeamOutlined />, perm: P.RoleList },
-      { label: '菜单管理', key: '/admin/sysMenu', icon: <MenuOutlined />, perm: P.MenuList },
-      { label: '部门管理', key: '/admin/sysDept', icon: <ApartmentOutlined />, perm: P.DeptList },
+      { label: t('用户管理'), key: '/admin/sysUser', icon: <UserOutlined />, perm: P.UserList },
+      { label: t('角色管理'), key: '/admin/sysRole', icon: <TeamOutlined />, perm: P.RoleList },
+      { label: t('菜单管理'), key: '/admin/sysMenu', icon: <MenuOutlined />, perm: P.MenuList },
+      { label: t('部门管理'), key: '/admin/sysDept', icon: <ApartmentOutlined />, perm: P.DeptList },
       // 权限码用字面量：permissions.ts 重新生成后才有 AuditLog* 常量，旧码 system:loginlog:list 仅作兼容
-      { label: '审查日志', key: '/admin/sysAuditLog', icon: <FileSearchOutlined />, perm: 'system:auditlog:list' },
+      { label: t('审查日志'), key: '/admin/sysAuditLog', icon: <FileSearchOutlined />, perm: 'system:auditlog:list' },
     ],
   },
   {
-    label: '工具与文档',
+    label: t('工具与文档'),
     key: '/documents/documents',
     icon: <BookOutlined />,
     perm: P.DocsView,
@@ -111,7 +112,7 @@ const menus: AppMenuItem[] = [
 
 /** 个人中心：独立入口，不加入侧边导航 */
 export const profileMenu: AppMenuItem = {
-  label: '个人中心',
+  label: t('个人中心'),
   key: '/common/userProfile',
 }
 
@@ -200,7 +201,8 @@ export function buildMenusFromBackend (list?: BackendMenuItem[]): Array<SubMenuT
       const icon = renderMenuIcon(item.icon)
       if (children.length > 0) {
         result.push({
-          label: item.name,
+          // 菜单名来自后端（中文），走 t() 才能翻成英文；词条里没有时原样回落
+          label: t(item.name),
           key: item.path || item.id,
           icon,
           children,
@@ -209,7 +211,7 @@ export function buildMenusFromBackend (list?: BackendMenuItem[]): Array<SubMenuT
       }
       if (!item.path) return
       result.push({
-        label: item.name,
+        label: t(item.name),
         key: item.path,
         icon,
       } as MenuItemType)
@@ -225,7 +227,7 @@ export function buildMenuNameMap (list?: BackendMenuItem[]): Record<string, stri
   const walk = (items?: BackendMenuItem[]) => {
     if (!Array.isArray(items)) return
     items.forEach(item => {
-      if (item?.path) map[item.path] = item.name
+      if (item?.path) map[item.path] = t(item.name)
       walk(item?.children)
     })
   }

@@ -9,6 +9,7 @@ import { useParams } from 'react-router-dom'
 import { AddDirectRule, AddDirectRuleRef } from './components/AddDirectRule'
 import CodeHighlighter from '@/components/CodeHighlighter/CodeHighlighter'
 import useRequest from '@/hooks/useRequest'
+import { t } from '@/i18n'
 
 const { Text } = Typography
 const { useMessage } = message
@@ -77,22 +78,22 @@ const DevicesManage: React.FC<DevicesManageProps> = () => {
           <Form.Item key="status" name="status">
             <Select
               style={{ width: 120 }}
-              placeholder="启用状态"
+              placeholder={t('启用状态')}
               options={[
-                { label: '状态 (全部)', value: '' },
-                { label: '启用', value: 'running' },
-                { label: '禁用', value: 'stopped' },
+                { label: t('状态 (全部)'), value: '' },
+                { label: t('启用'), value: 'running' },
+                { label: t('禁用'), value: 'stopped' },
               ]}
             />
           </Form.Item>
-          <Form.Item key="name" name="name" label="规则名称">
-            <Input style={{ width: 220 }} placeholder="搜索规则" allowClear></Input>
+          <Form.Item key="name" name="name" label={t('规则名称')}>
+            <Input style={{ width: 220 }} placeholder={t('搜索规则')} allowClear></Input>
           </Form.Item>
           <Form.Item>
-            <Button type="primary" onClick={search}>查询</Button>
+            <Button type="primary" onClick={search}>{t('查询')}</Button>
           </Form.Item>
           <Form.Item>
-            <Button type="default" onClick={reset}>重置</Button>
+            <Button type="default" onClick={reset}>{t('重置')}</Button>
           </Form.Item>
         </Form>
       </Card>
@@ -110,7 +111,7 @@ const DevicesManage: React.FC<DevicesManageProps> = () => {
               onClick={() => {
                 AddDirectRuleRef.current?.open()
               }}
-            ><PlusOutlined />添加规则</Button>
+            ><PlusOutlined />{t('添加规则')}</Button>
           </div>
         </Space>
         <Table
@@ -121,10 +122,10 @@ const DevicesManage: React.FC<DevicesManageProps> = () => {
           rowKey="id"
           size="small"
           columns={[
-            { title: '设备名称', key: 'name', dataIndex: 'name' },
-            { title: '规则描述', key: 'description', dataIndex: 'description' },
+            { title: t('设备名称'), key: 'name', dataIndex: 'name' },
+            { title: t('规则描述'), key: 'description', dataIndex: 'description' },
             {
-              title: '转发方式',
+              title: t('转发方式'),
               key: 'dataResource',
               dataIndex: 'dataResource',
               render (dataResource) {
@@ -132,7 +133,7 @@ const DevicesManage: React.FC<DevicesManageProps> = () => {
               },
             },
             {
-              title: '创建时间',
+              title: t('创建时间'),
               key: 'created',
               dataIndex: 'created',
               render (value) {
@@ -140,13 +141,13 @@ const DevicesManage: React.FC<DevicesManageProps> = () => {
               },
             },
             {
-              title: '启用状态',
+              title: t('启用状态'),
               key: 'status',
               dataIndex: 'status',
               render: (status, r) => <StatusSwitch status={status} id={r.id} onSuccess={() => reload()} />,
             },
             {
-              title: '操作',
+              title: t('操作'),
               key: 'action',
               dataIndex: 'action',
               render (value, record) {
@@ -154,22 +155,22 @@ const DevicesManage: React.FC<DevicesManageProps> = () => {
                   <Space split={<Text type="secondary">/</Text>}>
                     <Typography.Link
                       onClick={() => showDrawer({ id: record.id })}
-                    >详情</Typography.Link>
+                    >{t('详情')}</Typography.Link>
                     <Typography.Link
                       onClick={() => {
                         AddDirectRuleRef.current?.open(record.id)
                       }}
-                    >编辑</Typography.Link>
+                    >{t('编辑')}</Typography.Link>
                     <Popconfirm
-                      title="您确定要删除该规则吗？"
-                      okText="确定"
-                      cancelText="取消"
+                      title={t('您确定要删除该规则吗？')}
+                      okText={t('确定')}
+                      cancelText={t('取消')}
                       placement="topRight"
                       onConfirm={() => {
                         deleteRuleEngine(record?.id)
                           .then(resp => {
                             if (resp.success) {
-                              messageApi.open({ type: 'success', content: '删除成功' })
+                              messageApi.open({ type: 'success', content: t('删除成功') })
                               reload()
                             } else {
                               messageApi.open({ type: 'error', content: resp.errorMsg })
@@ -177,7 +178,7 @@ const DevicesManage: React.FC<DevicesManageProps> = () => {
                           })
                       }}
                     >
-                      <Typography.Link>删除</Typography.Link>
+                      <Typography.Link>{t('删除')}</Typography.Link>
                     </Popconfirm>
                   </Space>
                 )
@@ -187,7 +188,7 @@ const DevicesManage: React.FC<DevicesManageProps> = () => {
         />
       </Card>
       <Drawer
-        title="规则详情"
+        title={t('规则详情')}
         placement="right"
         onClose={onClose}
         open={open}
@@ -199,7 +200,7 @@ const DevicesManage: React.FC<DevicesManageProps> = () => {
         extra={<CloseOutlined onClick={onClose} />}
         footer={
           <Space>
-            <Button onClick={onClose}>关闭</Button>
+            <Button onClick={onClose}>{t('关闭')}</Button>
           </Space>
         }
       >
@@ -211,31 +212,31 @@ const DevicesManage: React.FC<DevicesManageProps> = () => {
               current={2}
               items={[
                 {
-                  title: '条件过滤',
+                  title: t('条件过滤'),
                   description: <>
                     {/* <Row className="mt20 mb10">
                       <Col span={4}>产品筛选：</Col>
                       <Col span={20}>指定产品 | 侧风机</Col>
                     </Row> */}
                     <Row className="mt20 mb10">
-                      <Col span={4}>消息源：</Col>
+                      <Col span={4}>{t('消息源：')}</Col>
                       <Col span={20}>{getRuleEngineInfoApi.data?.filter?.message_source}</Col>
                     </Row>
                     <Row className="mb10">
-                      <Col span={4}>查询语句：</Col>
+                      <Col span={4}>{t('查询语句：')}</Col>
                       <Col span={20}><CodeHighlighter value={getRuleEngineInfoApi.data?.filter?.sql} /></Col>
                     </Row>
                   </>,
                 },
                 {
-                  title: '转发方式',
+                  title: t('转发方式'),
                   description: <>
                     <Row className="mt20 mb10">
-                      <Col span={4}>转发方式：</Col>
+                      <Col span={4}>{t('转发方式：')}</Col>
                       <Col span={20}>{getRuleEngineInfoApi.data?.dataResource?.type}</Col>
                     </Row>
                     <Row className="mb10">
-                      <Col span={4}>使用资源：</Col>
+                      <Col span={4}>{t('使用资源：')}</Col>
                       <Col span={20}>{(dataResourceApi.data?.list || []).filter((item: { id: string }) => item.id === getRuleEngineInfoApi.data?.data_resource_id)?.[0]?.name}</Col>
                     </Row>
                   </>,
@@ -286,8 +287,8 @@ function StatusSwitch ({ status, id, onSuccess }: { status: EStatus, id: string,
 
   return (<Switch
     checked={status === EStatus.running}
-    checkedChildren="开"
-    unCheckedChildren="关"
+    checkedChildren={t('开')}
+    unCheckedChildren={t('关')}
     loading={stopSceneApi.loading}
     onChange={async (bool) => {
       console.log(bool)

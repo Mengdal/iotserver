@@ -5,6 +5,7 @@ import { CloseCircleOutlined, PlusOutlined } from '@ant-design/icons'
 import { stringValidator } from '../helper'
 import { EnumValue } from '../types'
 import { v4 } from 'uuid'
+import { t } from '@/i18n'
 
 const { Text } = Typography
 
@@ -27,10 +28,10 @@ export const Enum: React.FC<EnumProps> = (props) => {
     <>
       <Row className="mb15">
         <Col span={9}>
-          <Text>参数值</Text>
+          <Text>{t('参数值')}</Text>
         </Col>
         <Col span={14}>
-          <Text>参数描述</Text>
+          <Text>{t('参数描述')}</Text>
         </Col>
       </Row>
       {
@@ -41,11 +42,11 @@ export const Enum: React.FC<EnumProps> = (props) => {
                 <Form.Item
                   name={item.keyName}
                   initialValue={item.key}
-                  rules={[{ required: true, message: '请输入参数值' }]}
+                  rules={[{ required: true, message: t('请输入参数值') }]}
                 >
                   <InputNumber
                     style={{ width: '100%' }}
-                    placeholder="整数"
+                    placeholder={t('整数')}
                     precision={0}
                     min={0}
                     onChange={(value) => {
@@ -68,7 +69,7 @@ export const Enum: React.FC<EnumProps> = (props) => {
                   rules={[{ validator: stringValidator }]}
                 >
                   <Input
-                    placeholder="1-20位, 中文、英文、数字及特殊字符_-, 必须以中文、英文或数字开头"
+                    placeholder={t('1-20位, 中文、英文、数字及特殊字符_-, 必须以中文、英文或数字开头')}
                     onChange={(e) => {
                       const newOptions = options.map((i) => {
                         if (i.valueName === item.valueName) {
@@ -112,7 +113,7 @@ export const Enum: React.FC<EnumProps> = (props) => {
         onClick={() => {
           setOptions([...options, { id: v4(), keyName: v4(), key: undefined, valueName: v4(), value: undefined }])
         }}
-      >添加枚举项</Button>
+      >{t('添加枚举项')}</Button>
     </>
   )
 }

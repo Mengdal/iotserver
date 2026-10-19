@@ -3,6 +3,7 @@ import { Alert } from 'antd'
 import type { VizWidget } from '@/api'
 import { getWidgetManifest } from './registry'
 import type { VizWidgetContext } from './types'
+import { t } from '@/i18n'
 
 /**
  * 按注册表渲染一个组件的**内容**（不含卡片外框，外框由 WidgetCard 负责）。
@@ -17,8 +18,8 @@ const WidgetBody: React.FC<{ widget: VizWidget; ctx: VizWidgetContext }> = ({ wi
       <Alert
         type="warning"
         showIcon
-        message={`当前版本不支持组件类型「${widget.type || '未知'}」`}
-        description="看板数据仍然保留，升级到最新版本即可正常显示。"
+        message={t('当前版本不支持组件类型「{{p1}}」', { p1: widget.type || t('未知') })}
+        description={t('看板数据仍然保留，升级到最新版本即可正常显示。')}
       />
     )
   }

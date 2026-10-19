@@ -20,15 +20,16 @@ import { getSysConfigs, saveSysConfigs, SysConfig } from '@/api'
 import { isPlatformAdmin, useAuth } from '@/utils/auth'
 import { useBrand } from '@/components/Brand'
 import ImageUploader from '@/components/ImageUploader'
+import { t, tt } from '@/i18n'
 
 const { useMessage } = message
 const { Text, Title } = Typography
 
 /** 图片项推荐尺寸提示（对齐参考站文案） */
 const SIZE_HINT = {
-  logo: '推荐尺寸 200*200',
-  favicon: '推荐尺寸：64*64',
-  background: '推荐尺寸：800*600',
+  logo: t('推荐尺寸 200*200'),
+  favicon: t('推荐尺寸：64*64'),
+  background: t('推荐尺寸：800*600'),
 }
 
 interface BrandField {
@@ -42,18 +43,18 @@ interface BrandField {
 }
 
 const TEXT_FIELDS: BrandField[] = [
-  { key: 'platform.name', label: '系统名称', type: 'text', placeholder: '请输入系统名称' },
-  { key: 'platform.copyright', label: 'copyright', type: 'text', placeholder: '请输入 copyright' },
+  { key: 'platform.name', label: t('系统名称'), type: 'text', placeholder: t('请输入系统名称') },
+  { key: 'platform.copyright', label: 'copyright', type: 'text', placeholder: t('请输入 copyright') },
 ]
 
 const IMAGE_FIELDS: BrandField[] = [
-  { key: 'platform.logo', label: '系统 logo', type: 'image', hint: SIZE_HINT.logo, boxWidth: 120, boxHeight: 120 },
-  { key: 'platform.favicon', label: '浏览器标签', type: 'image', hint: SIZE_HINT.favicon, boxWidth: 120, boxHeight: 120 },
+  { key: 'platform.logo', label: t('系统 logo'), type: 'image', hint: SIZE_HINT.logo, boxWidth: 120, boxHeight: 120 },
+  { key: 'platform.favicon', label: t('浏览器标签'), type: 'image', hint: SIZE_HINT.favicon, boxWidth: 120, boxHeight: 120 },
 ]
 
 const BG_FIELD: BrandField = {
   key: 'platform.loginBackground',
-  label: '背景图',
+  label: t('背景图'),
   type: 'image',
   hint: SIZE_HINT.background,
   boxWidth: 260,
@@ -140,7 +141,7 @@ const SysSetPage: React.FC = () => {
       setSaving(true)
       const resp = await saveSysConfigs(payload)
       if (resp.success) {
-        messageApi.open({ type: 'success', content: '保存成功，即将刷新页面' })
+        messageApi.open({ type: 'success', content: t('保存成功，即将刷新页面') })
         await loadData()
         // 品牌信息立即生效（名称 / Logo / 浏览器标签 / 背景图），无需手动刷新
         await brand.reload()
@@ -156,7 +157,8 @@ const SysSetPage: React.FC = () => {
 
   /** 图片项：label 带「推荐尺寸」提示，右侧为大预览框 */
   const renderImageItem = (field: BrandField) => {
-    const label = itemByKey.get(field.key)?.name || field.label
+    // 后端配置项自带中文名称（系统 Logo、登录页背景图…），词条里有对应英文时跟着语言变
+    const label = tt(itemByKey.get(field.key)?.name) || field.label
     return (
       <Form.Item
         label={(
@@ -181,7 +183,7 @@ const SysSetPage: React.FC = () => {
     <Alert
       type="info"
       showIcon
-      message="系统配置为平台级（全局唯一），保存后对所有租户生效；如需按租户区分，请使用各业务模块自己的配置。"
+      message={t('系统配置为平台级（全局唯一），保存后对所有租户生效；如需按租户区分，请使用各业务模块自己的配置。')}
       style={{ marginBottom: 16 }}
     />
   )
@@ -192,7 +194,7 @@ const SysSetPage: React.FC = () => {
       <Card className="admin-page">
         {contextHolder}
         {platformNotice}
-        <Empty description="系统配置为平台级功能，仅平台管理员可访问" />
+        <Empty description={t('系统配置为平台级功能，仅平台管理员可访问')} />
       </Card>
     )
   }
@@ -202,9 +204,9 @@ const SysSetPage: React.FC = () => {
       {contextHolder}
       {platformNotice}
       <Spin spinning={loading}>
-        <Title level={5} style={{ marginBottom: 4 }}>系统配置</Title>
+        <Title level={5} style={{ marginBottom: 4 }}>{t('系统配置')}</Title>
         <Text type="secondary">
-          系统设置页面提供系统基础配置项，支持用户对系统的名称、登录页、LOGO等基础信息进行维护管理。
+          {t('系统设置页面提供系统基础配置项，支持用户对系统的名称、登录页、LOGO等基础信息进行维护管理。')}
         </Text>
         <Divider />
 
@@ -220,9 +222,9 @@ const SysSetPage: React.FC = () => {
                   key={field.key}
                   label={field.label}
                   name={field.key}
-                  rules={[{ required: true, message: `请输入${field.label}` }]}
+                  rules={[{ required: true, message: t('请输入{{label}}', { label: field.label }) }]}
                 >
-                  <Input placeholder="请输入" />
+                  <Input placeholder={t('请输入')} />
                 </Form.Item>
               ))}
               <Row gutter={16}>
@@ -242,11 +244,11 @@ const SysSetPage: React.FC = () => {
 
           {otherGroups.length > 0 && (
             <>
-              <Divider orientation="left" plain>安全配置</Divider>
+              <Divider orientation="left" plain>{t('安全配置')}</Divider>
               <Row gutter={16}>
                 {otherGroups.map(item => (
                   <Col span={12} key={item.id}>
-                    <Form.Item label={item.name} name={item.configKey} extra={item.remark || undefined}>
+                    <Form.Item label={tt(item.name)} name={item.configKey} extra={tt(item.remark) || undefined}>
                       {item.type === 'number'
                         ? <InputNumber style={{ width: '100%' }} />
                         : <Input />}
@@ -259,8 +261,8 @@ const SysSetPage: React.FC = () => {
 
           <Form.Item style={{ marginTop: 8 }}>
             <Space>
-              <Button type="primary" htmlType="submit" loading={saving}>保存</Button>
-              <Button icon={<ReloadOutlined />} onClick={loadData}>重置</Button>
+              <Button type="primary" htmlType="submit" loading={saving}>{t('保存')}</Button>
+              <Button icon={<ReloadOutlined />} onClick={loadData}>{t('重置')}</Button>
             </Space>
           </Form.Item>
         </Form>

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { queryVizDeviceData, VizDataItem, VizDeviceQueryItem, VizWidget } from '@/api'
 import { getWidgetManifest } from './registry'
+import { t } from '@/i18n'
 
 export interface VizDataState {
   /** 组件 id → 取数结果 */
@@ -105,10 +106,10 @@ export function useVizData (
         setResults(prev => (replace ? next : { ...prev, ...next }))
         setError('')
       } else {
-        setError(resp.errorMsg || '取数失败')
+        setError(resp.errorMsg || t('取数失败'))
       }
     } catch (e: any) {
-      setError(e?.message || '取数失败')
+      setError(e?.message || t('取数失败'))
     } finally {
       if (!silent) setLoading(false)
     }

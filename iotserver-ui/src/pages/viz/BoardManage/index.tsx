@@ -13,8 +13,9 @@ import {
   createVizBoard, deleteVizBoard, getVizBoards, setVizBoardActive, VizBoard,
 } from '@/api'
 import './index.less'
+import { t, tt } from '@/i18n'
 
-const { Paragraph, Text } = Typography
+const { Paragraph } = Typography
 
 /** 新建看板时可选的图标（存图标名，列表里再映射回组件） */
 const ICON_OPTIONS: { key: string, icon: React.ReactNode }[] = [
@@ -75,10 +76,10 @@ const BoardManage: React.FC = () => {
       if (resp.success) {
         setList(resp.result.list || [])
       } else {
-        message.error(resp.errorMsg || '获取看板列表失败')
+        message.error(resp.errorMsg || t('获取看板列表失败'))
       }
     } catch (e: any) {
-      message.error(e?.message || '获取看板列表失败')
+      message.error(e?.message || t('获取看板列表失败'))
     } finally {
       setLoading(false)
     }
@@ -111,10 +112,10 @@ const BoardManage: React.FC = () => {
           load()
         }
       } else {
-        message.error(resp.errorMsg || '新建失败')
+        message.error(resp.errorMsg || t('新建失败'))
       }
     } catch (e: any) {
-      message.error(e?.message || '新建失败')
+      message.error(e?.message || t('新建失败'))
     } finally {
       setCreating(false)
     }
@@ -124,15 +125,15 @@ const BoardManage: React.FC = () => {
     try {
       const resp = await deleteVizBoard(record.id)
       if (resp.success) {
-        message.success('已删除')
+        message.success(t('已删除'))
         load()
       } else {
-        message.error(resp.errorMsg || '删除失败')
+        message.error(resp.errorMsg || t('删除失败'))
       }
     } catch (e: any) {
       // 没有 catch 的话，接口 4xx/5xx（axios 会 reject）会变成静默的 unhandled rejection，
       // 用户看到的就是"点了删除没反应"
-      message.error(e?.message || '删除失败')
+      message.error(e?.message || t('删除失败'))
     }
   }
 
@@ -143,11 +144,11 @@ const BoardManage: React.FC = () => {
    */
   const confirmRemove = (record: VizBoard) => {
     Modal.confirm({
-      title: `删除看板「${record.name}」？`,
-      content: '看板上的组件会一起删掉，删除后不能恢复。',
-      okText: '删除',
+      title: t('删除看板「{{name}}」？', { name: tt(record.name) }),
+      content: t('看板上的组件会一起删掉，删除后不能恢复。'),
+      okText: t('删除'),
       okButtonProps: { danger: true },
-      cancelText: '取消',
+      cancelText: t('取消'),
       onOk: () => remove(record),
     })
   }
@@ -156,41 +157,41 @@ const BoardManage: React.FC = () => {
     try {
       const resp = await setVizBoardActive(record.id, slot, value)
       if (resp.success) {
-        message.success('已更新')
+        message.success(t('已更新'))
         load()
       } else {
-        message.error(resp.errorMsg || '设置失败')
+        message.error(resp.errorMsg || t('设置失败'))
       }
     } catch (e: any) {
-      message.error(e?.message || '设置失败')
+      message.error(e?.message || t('设置失败'))
     }
   }
 
   const menuFor = (record: VizBoard): MenuProps['items'] => {
     const items: NonNullable<MenuProps['items']> = []
-    items.push({ key: 'canvas', label: '编辑看板', onClick: () => navigate(`/viz/boards/${record.id}/edit`) })
+    items.push({ key: 'canvas', label: t('编辑看板'), onClick: () => navigate(`/viz/boards/${record.id}/edit`) })
     // 只读大屏：不套后台外壳，可直接投到墙上/分享给只看数据的同事
     items.push({
       key: 'view',
-      label: '大屏展示（只读）',
+      label: t('大屏展示（只读）'),
       onClick: () => window.open(`/viz/view/${record.id}`, '_blank'),
     })
     // 首页看板：首页（/home/dashboard）整页渲染它；没设时首页走内置静态页
     items.push({
       key: 'home',
-      label: record.isHome ? '取消首页看板' : '设为首页看板',
+      label: record.isHome ? t('取消首页看板') : t('设为首页看板'),
       onClick: () => setActive(record, 'home', !record.isHome),
     })
     items.push({
       key: 'default',
-      label: record.isDefault ? '取消数据看板整页' : '设为数据看板整页',
+      label: record.isDefault ? t('取消数据看板整页') : t('设为数据看板整页'),
       onClick: () => setActive(record, 'default', !record.isDefault),
     })
     items.push({ type: 'divider' })
     items.push({
       key: 'delete',
       danger: true,
-      label: '删除',
+      label: t('删除'),
       onClick: () => confirmRemove(record),
     })
     return items
@@ -204,7 +205,7 @@ const BoardManage: React.FC = () => {
     >
       <div className="board-card__head">
         <span className="board-card__icon">{iconOf(record.icon)}</span>
-        <span className="board-card__name">{record.name}</span>
+        <span className="board-card__name">{tt(record.name)}</span>
         <span style={{ marginLeft: 'auto' }} onClick={e => e.stopPropagation()}>
           <Dropdown menu={{ items: menuFor(record) }} trigger={['click']}>
             <Button size="small" type="text" icon={<MoreOutlined />} />
@@ -212,12 +213,12 @@ const BoardManage: React.FC = () => {
         </span>
       </div>
       <div className="board-card__meta">
-        画布看板 · {record.widgetCount || 0} 个组件
+        {t('画布看板 ·')} {record.widgetCount || 0} {t('个组件')}
         {record.updateAt ? ` · ${formatTime(record.updateAt)}` : ''}
       </div>
       <div className="board-card__tags">
-        {record.isHome ? <Tag color="blue">首页看板</Tag> : null}
-        {record.isDefault ? <Tag color="green">数据看板整页</Tag> : null}
+        {record.isHome ? <Tag color="blue">{t('首页看板')}</Tag> : null}
+        {record.isDefault ? <Tag color="green">{t('数据看板整页')}</Tag> : null}
       </div>
     </div>
   )), [list])
@@ -225,14 +226,18 @@ const BoardManage: React.FC = () => {
   return (
     <Card
       className="admin-page"
-      title="看板管理"
-      extra={<Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>新建看板</Button>}
+      title={t('看板管理')}
+      extra={<Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>{t('新建看板')}</Button>}
     >
+      {/* 整句一起翻译：中文可以逐段拼接，英文拼接会粘在一起（缺少空格/语序不同） */}
       <Paragraph type="secondary">
-        新建看板后进入编辑器：左侧<Text strong>「组件库」</Text>点一下或拖进画布来放<Text strong>文本</Text>和
-        <Text strong>容器</Text>；组件<Text strong>拖标题栏</Text>换位置、<Text strong>拖右下角</Text>改大小。
-        卡片右上角菜单可把看板设为<Text strong>首页看板</Text>（首页整页展示这块看板）或
-        <Text strong>数据看板整页</Text>（「数据看板」页展示）。
+        {t('新建看板后进入编辑器：左侧「{{lib}}」里点一下或拖进画布来放{{text}}和{{container}}；组件可拖标题栏换位置、拖右下角改大小。卡片右上角菜单可把看板设为{{home}}（首页整页展示这块看板）或{{full}}（「数据看板」页展示）。', {
+          lib: t('组件库'),
+          text: t('文本'),
+          container: t('容器'),
+          home: t('首页看板'),
+          full: t('数据看板整页'),
+        })}
       </Paragraph>
 
       {loading
@@ -241,30 +246,30 @@ const BoardManage: React.FC = () => {
           <div className="board-grid">
             <div className="board-card board-card--new" onClick={openCreate}>
               <PlusOutlined style={{ fontSize: 20 }} />
-              <div>新建看板</div>
+              <div>{t('新建看板')}</div>
             </div>
             {cards}
             {list.length === 0
-              ? <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="还没有看板" style={{ gridColumn: '1 / -1' }} />
+              ? <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t('还没有看板')} style={{ gridColumn: '1 / -1' }} />
               : null}
           </div>
         )}
 
       {/* 新建看板：名称 + 图标（参考站的项目创建弹窗） */}
       <Modal
-        title="新建看板"
+        title={t('新建看板')}
         open={createOpen}
         confirmLoading={creating}
-        okText="创建并搭建"
+        okText={t('创建并搭建')}
         onOk={submitCreate}
         onCancel={() => setCreateOpen(false)}
         destroyOnClose
       >
         <Form form={form} layout="vertical" initialValues={{ icon: 'bar-chart' }}>
-          <Form.Item name="name" label="看板名称" rules={[{ required: true, message: '请输入看板名称' }]}>
-            <Input placeholder="例如：设备运行看板" />
+          <Form.Item name="name" label={t('看板名称')} rules={[{ required: true, message: t('请输入看板名称') }]}>
+            <Input placeholder={t('例如：设备运行看板')} />
           </Form.Item>
-          <Form.Item name="icon" label="图标">
+          <Form.Item name="icon" label={t('图标')}>
             <IconPicker />
           </Form.Item>
         </Form>

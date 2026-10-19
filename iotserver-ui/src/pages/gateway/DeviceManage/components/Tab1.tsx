@@ -7,6 +7,7 @@ import { getDeviceProperty } from '@/api'
 import { Tab1Modal, Tab1ModalRef } from './Tab1Modal'
 import { DeviceProperty } from '@/api/device-thingmodel'
 import { isNull } from 'lodash'
+import { t } from '@/i18n'
 
 const { Text, Title } = Typography
 
@@ -66,7 +67,7 @@ export const DetailTab1: React.FC<DetailTab1Props> = () => {
       <Tab1Modal ref={tab1ModalRef}></Tab1Modal>
       <div className="mb10" style={{ display: 'flex', justifyContent: 'flex-end' }}>
         <Form layout="inline">
-          <Form.Item label="实时刷新">
+          <Form.Item label={t('实时刷新')}>
             <Switch checked={checked} onChange={setChecked}/>
           </Form.Item>
         </Form>
@@ -90,7 +91,7 @@ export const DetailTab1: React.FC<DetailTab1Props> = () => {
                         }}
                       >
                         <HistoryOutlined className="mr5" />
-                        历史数据
+                        {t('历史数据')}
                       </Text>
                     </div>
                   </div>
@@ -106,8 +107,8 @@ export const DetailTab1: React.FC<DetailTab1Props> = () => {
                       <Divider type="vertical" />
                       {item.data_type}
                       <Divider type="vertical" />
-                      {item.access_mode === 'R' && '只读'}
-                      {item.access_mode === 'RW' && '读写'}
+                      {item.access_mode === 'R' && t('只读')}
+                      {item.access_mode === 'RW' && t('读写')}
                     </Text>
                   </div>
                 </Card>

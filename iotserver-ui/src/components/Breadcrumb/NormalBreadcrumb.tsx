@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { Breadcrumb } from 'antd'
 import { lookupMenuName } from '@/routes/menus'
 import './style.less'
+import { t } from '@/i18n'
 
 export interface NormalBreadcrumbProps {
   // eslint-disable-next-line react/no-unused-prop-types
@@ -17,7 +18,7 @@ const NormalBreadcrumb:React.FC<NormalBreadcrumbProps> = () => {
     <div className="normal-breadcrumb-title">
       <Breadcrumb>
         <Breadcrumb.Item key="home">
-          <Link to="/">首页</Link>
+          <Link to="/">{t('首页')}</Link>
         </Breadcrumb.Item>
         {
           pathSnippets.map((_, index) => {

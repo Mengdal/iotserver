@@ -1,8 +1,11 @@
 package i18n
 
 import (
+	"bytes"
 	"context"
+	"errors"
 	"fmt"
+	"iotserver/internal/pkg/errort"
 	"iotserver/internal/pkg/i18n/locales"
 	"strconv"
 	"strings"
@@ -47,14 +50,50 @@ func Trans(lang string, messageId string, params map[string]interface{}) string 
 		},
 	})
 	if err != nil {
+		// 词条缺失时的兜底：按「ID 就是原文模板」的约定把参数填进去。
+		// 中文因此不用单独维护词条（见 errort.NewMessageErr）。
+		if params != nil {
+			return renderFallback(messageId, params)
+		}
 		return messageId
 	}
 	return retStr
 }
 
-// 错误码的翻译 TransCode("en",10001, nil)
+// LocalizeError 把错误转成当前语言的文案。
+// 错误链里带 errort.MessageError（词条 ID + 参数）时返回按请求语言渲染的文案与 ok=true；
+// 其它错误返回 ok=false，调用方自己决定怎么展示（避免把内部错误细节拼进用户文案）。
+func LocalizeError(ctx context.Context, err error) (string, bool) {
+	if err == nil {
+		return "", false
+	}
+	var msgErr *errort.MessageError
+	if errors.As(err, &msgErr) {
+		return Trans(GetLang(ctx), msgErr.ID, msgErr.Params), true
+	}
+	return "", false
+}
+
+// renderFallback 把 ID 当模板渲染出带参数的中文原文；渲染不了就原样返回
+func renderFallback(text string, params map[string]interface{}) string {
+	tmpl, err := template.New("i18n.fallback").Parse(text)
+	if err != nil {
+		return text
+	}
+	var buf bytes.Buffer
+	if err := tmpl.Execute(&buf, params); err != nil {
+		return text
+	}
+	return buf.String()
+}
+
+// 错误码的翻译 TransCode(ctx,10001, nil)：语言取自请求上下文（Accept-Language / ?lang=）
 func TransCode(ctx context.Context, code uint32, params map[string]interface{}) string {
-	lang := GetLang(ctx)
+	return transCodeWithLang(GetLang(ctx), code, params)
+}
+
+// transCodeWithLang 按指定语言翻译错误码
+func transCodeWithLang(lang string, code uint32, params map[string]interface{}) string {
 	localizer := i18n.NewLocalizer(bundle, lang)
 	strCode := strconv.Itoa(int(code))
 	retStr, err := localizer.Localize(&i18n.LocalizeConfig{
@@ -72,9 +111,10 @@ func TransCode(ctx context.Context, code uint32, params map[string]interface{}) 
 	return retStr
 }
 
-// TransCodeDefault 错误码转换, 用于告警显示, 只显示英文错误信息
+// TransCodeDefault 错误码转换, 用于告警显示, 只显示英文错误信息。
+// 这里显式指定英文，不再依赖「上下文取不到语言时」的默认值，避免跟着默认语言一起变。
 func TransCodeDefault(code uint32, params map[string]interface{}) string {
-	return "[Code(" + strconv.Itoa(int(code)) + ")] " + TransCode(context.Background(), code, params)
+	return "[Code(" + strconv.Itoa(int(code)) + ")] " + transCodeWithLang(LangEnUS, code, params)
 }
 
 func funcFilter(a interface{}) string {

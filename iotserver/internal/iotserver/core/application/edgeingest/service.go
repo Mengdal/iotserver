@@ -126,7 +126,7 @@ func (s *Service) Start() error {
 		},
 		func(ctx context.Context, msg dtos.CallbackMessage) { s.lc.Info("参考系统接入 mqtt disconnected") })
 	if err != nil {
-		return fmt.Errorf("参考系统接入 MQTT 连接失败: %w", err)
+		return errort.NewMessageErr("参考系统接入 MQTT 连接失败: {{.p1}}", map[string]interface{}{"p1": err})
 	}
 	s.mqttClient = client
 	s.stopCh = make(chan struct{})
@@ -172,7 +172,7 @@ func (s *Service) syncSubscriptions() error {
 	ctx := tenant.Platform(context.Background())
 	gateways, _, err := s.dbClient.WithCtx(ctx).GatewaySearch(0, -1, dtos.GatewaySearchQueryRequest{})
 	if err != nil {
-		return fmt.Errorf("读取网关列表失败: %w", err)
+		return errort.NewMessageErr("读取网关列表失败: {{.p1}}", map[string]interface{}{"p1": err})
 	}
 
 	desired := make(map[string]struct{}, len(gateways)*4)
@@ -205,7 +205,7 @@ func (s *Service) syncSubscriptions() error {
 	if s.mqttClient != nil {
 		if len(added) > 0 {
 			if err := s.mqttClient.Subscribe(added...); err != nil {
-				return fmt.Errorf("订阅失败: %w", err)
+				return errort.NewMessageErr("订阅失败: {{.p1}}", map[string]interface{}{"p1": err})
 			}
 		}
 		if len(removed) > 0 {
@@ -228,14 +228,14 @@ func (s *Service) syncSubscriptions() error {
 func (s *Service) HandleMessage(topic string, payload []byte) error {
 	kind, pk, sn, ok := edgeprotocol.ParseTopic(topic)
 	if !ok {
-		return fmt.Errorf("非法的参考系统主题: %s", topic)
+		return errort.NewMessageErr("非法的参考系统主题: {{.p1}}", map[string]interface{}{"p1": topic})
 	}
 	// 此刻还没有租户上下文，先靠 (pk, sn) 定位网关
 	platformCtx := tenant.Platform(context.Background())
 	gateway, err := s.dbClient.WithCtx(platformCtx).GatewayByPkSn(pk, sn)
 	if err != nil {
 		// 未注册网关：记录后拒绝，避免任意设备注入数据
-		return fmt.Errorf("未注册的网关 pk=%s sn=%s", pk, sn)
+		return errort.NewMessageErr("未注册的网关 pk={{.p1}} sn={{.p2}}", map[string]interface{}{"p1": pk, "p2": sn})
 	}
 	// 之后的读写都在该网关所属租户的作用域内进行
 	tenantCtx := tenant.With(platformCtx, tenant.Context{TenantID: gateway.TenantId, Platform: false})
@@ -248,7 +248,7 @@ func (s *Service) HandleMessage(topic string, payload []byte) error {
 	case edgeprotocol.KindLastwill:
 		return s.gatewayItf.GatewayOffline(tenantCtx, gateway.Sn)
 	default:
-		return fmt.Errorf("未支持的参考系统上行类型: %s", kind)
+		return errort.NewMessageErr("未支持的参考系统上行类型: {{.p1}}", map[string]interface{}{"p1": kind})
 	}
 }
 

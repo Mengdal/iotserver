@@ -1,6 +1,6 @@
 {
-  "short_name": "罗米物联网",
-  "name": "罗米物联网平台",
+  "short_name": "iotserver",
+  "name": "iotserver IoT Platform",
   "icons": [
     {
       "src": "logo192.png",

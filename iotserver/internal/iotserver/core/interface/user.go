@@ -23,6 +23,7 @@ type UserItf interface {
 	/*********** 当前登录用户 ***********/
 	CurrentUserProfile(ctx context.Context, username string) (dtos.SysUserProfileResponse, error)
 	UpdateCurrentUserProfile(ctx context.Context, username string, req dtos.SysUserProfileUpdateRequest) error
+	UpdateCurrentUserLang(ctx context.Context, username string, req dtos.UpdateLangRequest) error
 	PermissionsByUsername(username string) ([]string, error)
 	IsAdminUsername(username string) bool
 

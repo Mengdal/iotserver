@@ -45,7 +45,7 @@ func checkCallbackToken(c *gin.Context) error {
 		return nil
 	}
 	if c.GetHeader(dtos.CallbackTokenHeaderName) != expect[dtos.CallbackTokenHeaderName] {
-		return errort.NewCommonErr(errort.DefaultTokenPermission, fmt.Errorf("回调鉴权失败"))
+		return errort.NewCommonErr(errort.DefaultTokenPermission, errort.NewMessageErr("回调鉴权失败", nil))
 	}
 	return nil
 }

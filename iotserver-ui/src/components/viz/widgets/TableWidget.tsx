@@ -6,6 +6,7 @@ import type { VizWidgetManifest, VizWidgetSettingsProps } from '../types'
 import { formatTime, formatValue, latestPoint, seriesLabel, seriesUnit } from '../format'
 import DataBindingEditor from './MetricsEditor'
 import { SettingGroup, SettingRow } from './SettingsLayout'
+import { t, tt } from '@/i18n'
 
 const { Text } = Typography
 
@@ -20,11 +21,11 @@ export interface TableConfig {
 }
 
 const RANGE_OPTIONS = [
-  { label: '近 1 小时', value: '1h' },
-  { label: '近 24 小时', value: '24h' },
-  { label: '近 7 天', value: '7d' },
-  { label: '近 30 天', value: '30d' },
-  { label: '不限', value: 'all' },
+  { label: t('近 1 小时'), value: '1h' },
+  { label: t('近 24 小时'), value: '24h' },
+  { label: t('近 7 天'), value: '7d' },
+  { label: t('近 30 天'), value: '30d' },
+  { label: t('不限'), value: 'all' },
 ]
 
 interface LatestRow {
@@ -90,15 +91,15 @@ const TableWidget: React.FC<{ config: TableConfig; ctx: any }> = ({ config, ctx 
       const hit = byKey.get(key)
       return {
         key: `${key}-${index}`,
-        metric: (hit && hit.label) || key,
+        metric: tt((hit && hit.label) || key),
         value: hit ? formatValue(hit.value, 2) : '--',
-        unit: (hit && hit.unit) || '',
+        unit: tt((hit && hit.unit) || ''),
       }
     })
   }, [metricKeys, metricValues])
 
   if (!useMetric && (!config.series || config.series.length === 0)) {
-    return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="还没绑定数据（右上角菜单 → 配置本组件）" />
+    return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t('还没绑定数据（右上角菜单 → 配置本组件）')} />
   }
   if (ctx.loading && series.length === 0 && metricValues.length === 0) {
     return <div style={{ textAlign: 'center', paddingTop: 12 }}><Spin /></div>
@@ -114,9 +115,9 @@ const TableWidget: React.FC<{ config: TableConfig; ctx: any }> = ({ config, ctx 
         dataSource={metricRows}
         pagination={metricRows.length > (config.pageSize || 10) ? pagination : false}
         columns={[
-          { title: '指标', dataIndex: 'metric', ellipsis: true },
-          { title: '值', dataIndex: 'value', align: 'right' },
-          { title: '单位', dataIndex: 'unit', width: 70 },
+          { title: t('指标'), dataIndex: 'metric', ellipsis: true },
+          { title: t('值'), dataIndex: 'value', align: 'right' },
+          { title: t('单位'), dataIndex: 'unit', width: 70 },
         ]}
       />
     )
@@ -135,11 +136,11 @@ const TableWidget: React.FC<{ config: TableConfig; ctx: any }> = ({ config, ctx 
         dataSource={latestRows}
         pagination={latestRows.length > (config.pageSize || 10) ? pagination : false}
         columns={[
-          { title: '设备', dataIndex: 'device', ellipsis: true },
-          { title: '属性', dataIndex: 'property', ellipsis: true },
-          { title: '当前值', dataIndex: 'value', align: 'right' },
-          { title: '单位', dataIndex: 'unit', width: 70 },
-          { title: '采样时间', dataIndex: 'time', width: 150 },
+          { title: t('设备'), dataIndex: 'device', ellipsis: true },
+          { title: t('属性'), dataIndex: 'property', ellipsis: true },
+          { title: t('当前值'), dataIndex: 'value', align: 'right' },
+          { title: t('单位'), dataIndex: 'unit', width: 70 },
+          { title: t('采样时间'), dataIndex: 'time', width: 150 },
         ]}
       />
     )
@@ -153,7 +154,7 @@ const TableWidget: React.FC<{ config: TableConfig; ctx: any }> = ({ config, ctx 
       pagination={pagination}
       scroll={{ y: undefined }}
       columns={[
-        { title: '时间', dataIndex: 'time', width: 150, fixed: 'left' as const },
+        { title: t('时间'), dataIndex: 'time', width: 150, fixed: 'left' as const },
         ...history.columns.map(label => ({ title: label, dataIndex: label, align: 'right' as const })),
       ]}
     />
@@ -164,27 +165,27 @@ const TableSettings: React.FC<VizWidgetSettingsProps<TableConfig>> = ({ config, 
   const useMetric = (config.metrics || []).length > 0
   return (
     <>
-      <SettingGroup title="数据绑定">
+      <SettingGroup title={t('数据绑定')}>
         <DataBindingEditor
           series={config.series || []}
           metrics={config.metrics}
           onChange={patch => onChange(patch)}
         />
       </SettingGroup>
-      <SettingGroup title="显示设置">
+      <SettingGroup title={t('显示设置')}>
         {/* 「当前值 / 历史明细」只对设备测点有意义：指标是聚合值，没有历史明细 */}
         {useMetric
-          ? <SettingRow hint="指标表格每个指标一行；「当前值 / 历史明细」只对设备测点生效。" />
+          ? <SettingRow hint={t('指标表格每个指标一行；「当前值 / 历史明细」只对设备测点生效。')} />
           : (
             <>
               <SettingRow
-                label="当前值"
+                label={t('当前值')}
                 inline
-                hint="每行显示一条数据序列的最新上报；关掉后按时间列出历史明细。"
+                hint={t('每行显示一条数据序列的最新上报；关掉后按时间列出历史明细。')}
               >
                 <Switch size="small" checked={config.latest !== false} onChange={v => onChange({ latest: v })} />
               </SettingRow>
-              <SettingRow label="时间范围">
+              <SettingRow label={t('时间范围')}>
                 <Select
                   style={{ width: '100%' }}
                   value={config.timeRange || '24h'}
@@ -195,7 +196,7 @@ const TableSettings: React.FC<VizWidgetSettingsProps<TableConfig>> = ({ config, 
               </SettingRow>
             </>
           )}
-        <SettingRow label="每页条数">
+        <SettingRow label={t('每页条数')}>
           <Select
             style={{ width: '100%' }}
             value={config.pageSize || 10}
@@ -210,7 +211,7 @@ const TableSettings: React.FC<VizWidgetSettingsProps<TableConfig>> = ({ config, 
 
 export const tableManifest: VizWidgetManifest<TableConfig> = {
   type: 'table',
-  label: '表格',
+  label: t('表格'),
   icon: <TableOutlined />,
   defaultSize: { w: 6, h: 8 },
   minSize: { w: 3, h: 3 },

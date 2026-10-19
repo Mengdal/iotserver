@@ -29,18 +29,19 @@ import {
 import { useAuth } from '@/utils/auth'
 import { useTreeTable } from '../utils/useTreeTable'
 import type { FlatMeta } from '../utils/treeTable'
+import { t } from '@/i18n'
 
 const { useMessage } = message
 
 /** 组织节点类型：与后端 models.DeptType* 保持一致 */
 const DEPT_TYPE_OPTIONS = [
-  { value: 1, label: '公司' },
-  { value: 2, label: '工厂' },
-  { value: 3, label: '车间' },
-  { value: 4, label: '产线' },
+  { value: 1, label: t('公司') },
+  { value: 2, label: t('工厂') },
+  { value: 3, label: t('车间') },
+  { value: 4, label: t('产线') },
 ]
 
-const deptTypeLabel = (value?: number) => DEPT_TYPE_OPTIONS.find(item => item.value === value)?.label || '公司'
+const deptTypeLabel = (value?: number) => DEPT_TYPE_OPTIONS.find(item => item.value === value)?.label || t('公司')
 
 type FlatDept = SysDept & FlatMeta
 
@@ -113,7 +114,7 @@ const SysDeptPage: React.FC = () => {
   const rows = flatTable.rows as unknown as FlatDept[]
 
   const parentOptions = useMemo(
-    () => [{ value: '0', title: '顶级部门' }, ...toParentOptions(treeData, editing?.id)],
+    () => [{ value: '0', title: t('顶级部门') }, ...toParentOptions(treeData, editing?.id)],
     [treeData, editing],
   )
 
@@ -146,7 +147,7 @@ const SysDeptPage: React.FC = () => {
       ? await updateSysDept({ ...values, id: editing.id })
       : await addSysDept(values)
     if (resp.success) {
-      messageApi.open({ type: 'success', content: editing ? '修改成功' : '新增成功' })
+      messageApi.open({ type: 'success', content: editing ? t('修改成功') : t('新增成功') })
       setModalOpen(false)
       loadData()
     } else {
@@ -157,7 +158,7 @@ const SysDeptPage: React.FC = () => {
   const handleDelete = async (id: string) => {
     const resp = await deleteSysDept([id])
     if (resp.success) {
-      messageApi.open({ type: 'success', content: '删除成功' })
+      messageApi.open({ type: 'success', content: t('删除成功') })
       loadData()
     } else {
       messageApi.open({ type: 'error', content: resp.errorMsg })
@@ -177,7 +178,7 @@ const SysDeptPage: React.FC = () => {
             style={{ padding: 0, width: 20, height: 20 }}
             data-node={record.id}
             data-name={record.name}
-            aria-label={flatTable.isExpanded(record.id) ? '折叠' : '展开'}
+            aria-label={flatTable.isExpanded(record.id) ? t('折叠') : t('展开')}
             onClick={() => flatTable.toggleExpand(record)}
           >
             {flatTable.isExpanded(record.id) ? <MinusSquareOutlined /> : <PlusSquareOutlined />}
@@ -186,7 +187,7 @@ const SysDeptPage: React.FC = () => {
         : null),
     },
     {
-      title: '部门名称',
+      title: t('部门名称'),
       dataIndex: 'name',
       width: 260,
       render: (value: string, record) => (
@@ -196,39 +197,39 @@ const SysDeptPage: React.FC = () => {
       ),
     },
     {
-      title: '节点类型',
+      title: t('节点类型'),
       dataIndex: 'deptType',
       width: 100,
       render: (value: number) => <Tag color="processing">{deptTypeLabel(value)}</Tag>,
     },
-    { title: '负责人', dataIndex: 'leader', width: 140, render: (value: string) => value || '-' },
-    { title: '联系电话', dataIndex: 'phone', width: 160, render: (value: string) => value || '-' },
-    { title: '邮箱', dataIndex: 'email', width: 200, render: (value: string) => value || '-' },
-    { title: '排序', dataIndex: 'sort', width: 80 },
+    { title: t('负责人'), dataIndex: 'leader', width: 140, render: (value: string) => value || '-' },
+    { title: t('联系电话'), dataIndex: 'phone', width: 160, render: (value: string) => value || '-' },
+    { title: t('邮箱'), dataIndex: 'email', width: 200, render: (value: string) => value || '-' },
+    { title: t('排序'), dataIndex: 'sort', width: 80 },
     {
-      title: '状态',
+      title: t('状态'),
       dataIndex: 'status',
       width: 90,
-      render: (value: number) => (value === 1 ? <Tag color="success">正常</Tag> : <Tag color="default">停用</Tag>),
+      render: (value: number) => (value === 1 ? <Tag color="success">{t('正常')}</Tag> : <Tag color="default">{t('停用')}</Tag>),
     },
     {
-      title: '创建时间',
+      title: t('创建时间'),
       dataIndex: 'created',
       width: 180,
       render: (value: number) => (value ? dayjs(value).format('YYYY-MM-DD HH:mm:ss') : '-'),
     },
     {
-      title: '操作',
+      title: t('操作'),
       key: 'action',
       width: 200,
       fixed: 'right',
       render: (_, record) => (
         <Space size={4}>
-          {canAdd && <Button type="link" size="small" onClick={() => openAdd(record.id)}>新增下级</Button>}
-          {canEdit && <Button type="link" size="small" onClick={() => openEdit(record)}>编辑</Button>}
+          {canAdd && <Button type="link" size="small" onClick={() => openAdd(record.id)}>{t('新增下级')}</Button>}
+          {canEdit && <Button type="link" size="small" onClick={() => openEdit(record)}>{t('编辑')}</Button>}
           {canRemove && (
-            <Popconfirm title="确认删除该部门？" onConfirm={() => handleDelete(record.id)} okText="确定" cancelText="取消">
-              <Button type="link" size="small" danger>删除</Button>
+            <Popconfirm title={t('确认删除该部门？')} onConfirm={() => handleDelete(record.id)} okText={t('确定')} cancelText={t('取消')}>
+              <Button type="link" size="small" danger>{t('删除')}</Button>
             </Popconfirm>
           )}
         </Space>
@@ -245,18 +246,18 @@ const SysDeptPage: React.FC = () => {
         style={{ marginBottom: 16, rowGap: 8 }}
         onFinish={values => setFilters({ name: values.name, status: values.status })}
       >
-        <Form.Item name="name" label="部门名称">
-          <Input placeholder="请输入部门名称" allowClear style={{ width: 180 }} />
+        <Form.Item name="name" label={t('部门名称')}>
+          <Input placeholder={t('请输入部门名称')} allowClear style={{ width: 180 }} />
         </Form.Item>
-        <Form.Item name="status" label="状态">
-          <Select placeholder="全部" allowClear style={{ width: 120 }}>
-            <Select.Option value="1">正常</Select.Option>
-            <Select.Option value="0">停用</Select.Option>
+        <Form.Item name="status" label={t('状态')}>
+          <Select placeholder={t('全部')} allowClear style={{ width: 120 }}>
+            <Select.Option value="1">{t('正常')}</Select.Option>
+            <Select.Option value="0">{t('停用')}</Select.Option>
           </Select>
         </Form.Item>
         <Form.Item>
           <Space>
-            <Button type="primary" icon={<SearchOutlined />} htmlType="submit">查询</Button>
+            <Button type="primary" icon={<SearchOutlined />} htmlType="submit">{t('查询')}</Button>
             <Button
               icon={<ReloadOutlined />}
               onClick={() => {
@@ -264,14 +265,14 @@ const SysDeptPage: React.FC = () => {
                 setFilters({})
               }}
             >
-              重置
+              {t('重置')}
             </Button>
           </Space>
         </Form.Item>
       </Form>
 
       <Space style={{ marginBottom: 12 }}>
-        {canAdd && <Button type="primary" icon={<PlusOutlined />} onClick={() => openAdd()}>新增部门</Button>}
+        {canAdd && <Button type="primary" icon={<PlusOutlined />} onClick={() => openAdd()}>{t('新增部门')}</Button>}
       </Space>
 
       <Table<FlatDept>
@@ -289,55 +290,55 @@ const SysDeptPage: React.FC = () => {
 
       <Drawer
         open={modalOpen}
-        title={editing ? '编辑部门' : '新增部门'}
+        title={editing ? t('编辑部门') : t('新增部门')}
         placement="right"
         width={560}
         onClose={() => setModalOpen(false)}
         footer={
           <Space style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <Button onClick={() => setModalOpen(false)}>取消</Button>
-            <Button type="primary" onClick={handleSubmit}>确定</Button>
+            <Button onClick={() => setModalOpen(false)}>{t('取消')}</Button>
+            <Button type="primary" onClick={handleSubmit}>{t('确定')}</Button>
           </Space>
         }
       >
         <Form form={editForm} layout="vertical">
-          <Form.Item label="上级部门" name="parentId">
-            <Select options={parentOptions} placeholder="请选择上级部门" showSearch optionFilterProp="title" />
+          <Form.Item label={t('上级部门')} name="parentId">
+            <Select options={parentOptions} placeholder={t('请选择上级部门')} showSearch optionFilterProp="title" />
           </Form.Item>
-          <Form.Item label="部门名称" name="name" rules={[{ required: true, message: '请输入部门名称' }]}>
-            <Input placeholder="请输入部门名称" />
+          <Form.Item label={t('部门名称')} name="name" rules={[{ required: true, message: t('请输入部门名称') }]}>
+            <Input placeholder={t('请输入部门名称')} />
           </Form.Item>
-          <Form.Item label="节点类型" name="deptType" initialValue={1}>
-            <Select options={DEPT_TYPE_OPTIONS} placeholder="请选择节点类型" />
+          <Form.Item label={t('节点类型')} name="deptType" initialValue={1}>
+            <Select options={DEPT_TYPE_OPTIONS} placeholder={t('请选择节点类型')} />
           </Form.Item>
           <Row gutter={12}>
             <Col span={12}>
-              <Form.Item label="负责人" name="leader">
-                <Input placeholder="请输入负责人" />
+              <Form.Item label={t('负责人')} name="leader">
+                <Input placeholder={t('请输入负责人')} />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item label="联系电话" name="phone">
-                <Input placeholder="请输入联系电话" />
+              <Form.Item label={t('联系电话')} name="phone">
+                <Input placeholder={t('请输入联系电话')} />
               </Form.Item>
             </Col>
           </Row>
           <Row gutter={12}>
             <Col span={12}>
-              <Form.Item label="邮箱" name="email">
-                <Input placeholder="请输入邮箱" />
+              <Form.Item label={t('邮箱')} name="email">
+                <Input placeholder={t('请输入邮箱')} />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item label="显示排序" name="sort">
+              <Form.Item label={t('显示排序')} name="sort">
                 <InputNumber min={0} style={{ width: '100%' }} />
               </Form.Item>
             </Col>
           </Row>
-          <Form.Item label="部门状态" name="status">
+          <Form.Item label={t('部门状态')} name="status">
             <Radio.Group>
-              <Radio value={1}>正常</Radio>
-              <Radio value={0}>停用</Radio>
+              <Radio value={1}>{t('正常')}</Radio>
+              <Radio value={0}>{t('停用')}</Radio>
             </Radio.Group>
           </Form.Item>
         </Form>

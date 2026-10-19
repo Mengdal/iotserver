@@ -9,6 +9,7 @@ import { AddModal, AddModalRef } from './AddModal'
 import { RunStatusMap } from '@/utils/statusMap'
 import { confirmPlatformViewAdd } from '@/utils/platformViewGuard'
 import { ProductType } from '@/api/product'
+import { t, tt } from '@/i18n'
 
 const { Text } = Typography
 const { useMessage } = message
@@ -75,19 +76,19 @@ const ProductManage: React.FC<ProductManageProps> = () => {
         <Form layout="inline" form={form}>
           <Form.Item key="platform" name="platform" initialValue={''}>
             <Select
-              placeholder="请选择云平台"
+              placeholder={t('请选择云平台')}
               style={{ minWidth: 180 }}
-              options={[{ label: '云平台 (全部)', value: '' }, ...iotPlatformOptions.map(i => ({ label: i, value: i }))]}
+              options={[{ label: t('云平台 (全部)'), value: '' }, ...iotPlatformOptions.map(i => ({ label: tt(i), value: i }))]}
             />
           </Form.Item>
           <Form.Item key="name" name="name">
-            <Input placeholder="产品名称"></Input>
+            <Input placeholder={t('产品名称')}></Input>
           </Form.Item>
           <Form.Item>
-            <Button type="primary" onClick={search}>查询</Button>
+            <Button type="primary" onClick={search}>{t('查询')}</Button>
           </Form.Item>
           <Form.Item>
-            <Button type="default" onClick={reset}>重置</Button>
+            <Button type="default" onClick={reset}>{t('重置')}</Button>
           </Form.Item>
         </Form>
       </Card>
@@ -99,7 +100,7 @@ const ProductManage: React.FC<ProductManageProps> = () => {
               if (!await confirmPlatformViewAdd()) return
               addModalRef.current?.open()
             }}
-          ><PlusOutlined />创建产品</Button>
+          ><PlusOutlined />{t('创建产品')}</Button>
           <div className="flex-center">
             <Space.Compact block>
               <Select
@@ -114,7 +115,7 @@ const ProductManage: React.FC<ProductManageProps> = () => {
                   ),
                 }))}
                 value={cloudInstanceId}
-                placeholder="请选择云实例"
+                placeholder={t('请选择云实例')}
                 dropdownMatchSelectWidth={false}
                 onChange={value => {
                   setCloudInstanceId(value)
@@ -127,11 +128,11 @@ const ProductManage: React.FC<ProductManageProps> = () => {
                 onClick={() => {
                   if (cloudInstanceId) {
                     setSubmitting(true)
-                    messageApi.open({ key, type: 'loading', content: '产品数据同步中, 请等待 ..' })
+                    messageApi.open({ key, type: 'loading', content: t('产品数据同步中, 请等待 ..') })
                     allProductSync({ cloud_instance_id: cloudInstanceId })
                       .then(resp => {
                         if (resp.success) {
-                          messageApi.open({ key, type: 'success', content: '产品数据同步成功', duration: 3 })
+                          messageApi.open({ key, type: 'success', content: t('产品数据同步成功'), duration: 3 })
                           reload()
                         } else {
                           messageApi.open({ key, type: 'error', content: resp.errorMsg, duration: 3 })
@@ -140,16 +141,16 @@ const ProductManage: React.FC<ProductManageProps> = () => {
                         setSubmitting(false)
                       })
                   } else {
-                    messageApi.open({ type: 'error', content: '请选择要同步的云实例' })
+                    messageApi.open({ type: 'error', content: t('请选择要同步的云实例') })
                   }
                 }}
-              >数据同步</Button>
+              >{t('数据同步')}</Button>
             </Space.Compact>
             <Button className="ml10"
               onClick={() => {
                 reload()
               }}
-            ><ReloadOutlined />刷新</Button>
+            ><ReloadOutlined />{t('刷新')}</Button>
           </div>
         </Space>
         <Table
@@ -160,20 +161,20 @@ const ProductManage: React.FC<ProductManageProps> = () => {
           rowKey="id"
           size="small"
           columns={[
-            { title: '产品ID', key: 'id', dataIndex: 'id' },
-            { title: '产品名称', key: 'name', dataIndex: 'name' },
+            { title: t('产品ID'), key: 'id', dataIndex: 'id' },
+            { title: t('产品名称'), key: 'name', dataIndex: 'name' },
             {
-              title: '产品编号',
+              title: t('产品编号'),
               key: 'product_id',
               dataIndex: 'product_id',
               render (value) {
-                return value ? <Text copyable={{ tooltips: ['复制', '复制成功'] }}>{value}</Text> : null
+                return value ? <Text copyable={{ tooltips: [t('复制'), t('复制成功')] }}>{value}</Text> : null
               },
             },
-            { title: '类型', key: 'node_type', dataIndex: 'node_type' },
-            { title: '云平台', key: 'platform', dataIndex: 'platform' },
+            { title: t('类型'), key: 'node_type', dataIndex: 'node_type', render: (value: string) => tt(value) },
+            { title: t('云平台'), key: 'platform', dataIndex: 'platform', render: (value: string) => tt(value) },
             {
-              title: '创建时间',
+              title: t('创建时间'),
               key: 'created_at',
               dataIndex: 'created_at',
               render (value) {
@@ -181,12 +182,12 @@ const ProductManage: React.FC<ProductManageProps> = () => {
               },
             },
             {
-              title: '状态',
+              title: t('状态'),
               key: 'status',
               dataIndex: 'status',
               render: (value) => {
-                if (value === '未发布') return <Space><MinusCircleFilled style={{ color: '#87909d' }} />未发布</Space>
-                if (value === '已发布') return <Space><CheckCircleFilled style={{ color: '#55af70' }} />已发布</Space>
+                if (value === '未发布') return <Space><MinusCircleFilled style={{ color: '#87909d' }} />{t('未发布')}</Space>
+                if (value === '已发布') return <Space><CheckCircleFilled style={{ color: '#55af70' }} />{t('已发布')}</Space>
                 return '-'
               },
               // render (value, record) {
@@ -202,7 +203,7 @@ const ProductManage: React.FC<ProductManageProps> = () => {
               // },
             },
             {
-              title: '操作',
+              title: t('操作'),
               key: 'action',
               dataIndex: 'action',
               render (value, record) {
@@ -212,22 +213,22 @@ const ProductManage: React.FC<ProductManageProps> = () => {
                       onClick={() => {
                         navigate(`/gateway/product/detail/${record?.id}`)
                       }}
-                    >详情</Typography.Link>
+                    >{t('详情')}</Typography.Link>
                     <Typography.Link
                       onClick={() => {
                         navigate(`/gateway/device/manage/${record?.id}`)
                       }}
-                    >管理设备</Typography.Link>
+                    >{t('管理设备')}</Typography.Link>
                     <Popconfirm
-                      title="此操作将永久删除该条记录, 是否继续?"
-                      okText="确定"
-                      cancelText="取消"
+                      title={t('此操作将永久删除该条记录, 是否继续?')}
+                      okText={t('确定')}
+                      cancelText={t('取消')}
                       placement="topRight"
                       onConfirm={() => {
                         deleteProduct(record?.id)
                           .then(resp => {
                             if (resp.success) {
-                              messageApi.open({ type: 'success', content: '删除成功' })
+                              messageApi.open({ type: 'success', content: t('删除成功') })
                               reload()
                             } else {
                               messageApi.open({ type: 'error', content: resp.errorMsg })
@@ -235,7 +236,7 @@ const ProductManage: React.FC<ProductManageProps> = () => {
                           })
                       }}
                     >
-                      <Typography.Link>删除</Typography.Link>
+                      <Typography.Link>{t('删除')}</Typography.Link>
                     </Popconfirm>
                   </Space>
                 )

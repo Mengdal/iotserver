@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { Alert, Card, Spin } from 'antd'
 import CanvasBoard from '@/components/CanvasBoard'
 import { getVizBoards, VizBoard } from '@/api'
+import { t } from '@/i18n'
 
 /**
  * 系统监控：组件由「看板管理」里的「系统监控看板」（画布看板）渲染。
@@ -17,17 +18,17 @@ const SystemMonitor: React.FC = () => {
     getVizBoards()
       .then((resp) => {
         if (!resp.success) {
-          setError(resp.errorMsg || '看板加载失败')
+          setError(resp.errorMsg || t('看板加载失败'))
           return
         }
         const hit = (resp.result.list || []).find(b => b.name === '系统监控看板')
         if (hit) {
           setBoard(hit)
         } else {
-          setError('找不到「系统监控看板」，请在「看板管理」里新建/改名')
+          setError(t('找不到「系统监控看板」，请在「看板管理」里新建/改名'))
         }
       })
-      .catch((e: any) => setError(e?.message || '看板加载失败'))
+      .catch((e: any) => setError(e?.message || t('看板加载失败')))
       .finally(() => setLoading(false))
   }, [])
 
@@ -35,11 +36,11 @@ const SystemMonitor: React.FC = () => {
     return <Card className="m20" size="small"><div style={{ padding: 48, textAlign: 'center' }}><Spin /></div></Card>
   }
   if (error) {
-    return <Card className="m20" size="small"><Alert type="info" showIcon message="系统监控看板未就绪" description={error} /></Card>
+    return <Card className="m20" size="small"><Alert type="info" showIcon message={t('系统监控看板未就绪')} description={error} /></Card>
   }
 
   return (
-    <Card className="m20" size="small" title="系统监控">
+    <Card className="m20" size="small" title={t('系统监控')}>
       {board ? <CanvasBoard boardId={board.id} /> : null}
     </Card>
   )

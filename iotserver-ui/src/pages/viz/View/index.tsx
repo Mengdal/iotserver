@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom'
 import { Alert, Spin } from 'antd'
 import { getVizBoard, VizBoardDetail } from '@/api'
 import CanvasBoard from '@/components/CanvasBoard'
+import { t } from '@/i18n'
 
 /**
  * 看板只读展示页（大屏 / 分享链接）
@@ -20,7 +21,7 @@ const VizView: React.FC = () => {
 
   useEffect(() => {
     if (!id) {
-      setError('缺少看板 id')
+      setError(t('缺少看板 id'))
       setLoading(false)
       return
     }
@@ -28,9 +29,9 @@ const VizView: React.FC = () => {
     getVizBoard(id)
       .then((resp) => {
         if (resp.success) setBoard(resp.result)
-        else setError(resp.errorMsg || '看板加载失败')
+        else setError(resp.errorMsg || t('看板加载失败'))
       })
-      .catch((e: any) => setError(e?.message || '看板加载失败'))
+      .catch((e: any) => setError(e?.message || t('看板加载失败')))
       .finally(() => setLoading(false))
   }, [id])
 
@@ -42,7 +43,7 @@ const VizView: React.FC = () => {
     )
   }
   if (error) {
-    return <Alert type="error" showIcon style={{ margin: 24 }} message="看板加载失败" description={error} />
+    return <Alert type="error" showIcon style={{ margin: 24 }} message={t('看板加载失败')} description={error} />
   }
   return (
     <div style={{ minHeight: '100vh', padding: 12, background: '#f5f6f8', boxSizing: 'border-box' }}>

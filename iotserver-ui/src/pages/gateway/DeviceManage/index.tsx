@@ -11,6 +11,7 @@ import { BatchBindModal, BatchBindModalRef } from './BatchBindModal'
 import { DeviceSyncModal, DeviceSyncModalRef } from './DeviceSyncModal'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { DevicesType } from '@/api/devices'
+import { t, tt } from '@/i18n'
 
 const { Text } = Typography
 const { useMessage } = message
@@ -88,39 +89,39 @@ const DevicesManage: React.FC<DevicesManageProps> = () => {
           <Form.Item key="product_id" name="product_id">
             <Select
               style={{ width: 180 }}
-              placeholder="产品范围"
-              options={[{ label: '产品范围 (全部)', value: '' }, ...productListOptions.map(i => ({ label: i.name, value: i.id }))]}
+              placeholder={t('产品范围')}
+              options={[{ label: t('产品范围 (全部)'), value: '' }, ...productListOptions.map(i => ({ label: i.name, value: i.id }))]}
             />
           </Form.Item>
           <Form.Item key="platform" name="platform">
             <Select
               style={{ width: 180 }}
-              placeholder="平台"
-              options={[{ label: '平台 (全部)', value: '' }, ...iotPlatformOptions.map(i => ({ label: i, value: i }))]}
+              placeholder={t('平台')}
+              options={[{ label: t('平台 (全部)'), value: '' }, ...iotPlatformOptions.map(i => ({ label: tt(i), value: i }))]}
             />
           </Form.Item>
           <Form.Item key="drive_instance_id" name="drive_instance_id">
             <Select
               style={{ width: 180 }}
-              placeholder="驱动"
-              options={[{ label: '驱动 (全部)', value: '' }, ...deviceServersOptions.map(i => ({ label: i.name, value: i.id }))]}
+              placeholder={t('驱动')}
+              options={[{ label: t('驱动 (全部)'), value: '' }, ...deviceServersOptions.map(i => ({ label: i.name, value: i.id }))]}
             />
           </Form.Item>
           <Form.Item key="status" name="status">
             <Select
               style={{ width: 180 }}
-              placeholder="状态"
-              options={[{ label: '状态 (全部)', value: '' }, ...statusOptions.map(i => ({ label: i, value: i }))]}
+              placeholder={t('状态')}
+              options={[{ label: t('状态 (全部)'), value: '' }, ...statusOptions.map(i => ({ label: tt(i), value: i }))]}
             />
           </Form.Item>
           <Form.Item key="name" name="name">
-            <Input placeholder="设备名称"></Input>
+            <Input placeholder={t('设备名称')}></Input>
           </Form.Item>
           <Form.Item>
-            <Button type="primary" onClick={search}>查询</Button>
+            <Button type="primary" onClick={search}>{t('查询')}</Button>
           </Form.Item>
           <Form.Item>
-            <Button type="default" onClick={reset}>重置</Button>
+            <Button type="default" onClick={reset}>{t('重置')}</Button>
           </Form.Item>
         </Form>
       </Card>
@@ -133,7 +134,7 @@ const DevicesManage: React.FC<DevicesManageProps> = () => {
                 if (!await confirmPlatformViewAdd()) return
                 addModalRef.current?.open()
               }}
-            ><PlusOutlined />添加设备</Button>
+            ><PlusOutlined />{t('添加设备')}</Button>
           </div>
           <div>
             <Button
@@ -141,17 +142,17 @@ const DevicesManage: React.FC<DevicesManageProps> = () => {
               disabled={!selectedRowKeys?.length}
               onClick={() => {
                 batchBindModalRef.current?.open()
-              }}><LockOutlined />批量驱动绑定
+              }}><LockOutlined />{t('批量驱动绑定')}
             </Button>
             <Popconfirm
-              title="确定解绑当前勾选的设备吗?"
-              okText="确定"
-              cancelText="取消"
+              title={t('确定解绑当前勾选的设备吗?')}
+              okText={t('确定')}
+              cancelText={t('取消')}
               disabled={!selectedRowKeys?.length}
               onConfirm={() => {
                 unBindDriver({ device_ids: selectedRowKeys }).then(resp => {
                   if (resp.success) {
-                    messageApi.open({ type: 'success', content: '批量解绑成功' })
+                    messageApi.open({ type: 'success', content: t('批量解绑成功') })
                     setSelectedRowKeys([])
                     reload()
                   } else {
@@ -160,17 +161,17 @@ const DevicesManage: React.FC<DevicesManageProps> = () => {
                 })
               }}
             >
-              <Button className="ml10" disabled={!selectedRowKeys?.length}><UnlockOutlined />批量驱动解绑</Button>
+              <Button className="ml10" disabled={!selectedRowKeys?.length}><UnlockOutlined />{t('批量驱动解绑')}</Button>
             </Popconfirm>
             <Popconfirm
-              title="确定删除当前勾选的设备吗?"
-              okText="确定"
-              cancelText="取消"
+              title={t('确定删除当前勾选的设备吗?')}
+              okText={t('确定')}
+              cancelText={t('取消')}
               disabled={!selectedRowKeys?.length}
               onConfirm={() => {
                 deleteDevices({ device_ids: selectedRowKeys }).then(resp => {
                   if (resp.success) {
-                    messageApi.open({ type: 'success', content: '批量删除成功' })
+                    messageApi.open({ type: 'success', content: t('批量删除成功') })
                     setSelectedRowKeys([])
                     reload()
                   } else {
@@ -179,18 +180,18 @@ const DevicesManage: React.FC<DevicesManageProps> = () => {
                 })
               }}
             >
-              <Button className="ml10" disabled={!selectedRowKeys?.length}><DeleteOutlined />批量删除</Button>
+              <Button className="ml10" disabled={!selectedRowKeys?.length}><DeleteOutlined />{t('批量删除')}</Button>
             </Popconfirm>
             <Button className="ml10"
               onClick={() => {
                 deviceSyncModalRef.current?.open()
               }}
-            ><SyncOutlined />设备同步</Button>
+            ><SyncOutlined />{t('设备同步')}</Button>
             <Button className="ml10"
               onClick={() => {
                 reload()
               }}
-            ><ReloadOutlined />刷新</Button>
+            ><ReloadOutlined />{t('刷新')}</Button>
           </div>
         </Space>
         <Table
@@ -201,11 +202,11 @@ const DevicesManage: React.FC<DevicesManageProps> = () => {
           rowKey="id"
           size="small"
           columns={[
-            { title: '设备ID', key: 'id', dataIndex: 'id' },
-            { title: '设备名称', key: 'name', dataIndex: 'name' },
-            { title: '所属产品', key: 'product_name', dataIndex: 'product_name' },
+            { title: t('设备ID'), key: 'id', dataIndex: 'id' },
+            { title: t('设备名称'), key: 'name', dataIndex: 'name' },
+            { title: t('所属产品'), key: 'product_name', dataIndex: 'product_name' },
             {
-              title: '设备状态',
+              title: t('设备状态'),
               key: 'status',
               dataIndex: 'status',
               render (value, record) {
@@ -217,15 +218,15 @@ const DevicesManage: React.FC<DevicesManageProps> = () => {
                       禁用: 'red',
                       未激活: 'orange',
                     }[record.status] || 'gray'} />
-                    <Text className="ml5">{value || '未知'}</Text>
+                    <Text className="ml5">{tt(value) || t('未知')}</Text>
                   </>
                 )
               },
             },
-            { title: '平台', key: 'platform', dataIndex: 'platform' },
-            { title: '关联驱动', key: 'driver_service_name', dataIndex: 'driver_service_name' },
+            { title: t('平台'), key: 'platform', dataIndex: 'platform', render: (value: string) => tt(value) },
+            { title: t('关联驱动'), key: 'driver_service_name', dataIndex: 'driver_service_name' },
             {
-              title: '创建时间',
+              title: t('创建时间'),
               key: 'created',
               dataIndex: 'created',
               render (value) {
@@ -233,7 +234,7 @@ const DevicesManage: React.FC<DevicesManageProps> = () => {
               },
             },
             {
-              title: '最近在线时间',
+              title: t('最近在线时间'),
               key: 'last_online_time',
               dataIndex: 'last_online_time',
               render (value) {
@@ -241,9 +242,10 @@ const DevicesManage: React.FC<DevicesManageProps> = () => {
               },
             },
             {
-              title: '操作',
+              title: t('操作'),
               key: 'action',
               dataIndex: 'action',
+              width: 190,
               render (value, record) {
                 return (
                   <Space split={<Text type="secondary">/</Text>}>
@@ -251,22 +253,22 @@ const DevicesManage: React.FC<DevicesManageProps> = () => {
                       onClick={() => {
                         navigate(`/gateway/device/detail/${record?.id}`)
                       }}
-                    >详情</Typography.Link>
+                    >{t('详情')}</Typography.Link>
                     <Typography.Link
                       onClick={() => {
                         editModalRef.current?.open(record)
                       }}
-                    >编辑</Typography.Link>
+                    >{t('编辑')}</Typography.Link>
                     <Popconfirm
-                      title="此操作将永久删除该条记录, 是否继续?"
-                      okText="确定"
-                      cancelText="取消"
+                      title={t('此操作将永久删除该条记录, 是否继续?')}
+                      okText={t('确定')}
+                      cancelText={t('取消')}
                       placement="topRight"
                       onConfirm={() => {
                         deleteDevice(record?.id)
                           .then(resp => {
                             if (resp.success) {
-                              messageApi.open({ type: 'success', content: '删除成功' })
+                              messageApi.open({ type: 'success', content: t('删除成功') })
                               reload()
                             } else {
                               messageApi.open({ type: 'error', content: resp.errorMsg })
@@ -274,7 +276,7 @@ const DevicesManage: React.FC<DevicesManageProps> = () => {
                           })
                       }}
                     >
-                      <Typography.Link>删除</Typography.Link>
+                      <Typography.Link>{t('删除')}</Typography.Link>
                     </Popconfirm>
                   </Space>
                 )

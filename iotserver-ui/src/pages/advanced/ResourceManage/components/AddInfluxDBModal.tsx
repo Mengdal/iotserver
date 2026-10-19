@@ -2,6 +2,7 @@ import { Button, Drawer, Form, Input, message, Space } from 'antd'
 import { CloseOutlined } from '@ant-design/icons'
 import React, { forwardRef, useCallback, useImperativeHandle, useState } from 'react'
 import { addResource, editResource, InfluxDBResource } from '@/api'
+import { t } from '@/i18n'
 
 const { useForm } = Form
 
@@ -37,7 +38,7 @@ export const AddInfluxDBModal = forwardRef<AddInfluxDBModalRef, AddInfluxDBModal
 
   return (
     <Drawer
-      title={record ? '修改实例' : '添加实例'}
+      title={record ? t('修改实例') : t('添加实例')}
       placement="right"
       open={isModalOpen}
       width={550}
@@ -64,7 +65,7 @@ export const AddInfluxDBModal = forwardRef<AddInfluxDBModalRef, AddInfluxDBModal
                     editResource(values)
                       .then(resp => {
                         if (resp.success) {
-                          message.success('修改成功')
+                          message.success(t('修改成功'))
                           handleClose()
                           onFinish()
                         } else {
@@ -77,7 +78,7 @@ export const AddInfluxDBModal = forwardRef<AddInfluxDBModalRef, AddInfluxDBModal
                     addResource(values)
                       .then(resp => {
                         if (resp.success) {
-                          message.success('添加成功')
+                          message.success(t('添加成功'))
                           handleClose()
                           onFinish()
                         } else {
@@ -89,8 +90,8 @@ export const AddInfluxDBModal = forwardRef<AddInfluxDBModalRef, AddInfluxDBModal
                   }
                 })
             }}
-          >确定</Button>
-          <Button onClick={handleClose}>取消</Button>
+          >{t('确定')}</Button>
+          <Button onClick={handleClose}>{t('取消')}</Button>
         </Space>
       }
     >
@@ -99,71 +100,71 @@ export const AddInfluxDBModal = forwardRef<AddInfluxDBModalRef, AddInfluxDBModal
         layout="vertical"
       >
         <Form.Item
-          label="实例名称"
+          label={t('实例名称')}
           name="name"
           rules={[
             {
               required: true,
               validator (rule, value, callback) {
                 if (!value) {
-                  callback('请输入实例名称')
+                  callback(t('请输入实例名称'))
                 } else if (/^[a-zA-Z\u4e00-\u9fa5][a-zA-Z0-9\u4e00-\u9fa5_-]{0,31}$/.test(value)) {
                   callback()
                 } else {
-                  callback('1-32位字符，支持中文、英文、数字及特殊字符_-，必须以英文或中文字符开头')
+                  callback(t('1-32位字符，支持中文、英文、数字及特殊字符_-，必须以英文或中文字符开头'))
                 }
               },
             },
           ]}
         >
-          <Input placeholder="1-32位字符，支持中文、英文、数字及特殊字符_-，必须以英文或中文字符开头"></Input>
+          <Input placeholder={t('1-32位字符，支持中文、英文、数字及特殊字符_-，必须以英文或中文字符开头')}></Input>
         </Form.Item>
         <Form.Item
           label="Addr"
           name={['option', 'addr']}
-          rules={[{ required: true, message: '不能为空' }]}
+          rules={[{ required: true, message: t('不能为空') }]}
         >
-          <Input placeholder="请输入"></Input>
+          <Input placeholder={t('请输入')}></Input>
         </Form.Item>
         <Form.Item
           label="Username"
           name={['option', 'username']}
         >
-          <Input placeholder="请输入"></Input>
+          <Input placeholder={t('请输入')}></Input>
         </Form.Item>
         <Form.Item
           label="Password"
           name={['option', 'password']}
         >
-          <Input placeholder="请输入"></Input>
+          <Input placeholder={t('请输入')}></Input>
         </Form.Item>
         <Form.Item
           label="Measurement"
           name={['option', 'measurement']}
-          rules={[{ required: true, message: '不能为空' }]}
+          rules={[{ required: true, message: t('不能为空') }]}
         >
-          <Input placeholder="请输入"></Input>
+          <Input placeholder={t('请输入')}></Input>
         </Form.Item>
         <Form.Item
           label="Databasename"
           name={['option', 'databasename']}
-          rules={[{ required: true, message: '不能为空' }]}
+          rules={[{ required: true, message: t('不能为空') }]}
         >
-          <Input placeholder="请输入"></Input>
+          <Input placeholder={t('请输入')}></Input>
         </Form.Item>
         <Form.Item
           label="Tagkey"
           name={['option', 'tagkey']}
-          rules={[{ required: true, message: '不能为空' }]}
+          rules={[{ required: true, message: t('不能为空') }]}
         >
-          <Input placeholder="请输入"></Input>
+          <Input placeholder={t('请输入')}></Input>
         </Form.Item>
         <Form.Item
           label="Tagvalue"
           name={['option', 'tagvalue']}
-          rules={[{ required: true, message: '不能为空' }]}
+          rules={[{ required: true, message: t('不能为空') }]}
         >
-          <Input placeholder="请输入"></Input>
+          <Input placeholder={t('请输入')}></Input>
         </Form.Item>
         {/* <Form.Item
           label="Fields"

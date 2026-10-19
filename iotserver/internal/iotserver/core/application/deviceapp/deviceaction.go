@@ -124,7 +124,7 @@ func (p *deviceApp) SetDeviceProperty(req dtos.OpenApiSetDeviceThingModel) (err 
 	defer func() {
 		if r := recover(); r != nil {
 			p.lc.Error("Panic:", r)
-			err = fmt.Errorf("设备属性设置异常: %v", r)
+			err = errort.NewMessageErr("设备属性设置异常: {{.p1}}", map[string]interface{}{"p1": r})
 		}
 	}()
 

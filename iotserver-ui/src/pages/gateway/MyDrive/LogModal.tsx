@@ -5,6 +5,7 @@ import { PlayCircleOutlined, PauseCircleOutlined } from '@ant-design/icons'
 import { WebSocketContext } from '@/components/WebSocket'
 import { Terminal } from 'xterm'
 import 'xterm/css/xterm.css'
+import { t } from '@/i18n'
 // import { WebSocketClass } from '@/utils/web-socket'
 
 export interface LogModalProps {
@@ -94,7 +95,7 @@ export const LogModal = forwardRef<LogModalRef, LogModalProps>((props, ref) => {
 
   return (
     <Modal
-      title="云服务日志"
+      title={t('云服务日志')}
       width={1250}
       maskClosable={false}
       open={isModalOpen}
@@ -115,14 +116,14 @@ export const LogModal = forwardRef<LogModalRef, LogModalProps>((props, ref) => {
               a.click()
               document.body.removeChild(a)
             }}
-          >下载日志</Button>
+          >{t('下载日志')}</Button>
           <Button
             type="primary"
             icon={loading ? <PauseCircleOutlined /> : <PlayCircleOutlined />}
             onClick={() => {
               loading ? handleStop() : handleStart(id)
             }}
-          >{ loading ? '停止' : '开始' }</Button>
+          >{ loading ? t('停止') : t('开始') }</Button>
         </>
       }
       onCancel={() => {

@@ -1,5 +1,6 @@
 
 import qs from 'qs'
+import { currentLocale, t } from '@/i18n'
 
 interface WebSocketOptions {
   url?: string
@@ -51,7 +52,9 @@ export class WebSocketClass {
 
   private get wsurl () {
     const { url, path, query } = this.options
-    return `${url}${path}?${qs.stringify(query)}`
+    // 语言走 query：浏览器的 WebSocket API 不能自定义请求头，
+    // 后端按 ?lang= 决定回中文还是英文（见 iotserver/internal/pkg/i18n）
+    return `${url}${path}?${qs.stringify({ ...query, lang: currentLocale() })}`
   }
 
   constructor (
@@ -140,7 +143,7 @@ export class WebSocketClass {
     return new Promise((resolve, reject) => {
       // 1. 连接不可用时立即失败，而不是静默丢弃
       if (this.websocket.readyState !== WebSocket.OPEN) {
-        reject(new Error('WebSocket 未连接，请刷新页面后重试'))
+        reject(new Error(t('WebSocket 未连接，请刷新页面后重试')))
         return
       }
 
@@ -161,7 +164,7 @@ export class WebSocketClass {
         if (cur?.resolveMap) {
           cur.resolveMap = cur.resolveMap.filter(fn => fn !== wrapped)
         }
-        reject(new Error('请求超时（后端未响应），请查看服务端日志'))
+        reject(new Error(t('请求超时（后端未响应），请查看服务端日志')))
       }, timeoutMs)
 
       callbackMapCopy.resolveMap = [...oldResolveMap, wrapped]
@@ -171,7 +174,7 @@ export class WebSocketClass {
         this.websocket.send(postMessage)
       } catch (e) {
         clearTimeout(timer)
-        reject(e instanceof Error ? e : new Error('消息发送失败'))
+        reject(e instanceof Error ? e : new Error(t('消息发送失败')))
       }
     })
   }

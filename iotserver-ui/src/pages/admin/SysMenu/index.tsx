@@ -37,6 +37,7 @@ import IconSelect, { renderMenuIcon } from '@/components/IconSelect'
 import { useTreeTable } from '../utils/useTreeTable'
 import { collectNested } from '../utils/treeTable'
 import type { FlatMeta } from '../utils/treeTable'
+import { t } from '@/i18n'
 
 const { useMessage } = message
 
@@ -45,15 +46,15 @@ type FlatMenu = SysMenu & FlatMeta
 type TabKey = 'tenant' | 'platform'
 
 const menuTypeOptions = [
-  { label: '目录', value: 'M' },
-  { label: '菜单', value: 'C' },
-  { label: '按钮', value: 'F' },
+  { label: t('目录'), value: 'M' },
+  { label: t('菜单'), value: 'C' },
+  { label: t('按钮'), value: 'F' },
 ]
 
 const menuTypeTag: Record<string, { color: string, text: string }> = {
-  M: { color: 'purple', text: '目录' },
-  C: { color: 'blue', text: '菜单' },
-  F: { color: 'default', text: '按钮' },
+  M: { color: 'purple', text: t('目录') },
+  C: { color: 'blue', text: t('菜单') },
+  F: { color: 'default', text: t('按钮') },
 }
 
 interface ParentOption {
@@ -197,19 +198,19 @@ const SysMenuPage: React.FC = () => {
   })
   const rows = flatTable.rows as unknown as FlatMenu[]
 
-  const parentOptions = useMemo(() => [{ value: '0', title: '顶级菜单' }, ...toParentOptions(treeData)], [treeData])
+  const parentOptions = useMemo(() => [{ value: '0', title: t('顶级菜单') }, ...toParentOptions(treeData)], [treeData])
 
   const scopeText = useMemo(() => {
-    if (!platformAdmin) return '当前编辑：本租户的自定义菜单与显示定制 —— 仅本租户可见'
-    if (tenantId) return '当前编辑：该租户的自定义菜单与显示定制 —— 仅该租户可见，不影响平台菜单'
-    return '当前编辑：平台原始菜单 —— 改动对所有租户生效'
+    if (!platformAdmin) return t('当前编辑：本租户的自定义菜单与显示定制 —— 仅本租户可见')
+    if (tenantId) return t('当前编辑：该租户的自定义菜单与显示定制 —— 仅该租户可见，不影响平台菜单')
+    return t('当前编辑：平台原始菜单 —— 改动对所有租户生效')
   }, [platformAdmin, tenantId])
 
   const tabItems = useMemo(() => {
-    if (!tenantView) return [{ key: 'platform', label: '平台菜单' }]
+    if (!tenantView) return [{ key: 'platform', label: t('平台菜单') }]
     return [
-      { key: 'tenant', label: '本租户自定义菜单' },
-      { key: 'platform', label: '平台菜单' },
+      { key: 'tenant', label: t('本租户自定义菜单') },
+      { key: 'platform', label: t('平台菜单') },
     ]
   }, [tenantView])
 
@@ -258,7 +259,7 @@ const SysMenuPage: React.FC = () => {
       ? await updateSysMenu({ ...payload, id: editing.id })
       : await addSysMenu(payload)
     if (resp.success) {
-      messageApi.open({ type: 'success', content: editing ? '修改成功' : '新增成功' })
+      messageApi.open({ type: 'success', content: editing ? t('修改成功') : t('新增成功') })
       setModalOpen(false)
       loadData()
     } else {
@@ -269,7 +270,7 @@ const SysMenuPage: React.FC = () => {
   const handleDelete = async (id: string) => {
     const resp = await deleteSysMenu([id])
     if (resp.success) {
-      messageApi.open({ type: 'success', content: '删除成功' })
+      messageApi.open({ type: 'success', content: t('删除成功') })
       loadData()
     } else {
       // 后端会给出带数量的拒绝原因（如「有 N 个租户在它下面挂了自建菜单」），原样展示
@@ -288,7 +289,7 @@ const SysMenuPage: React.FC = () => {
       sort: patch.sort ?? current?.sort ?? 0,
     })
     if (resp.success) {
-      messageApi.open({ type: 'success', content: '菜单定制已保存' })
+      messageApi.open({ type: 'success', content: t('菜单定制已保存') })
       loadData()
       return true
     }
@@ -321,7 +322,7 @@ const SysMenuPage: React.FC = () => {
   const handleTenantReset = async () => {
     const resp = await resetSysMenuTenant(tenantId)
     if (resp.success) {
-      messageApi.open({ type: 'success', content: '已重置该租户的菜单定制' })
+      messageApi.open({ type: 'success', content: t('已重置该租户的菜单定制') })
       loadData()
     } else {
       messageApi.open({ type: 'error', content: resp.errorMsg })
@@ -341,7 +342,7 @@ const SysMenuPage: React.FC = () => {
             style={{ padding: 0, width: 20, height: 20 }}
             data-node={record.id}
             data-name={record.name}
-            aria-label={flatTable.isExpanded(record.id) ? '折叠' : '展开'}
+            aria-label={flatTable.isExpanded(record.id) ? t('折叠') : t('展开')}
             onClick={() => flatTable.toggleExpand(record)}
           >
             {flatTable.isExpanded(record.id) ? <MinusSquareOutlined /> : <PlusSquareOutlined />}
@@ -350,7 +351,7 @@ const SysMenuPage: React.FC = () => {
         : null),
     },
     {
-      title: '菜单名称',
+      title: t('菜单名称'),
       dataIndex: 'name',
       width: 280,
       render: (value: string, record) => {
@@ -365,20 +366,20 @@ const SysMenuPage: React.FC = () => {
             }}
           >
             {customName || value}
-            {customName ? <Tag color="blue" style={{ marginLeft: 6 }}>已改名</Tag> : null}
-            {hidden ? <Tag style={{ marginLeft: 6 }}>已隐藏</Tag> : null}
+            {customName ? <Tag color="blue" style={{ marginLeft: 6 }}>{t('已改名')}</Tag> : null}
+            {hidden ? <Tag style={{ marginLeft: 6 }}>{t('已隐藏')}</Tag> : null}
           </span>
         )
       },
     },
     {
-      title: '按钮',
+      title: t('按钮'),
       key: 'isButton',
       width: 70,
-      render: (_, record) => (record.menuType === 'F' ? <Tag>是</Tag> : <Tag color="blue">否</Tag>),
+      render: (_, record) => (record.menuType === 'F' ? <Tag>{t('是')}</Tag> : <Tag color="blue">{t('否')}</Tag>),
     },
     {
-      title: '类型',
+      title: t('类型'),
       dataIndex: 'menuType',
       width: 80,
       render: (value: string) => {
@@ -387,7 +388,7 @@ const SysMenuPage: React.FC = () => {
       },
     },
     {
-      title: '图标',
+      title: t('图标'),
       dataIndex: 'icon',
       width: 140,
       render: (value: string, record) => {
@@ -402,23 +403,23 @@ const SysMenuPage: React.FC = () => {
           : '-')
       },
     },
-    { title: '路由地址', dataIndex: 'path', width: 200, render: (value: string) => value || '-' },
-    { title: '权限标识', dataIndex: 'perms', width: 200, render: (value: string) => value || '-' },
-    { title: '排序', dataIndex: 'sort', width: 80 },
+    { title: t('路由地址'), dataIndex: 'path', width: 200, render: (value: string) => value || '-' },
+    { title: t('权限标识'), dataIndex: 'perms', width: 200, render: (value: string) => value || '-' },
+    { title: t('排序'), dataIndex: 'sort', width: 80 },
     {
-      title: '显示',
+      title: t('显示'),
       dataIndex: 'visible',
       width: 80,
-      render: (value: number) => (value === 1 ? '显示' : '隐藏'),
+      render: (value: number) => (value === 1 ? t('显示') : t('隐藏')),
     },
     {
-      title: '状态',
+      title: t('状态'),
       dataIndex: 'status',
       width: 90,
-      render: (value: number) => (value === 1 ? <Tag color="success">正常</Tag> : <Tag color="default">停用</Tag>),
+      render: (value: number) => (value === 1 ? <Tag color="success">{t('正常')}</Tag> : <Tag color="default">{t('停用')}</Tag>),
     },
     {
-      title: '创建时间',
+      title: t('创建时间'),
       dataIndex: 'created',
       width: 180,
       render: (value: number) => (value ? dayjs(value).format('YYYY-MM-DD HH:mm:ss') : '-'),
@@ -427,7 +428,7 @@ const SysMenuPage: React.FC = () => {
 
   const actionColumn: ColumnsType<FlatMenu>[number] = readonlyTab
     ? {
-      title: '操作（仅本租户显示定制）',
+      title: t('操作（仅本租户显示定制）'),
       key: 'action',
       width: 260,
       fixed: 'right',
@@ -435,35 +436,35 @@ const SysMenuPage: React.FC = () => {
         ? (
           <Space size={4}>
             <Button type="link" size="small" onClick={() => handleToggleHidden(record)}>
-              {prefMap[record.id]?.hidden === 1 ? '显示' : '隐藏'}
+              {prefMap[record.id]?.hidden === 1 ? t('显示') : t('隐藏')}
             </Button>
-            <Button type="link" size="small" onClick={() => openRename(record)}>改名</Button>
+            <Button type="link" size="small" onClick={() => openRename(record)}>{t('改名')}</Button>
             <Button
               type="link"
               size="small"
               disabled={!prefMap[record.id]}
               onClick={() => handleRestoreDefault(record)}
             >
-              恢复默认
+              {t('恢复默认')}
             </Button>
           </Space>
         )
-        : <span style={{ color: 'rgba(0, 0, 0, 0.45)' }}>无定制权限</span>),
+        : <span style={{ color: 'rgba(0, 0, 0, 0.45)' }}>{t('无定制权限')}</span>),
     }
     : {
-      title: '操作',
+      title: t('操作'),
       key: 'action',
       width: 200,
       fixed: 'right',
       render: (_, record) => (
         <Space size={4}>
           {canAdd && record.menuType !== 'F' && (
-            <Button type="link" size="small" onClick={() => openAdd(record.id)}>新增下级</Button>
+            <Button type="link" size="small" onClick={() => openAdd(record.id)}>{t('新增下级')}</Button>
           )}
-          {canEdit && <Button type="link" size="small" onClick={() => openEdit(record)}>编辑</Button>}
+          {canEdit && <Button type="link" size="small" onClick={() => openEdit(record)}>{t('编辑')}</Button>}
           {canRemove && (
-            <Popconfirm title="确认删除该菜单？" onConfirm={() => handleDelete(record.id)} okText="确定" cancelText="取消">
-              <Button type="link" size="small" danger>删除</Button>
+            <Popconfirm title={t('确认删除该菜单？')} onConfirm={() => handleDelete(record.id)} okText={t('确定')} cancelText={t('取消')}>
+              <Button type="link" size="small" danger>{t('删除')}</Button>
             </Popconfirm>
           )}
         </Space>
@@ -495,18 +496,18 @@ const SysMenuPage: React.FC = () => {
         style={{ marginBottom: 16, rowGap: 8 }}
         onFinish={values => setFilters({ name: values.name, status: values.status })}
       >
-        <Form.Item name="name" label="菜单名称">
-          <Input placeholder="请输入菜单名称" allowClear style={{ width: 180 }} />
+        <Form.Item name="name" label={t('菜单名称')}>
+          <Input placeholder={t('请输入菜单名称')} allowClear style={{ width: 180 }} />
         </Form.Item>
-        <Form.Item name="status" label="状态">
-          <Select placeholder="全部" allowClear style={{ width: 120 }}>
-            <Select.Option value="1">正常</Select.Option>
-            <Select.Option value="0">停用</Select.Option>
+        <Form.Item name="status" label={t('状态')}>
+          <Select placeholder={t('全部')} allowClear style={{ width: 120 }}>
+            <Select.Option value="1">{t('正常')}</Select.Option>
+            <Select.Option value="0">{t('停用')}</Select.Option>
           </Select>
         </Form.Item>
         <Form.Item>
           <Space>
-            <Button type="primary" icon={<SearchOutlined />} htmlType="submit">查询</Button>
+            <Button type="primary" icon={<SearchOutlined />} htmlType="submit">{t('查询')}</Button>
             <Button
               icon={<ReloadOutlined />}
               onClick={() => {
@@ -514,7 +515,7 @@ const SysMenuPage: React.FC = () => {
                 setFilters({})
               }}
             >
-              重置
+              {t('重置')}
             </Button>
           </Space>
         </Form.Item>
@@ -522,17 +523,17 @@ const SysMenuPage: React.FC = () => {
 
       <Space style={{ marginBottom: 12 }}>
         {!readonlyTab && canAdd && (
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => openAdd()}>新增菜单</Button>
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => openAdd()}>{t('新增菜单')}</Button>
         )}
-        <Button icon={<ReloadOutlined />} onClick={loadData}>刷新</Button>
+        <Button icon={<ReloadOutlined />} onClick={loadData}>{t('刷新')}</Button>
         {platformAdmin && Boolean(tenantId) && canCustomReset && (
           <Popconfirm
-            title="将清空该租户的自建菜单与全部显示定制，恢复平台默认，是否继续？"
+            title={t('将清空该租户的自建菜单与全部显示定制，恢复平台默认，是否继续？')}
             onConfirm={handleTenantReset}
-            okText="确定"
-            cancelText="取消"
+            okText={t('确定')}
+            cancelText={t('取消')}
           >
-            <Button danger>重置该租户的菜单定制</Button>
+            <Button danger>{t('重置该租户的菜单定制')}</Button>
           </Popconfirm>
         )}
       </Space>
@@ -552,96 +553,96 @@ const SysMenuPage: React.FC = () => {
 
       <Drawer
         open={modalOpen}
-        title={editing ? '编辑菜单' : '新增菜单'}
+        title={editing ? t('编辑菜单') : t('新增菜单')}
         placement="right"
         width={600}
         onClose={() => setModalOpen(false)}
         footer={
           <Space style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <Button onClick={() => setModalOpen(false)}>取消</Button>
-            <Button type="primary" onClick={handleSubmit}>确定</Button>
+            <Button onClick={() => setModalOpen(false)}>{t('取消')}</Button>
+            <Button type="primary" onClick={handleSubmit}>{t('确定')}</Button>
           </Space>
         }
       >
         <Form form={editForm} layout="vertical">
-          <Form.Item label="上级菜单" name="parentId">
+          <Form.Item label={t('上级菜单')} name="parentId">
             <Select
               options={parentOptions}
-              placeholder="请选择上级菜单"
+              placeholder={t('请选择上级菜单')}
               showSearch
               optionFilterProp="title"
             />
           </Form.Item>
-          <Form.Item label="菜单类型" name="menuType" rules={[{ required: true, message: '请选择菜单类型' }]}>
+          <Form.Item label={t('菜单类型')} name="menuType" rules={[{ required: true, message: t('请选择菜单类型') }]}>
             <Radio.Group options={menuTypeOptions} optionType="button" buttonStyle="solid" />
           </Form.Item>
-          <Form.Item label="菜单名称" name="name" rules={[{ required: true, message: '请输入菜单名称' }]}>
-            <Input placeholder="请输入菜单名称" />
+          <Form.Item label={t('菜单名称')} name="name" rules={[{ required: true, message: t('请输入菜单名称') }]}>
+            <Input placeholder={t('请输入菜单名称')} />
           </Form.Item>
           {watchedMenuType !== 'F' && (
             <>
-              <Form.Item label="图标" name="icon">
-                <IconSelect placeholder="请选择图标" />
+              <Form.Item label={t('图标')} name="icon">
+                <IconSelect placeholder={t('请选择图标')} />
               </Form.Item>
-              <Form.Item label="路由地址" name="path">
-                <Input placeholder="例如 /admin/sysUser" />
+              <Form.Item label={t('路由地址')} name="path">
+                <Input placeholder={t('例如 /admin/sysUser')} />
               </Form.Item>
-              <Form.Item label="组件路径" name="component">
-                <Input placeholder="前端组件路径（可选）" />
+              <Form.Item label={t('组件路径')} name="component">
+                <Input placeholder={t('前端组件路径（可选）')} />
               </Form.Item>
             </>
           )}
           {tenantView
             ? (
-              <Form.Item label="权限标识">
+              <Form.Item label={t('权限标识')}>
                 <span style={{ color: 'rgba(0, 0, 0, 0.45)' }}>
-                  租户自建菜单只作为导航入口，不携带权限标识（权限由平台菜单与角色决定）
+                  {t('租户自建菜单只作为导航入口，不携带权限标识（权限由平台菜单与角色决定）')}
                 </span>
               </Form.Item>
             )
             : (
-              <Form.Item label="权限标识" name="perms">
-                <Input placeholder="例如 system:user:list" />
+              <Form.Item label={t('权限标识')} name="perms">
+                <Input placeholder={t('例如 system:user:list')} />
               </Form.Item>
             )}
-          <Form.Item label="显示排序" name="sort">
+          <Form.Item label={t('显示排序')} name="sort">
             <InputNumber min={0} style={{ width: '100%' }} />
           </Form.Item>
           {watchedMenuType !== 'F' && (
-            <Form.Item label="显示状态" name="visible">
+            <Form.Item label={t('显示状态')} name="visible">
               <Radio.Group>
-                <Radio value={1}>显示</Radio>
-                <Radio value={0}>隐藏</Radio>
+                <Radio value={1}>{t('显示')}</Radio>
+                <Radio value={0}>{t('隐藏')}</Radio>
               </Radio.Group>
             </Form.Item>
           )}
-          <Form.Item label="菜单状态" name="status">
+          <Form.Item label={t('菜单状态')} name="status">
             <Radio.Group>
-              <Radio value={1}>正常</Radio>
-              <Radio value={0}>停用</Radio>
+              <Radio value={1}>{t('正常')}</Radio>
+              <Radio value={0}>{t('停用')}</Radio>
             </Radio.Group>
           </Form.Item>
-          <Form.Item label="备注" name="remark">
-            <Input.TextArea rows={2} placeholder="请输入备注" />
+          <Form.Item label={t('备注')} name="remark">
+            <Input.TextArea rows={2} placeholder={t('请输入备注')} />
           </Form.Item>
         </Form>
       </Drawer>
 
       <Modal
         open={Boolean(renameTarget)}
-        title="修改本租户显示名称"
-        okText="确定"
-        cancelText="取消"
+        title={t('修改本租户显示名称')}
+        okText={t('确定')}
+        cancelText={t('取消')}
         onCancel={() => setRenameTarget(null)}
         onOk={handleRenameSubmit}
       >
         <Form form={renameForm} layout="vertical">
           <Form.Item
-            label="租户自定义名称"
+            label={t('租户自定义名称')}
             name="customName"
-            extra="留空表示恢复平台菜单名称；只影响本租户的显示，不修改平台菜单本体。"
+            extra={t('留空表示恢复平台菜单名称；只影响本租户的显示，不修改平台菜单本体。')}
           >
-            <Input placeholder={`平台名称：${renameTarget?.name || ''}`} allowClear maxLength={64} />
+            <Input placeholder={t('平台名称：{{p1}}', { p1: renameTarget?.name || '' })} allowClear maxLength={64} />
           </Form.Item>
         </Form>
       </Modal>

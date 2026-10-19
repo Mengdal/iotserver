@@ -6,6 +6,7 @@ import type { VizWidgetManifest, VizWidgetSettingsProps } from '../types'
 import { formatTime, formatValue, latestPoint, seriesLabel, seriesUnit } from '../format'
 import DataBindingEditor from './MetricsEditor'
 import { SettingGroup, SettingRow } from './SettingsLayout'
+import { t, tt } from '@/i18n'
 
 const { Text } = Typography
 
@@ -45,7 +46,7 @@ const GaugeWidget: React.FC<{ config: GaugeConfig; ctx: any }> = ({ config, ctx 
   // 绑了指标就按指标驱动指针；没绑指标走原来的设备测点路径（量程仍取 config 的 min/max）
   const useMetric = !!metricKey
   if (!useMetric && (!config.series || config.series.length === 0)) {
-    return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="还没绑定数据（右上角菜单 → 配置本组件）" />
+    return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t('还没绑定数据（右上角菜单 → 配置本组件）')} />
   }
   if (ctx.loading && !series && !metric) return <div style={{ textAlign: 'center', paddingTop: 12 }}><Spin /></div>
   if (!useMetric && series && series.error) return <Text type="danger">{series.error}</Text>
@@ -65,7 +66,7 @@ const GaugeWidget: React.FC<{ config: GaugeConfig; ctx: any }> = ({ config, ctx 
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
-      <Text type="secondary" style={{ fontSize: 12 }} ellipsis>{label}</Text>
+      <Text type="secondary" style={{ fontSize: 12 }} ellipsis>{tt(label)}</Text>
       <Progress
         type="dashboard"
         percent={Math.round(percent * 10) / 10}
@@ -78,12 +79,12 @@ const GaugeWidget: React.FC<{ config: GaugeConfig; ctx: any }> = ({ config, ctx 
         format={() => (
           <span style={{ fontSize: 20, fontWeight: 600 }}>
             {Number.isFinite(raw) ? formatValue(raw, config.decimals) : '--'}
-            {unit ? <span style={{ fontSize: 12, marginLeft: 2 }}>{unit}</span> : null}
+            {unit ? <span style={{ fontSize: 12, marginLeft: 2 }}>{tt(unit)}</span> : null}
           </span>
         )}
       />
       <Text type="secondary" style={{ fontSize: 12 }}>
-        {(useMetric ? metric : point) ? (useMetric ? '实时统计' : formatTime(point && point.time)) : '暂无数据'} · 量程 {min}~{max}
+        {(useMetric ? metric : point) ? (useMetric ? t('实时统计') : formatTime(point && point.time)) : t('暂无数据')} {t('· 量程')} {min}~{max}
       </Text>
     </div>
   )
@@ -99,7 +100,7 @@ const GaugeSettings: React.FC<VizWidgetSettingsProps<GaugeConfig>> = ({ config, 
   }
   return (
     <>
-      <SettingGroup title="数据绑定">
+      <SettingGroup title={t('数据绑定')}>
         <DataBindingEditor
           single
           series={config.series || []}
@@ -107,14 +108,14 @@ const GaugeSettings: React.FC<VizWidgetSettingsProps<GaugeConfig>> = ({ config, 
           onChange={patch => onChange(patch)}
         />
       </SettingGroup>
-      <SettingGroup title="显示设置">
-        <SettingRow label="最小值">
+      <SettingGroup title={t('显示设置')}>
+        <SettingRow label={t('最小值')}>
           <InputNumber style={{ width: '100%' }} value={config.min} onChange={v => onChange({ min: Number(v) || 0 })} />
         </SettingRow>
-        <SettingRow label="最大值">
+        <SettingRow label={t('最大值')}>
           <InputNumber style={{ width: '100%' }} value={config.max} onChange={v => onChange({ max: Number(v) || 0 })} />
         </SettingRow>
-        <SettingRow label="小数位">
+        <SettingRow label={t('小数位')}>
           <InputNumber
             min={0}
             max={6}
@@ -123,17 +124,17 @@ const GaugeSettings: React.FC<VizWidgetSettingsProps<GaugeConfig>> = ({ config, 
             onChange={v => onChange({ decimals: Number(v) || 0 })}
           />
         </SettingRow>
-        <SettingRow label="单位">
+        <SettingRow label={t('单位')}>
           <Input
             style={{ width: '100%' }}
-            placeholder="留空用属性/指标单位"
+            placeholder={t('留空用属性/指标单位')}
             value={config.unit || ''}
             onChange={e => onChange({ unit: e.target.value })}
           />
         </SettingRow>
       </SettingGroup>
       <SettingGroup
-        title="阈值配色"
+        title={t('阈值配色')}
         extra={(
           <Button
             type="link"
@@ -141,11 +142,11 @@ const GaugeSettings: React.FC<VizWidgetSettingsProps<GaugeConfig>> = ({ config, 
             icon={<PlusOutlined />}
             onClick={() => onChange({ thresholds: thresholds.concat([[0, '#4caf50']]) })}
           >
-            添加阈值
+            {t('添加阈值')}
           </Button>
         )}
       >
-        <SettingRow hint="大于等于该值显示对应颜色；未配置时用默认阈值。" />
+        <SettingRow hint={t('大于等于该值显示对应颜色；未配置时用默认阈值。')} />
         {thresholds.map(([value, color], index) => (
           <SettingRow key={index}>
             <InputNumber
@@ -175,7 +176,7 @@ const GaugeSettings: React.FC<VizWidgetSettingsProps<GaugeConfig>> = ({ config, 
 
 export const gaugeManifest: VizWidgetManifest<GaugeConfig> = {
   type: 'gauge',
-  label: '仪表盘',
+  label: t('仪表盘'),
   icon: <DashboardOutlined />,
   defaultSize: { w: 3, h: 6 },
   minSize: { w: 2, h: 4 },

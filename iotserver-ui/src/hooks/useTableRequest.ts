@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Form } from 'antd'
 import type { FormInstance, PaginationProps } from 'antd'
 import type { TableReponseType, TableRequestType, CommonResponse } from '@/types'
+import { t } from '@/i18n'
 
 const { useForm } = Form
 
@@ -79,7 +80,7 @@ export function useTableRequest<T> ({ onRequest }: PaginationParamsType<T>): {
       size: 'small',
       showQuickJumper: true,
       showSizeChanger: true,
-      showTotal: (total) => `共 ${total} 条`,
+      showTotal: (total) => t('共 {{count}} 条', { count: total }),
       total,
       current: pagination.current,
       pageSize: pagination.pageSize,

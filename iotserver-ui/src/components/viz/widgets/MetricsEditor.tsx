@@ -4,6 +4,7 @@ import { loadVizMetrics, VizMetricDef, VizSeriesRef } from '@/api'
 import { isPlatformView } from '@/utils/platformViewGuard'
 import SeriesEditor from './SeriesEditor'
 import { SettingRow } from './SettingsLayout'
+import { t } from '@/i18n'
 
 export type VizBindMode = 'series' | 'metrics'
 
@@ -82,8 +83,8 @@ export const MetricsEditor: React.FC<MetricsEditorProps> = ({ value, onChange, s
   const { options, loading } = useVizMetricsOptions(kind)
   const selected = value || []
   const placeholder = kind === 'series'
-    ? '选择指标（按天趋势）'
-    : (single ? '选择指标' : '选择指标（可多选）')
+    ? t('选择指标（按天趋势）')
+    : (single ? t('选择指标') : t('选择指标（可多选）'))
   return (
     <Select
       style={{ width: '100%' }}
@@ -96,7 +97,7 @@ export const MetricsEditor: React.FC<MetricsEditorProps> = ({ value, onChange, s
       disabled={disabled}
       value={single ? (selected[0] || undefined) : selected}
       options={options}
-      notFoundContent={loading ? undefined : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无可绑定指标" />}
+      notFoundContent={loading ? undefined : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t('暂无可绑定指标')} />}
       onChange={(v: any) => onChange(single ? (v ? [String(v)] : []) : (v || []).map((x: any) => String(x)))}
     />
   )
@@ -142,8 +143,8 @@ const DataBindingEditor: React.FC<DataBindingEditorProps> = ({ series, metrics, 
   }
 
   const metricsHint = metricKind === 'series'
-    ? '平台指标按天统计（每日任务汇总），用「时间范围」选要看的跨度。'
-    : '统计指标是瞬时聚合值（按当前租户/平台视图统计），没有历史曲线。'
+    ? t('平台指标按天统计（每日任务汇总），用「时间范围」选要看的跨度。')
+    : t('统计指标是瞬时聚合值（按当前租户/平台视图统计），没有历史曲线。')
 
   return (
     <>
@@ -153,8 +154,8 @@ const DataBindingEditor: React.FC<DataBindingEditorProps> = ({ series, metrics, 
         disabled={disabled}
         onChange={v => switchMode(String(v) as VizBindMode)}
         options={[
-          { label: '设备测点', value: 'series' },
-          { label: '指标', value: 'metrics' },
+          { label: t('设备测点'), value: 'series' },
+          { label: t('指标'), value: 'metrics' },
         ]}
       />
       {mode === 'series'

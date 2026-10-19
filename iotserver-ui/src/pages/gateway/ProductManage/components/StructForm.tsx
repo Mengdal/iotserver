@@ -6,6 +6,7 @@ import { PropertyFormItem } from './PropertyFormItem'
 import { DeatilModalFormValue, ThingModelUnit } from '../types'
 import { v4 } from 'uuid'
 import { thingModelUnit } from '@/api'
+import { t } from '@/i18n'
 
 const { useForm } = Form
 
@@ -78,7 +79,7 @@ export const StructForm = forwardRef<StructFormRef, StructFormProps>(({ onAdd },
 
   return (
     <Drawer
-      title={readonly ? '查看结构体参数' : '添加结构体参数'}
+      title={readonly ? t('查看结构体参数') : t('添加结构体参数')}
       placement="right"
       open={isModalOpen}
       width={500}
@@ -99,25 +100,25 @@ export const StructForm = forwardRef<StructFormRef, StructFormProps>(({ onAdd },
               onAdd({ id: id || v4(), ...resp })
               handleClose()
             }}
-          >确定</Button>
-          <Button onClick={handleClose}>取消</Button>
+          >{t('确定')}</Button>
+          <Button onClick={handleClose}>{t('取消')}</Button>
         </Space>
       }
     >
       <Form layout="vertical" form={form}>
         <Form.Item
-          label="参数名称"
+          label={t('参数名称')}
           name="name"
-          rules={[{ required: true, message: '请输入参数名称' }]}
+          rules={[{ required: true, message: t('请输入参数名称') }]}
         >
-          <Input placeholder="请输入参数名称"></Input>
+          <Input placeholder={t('请输入参数名称')}></Input>
         </Form.Item>
         <Form.Item
-          label="标识符"
+          label={t('标识符')}
           name="code"
-          rules={[{ required: true, message: '请输入标识符' }]}
+          rules={[{ required: true, message: t('请输入标识符') }]}
         >
-          <Input placeholder="请输入标识符"></Input>
+          <Input placeholder={t('请输入标识符')}></Input>
         </Form.Item>
         <PropertyFormItem prefix="struct_" options={options} />
       </Form>

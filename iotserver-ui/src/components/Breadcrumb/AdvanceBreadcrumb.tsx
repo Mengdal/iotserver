@@ -4,6 +4,7 @@ import { LeftOutlined } from '@ant-design/icons'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { lookupMenuName } from '@/routes/menus'
 import './style.less'
+import { t } from '@/i18n'
 
 const { Title, Paragraph, Text } = Typography
 
@@ -44,7 +45,7 @@ const AdvanceBreadcrumb: React.FC<AdvanceBreadcrumbProps> = ({ title, describe, 
       })
       .filter((item): item is BreadcrumbItem => item !== null)
       // 首层面包屑固定是「首页」，首页自身不再重复一次
-      .filter(item => item.label !== '首页')
+      .filter(item => item.label !== t('首页'))
   }, [location])
 
   // 默认版式：左侧标题 + 描述，右侧插槽
@@ -81,7 +82,7 @@ const AdvanceBreadcrumb: React.FC<AdvanceBreadcrumbProps> = ({ title, describe, 
     <div className={`advance-breadcrumb-title${className ? ` ${className}` : ''}`} style={{ backgroundImage }}>
       <Breadcrumb>
         <Breadcrumb.Item key="home">
-          <Link to="/">首页</Link>
+          <Link to="/">{t('首页')}</Link>
         </Breadcrumb.Item>
         {(breadcrumb?.length ? breadcrumb : defaultBreadcrumb).map(({ to, label }, index) => (
           <Breadcrumb.Item key={index}>

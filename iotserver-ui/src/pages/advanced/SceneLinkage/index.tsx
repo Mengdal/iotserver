@@ -10,6 +10,7 @@ import { AddScene, AddSceneRef } from './components/AddScene'
 import EditScene1 from './components/EditScene1'
 import { useNavigate } from 'react-router-dom'
 import useRequest from '@/hooks/useRequest'
+import { t } from '@/i18n'
 
 const { Text } = Typography
 const { useMessage } = message
@@ -44,22 +45,22 @@ const SceneLinkage: React.FC<SceneLinkageProps> = () => {
           <Form.Item key="status" name="status">
             <Select
               style={{ width: 120 }}
-              placeholder="启用状态"
+              placeholder={t('启用状态')}
               options={[
-                { label: '状态 (全部)', value: '' },
-                { label: '启用', value: 'running' },
-                { label: '禁用', value: 'stopped' },
+                { label: t('状态 (全部)'), value: '' },
+                { label: t('启用'), value: 'running' },
+                { label: t('禁用'), value: 'stopped' },
               ]}
             />
           </Form.Item>
-          <Form.Item key="name" name="name" label="场景名称">
-            <Input style={{ width: 220 }} placeholder="请输入" allowClear></Input>
+          <Form.Item key="name" name="name" label={t('场景名称')}>
+            <Input style={{ width: 220 }} placeholder={t('请输入')} allowClear></Input>
           </Form.Item>
           <Form.Item>
-            <Button type="primary" onClick={search}>查询</Button>
+            <Button type="primary" onClick={search}>{t('查询')}</Button>
           </Form.Item>
           <Form.Item>
-            <Button type="default" onClick={reset}>重置</Button>
+            <Button type="default" onClick={reset}>{t('重置')}</Button>
           </Form.Item>
         </Form>
       </Card>
@@ -71,7 +72,7 @@ const SceneLinkage: React.FC<SceneLinkageProps> = () => {
               onClick={() => {
                 addSceneRef.current?.open()
               }}
-            ><PlusOutlined />新建场景</Button>
+            ><PlusOutlined />{t('新建场景')}</Button>
           </div>
         </Space>
         {record && <EditScene1
@@ -87,10 +88,10 @@ const SceneLinkage: React.FC<SceneLinkageProps> = () => {
           rowKey="id"
           size="small"
           columns={[
-            { title: '场景名称', key: 'name', dataIndex: 'name' },
-            { title: '场景描述', key: 'description', dataIndex: 'description' },
+            { title: t('场景名称'), key: 'name', dataIndex: 'name' },
+            { title: t('场景描述'), key: 'description', dataIndex: 'description' },
             {
-              title: '创建时间',
+              title: t('创建时间'),
               key: 'created',
               dataIndex: 'created',
               render (value) {
@@ -98,13 +99,13 @@ const SceneLinkage: React.FC<SceneLinkageProps> = () => {
               },
             },
             {
-              title: '启用状态',
+              title: t('启用状态'),
               key: 'status',
               dataIndex: 'status',
               render: (status, r) => <StatusSwitch status={status} id={r.id} onSuccess={() => reload()} />,
             },
             {
-              title: '操作',
+              title: t('操作'),
               key: 'action',
               dataIndex: 'action',
               render (value, record) {
@@ -117,22 +118,22 @@ const SceneLinkage: React.FC<SceneLinkageProps> = () => {
                         //   editSceneRef.current?.open(record)
                         // }, 0)
                       }}
-                    >编辑场景</Typography.Link>
+                    >{t('编辑场景')}</Typography.Link>
                     <Typography.Link
                       onClick={() => {
                         navigate(`/advanced/scene/log/${record?.id}`)
                       }}
-                    >查询日志</Typography.Link>
+                    >{t('查询日志')}</Typography.Link>
                     <Popconfirm
-                      title="您确定要删除该条场景吗？"
-                      okText="确定"
-                      cancelText="取消"
+                      title={t('您确定要删除该条场景吗？')}
+                      okText={t('确定')}
+                      cancelText={t('取消')}
                       placement="topRight"
                       onConfirm={() => {
                         deleteScene(record?.id)
                           .then(resp => {
                             if (resp.success) {
-                              messageApi.open({ type: 'success', content: '删除成功' })
+                              messageApi.open({ type: 'success', content: t('删除成功') })
                               reload()
                             } else {
                               messageApi.open({ type: 'error', content: resp.errorMsg })
@@ -140,7 +141,7 @@ const SceneLinkage: React.FC<SceneLinkageProps> = () => {
                           })
                       }}
                     >
-                      <Typography.Link>删除</Typography.Link>
+                      <Typography.Link>{t('删除')}</Typography.Link>
                     </Popconfirm>
                   </Space>
                 )
@@ -166,8 +167,8 @@ function StatusSwitch ({ status, id, onSuccess }: { status: EStatus, id: string,
 
   return (<Switch
     checked={status === EStatus.running}
-    checkedChildren="开"
-    unCheckedChildren="关"
+    checkedChildren={t('开')}
+    unCheckedChildren={t('关')}
     loading={stopSceneApi.loading}
     onChange={async (bool) => {
       console.log(bool)

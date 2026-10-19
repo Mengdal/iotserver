@@ -23,6 +23,7 @@ import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
 import { getSysAuditLogs, deleteSysAuditLogs, clearSysAuditLogs, SysAuditLog } from '@/api'
 import { useAuth } from '@/utils/auth'
+import { t, tt } from '@/i18n'
 
 const { useMessage } = message
 const { RangePicker } = DatePicker
@@ -35,15 +36,15 @@ const PERM_AUDIT_LIST = 'system:auditlog:list'
 const PERM_AUDIT_REMOVE = 'system:auditlog:remove'
 
 const TYPE_OPTIONS = [
-  { label: '全部', value: '' },
-  { label: '登录', value: 'login' },
-  { label: '操作', value: 'operation' },
+  { label: t('全部'), value: '' },
+  { label: t('登录'), value: 'login' },
+  { label: t('操作'), value: 'operation' },
 ]
 
 const STATUS_OPTIONS = [
-  { label: '全部', value: '' },
-  { label: '成功', value: 1 },
-  { label: '失败', value: 0 },
+  { label: t('全部'), value: '' },
+  { label: t('成功'), value: 1 },
+  { label: t('失败'), value: 0 },
 ]
 
 const formatTime = (value?: number) => (value ? dayjs(value).format('YYYY-MM-DD HH:mm:ss') : '-')
@@ -123,7 +124,7 @@ const SysAuditLogPage: React.FC = () => {
   const handleDelete = async (id: string) => {
     const resp = await deleteSysAuditLogs([id])
     if (resp.success) {
-      messageApi.open({ type: 'success', content: '删除成功' })
+      messageApi.open({ type: 'success', content: t('删除成功') })
       loadData(pagination.current, pagination.pageSize)
     } else {
       messageApi.open({ type: 'error', content: resp.errorMsg })
@@ -133,7 +134,7 @@ const SysAuditLogPage: React.FC = () => {
   const handleClear = async () => {
     const resp = await clearSysAuditLogs()
     if (resp.success) {
-      messageApi.open({ type: 'success', content: '清空成功' })
+      messageApi.open({ type: 'success', content: t('清空成功') })
       setPagination({ current: 1, pageSize: pagination.pageSize })
       loadData(1, pagination.pageSize)
     } else {
@@ -142,8 +143,8 @@ const SysAuditLogPage: React.FC = () => {
   }
 
   const renderType = (value: string) => {
-    if (value === 'login') return <Tag color="processing">登录</Tag>
-    if (value === 'operation') return <Tag color="success">操作</Tag>
+    if (value === 'login') return <Tag color="processing">{t('登录')}</Tag>
+    if (value === 'operation') return <Tag color="success">{t('操作')}</Tag>
     return <Tag>{value || '-'}</Tag>
   }
 
@@ -151,10 +152,10 @@ const SysAuditLogPage: React.FC = () => {
     const ok = record.status === 1
     return (
       <Space size={4}>
-        <Tag color={ok ? 'success' : 'error'}>{ok ? '成功' : '失败'}</Tag>
+        <Tag color={ok ? 'success' : 'error'}>{ok ? t('成功') : t('失败')}</Tag>
         {!ok && (
           <Tooltip title={record.message || ''}>
-            <span style={{ color: '#ff4d4f' }}>{record.errorCode ? String(record.errorCode) : '失败'}</span>
+            <span style={{ color: '#ff4d4f' }}>{record.errorCode ? String(record.errorCode) : t('失败')}</span>
           </Tooltip>
         )}
       </Space>
@@ -167,36 +168,36 @@ const SysAuditLogPage: React.FC = () => {
   }
 
   const columns: ColumnsType<SysAuditLog> = [
-    { title: '类型', dataIndex: 'type', width: 80, render: (value: string) => renderType(value) },
-    { title: '操作人', dataIndex: 'username', width: 140, render: (value: string) => value || '-' },
-    { title: '模块', dataIndex: 'module', width: 140, ellipsis: true, render: (value: string) => value || '-' },
-    { title: '动作', dataIndex: 'action', width: 160, ellipsis: true, render: (value: string) => value || '-' },
-    { title: '对象', dataIndex: 'target', width: 160, ellipsis: true, render: (value: string) => value || '-' },
-    { title: '结果', dataIndex: 'status', width: 160, render: (_: any, record: SysAuditLog) => renderStatus(record) },
-    { title: '耗时', dataIndex: 'durationMs', width: 100, render: (_: any, record: SysAuditLog) => renderDuration(record) },
+    { title: t('类型'), dataIndex: 'type', width: 80, render: (value: string) => renderType(value) },
+    { title: t('操作人'), dataIndex: 'username', width: 140, render: (value: string) => value || '-' },
+    { title: t('模块'), dataIndex: 'module', width: 140, ellipsis: true, render: (value: string) => tt(value) || '-' },
+    { title: t('动作'), dataIndex: 'action', width: 160, ellipsis: true, render: (value: string) => tt(value) || '-' },
+    { title: t('对象'), dataIndex: 'target', width: 160, ellipsis: true, render: (value: string) => value || '-' },
+    { title: t('结果'), dataIndex: 'status', width: 160, render: (_: any, record: SysAuditLog) => renderStatus(record) },
+    { title: t('耗时'), dataIndex: 'durationMs', width: 100, render: (_: any, record: SysAuditLog) => renderDuration(record) },
     { title: 'IP', dataIndex: 'ip', width: 140, render: (value: string) => value || '-' },
     {
-      title: '时间',
+      title: t('时间'),
       dataIndex: 'created',
       width: 180,
       render: (_: any, record: SysAuditLog) => formatTime(record.created || record.loginTime),
     },
     {
-      title: '操作',
+      title: t('操作'),
       key: 'action',
       width: 140,
       fixed: 'right',
       render: (_: any, record: SysAuditLog) => (
         <Space size={4}>
-          <Button type="link" size="small" onClick={() => setDetail(record)}>详情</Button>
+          <Button type="link" size="small" onClick={() => setDetail(record)}>{t('详情')}</Button>
           {canRemove && (
             <Popconfirm
-              title="此操作将永久删除该记录, 是否继续?"
+              title={t('此操作将永久删除该记录, 是否继续?')}
               onConfirm={() => handleDelete(record.id)}
-              okText="确定"
-              cancelText="取消"
+              okText={t('确定')}
+              cancelText={t('取消')}
             >
-              <Button type="link" size="small" danger>删除</Button>
+              <Button type="link" size="small" danger>{t('删除')}</Button>
             </Popconfirm>
           )}
         </Space>
@@ -208,28 +209,28 @@ const SysAuditLogPage: React.FC = () => {
     <Card className="admin-page">
       {contextHolder}
       <Form form={form} layout="inline" style={{ marginBottom: 16, rowGap: 8 }} disabled={!canList}>
-        <Form.Item name="type" label="类型">
+        <Form.Item name="type" label={t('类型')}>
           <Select options={TYPE_OPTIONS} style={{ width: 120 }} />
         </Form.Item>
-        <Form.Item name="username" label="操作人">
-          <Input placeholder="请输入操作人" allowClear style={{ width: 160 }} />
+        <Form.Item name="username" label={t('操作人')}>
+          <Input placeholder={t('请输入操作人')} allowClear style={{ width: 160 }} />
         </Form.Item>
-        <Form.Item name="module" label="模块">
-          <Input placeholder="请输入模块" allowClear style={{ width: 160 }} />
+        <Form.Item name="module" label={t('模块')}>
+          <Input placeholder={t('请输入模块')} allowClear style={{ width: 160 }} />
         </Form.Item>
-        <Form.Item name="status" label="状态">
+        <Form.Item name="status" label={t('状态')}>
           <Select options={STATUS_OPTIONS} style={{ width: 120 }} />
         </Form.Item>
-        <Form.Item name="time" label="时间范围">
+        <Form.Item name="time" label={t('时间范围')}>
           <RangePicker showTime style={{ width: 360 }} />
         </Form.Item>
         <Form.Item>
           <Space>
             <Button type="primary" icon={<SearchOutlined />} disabled={!canList} onClick={search}>
-              查询
+              {t('查询')}
             </Button>
             <Button icon={<ReloadOutlined />} disabled={!canList} onClick={reset}>
-              重置
+              {t('重置')}
             </Button>
           </Space>
         </Form.Item>
@@ -240,13 +241,13 @@ const SysAuditLogPage: React.FC = () => {
           <Space>
             {canRemove && (
               <Popconfirm
-                title="此操作将永久删除全部审查日志, 是否继续?"
+                title={t('此操作将永久删除全部审查日志, 是否继续?')}
                 onConfirm={handleClear}
-                okText="确定"
-                cancelText="取消"
+                okText={t('确定')}
+                cancelText={t('取消')}
                 disabled={!canList}
               >
-                <Button danger icon={<ClearOutlined />} disabled={!canList}>清空</Button>
+                <Button danger icon={<ClearOutlined />} disabled={!canList}>{t('清空')}</Button>
               </Popconfirm>
             )}
           </Space>
@@ -263,12 +264,12 @@ const SysAuditLogPage: React.FC = () => {
             columns={columns}
             dataSource={dataSource}
             scroll={{ x: 1460 }}
-            locale={{ emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无审查日志" /> }}
+            locale={{ emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t('暂无审查日志')} /> }}
             pagination={{
               size: 'small',
               showQuickJumper: true,
               showSizeChanger: true,
-              showTotal: t => `共 ${t} 条`,
+              showTotal: total => t('共 {{count}} 条', { count: total }),
               total,
               current: pagination.current,
               pageSize: pagination.pageSize,
@@ -282,13 +283,13 @@ const SysAuditLogPage: React.FC = () => {
         : (
           <Empty
             image={Empty.PRESENTED_IMAGE_SIMPLE}
-            description="暂无审查日志查看权限"
+            description={t('暂无审查日志查看权限')}
             style={{ padding: '48px 0' }}
           />
         )}
 
       <Modal
-        title="审查日志详情"
+        title={t('审查日志详情')}
         open={!!detail}
         footer={null}
         width={760}
@@ -296,27 +297,27 @@ const SysAuditLogPage: React.FC = () => {
       >
         {detail && (
           <Descriptions column={2} size="small" bordered>
-            <Descriptions.Item label="类型">{renderType(detail.type)}</Descriptions.Item>
-            <Descriptions.Item label="操作人">{detail.username || '-'}</Descriptions.Item>
-            <Descriptions.Item label="模块">{detail.module || '-'}</Descriptions.Item>
-            <Descriptions.Item label="动作">{detail.action || '-'}</Descriptions.Item>
-            <Descriptions.Item label="对象">{detail.target || '-'}</Descriptions.Item>
-            <Descriptions.Item label="方法">{detail.method || '-'}</Descriptions.Item>
-            <Descriptions.Item label="路径" span={2}>{detail.path || '-'}</Descriptions.Item>
-            <Descriptions.Item label="结果">{renderStatus(detail)}</Descriptions.Item>
-            <Descriptions.Item label="错误码">{detail.errorCode ? String(detail.errorCode) : '-'}</Descriptions.Item>
-            <Descriptions.Item label="耗时">{renderDuration(detail)}</Descriptions.Item>
+            <Descriptions.Item label={t('类型')}>{renderType(detail.type)}</Descriptions.Item>
+            <Descriptions.Item label={t('操作人')}>{detail.username || '-'}</Descriptions.Item>
+            <Descriptions.Item label={t('模块')}>{tt(detail.module) || '-'}</Descriptions.Item>
+            <Descriptions.Item label={t('动作')}>{tt(detail.action) || '-'}</Descriptions.Item>
+            <Descriptions.Item label={t('对象')}>{detail.target || '-'}</Descriptions.Item>
+            <Descriptions.Item label={t('方法')}>{detail.method || '-'}</Descriptions.Item>
+            <Descriptions.Item label={t('路径')} span={2}>{detail.path || '-'}</Descriptions.Item>
+            <Descriptions.Item label={t('结果')}>{renderStatus(detail)}</Descriptions.Item>
+            <Descriptions.Item label={t('错误码')}>{detail.errorCode ? String(detail.errorCode) : '-'}</Descriptions.Item>
+            <Descriptions.Item label={t('耗时')}>{renderDuration(detail)}</Descriptions.Item>
             <Descriptions.Item label="IP">{detail.ip || '-'}</Descriptions.Item>
-            <Descriptions.Item label="浏览器">{detail.browser || '-'}</Descriptions.Item>
-            <Descriptions.Item label="操作系统">{detail.os || '-'}</Descriptions.Item>
-            <Descriptions.Item label="时间">{formatTime(detail.created || detail.loginTime)}</Descriptions.Item>
-            <Descriptions.Item label="请求参数" span={2}>
+            <Descriptions.Item label={t('浏览器')}>{detail.browser || '-'}</Descriptions.Item>
+            <Descriptions.Item label={t('操作系统')}>{detail.os || '-'}</Descriptions.Item>
+            <Descriptions.Item label={t('时间')}>{formatTime(detail.created || detail.loginTime)}</Descriptions.Item>
+            <Descriptions.Item label={t('请求参数')} span={2}>
               <pre style={{ maxHeight: 240, overflow: 'auto', margin: 0, whiteSpace: 'pre-wrap' }}>
                 {formatParams(detail.params)}
               </pre>
             </Descriptions.Item>
             {detail.status !== 1 && (
-              <Descriptions.Item label="错误信息" span={2}>{detail.message || '-'}</Descriptions.Item>
+              <Descriptions.Item label={t('错误信息')} span={2}>{detail.message || '-'}</Descriptions.Item>
             )}
           </Descriptions>
         )}

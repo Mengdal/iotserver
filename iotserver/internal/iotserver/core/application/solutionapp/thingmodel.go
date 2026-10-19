@@ -134,13 +134,13 @@ func (app *machineTemplateApp) mutateSolutionThingModel(ctx context.Context, key
 	tpl, err := db.SolutionByKey(tenantId, key)
 	if err != nil {
 		return dtos.SolutionResponse{}, errort.NewCommonErr(errort.DefaultResourcesNotFound,
-			fmt.Errorf("方案 %s 不存在", key))
+			errort.NewMessageErr("方案 {{.p1}} 不存在", map[string]interface{}{"p1": key}))
 	}
 
 	doc, err := decodeThingModel(tpl.ThingModelJson)
 	if err != nil {
 		return dtos.SolutionResponse{}, errort.NewCommonErr(errort.DefaultJsonParseError,
-			fmt.Errorf("方案 %s 的物模型 JSON 解析失败", key))
+			errort.NewMessageErr("方案 {{.p1}} 的物模型 JSON 解析失败", map[string]interface{}{"p1": key}))
 	}
 	if err = mutate(doc); err != nil {
 		return dtos.SolutionResponse{}, err
@@ -148,7 +148,7 @@ func (app *machineTemplateApp) mutateSolutionThingModel(ctx context.Context, key
 	thingModelJson, err := json.Marshal(doc)
 	if err != nil {
 		return dtos.SolutionResponse{}, errort.NewCommonErr(errort.DefaultJsonParseError,
-			fmt.Errorf("方案 %s 的物模型 JSON 序列化失败", key))
+			errort.NewMessageErr("方案 {{.p1}} 的物模型 JSON 序列化失败", map[string]interface{}{"p1": key}))
 	}
 
 	// 内置行：克隆副本（带改动一次性落库），绝不原地修改。
@@ -159,7 +159,7 @@ func (app *machineTemplateApp) mutateSolutionThingModel(ctx context.Context, key
 		clone.ThingModelJson = string(thingModelJson)
 		if err = db.AddSolution(clone); err != nil {
 			return dtos.SolutionResponse{}, errort.NewCommonErr(errort.DefaultSystemError,
-				fmt.Errorf("方案 %s 的租户副本创建失败", key))
+				errort.NewMessageErr("方案 {{.p1}} 的租户副本创建失败", map[string]interface{}{"p1": key}))
 		}
 		return machineTemplateResponseFromModel(clone), nil
 	}
@@ -167,7 +167,7 @@ func (app *machineTemplateApp) mutateSolutionThingModel(ctx context.Context, key
 	// 租户副本：直接更新
 	if err = db.UpdateSolutionThingModel(tpl.Id, string(thingModelJson)); err != nil {
 		return dtos.SolutionResponse{}, errort.NewCommonErr(errort.DefaultSystemError,
-			fmt.Errorf("方案 %s 的物模型保存失败", key))
+			errort.NewMessageErr("方案 {{.p1}} 的物模型保存失败", map[string]interface{}{"p1": key}))
 	}
 	tpl.ThingModelJson = string(thingModelJson)
 	return machineTemplateResponseFromModel(tpl), nil
@@ -189,11 +189,11 @@ func (app *machineTemplateApp) SolutionThingModelItemAdd(ctx context.Context, ke
 		list, dErr := decodeThingModelArray(doc, arrayKey)
 		if dErr != nil {
 			return errort.NewCommonErr(errort.DefaultJsonParseError,
-				fmt.Errorf("方案 %s 的物模型 %s 解析失败", key, arrayKey))
+				errort.NewMessageErr("方案 {{.p1}} 的物模型 {{.p2}} 解析失败", map[string]interface{}{"p1": key, "p2": arrayKey}))
 		}
 		if indexOfThingModelItem(list, identifier) >= 0 {
 			return errort.NewCommonErr(errort.ThingModelCodeExist,
-				fmt.Errorf("物模型标识符 %s 已存在，不能重复添加", identifier))
+				errort.NewMessageErr("物模型标识符 {{.p1}} 已存在，不能重复添加", map[string]interface{}{"p1": identifier}))
 		}
 		return storeThingModelArray(doc, arrayKey, append(list, item))
 	})
@@ -219,16 +219,16 @@ func (app *machineTemplateApp) SolutionThingModelItemUpdate(ctx context.Context,
 		list, dErr := decodeThingModelArray(doc, arrayKey)
 		if dErr != nil {
 			return errort.NewCommonErr(errort.DefaultJsonParseError,
-				fmt.Errorf("方案 %s 的物模型 %s 解析失败", key, arrayKey))
+				errort.NewMessageErr("方案 {{.p1}} 的物模型 {{.p2}} 解析失败", map[string]interface{}{"p1": key, "p2": arrayKey}))
 		}
 		idx := indexOfThingModelItem(list, oldIdentifier)
 		if idx < 0 {
 			return errort.NewCommonErr(errort.ThingModelNotExist,
-				fmt.Errorf("物模型条目 %s 不存在", oldIdentifier))
+				errort.NewMessageErr("物模型条目 {{.p1}} 不存在", map[string]interface{}{"p1": oldIdentifier}))
 		}
 		if newIdentifier != oldIdentifier && indexOfThingModelItem(list, newIdentifier) >= 0 {
 			return errort.NewCommonErr(errort.ThingModelCodeExist,
-				fmt.Errorf("物模型标识符 %s 已存在，不能重复", newIdentifier))
+				errort.NewMessageErr("物模型标识符 {{.p1}} 已存在，不能重复", map[string]interface{}{"p1": newIdentifier}))
 		}
 		list[idx] = item
 		return storeThingModelArray(doc, arrayKey, list)
@@ -250,12 +250,12 @@ func (app *machineTemplateApp) SolutionThingModelItemDelete(ctx context.Context,
 		list, dErr := decodeThingModelArray(doc, arrayKey)
 		if dErr != nil {
 			return errort.NewCommonErr(errort.DefaultJsonParseError,
-				fmt.Errorf("方案 %s 的物模型 %s 解析失败", key, arrayKey))
+				errort.NewMessageErr("方案 {{.p1}} 的物模型 {{.p2}} 解析失败", map[string]interface{}{"p1": key, "p2": arrayKey}))
 		}
 		idx := indexOfThingModelItem(list, identifier)
 		if idx < 0 {
 			return errort.NewCommonErr(errort.ThingModelNotExist,
-				fmt.Errorf("物模型条目 %s 不存在", identifier))
+				errort.NewMessageErr("物模型条目 {{.p1}} 不存在", map[string]interface{}{"p1": identifier}))
 		}
 		return storeThingModelArray(doc, arrayKey, append(list[:idx], list[idx+1:]...))
 	})

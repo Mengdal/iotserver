@@ -225,6 +225,30 @@ func (ctl *controller) UserProfileUpdate(c *gin.Context) {
 }
 
 // @Tags    系统管理-个人中心
+// @Summary 切换当前用户语言
+// @Produce json
+// @Success 200 {object} httphelper.CommonResponse
+// @Router  /api/v1/user/lang [put]
+func (ctl *controller) UserLangUpdate(c *gin.Context) {
+	lc := ctl.lc
+	username, ok := currentUsername(c)
+	if !ok {
+		httphelper.RenderFail(c, errort.NewCommonErr(errort.DefaultTokenPermission, fmt.Errorf("token is invalid")), c.Writer, lc)
+		return
+	}
+	var req dtos.UpdateLangRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		httphelper.RenderFail(c, errort.NewCommonErr(errort.DefaultReqParamsError, err), c.Writer, lc)
+		return
+	}
+	if err := ctl.getUserApp().UpdateCurrentUserLang(c, username, req); err != nil {
+		httphelper.RenderFail(c, err, c.Writer, lc)
+		return
+	}
+	httphelper.ResultSuccess(nil, c.Writer, lc)
+}
+
+// @Tags    系统管理-个人中心
 // @Summary 查询当前用户菜单
 // @Produce json
 // @Success 200 {object} httphelper.CommonResponse
