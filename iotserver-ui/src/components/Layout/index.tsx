@@ -3,7 +3,7 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { UserOutlined } from '@ant-design/icons'
 import { Layout, Space, Menu, Avatar, Dropdown, Modal, Form, Input, Select, MenuProps, message } from 'antd'
 import { buildMenus, buildMenusFromBackend, isExternalLink } from '@/routes/menus'
-import { resolvePageMeta, resolvePageTitle } from '@/routes/pageMeta'
+import { resolveMenuPath, resolvePageMeta, resolvePageTitle } from '@/routes/pageMeta'
 import { AdvanceBreadcrumb } from '@/components/Breadcrumb'
 import { useBrand } from '@/components/Brand'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
@@ -132,6 +132,25 @@ const MainLayout: React.FC = () => {
 
   const [sliderMenuOpenKeys, setSliderMenuOpenKeys] = useState<string[]>([])
 
+  // 侧边栏当前选中项：详情页/带过滤参数的列表页（如 /gateway/device/manage/:productId）
+  // 没有与完整路径一一对应的菜单，回落到所属菜单，避免跳转后侧边栏没有任何高亮。
+  const selectedMenuKey = useMemo(() => {
+    const menuPath = resolveMenuPath(location.pathname)
+    if (menuPath) return menuPath
+    let best = ''
+    const walk = (items: any[]) => {
+      items.forEach((item) => {
+        const key = String(item?.key || '')
+        if (key.startsWith('/') && (location.pathname === key || location.pathname.startsWith(key + '/'))) {
+          if (key.length > best.length) best = key
+        }
+        if (Array.isArray(item?.children)) walk(item.children)
+      })
+    }
+    walk(siderMenus as any[])
+    return best || location.pathname
+  }, [siderMenus, location.pathname])
+
   useEffect(() => {
     // 内容区自己滚动（见 style.less）：切路由时手动回到顶部，保持原来整页滚动的体验
     const view = document.querySelector('.main-view')
@@ -147,6 +166,12 @@ const MainLayout: React.FC = () => {
       }
       if (item.key === location.pathname) {
         r.titles.push(String(item.label))
+        return r
+      }
+      // 动态路径（如 /gateway/device/manage/:productId）：只要展开所属菜单，
+      // 浏览器标题仍交给下面的 resolvePageTitle 兜底（详情页要显示「设备详情」而不是列表名）
+      if (children.some(child => child.key === selectedMenuKey)) {
+        r.paths.push(item.key as string)
       }
       return r
     }, { paths: [], titles: [] } as { paths: string[], titles: string[] })
@@ -166,7 +191,7 @@ const MainLayout: React.FC = () => {
       document.title = brandName
     }
     setSliderMenuOpenKeys(paths)
-  }, [location.pathname, siderMenus])
+  }, [location.pathname, siderMenus, selectedMenuKey])
 
   const handleOk = async () => {
     const values = await form.validateFields()
@@ -329,7 +354,7 @@ const MainLayout: React.FC = () => {
             onOpenChange={openKeys => {
               setSliderMenuOpenKeys(openKeys)
             }}
-            selectedKeys={[location.pathname]}
+            selectedKeys={[selectedMenuKey]}
             onClick={({ key }) => {
               const target = String(key)
               // 菜单管理里配置的外链（http/https）新窗口打开

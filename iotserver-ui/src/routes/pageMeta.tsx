@@ -130,11 +130,11 @@ const pageMetas: Record<string, PageMeta> = {
 }
 
 /** 标题/面包屑依赖页面数据的详情页：标题条由页面自己渲染，这里的 title 只用于浏览器标签 */
-const pageRenderedRules: Array<{ test: RegExp, title: string }> = [
-  { test: /^\/gateway\/product\/detail\//, title: t('产品详情') },
-  { test: /^\/gateway\/device\/detail\//, title: t('设备详情') },
-  { test: /^\/monitor\/alarmCenter\/detail\//, title: t('规则详情') },
-  { test: /^\/advanced\/scene\/log\//, title: t('联动日志') },
+const pageRenderedRules: Array<{ test: RegExp, title: string, menuPath?: string }> = [
+  { test: /^\/gateway\/product\/detail\//, title: t('产品详情'), menuPath: '/gateway/product/manage' },
+  { test: /^\/gateway\/device\/detail\//, title: t('设备详情'), menuPath: '/gateway/device/manage' },
+  { test: /^\/monitor\/alarmCenter\/detail\//, title: t('规则详情'), menuPath: '/monitor/alarmCenter/list' },
+  { test: /^\/advanced\/scene\/log\//, title: t('联动日志'), menuPath: '/advanced/scene/linkage' },
 ]
 
 /** 带动态段但仍是列表页的路径：按 basePath 取所属菜单的标题条 */
@@ -169,3 +169,16 @@ export function resolvePageTitle (pathname: string): string | undefined {
 }
 
 export default pageMetas
+
+/**
+ * 当前路径应在侧边栏选中的菜单项。
+ * 详情页等带动态段的路由没有一一对应的菜单（如 /gateway/device/manage/:productId、
+ * /gateway/product/detail/:id），回落到所属列表菜单，避免跳转后侧边栏没有任何选中项。
+ */
+export function resolveMenuPath (pathname: string): string | undefined {
+  const pageRendered = pageRenderedRules.find(rule => rule.test.test(pathname))
+  if (pageRendered?.menuPath) return pageRendered.menuPath
+  const prefixed = prefixMetas.find(item => item.test.test(pathname))
+  if (prefixed) return prefixed.basePath
+  return undefined
+}

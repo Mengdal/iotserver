@@ -11,7 +11,7 @@ import { DetailTab3 } from './components/Tab3'
 import './style.less'
 import dayjs from 'dayjs'
 import { ProductInfo } from './types'
-import { t } from '@/i18n'
+import { t, tt } from '@/i18n'
 
 const { Text, Link } = Typography
 
@@ -132,13 +132,13 @@ export const DeviceDetail:React.FC<DeviceDetailProps> = () => {
               禁用: 'red',
               未激活: 'orange',
             }[detail?.status as string] || 'gray'} />
-            <Text className="ml5" style={{ fontSize: 12 }}>{detail?.status || t('未知')}</Text>
+            <Text className="ml5" style={{ fontSize: 12 }}>{tt(detail?.status) || t('未知')}</Text>
           </Descriptions.Item>
           <Descriptions.Item label={t('设备名称')}>{detail?.name}</Descriptions.Item>
           <Descriptions.Item label={t('设备ID')} span={2}>
             <Text style={{ fontSize: 12 }} copyable>{detail?.id}</Text>
           </Descriptions.Item>
-          <Descriptions.Item label={t('平台')}>{detail?.platform}</Descriptions.Item>
+          <Descriptions.Item label={t('平台')}>{tt(detail?.platform)}</Descriptions.Item>
           <Descriptions.Item label={t('设备密钥')} span={2}>
             {
               detail?.secret && (
