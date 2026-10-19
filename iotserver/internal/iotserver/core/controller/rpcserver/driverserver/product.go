@@ -38,7 +38,7 @@ func (s *ProductServer) QueryProductList(ctx context.Context, request *driverpro
 		s.lc.Infof("request.BaseRequest.GetCloudInstanceInfo().IotPlatform:", request.BaseRequest.GetCloudInstanceInfo().IotPlatform)
 		switch request.BaseRequest.GetCloudInstanceInfo().IotPlatform {
 		case drivercommon.IotPlatform_WinCLinkIot:
-			productPlatform = constants.IotPlatform_LuomiIot
+			productPlatform = constants.IotPlatform_Things
 		case drivercommon.IotPlatform_AliIot:
 			productPlatform = constants.IotPlatform_AliIot
 		case drivercommon.IotPlatform_HuaweiIot:

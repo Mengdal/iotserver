@@ -17,7 +17,7 @@
 
 关键判断：**路径 B 不需要新建**——平台已有 `CloudService`（`constants/cloudservice.go`：参考系统/阿里/华为/腾讯/涂鸦/OneNET）、`CloudInstance`（docker 驱动实例，带 `authorization_config`/`extend_template`，`constants.CloudInstance = "cloudInstanceService"`）、`application/dmi/docker`、`driverserviceapp`、`controller/rpcserver/driverserver`，设备与产品上已有 `Platform`/`CloudProductId`/`CloudInstanceId`。本次工作集中在**路径 A + 两条路径的统一层**。
 
-> 注：`IotPlatform_LuomiIot`（`internal/pkg/constants/product.go:27`）的取值即 iotddc/things 平台。因此接入它**不必新增枚举值**，直接复用。
+> 注：`IotPlatform_Things`（`internal/pkg/constants/product.go:27`）的取值即 iotddc/things 平台。因此接入它**不必新增枚举值**，直接复用。
 
 ## 1. 路径 A：网关子设备接入（兼容 `/edge` 协议）
 
@@ -146,7 +146,7 @@ device_tag: device_id, code, name, type, unit, access_mode, source(auto|manual),
 
 ### 3.2 `Platform` 取值
 
-路径 A 接入 iotddc 时**直接复用 `IotPlatform_LuomiIot`**，不要复用 `LocalIot`（本地），否则从设备上看不出它来自外部云、也无法与路径 B 的云实例对应。
+路径 A 接入 iotddc 时**直接复用 `IotPlatform_Things`**，不要复用 `LocalIot`（本地），否则从设备上看不出它来自外部云、也无法与路径 B 的云实例对应。
 
 ### 3.3 上层无差别消费
 

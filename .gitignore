@@ -41,3 +41,7 @@ iotserver/cmd/iotserver-ui/build/**/*.map
 # ===== 本地端到端测试工具与产物（不入库）=====
 .preview/
 *.png.tmp
+
+# ===== 本地品牌素材与旧版截图（保留在本地，不入库）=====
+/robx-logo*.png
+/iotserver/manifest/image/

@@ -23,19 +23,19 @@ type IotPlatform string
 
 const (
 	IotPlatform_LocalIot    IotPlatform = "本地"
-	IotPlatform_CustomerIot IotPlatform = "用户自定义"   //用户自定义
-	IotPlatform_LuomiIot    IotPlatform = "罗米物联网平台" // 参考系统（iotddc / things）平台
-	IotPlatform_AliIot      IotPlatform = "阿里云"     //阿里
-	IotPlatform_HuaweiIot   IotPlatform = "华为云"     //华为
-	IotPlatform_TencentIot  IotPlatform = "腾讯云"     //腾讯
-	IotPlatform_TuyaIot     IotPlatform = "涂鸦云"     //涂鸦
-	IotPlatform_OneNetIot   IotPlatform = "OneNET"  //中国移动
+	IotPlatform_CustomerIot IotPlatform = "用户自定义"           //用户自定义
+	IotPlatform_Things      IotPlatform = "things platform" // 参考系统（iotddc / things）平台
+	IotPlatform_AliIot      IotPlatform = "阿里云"             //阿里
+	IotPlatform_HuaweiIot   IotPlatform = "华为云"             //华为
+	IotPlatform_TencentIot  IotPlatform = "腾讯云"             //腾讯
+	IotPlatform_TuyaIot     IotPlatform = "涂鸦云"             //涂鸦
+	IotPlatform_OneNetIot   IotPlatform = "OneNET"          //中国移动
 )
 
 func (i IotPlatform) TransformToCloudInstancePlatform() string {
 	switch i {
-	case IotPlatform_LuomiIot:
-		return CloudServiceLuomiName
+	case IotPlatform_Things:
+		return CloudServiceThingsName
 	case IotPlatform_AliIot:
 		return CloudServiceAliyunName
 	case IotPlatform_HuaweiIot:
@@ -55,7 +55,7 @@ func (i IotPlatform) TransformToDriverDevicePlatform() drivercommon.IotPlatform 
 	switch i {
 	case IotPlatform_LocalIot:
 		return drivercommon.IotPlatform_LocalIot
-	case IotPlatform_LuomiIot:
+	case IotPlatform_Things:
 		return drivercommon.IotPlatform_WinCLinkIot
 	case IotPlatform_AliIot:
 		return drivercommon.IotPlatform_AliIot
@@ -77,7 +77,7 @@ func TransformEdgePlatformToDbPlatform(platform drivercommon.IotPlatform) IotPla
 	case drivercommon.IotPlatform_CustomerIot:
 		return IotPlatform_CustomerIot
 	case drivercommon.IotPlatform_WinCLinkIot:
-		return IotPlatform_LuomiIot
+		return IotPlatform_Things
 	case drivercommon.IotPlatform_AliIot:
 		return IotPlatform_AliIot
 	case drivercommon.IotPlatform_HuaweiIot:

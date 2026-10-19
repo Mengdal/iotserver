@@ -20,5 +20,5 @@ const (
 	CloudServiceTencentName = "腾讯物联网平台"
 	CloudServiceOneNETName  = "OneNET物联网平台"
 	CloudServiceTuyaName    = "涂鸦物联网平台"
-	CloudServiceLuomiName   = "罗米物联网平台"
+	CloudServiceThingsName  = "things platform"
 )
