@@ -393,10 +393,11 @@ func (uapp *userApp) CurrentUserProfile(ctx context.Context, username string) (d
 	}
 	res.User = uapp.toSysUserResponse(user)
 	res.User.RoleIds = loginUser.RoleIds
-	res.User.RoleNames = loginUser.Roles
+	// RoleNames 用角色名称（toSysUserResponse 已按 roleIds 查好），不要覆盖成角色编码——
+	// 个人中心是展示用的，返回 "admin" 这种编码用户看不懂。
 	res.User.Admin = loginUser.Admin
 	res.Permissions = loginUser.Permissions
-	res.Roles = loginUser.Roles
+	res.Roles = res.User.RoleNames
 	res.Admin = loginUser.Admin
 	return res, nil
 }

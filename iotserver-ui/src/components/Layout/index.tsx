@@ -11,7 +11,7 @@ import type { BackendMenuItem, SubMenuType } from '@/routes/menus'
 import './style.less'
 import { clearUser, getCurrentTenantId, getUser, setCurrentTenantId, setUser } from '@/utils/auth'
 import { changePassword, getTenants, getUserGetInfo, updateUserProfile, Tenant } from '@/api'
-import { t } from '@/i18n'
+import { t, tt } from '@/i18n'
 
 const { Header, Content, Sider } = Layout
 const { useForm } = Form
@@ -304,7 +304,7 @@ const MainLayout: React.FC = () => {
           >
             <Space size={6} style={{ cursor: 'pointer' }}>
               <Avatar icon={<UserOutlined />} size="small" />
-              <span style={{ fontSize: '13px' }}>{getDisplayName()}</span>
+              <span style={{ fontSize: '13px' }}>{tt(getDisplayName())}</span>
             </Space>
           </Dropdown>
         </Space>

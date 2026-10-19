@@ -19,7 +19,7 @@ import { LockOutlined, SaveOutlined, UserOutlined } from '@ant-design/icons'
 import { changePassword, getUserProfile, updateUserProfile, SysUserProfile } from '@/api'
 import { clearUser, getUser, setUser } from '@/utils/auth'
 import { useNavigate } from 'react-router-dom'
-import { t } from '@/i18n'
+import { t, tt } from '@/i18n'
 
 const { Title, Text } = Typography
 const { useMessage } = message
@@ -114,12 +114,12 @@ const UserProfilePage: React.FC = () => {
         <Col xs={24} md={8}>
           <Card bordered={false} style={{ textAlign: 'center' }}>
             <Avatar size={72} icon={<UserOutlined />} />
-            <Title level={4} style={{ marginTop: 12, marginBottom: 4 }}>{user?.nickname || user?.username}</Title>
+            <Title level={4} style={{ marginTop: 12, marginBottom: 4 }}>{tt(user?.nickname) || user?.username}</Title>
             <Text type="secondary">{user?.username}</Text>
             <div style={{ marginTop: 12 }}>
               {profile?.admin
                 ? <Tag color="gold">{t('超级管理员')}</Tag>
-                : (profile?.roles || []).map(role => <Tag color="blue" key={role}>{role}</Tag>)}
+                : (profile?.roles || []).map(role => <Tag color="blue" key={role}>{tt(role)}</Tag>)}
             </div>
             <Divider />
             <Space direction="vertical" style={{ width: '100%' }}>
@@ -152,7 +152,7 @@ const UserProfilePage: React.FC = () => {
             <Descriptions column={2} size="small">
               <Descriptions.Item label={t('所属部门')}>{user?.deptName || '-'}</Descriptions.Item>
               <Descriptions.Item label={t('角色')}>
-                {(user?.roleNames || []).length === 0 ? '-' : (user?.roleNames || []).join('、')}
+                {(user?.roleNames || []).length === 0 ? '-' : (user?.roleNames || []).map(name => tt(name)).join('、')}
               </Descriptions.Item>
               <Descriptions.Item label={t('最后登录')}>
                 {user?.lastLogin ? new Date(user.lastLogin).toLocaleString() : '-'}

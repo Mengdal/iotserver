@@ -33,7 +33,7 @@ import {
   SysDept,
 } from '@/api'
 import { useAuth } from '@/utils/auth'
-import { t } from '@/i18n'
+import { t, tt } from '@/i18n'
 
 const { useMessage } = message
 
@@ -220,7 +220,7 @@ const SysUserPage: React.FC = () => {
       width: 200,
       render: (value: string[]) => (
         <Space size={[4, 4]} wrap>
-          {(value || []).length === 0 ? '-' : value.map(name => <Tag key={name} color="blue">{name}</Tag>)}
+          {(value || []).length === 0 ? '-' : value.map(name => <Tag key={name} color="blue">{tt(name)}</Tag>)}
         </Space>
       ),
     },
@@ -407,7 +407,7 @@ const SysUserPage: React.FC = () => {
           <Form.Item label={t('角色')} name="roleIds">
             <Select mode="multiple" placeholder={t('请选择角色')} allowClear>
               {roles.map(role => (
-                <Select.Option key={role.id} value={role.id}>{role.name}</Select.Option>
+                <Select.Option key={role.id} value={role.id}>{tt(role.name)}</Select.Option>
               ))}
             </Select>
           </Form.Item>
