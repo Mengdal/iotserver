@@ -69,7 +69,7 @@ PublishTopicPrefix = 'eventbus/in'
 # Broker 留空则回落到 MessageQueue 的地址（既有部署行为不变）。
 # 本文件在仓库里：生产地址与凭据请按环境填写，提交前记得清空。
 [EdgeIngest]
-Broker = ''
+Broker = 'tcp://things.iotddc.com:1885'
 Username = ''
 Password = ''
 # 订阅刷新间隔（秒）：界面上增删网关后自动重订阅，无需重启服务；<=0 用默认值 60
