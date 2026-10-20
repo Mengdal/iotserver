@@ -19,7 +19,7 @@ import type { MenuItemType, SubMenuType } from 'antd/es/menu/hooks/useItems'
 import { renderMenuIcon } from '@/components/IconSelect'
 import { USER_KEY } from '@/utils/auth'
 import * as P from './permissions'
-import { t } from '@/i18n'
+import { currentLocale, t } from '@/i18n'
 
 /**
  * 菜单定义
@@ -169,6 +169,8 @@ export interface BackendMenuItem {
   id: string
   parentId?: string
   name: string
+  /** 英文菜单名：英文界面优先使用；为空时回落到词条/中文名 */
+  nameEn?: string
   path?: string
   icon?: string
   menuType?: string
@@ -178,6 +180,12 @@ export interface BackendMenuItem {
   sort?: number
   isFrame?: number
   children?: BackendMenuItem[]
+}
+
+/** 后端菜单的展示名：英文界面优先用菜单自带的英文名，其次走词条翻译 */
+function backendMenuLabel (item: BackendMenuItem): string {
+  if (currentLocale() === 'en-US' && item.nameEn) return item.nameEn
+  return t(item.name)
 }
 
 /** 后端菜单里 http(s):// 开头视为外链 */
@@ -202,7 +210,7 @@ export function buildMenusFromBackend (list?: BackendMenuItem[]): Array<SubMenuT
       if (children.length > 0) {
         result.push({
           // 菜单名来自后端（中文），走 t() 才能翻成英文；词条里没有时原样回落
-          label: t(item.name),
+          label: backendMenuLabel(item),
           key: item.path || item.id,
           icon,
           children,
@@ -211,7 +219,7 @@ export function buildMenusFromBackend (list?: BackendMenuItem[]): Array<SubMenuT
       }
       if (!item.path) return
       result.push({
-        label: t(item.name),
+        label: backendMenuLabel(item),
         key: item.path,
         icon,
       } as MenuItemType)
@@ -227,7 +235,7 @@ export function buildMenuNameMap (list?: BackendMenuItem[]): Record<string, stri
   const walk = (items?: BackendMenuItem[]) => {
     if (!Array.isArray(items)) return
     items.forEach(item => {
-      if (item?.path) map[item.path] = t(item.name)
+      if (item?.path) map[item.path] = backendMenuLabel(item)
       walk(item?.children)
     })
   }

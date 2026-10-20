@@ -24,7 +24,9 @@
             "name": "运行",
             "value": 1
           }
-        ]
+        ],
+        "nameEn": "Running status",
+        "descriptionEn": "Production line running status"
       },
       {
         "name": "节拍",
@@ -40,7 +42,9 @@
           "unit": "s",
           "unitName": "秒"
         },
-        "dataSpecsList": null
+        "dataSpecsList": null,
+        "nameEn": "Takt time",
+        "descriptionEn": "Actual production line takt time"
       },
       {
         "name": "产量",
@@ -56,7 +60,9 @@
           "unit": "件",
           "unitName": "件"
         },
-        "dataSpecsList": null
+        "dataSpecsList": null,
+        "nameEn": "Output",
+        "descriptionEn": "Cumulative output"
       },
       {
         "name": "良品数",
@@ -72,7 +78,9 @@
           "unit": "件",
           "unitName": "件"
         },
-        "dataSpecsList": null
+        "dataSpecsList": null,
+        "nameEn": "Good product count",
+        "descriptionEn": "Cumulative good products"
       },
       {
         "name": "不良品数",
@@ -88,7 +96,9 @@
           "unit": "件",
           "unitName": "件"
         },
-        "dataSpecsList": null
+        "dataSpecsList": null,
+        "nameEn": "Rejected product count",
+        "descriptionEn": "Cumulative rejected products"
       },
       {
         "name": "合格率",
@@ -104,7 +114,9 @@
           "unit": "%",
           "unitName": "百分比"
         },
-        "dataSpecsList": null
+        "dataSpecsList": null,
+        "nameEn": "Pass rate",
+        "descriptionEn": "Good product rate percentage"
       },
       {
         "name": "停机时长",
@@ -120,7 +132,9 @@
           "unit": "min",
           "unitName": "分钟"
         },
-        "dataSpecsList": null
+        "dataSpecsList": null,
+        "nameEn": "Downtime duration",
+        "descriptionEn": "Cumulative downtime today"
       },
       {
         "name": "停机原因码",
@@ -155,7 +169,9 @@
             "name": "质量异常",
             "value": 5
           }
-        ]
+        ],
+        "nameEn": "Downtime reason code",
+        "descriptionEn": "Last downtime reason code"
       },
       {
         "name": "稼动率",
@@ -171,7 +187,9 @@
           "unit": "%",
           "unitName": "百分比"
         },
-        "dataSpecsList": null
+        "dataSpecsList": null,
+        "nameEn": "Availability rate",
+        "descriptionEn": "Equipment availability percentage"
       },
       {
         "name": "运行时长",
@@ -187,7 +205,9 @@
           "unit": "h",
           "unitName": "小时"
         },
-        "dataSpecsList": null
+        "dataSpecsList": null,
+        "nameEn": "Runtime",
+        "descriptionEn": "Equipment cumulative runtime"
       },
       {
         "name": "工位状态",
@@ -214,7 +234,9 @@
             "name": "故障",
             "value": 3
           }
-        ]
+        ],
+        "nameEn": "Station status",
+        "descriptionEn": "Critical station status"
       },
       {
         "name": "报警次数",
@@ -230,7 +252,9 @@
           "unit": "次",
           "unitName": "次"
         },
-        "dataSpecsList": null
+        "dataSpecsList": null,
+        "nameEn": "Alarm count",
+        "descriptionEn": "Cumulative alarm count today"
       },
       {
         "name": "在制品数量",
@@ -246,7 +270,9 @@
           "unit": "件",
           "unitName": "件"
         },
-        "dataSpecsList": null
+        "dataSpecsList": null,
+        "nameEn": "Work-in-progress count",
+        "descriptionEn": "Work-in-progress items on the line"
       }
     ],
     "events": [
@@ -288,7 +314,8 @@
                 "name": "质量异常",
                 "value": 5
               }
-            ]
+            ],
+            "nameEn": "Downtime reason"
           },
           {
             "name": "停机时间",
@@ -296,9 +323,12 @@
             "dataType": "DATE",
             "required": false,
             "dataSpecs": null,
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Downtime"
           }
-        ]
+        ],
+        "eventNameEn": "Downtime event",
+        "descriptionEn": "Production line stopped"
       },
       {
         "eventName": "节拍超限",
@@ -319,7 +349,8 @@
               "unit": "s",
               "unitName": "秒"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Current takt time"
           },
           {
             "name": "标准节拍",
@@ -333,9 +364,12 @@
               "unit": "s",
               "unitName": "秒"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Standard takt time"
           }
-        ]
+        ],
+        "eventNameEn": "Takt time exceeded",
+        "descriptionEn": "Production line takt time above the standard"
       },
       {
         "eventName": "不良率超限",
@@ -356,7 +390,8 @@
               "unit": "%",
               "unitName": "百分比"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Defect rate"
           },
           {
             "name": "不良品数",
@@ -370,9 +405,12 @@
               "unit": "件",
               "unitName": "件"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Rejected product count"
           }
-        ]
+        ],
+        "eventNameEn": "Defect rate exceeded",
+        "descriptionEn": "Defect rate above the allowed limit"
       },
       {
         "eventName": "产线启动",
@@ -387,7 +425,8 @@
             "dataType": "DATE",
             "required": false,
             "dataSpecs": null,
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Start time"
           },
           {
             "name": "班次",
@@ -408,9 +447,12 @@
                 "name": "晚班",
                 "value": 3
               }
-            ]
+            ],
+            "nameEn": "Shift"
           }
-        ]
+        ],
+        "eventNameEn": "Line started",
+        "descriptionEn": "Production line started"
       },
       {
         "eventName": "工位故障",
@@ -431,7 +473,8 @@
               "unit": "#",
               "unitName": "号"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Station number"
           },
           {
             "name": "故障码",
@@ -445,9 +488,12 @@
               "unit": "",
               "unitName": "故障码"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Fault code"
           }
-        ]
+        ],
+        "eventNameEn": "Station fault",
+        "descriptionEn": "Critical station fault"
       }
     ],
     "services": [
@@ -458,7 +504,9 @@
         "required": false,
         "callType": "ASYNC",
         "inputParams": [],
-        "outParams": []
+        "outParams": [],
+        "serviceNameEn": "Start",
+        "descriptionEn": "Start the production line"
       },
       {
         "serviceName": "停止",
@@ -467,7 +515,9 @@
         "required": false,
         "callType": "ASYNC",
         "inputParams": [],
-        "outParams": []
+        "outParams": [],
+        "serviceNameEn": "Stop",
+        "descriptionEn": "Stop the production line"
       },
       {
         "serviceName": "复位",
@@ -476,7 +526,9 @@
         "required": false,
         "callType": "ASYNC",
         "inputParams": [],
-        "outParams": []
+        "outParams": [],
+        "serviceNameEn": "Reset",
+        "descriptionEn": "Reset the production line and counters"
       },
       {
         "serviceName": "登记停机原因",
@@ -516,7 +568,8 @@
                 "name": "质量异常",
                 "value": 5
               }
-            ]
+            ],
+            "nameEn": "Downtime reason code"
           },
           {
             "name": "停机时长",
@@ -530,10 +583,13 @@
               "unit": "min",
               "unitName": "分钟"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Downtime duration"
           }
         ],
-        "outParams": []
+        "outParams": [],
+        "serviceNameEn": "Record downtime reason",
+        "descriptionEn": "Manually record downtime reason and duration"
       },
       {
         "serviceName": "查询生产统计",
@@ -555,7 +611,8 @@
               "unit": "件",
               "unitName": "件"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Output"
           },
           {
             "name": "良品数",
@@ -569,7 +626,8 @@
               "unit": "件",
               "unitName": "件"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Good product count"
           },
           {
             "name": "不良品数",
@@ -583,7 +641,8 @@
               "unit": "件",
               "unitName": "件"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Rejected product count"
           },
           {
             "name": "稼动率",
@@ -597,9 +656,12 @@
               "unit": "%",
               "unitName": "百分比"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Availability rate"
           }
-        ]
+        ],
+        "serviceNameEn": "Query production statistics",
+        "descriptionEn": "Query current-shift production statistics"
       }
     ]
   },
@@ -612,7 +674,9 @@
       "alertLevel": 2,
       "alertType": 1,
       "silenceTime": 600,
-      "description": "当日累计停机超过 30 分钟"
+      "description": "当日累计停机超过 30 分钟",
+      "nameEn": "Downtime duration exceeded",
+      "descriptionEn": "Cumulative downtime today above 30 minutes"
     },
     {
       "name": "节拍超限",
@@ -622,7 +686,9 @@
       "alertLevel": 2,
       "alertType": 1,
       "silenceTime": 600,
-      "description": "产线节拍超过 60 秒"
+      "description": "产线节拍超过 60 秒",
+      "nameEn": "Takt time exceeded",
+      "descriptionEn": "Production line takt time above 60 seconds"
     },
     {
       "name": "不良品数超限",
@@ -632,7 +698,9 @@
       "alertLevel": 2,
       "alertType": 1,
       "silenceTime": 1800,
-      "description": "累计不良品超过 100 件"
+      "description": "累计不良品超过 100 件",
+      "nameEn": "Rejected product count exceeded",
+      "descriptionEn": "Cumulative rejected products above 100"
     },
     {
       "name": "稼动率偏低",
@@ -642,7 +710,9 @@
       "alertLevel": 3,
       "alertType": 1,
       "silenceTime": 1800,
-      "description": "稼动率低于 60%"
+      "description": "稼动率低于 60%",
+      "nameEn": "Low availability rate",
+      "descriptionEn": "Availability below 60%"
     },
     {
       "name": "工位故障",
@@ -652,7 +722,9 @@
       "alertLevel": 1,
       "alertType": 1,
       "silenceTime": 300,
-      "description": "关键工位故障停机"
+      "description": "关键工位故障停机",
+      "nameEn": "Station fault",
+      "descriptionEn": "Critical station fault causing downtime"
     }
   ],
   "dashboard": {
@@ -664,21 +736,24 @@
         "propertyCode": "cycle_time",
         "timeRange": "1h",
         "aggInterval": 60,
-        "aggMethod": "avg"
+        "aggMethod": "avg",
+        "titleEn": "Takt time trend"
       },
       {
         "title": "产量",
         "type": "kpi",
         "propertyCode": "output_count",
         "unit": "件",
-        "decimals": 0
+        "decimals": 0,
+        "titleEn": "Output"
       },
       {
         "title": "稼动率",
         "type": "kpi",
         "propertyCode": "utilization_rate",
         "unit": "%",
-        "decimals": 1
+        "decimals": 1,
+        "titleEn": "Availability rate"
       },
       {
         "title": "稼动率",
@@ -686,20 +761,24 @@
         "propertyCode": "utilization_rate",
         "unit": "%",
         "min": 0,
-        "max": 100
+        "max": 100,
+        "titleEn": "Availability rate"
       },
       {
         "title": "停机记录",
         "type": "table",
         "propertyCode": "stop_reason",
-        "timeRange": "24h"
+        "timeRange": "24h",
+        "titleEn": "Downtime records"
       },
       {
         "title": "产线运行总览",
         "type": "text",
-        "text": "节拍、产量、停机与稼动率综合监控"
+        "text": "节拍、产量、停机与稼动率综合监控",
+        "titleEn": "Production line overview"
       }
-    ]
+    ],
+    "nameEn": "Production Line Dashboard"
   },
   "metrics": {
     "running": "run_status",
@@ -707,5 +786,7 @@
     "good": "good_count",
     "reject": "reject_count",
     "cycleTime": "cycle_time"
-  }
+  },
+  "nameEn": "Production Line",
+  "descriptionEn": "Production line takt time, output, downtime and availability monitoring"
 }

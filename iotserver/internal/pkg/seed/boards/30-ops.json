@@ -2,7 +2,7 @@
   "id": "builtin-ops",
   "name": "系统监控看板",
   "icon": "area-chart",
-  "scope": "all",
+  "scope": "platform",
   "canvas": {
     "cols": 12,
     "rowHeight": 40,
@@ -12,7 +12,12 @@
         "title": "系统资源",
         "showTitle": true,
         "type": "stats",
-        "layout": { "x": 0, "y": 0, "w": 12, "h": 5 },
+        "layout": {
+          "x": 0,
+          "y": 0,
+          "w": 12,
+          "h": 5
+        },
         "config": {
           "tiles": [
             {
@@ -33,14 +38,24 @@
               "metric": "system.memory.used",
               "icon": "db",
               "tone": "purple",
-              "tags": [{ "label": "总量", "metric": "system.memory.total" }]
+              "tags": [
+                {
+                  "label": "总量",
+                  "metric": "system.memory.total"
+                }
+              ]
             },
             {
               "label": "磁盘占用",
               "metric": "system.disk.used",
               "icon": "appstore",
               "tone": "green",
-              "tags": [{ "label": "总量", "metric": "system.disk.total" }]
+              "tags": [
+                {
+                  "label": "总量",
+                  "metric": "system.disk.total"
+                }
+              ]
             }
           ]
         }
@@ -50,10 +65,17 @@
         "title": "CPU使用率趋势",
         "showTitle": true,
         "type": "line",
-        "layout": { "x": 0, "y": 5, "w": 6, "h": 8 },
+        "layout": {
+          "x": 0,
+          "y": 5,
+          "w": 6,
+          "h": 8
+        },
         "config": {
           "series": [],
-          "metrics": ["system.cpu.trend"],
+          "metrics": [
+            "system.cpu.trend"
+          ],
           "timeRange": "24h",
           "aggInterval": 300,
           "aggMethod": "avg",
@@ -68,71 +90,19 @@
         "title": "内存使用率趋势",
         "showTitle": true,
         "type": "line",
-        "layout": { "x": 6, "y": 5, "w": 6, "h": 8 },
+        "layout": {
+          "x": 6,
+          "y": 5,
+          "w": 6,
+          "h": 8
+        },
         "config": {
           "series": [],
-          "metrics": ["system.memory.trend"],
+          "metrics": [
+            "system.memory.trend"
+          ],
           "timeRange": "24h",
           "aggInterval": 300,
-          "aggMethod": "avg",
-          "showLegend": false,
-          "smooth": true,
-          "fill": true,
-          "stacked": false
-        }
-      },
-      {
-        "id": "ops-business",
-        "title": "设备与告警",
-        "showTitle": true,
-        "type": "stats",
-        "layout": { "x": 0, "y": 13, "w": 12, "h": 5 },
-        "config": {
-          "tiles": [
-            {
-              "label": "在线设备",
-              "metric": "device.online",
-              "icon": "devices",
-              "tone": "green",
-              "tags": [
-                { "label": "离线", "metric": "device.offline" },
-                { "label": "从未上线", "metric": "device.never" }
-              ]
-            },
-            {
-              "label": "在线网关",
-              "metric": "gateway.online",
-              "icon": "gateway",
-              "tone": "cyan",
-              "tags": [{ "label": "离线", "metric": "gateway.offline" }]
-            },
-            {
-              "label": "今日上报量",
-              "metric": "report.today",
-              "icon": "chart",
-              "tone": "blue",
-              "note": "每日凌晨汇总昨日全天"
-            },
-            {
-              "label": "未处理告警",
-              "metric": "alarm.pending",
-              "icon": "alert",
-              "tone": "orange"
-            }
-          ]
-        }
-      },
-      {
-        "id": "ops-msg-trend",
-        "title": "消息量趋势",
-        "showTitle": true,
-        "type": "line",
-        "layout": { "x": 0, "y": 18, "w": 12, "h": 8 },
-        "config": {
-          "series": [],
-          "metrics": ["report.daily"],
-          "timeRange": "7d",
-          "aggInterval": 0,
           "aggMethod": "avg",
           "showLegend": false,
           "smooth": true,

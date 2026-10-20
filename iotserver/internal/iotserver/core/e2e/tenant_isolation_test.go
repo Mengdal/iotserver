@@ -269,7 +269,7 @@ func TestVizBoardTenantIsolation(t *testing.T) {
 	tokenA := loginAs(t, env, userA, tenantTestPassword)
 	tokenB := loginAs(t, env, userB, tenantTestPassword)
 
-	// 新租户首次访问会自动种入内置看板（首页 + 系统监控，见 pkg/seed/boards.go）
+	// 新租户首次访问会自动种入内置看板（首页 + 产品介绍；系统监控看板仅平台，见 pkg/seed/boards.go）
 	if got := countBoards(t, env, tokenA); got != 2 {
 		t.Fatalf("租户A应自动获得 2 块内置看板，实际 %d", got)
 	}

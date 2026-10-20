@@ -37,7 +37,7 @@ import IconSelect, { renderMenuIcon } from '@/components/IconSelect'
 import { useTreeTable } from '../utils/useTreeTable'
 import { collectNested } from '../utils/treeTable'
 import type { FlatMeta } from '../utils/treeTable'
-import { t } from '@/i18n'
+import { currentLocale, t, tt } from '@/i18n'
 
 const { useMessage } = message
 
@@ -57,6 +57,13 @@ const menuTypeTag: Record<string, { color: string, text: string }> = {
   F: { color: 'default', text: t('按钮') },
 }
 
+/** 菜单在管理页里的展示名：英文界面优先用菜单自带的英文名，其次词条翻译 */
+function menuDisplayName (item: SysMenu, customName?: string): string {
+  if (customName) return customName
+  if (currentLocale() === 'en-US') return item.nameEn || tt(item.name)
+  return item.name
+}
+
 interface ParentOption {
   value: string
   title: string
@@ -67,7 +74,7 @@ function toParentOptions (list: SysMenu[]): ParentOption[] {
   const result: ParentOption[] = []
   list.forEach(item => {
     if (item.menuType === 'F') return
-    const option: ParentOption = { value: item.id, title: item.name }
+    const option: ParentOption = { value: item.id, title: menuDisplayName(item) }
     if (item.children && item.children.length > 0) {
       const children = toParentOptions(item.children)
       if (children.length > 0) option.children = children
@@ -188,10 +195,10 @@ const SysMenuPage: React.FC = () => {
     getParentId: item => item.parentId || '0',
     match: item => {
       // 租户视图下列表展示的是覆盖后的名称，按展示名称与平台名称都能搜到
-      const displayName = prefMap[item.id]?.customName || item.name
+      const displayName = menuDisplayName(item, prefMap[item.id]?.customName)
       const nameHit = !filters.name
         || displayName.includes(filters.name)
-        || item.name.includes(filters.name)
+        || item.name.includes(filters.name) || tt(item.name).includes(filters.name)
       const statusHit = !filters.status || String(item.status) === filters.status
       return nameHit && statusHit
     },
@@ -234,6 +241,8 @@ const SysMenuPage: React.FC = () => {
     editForm.setFieldsValue({
       parentId: record.parentId === '0' ? '0' : record.parentId,
       name: record.name,
+      // 英文界面下把词条翻译预填到「英文名称」，避免编辑内置菜单时看到的全是中文
+      nameEn: record.nameEn || (currentLocale() === 'en-US' ? tt(record.name) : ''),
       path: record.path,
       component: record.component,
       icon: record.icon,
@@ -354,7 +363,7 @@ const SysMenuPage: React.FC = () => {
       title: t('菜单名称'),
       dataIndex: 'name',
       width: 280,
-      render: (value: string, record) => {
+      render: (_value: string, record) => {
         const pref = prefMap[record.id]
         const customName = pref?.customName || ''
         const hidden = pref?.hidden === 1
@@ -365,7 +374,7 @@ const SysMenuPage: React.FC = () => {
               color: hidden ? 'rgba(0, 0, 0, 0.35)' : undefined,
             }}
           >
-            {customName || value}
+            {menuDisplayName(record, customName)}
             {customName ? <Tag color="blue" style={{ marginLeft: 6 }}>{t('已改名')}</Tag> : null}
             {hidden ? <Tag style={{ marginLeft: 6 }}>{t('已隐藏')}</Tag> : null}
           </span>
@@ -434,7 +443,7 @@ const SysMenuPage: React.FC = () => {
       fixed: 'right',
       render: (_, record) => (canCustomPref
         ? (
-          <Space size={4}>
+          <Space size={4} wrap={false} style={{ whiteSpace: 'nowrap' }}>
             <Button type="link" size="small" onClick={() => handleToggleHidden(record)}>
               {prefMap[record.id]?.hidden === 1 ? t('显示') : t('隐藏')}
             </Button>
@@ -454,10 +463,10 @@ const SysMenuPage: React.FC = () => {
     : {
       title: t('操作'),
       key: 'action',
-      width: 200,
+      width: 240,
       fixed: 'right',
       render: (_, record) => (
-        <Space size={4}>
+        <Space size={4} wrap={false} style={{ whiteSpace: 'nowrap' }}>
           {canAdd && record.menuType !== 'F' && (
             <Button type="link" size="small" onClick={() => openAdd(record.id)}>{t('新增下级')}</Button>
           )}
@@ -578,6 +587,9 @@ const SysMenuPage: React.FC = () => {
           </Form.Item>
           <Form.Item label={t('菜单名称')} name="name" rules={[{ required: true, message: t('请输入菜单名称') }]}>
             <Input placeholder={t('请输入菜单名称')} />
+          </Form.Item>
+          <Form.Item label={t('英文名称')} name="nameEn">
+            <Input placeholder={t('可选；英文界面优先显示，留空则使用系统词条翻译')} maxLength={64} />
           </Form.Item>
           {watchedMenuType !== 'F' && (
             <>

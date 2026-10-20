@@ -1,0 +1,351 @@
+{
+  "key": "palletizer",
+  "name": "码垛机",
+  "industry": "包装印刷",
+  "version": 1,
+  "icon": "database",
+  "description": "码垛速度、垛层、气压与夹具状态监控",
+  "thingModelJson": {
+    "properties": [
+      {
+        "name": "码垛速度",
+        "identifier": "palletizing_speed",
+        "dataType": "FLOAT",
+        "description": "每分钟码垛箱数",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "60",
+          "min": "0",
+          "step": "1",
+          "unit": "boxes/min",
+          "unitName": "箱每分钟"
+        },
+        "dataSpecsList": null,
+        "nameEn": "Palletizing speed",
+        "descriptionEn": "Cartons palletized per minute"
+      },
+      {
+        "name": "当前垛层数",
+        "identifier": "stack_count",
+        "dataType": "INT",
+        "description": "当前托盘垛层数",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "30",
+          "min": "0",
+          "step": "1",
+          "unit": "layers",
+          "unitName": "层"
+        },
+        "dataSpecsList": null,
+        "nameEn": "Stack layers",
+        "descriptionEn": "Layers in the current pallet"
+      },
+      {
+        "name": "累计纸箱数",
+        "identifier": "carton_count",
+        "dataType": "INT",
+        "description": "累计码垛纸箱数",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "9999999",
+          "min": "0",
+          "step": "1",
+          "unit": "boxes",
+          "unitName": "箱"
+        },
+        "dataSpecsList": null,
+        "nameEn": "Cumulative cartons",
+        "descriptionEn": "Cumulative palletized cartons"
+      },
+      {
+        "name": "气压",
+        "identifier": "air_pressure",
+        "dataType": "FLOAT",
+        "description": "气动系统压力",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "1",
+          "min": "0",
+          "step": "0.01",
+          "unit": "MPa",
+          "unitName": "兆帕"
+        },
+        "dataSpecsList": null,
+        "nameEn": "Air pressure",
+        "descriptionEn": "Pneumatic system pressure"
+      },
+      {
+        "name": "运行状态",
+        "identifier": "run_status",
+        "dataType": "BOOL",
+        "description": "码垛机运行状态",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": null,
+        "dataSpecsList": [
+          {
+            "name": "Stop (停止)",
+            "value": 0
+          },
+          {
+            "name": "Running (运行)",
+            "value": 1
+          }
+        ],
+        "nameEn": "Running status",
+        "descriptionEn": "Palletizer running status"
+      },
+      {
+        "name": "故障码",
+        "identifier": "fault_code",
+        "dataType": "INT",
+        "description": "当前故障码，0 表示正常",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "999",
+          "min": "0",
+          "step": "1",
+          "unit": "",
+          "unitName": ""
+        },
+        "dataSpecsList": null,
+        "nameEn": "Fault code",
+        "descriptionEn": "Current fault code, 0 means normal"
+      },
+      {
+        "name": "夹具状态",
+        "identifier": "gripper_status",
+        "dataType": "BOOL",
+        "description": "夹具开合状态",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": null,
+        "dataSpecsList": [
+          {
+            "name": "Open (张开)",
+            "value": 0
+          },
+          {
+            "name": "Closed (夹紧)",
+            "value": 1
+          }
+        ],
+        "nameEn": "Gripper status",
+        "descriptionEn": "Gripper open/closed status"
+      },
+      {
+        "name": "当日产量",
+        "identifier": "output_count",
+        "dataType": "INT",
+        "description": "当日码垛产量",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "99999",
+          "min": "0",
+          "step": "1",
+          "unit": "boxes",
+          "unitName": "箱"
+        },
+        "dataSpecsList": null,
+        "nameEn": "Daily output",
+        "descriptionEn": "Cartons palletized today"
+      }
+    ],
+    "events": [
+      {
+        "eventName": "气压低报警",
+        "eventType": "ALERT",
+        "identifier": "air_low",
+        "description": "气压低于下限",
+        "required": false,
+        "outputData": [
+          {
+            "name": "当前气压",
+            "identifier": "value",
+            "dataType": "FLOAT",
+            "required": false,
+            "dataSpecs": {
+              "max": "1",
+              "min": "0",
+              "step": "0.01",
+              "unit": "MPa",
+              "unitName": "兆帕"
+            },
+            "dataSpecsList": null,
+            "nameEn": "Current air pressure"
+          }
+        ],
+        "eventNameEn": "Low air pressure",
+        "descriptionEn": "Air pressure below the lower limit"
+      },
+      {
+        "eventName": "夹具故障",
+        "eventType": "ERROR",
+        "identifier": "gripper_fault",
+        "description": "夹具动作失败",
+        "required": false,
+        "outputData": [
+          {
+            "name": "故障码",
+            "identifier": "code",
+            "dataType": "INT",
+            "required": false,
+            "dataSpecs": {
+              "max": "999",
+              "min": "0",
+              "step": "1",
+              "unit": "",
+              "unitName": ""
+            },
+            "dataSpecsList": null,
+            "nameEn": "Fault code"
+          }
+        ],
+        "eventNameEn": "Gripper fault",
+        "descriptionEn": "Gripper action failed"
+      },
+      {
+        "eventName": "托盘已满",
+        "eventType": "INFO",
+        "identifier": "stack_full",
+        "description": "垛层达到目标数量",
+        "required": false,
+        "outputData": [
+          {
+            "name": "当前垛层数",
+            "identifier": "layers",
+            "dataType": "INT",
+            "required": false,
+            "dataSpecs": {
+              "max": "30",
+              "min": "0",
+              "step": "1",
+              "unit": "layers",
+              "unitName": "层"
+            },
+            "dataSpecsList": null,
+            "nameEn": "Stack layers"
+          }
+        ],
+        "eventNameEn": "Pallet full",
+        "descriptionEn": "Stack reached the target layer count"
+      }
+    ],
+    "services": [
+      {
+        "serviceName": "启动",
+        "identifier": "start",
+        "description": "启动码垛机",
+        "required": false,
+        "callType": "ASYNC",
+        "inputParams": [],
+        "outParams": [],
+        "serviceNameEn": "Start",
+        "descriptionEn": "Start the palletizer"
+      },
+      {
+        "serviceName": "停止",
+        "identifier": "stop",
+        "description": "停止码垛机",
+        "required": false,
+        "callType": "ASYNC",
+        "inputParams": [],
+        "outParams": [],
+        "serviceNameEn": "Stop",
+        "descriptionEn": "Stop the palletizer"
+      },
+      {
+        "serviceName": "复位",
+        "identifier": "reset",
+        "description": "复位码垛机",
+        "required": false,
+        "callType": "ASYNC",
+        "inputParams": [],
+        "outParams": [],
+        "serviceNameEn": "Reset",
+        "descriptionEn": "Reset the palletizer"
+      }
+    ]
+  },
+  "alarmRules": [
+    {
+      "name": "气压低报警",
+      "propertyCode": "air_pressure",
+      "operator": "<",
+      "value": "0.4",
+      "alertLevel": 2,
+      "alertType": 1,
+      "silenceTime": 300,
+      "description": "气压低于 0.4 MPa",
+      "nameEn": "Low air pressure",
+      "descriptionEn": "Air pressure below 0.4 MPa"
+    },
+    {
+      "name": "托盘已满",
+      "propertyCode": "stack_count",
+      "operator": ">",
+      "value": "20",
+      "alertLevel": 3,
+      "alertType": 1,
+      "silenceTime": 300,
+      "description": "垛层超过 20 层",
+      "nameEn": "Pallet full",
+      "descriptionEn": "More than 20 layers on the pallet"
+    },
+    {
+      "name": "码垛机故障",
+      "propertyCode": "fault_code",
+      "operator": "!=",
+      "value": "0",
+      "alertLevel": 1,
+      "alertType": 1,
+      "silenceTime": 300,
+      "description": "故障码不为 0",
+      "nameEn": "Palletizer fault",
+      "descriptionEn": "Fault code is not zero"
+    }
+  ],
+  "dashboard": {
+    "name": "码垛机看板",
+    "widgets": [
+      {
+        "title": "码垛速度趋势",
+        "type": "line",
+        "propertyCode": "palletizing_speed",
+        "timeRange": "1h",
+        "aggInterval": 60,
+        "aggMethod": "avg",
+        "titleEn": "Palletizing speed trend"
+      },
+      {
+        "title": "当日产量",
+        "type": "kpi",
+        "propertyCode": "output_count",
+        "titleEn": "Daily output"
+      },
+      {
+        "title": "当前垛层数",
+        "type": "kpi",
+        "propertyCode": "stack_count",
+        "titleEn": "Stack layers"
+      }
+    ],
+    "nameEn": "Palletizer Dashboard"
+  },
+  "metrics": {
+    "running": "run_status",
+    "output": "output_count",
+    "good": null,
+    "reject": null,
+    "cycleTime": null
+  },
+  "nameEn": "Palletizer",
+  "descriptionEn": "Palletizing speed, stack layers, air pressure and gripper status monitoring"
+}

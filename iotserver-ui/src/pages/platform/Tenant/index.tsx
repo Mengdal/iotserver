@@ -276,7 +276,7 @@ const TenantPage: React.FC = () => {
       width: 140,
       fixed: 'right',
       render: (_, record) => (
-        <Space size={4}>
+        <Space size={4} wrap={false} style={{ whiteSpace: 'nowrap' }}>
           {canEdit && <Button type="link" size="small" onClick={() => openEdit(record)}>{t('编辑')}</Button>}
           {canRemove && (
             <Popconfirm

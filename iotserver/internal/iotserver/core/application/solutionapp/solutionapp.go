@@ -67,11 +67,13 @@ func machineTemplateResponseFromModel(tpl models.Solution) dtos.SolutionResponse
 	return dtos.SolutionResponse{
 		Key:            tpl.Key,
 		Name:           tpl.Name,
+		NameEn:         tpl.NameEn,
 		Industry:       tpl.Industry,
 		Version:        tpl.Version,
 		BuiltIn:        tpl.BuiltIn == 1,
 		Icon:           tpl.Icon,
 		Description:    tpl.Description,
+		DescriptionEn:  tpl.DescriptionEn,
 		ThingModelJson: tpl.ThingModelJson,
 		AlarmRulesJson: tpl.AlarmRulesJson,
 		DashboardJson:  tpl.DashboardJson,

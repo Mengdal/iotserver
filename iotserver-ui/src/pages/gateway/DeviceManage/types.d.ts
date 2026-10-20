@@ -83,6 +83,7 @@ export interface ProductInfo {
 export interface CategoryTemplate {
   category_key: string
   category_name: string
+  category_name_en?: string
   id: string
   scene: string
 }

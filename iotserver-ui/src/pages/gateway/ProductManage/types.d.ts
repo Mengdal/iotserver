@@ -84,6 +84,7 @@ export interface ProductInfo {
 export interface CategoryTemplate {
   category_key: string
   category_name: string
+  category_name_en?: string
   id: string
   scene: string
 }
@@ -129,6 +130,10 @@ export interface BaseThingModelType {
   code: string
   description?: string
   name: string
+  /** 英文名称（方案中心维护双语功能名） */
+  name_en?: string
+  /** 英文描述 */
+  description_en?: string
   product_id?: string
   action?: ActionThingModelType['action']
   event?: EventThingModelType['event']
@@ -148,7 +153,9 @@ export interface EnumValue {
 export interface DeatilModalFormValue {
   code: string
   name: string
+  name_en?: string
   description?: string
+  description_en?: string
   thing_model_type: ThingModelType
   access_model: AccessModelType
   type: TypeSpec

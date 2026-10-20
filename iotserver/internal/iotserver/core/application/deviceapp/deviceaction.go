@@ -18,15 +18,17 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/docker/distribution/uuid"
 	"github.com/LMgateways/iotserver-driver-proto/thingmodel"
+	"github.com/docker/distribution/uuid"
 	"iotserver/internal/dtos"
 	"iotserver/internal/iotserver/core/container"
+	"iotserver/internal/models"
 	"iotserver/internal/pkg/constants"
 	"iotserver/internal/pkg/di"
 	"iotserver/internal/pkg/errort"
 	"iotserver/internal/pkg/tenant"
 	"iotserver/internal/tools/rpcclient"
+	"strings"
 	"time"
 )
 
@@ -132,6 +134,32 @@ func (p *deviceApp) SetDeviceProperty(req dtos.OpenApiSetDeviceThingModel) (err 
 	device, err := p.dbClient.WithCtx(tenant.Platform(context.Background())).DeviceById(req.DeviceId)
 	if err != nil {
 		return err
+	}
+
+	// 网关接入的设备没有驱动实例：参考系统（/edge）设备改走控制通道写属性。
+	if strings.TrimSpace(device.GatewayId) != "" {
+		gw, gwErr := p.dbClient.WithCtx(tenant.Platform(context.Background())).GatewayById(device.GatewayId)
+		if gwErr == nil && isEdgeGatewayModel(gw.Protocol, gw.Vendor, gw.Model) {
+			pk := strings.TrimSpace(gw.Pk)
+			if pk == "" {
+				pk = gw.Sn
+			}
+			dn := strings.TrimSpace(device.DeviceKey)
+			if dn == "" {
+				dn = device.Name
+			}
+			ctl := container.EdgeCtlFrom(di.GContainer.Get)
+			for code, value := range req.Item {
+				status, msg, setErr := ctl.SetProperty(context.Background(), pk, gw.Sn, dn, code, fmt.Sprint(value))
+				if setErr != nil {
+					return setErr
+				}
+				if !status {
+					return errort.NewCommonErr(errort.DefaultSystemError, fmt.Errorf("网关回执失败: %s", msg))
+				}
+			}
+			return nil
+		}
 	}
 
 	_, err = p.dbClient.WithCtx(tenant.Platform(context.Background())).ProductById(device.ProductId)
@@ -364,4 +392,13 @@ func (p *deviceApp) DeviceInvokeThingService(ctx context.Context, invokeDeviceSe
 		}
 	}
 	return nil, errort.NewCommonErr(errort.DeviceServiceNotStarted, fmt.Errorf("driver id(%s) not start", deviceService.Id))
+}
+
+// isEdgeGatewayModel 参考系统网关识别：协议优先，历史数据按厂商/型号兜底。
+func isEdgeGatewayModel(protocol, vendor, model string) bool {
+	if strings.EqualFold(protocol, models.GatewayProtocolEdge) {
+		return true
+	}
+	s := strings.ToLower(vendor + " " + model)
+	return strings.Contains(s, "things") || strings.Contains(s, "iotddc")
 }

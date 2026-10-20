@@ -78,11 +78,16 @@
         "id": "home-msg-rank",
         "title": "设备消息量排名",
         "showTitle": true,
-        "type": "rank",
+        "type": "table",
         "layout": { "x": 8, "y": 5, "w": 4, "h": 8 },
         "config": {
+          "source": "deviceMessageRank",
+          "series": [],
+          "metrics": [],
           "timeRange": "7d",
-          "limit": 5
+          "limit": 5,
+          "latest": true,
+          "pageSize": 10
         }
       }
     ]

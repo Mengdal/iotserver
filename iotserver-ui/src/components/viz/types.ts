@@ -30,6 +30,12 @@ export interface VizWidgetContext {
   onTextChange?: (text: string) => void
   /** 编辑态：把 config 的局部改动写回看板（组件内部的小控件用，如阈值调色） */
   onConfigChange?: (patch: Record<string, any>) => void
+  /**
+   * 该组件生效的自动刷新间隔（秒，0 = 不自动刷新）。
+   * 数据类组件由 useVizData 统一取数，不需要这个字段；
+   * 自带独立取数接口的组件（如排行榜）据此自行轮询。
+   */
+  refreshInterval?: number
 }
 
 export interface VizWidgetRenderProps<C = any> {

@@ -285,9 +285,10 @@ func DefaultMenus() []models.Menu {
 			Sort: 20, Visible: 1, Status: 1, IsFrame: 1,
 		},
 		{
+			// 系统监控只给平台管理员：展示的是这台服务自身的 CPU/内存/磁盘等运行情况
 			Id: MenuSysMon, ParentId: MenuMonitorId, Name: "系统监控", Path: "/monitor/systemMonitor",
 			Icon: "dashboard", MenuType: models.MenuTypeMenu, Perms: permissions.MonitorView,
-			Sort: 1, Visible: 1, Status: 1, IsFrame: 1,
+			Sort: 1, Visible: 1, Status: 1, IsFrame: 1, PlatformOnly: 1,
 		},
 		{
 			Id: MenuAlarm, ParentId: MenuMonitorId, Name: "告警中心", Path: "/monitor/alarmCenter/list",

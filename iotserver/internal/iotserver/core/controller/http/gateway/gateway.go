@@ -1,9 +1,13 @@
 package gateway
 
 import (
+	"strings"
+
 	"github.com/gin-gonic/gin"
 
 	"iotserver/internal/dtos"
+	"iotserver/internal/iotserver/core/container"
+	"iotserver/internal/models"
 	"iotserver/internal/pkg/errort"
 	"iotserver/internal/pkg/httphelper"
 )
@@ -135,4 +139,115 @@ func (ctl *controller) GatewayCommand(c *gin.Context) {
 		return
 	}
 	httphelper.ResultSuccess(nil, c.Writer, lc)
+}
+
+/******************************* 参考系统（/edge）网关控制 *******************************/
+
+type gatewayEdgeRestartRequest struct {
+	Id string `json:"id" binding:"required"`
+}
+
+type gatewayEdgeControlRequest struct {
+	Id         string `json:"id" binding:"required"`
+	Dn         string `json:"dn" binding:"required"`
+	Identifier string `json:"identifier" binding:"required"`
+	Value      string `json:"value"`
+}
+
+// isEdgeGateway 判断是否为参考系统网关。历史数据里 protocol 可能仍是默认值，
+// 因此同时按厂商/型号兜底识别。
+func isEdgeGateway(g dtos.GatewayResponse) bool {
+	if strings.EqualFold(g.Protocol, models.GatewayProtocolEdge) {
+		return true
+	}
+	s := strings.ToLower(g.Vendor + " " + g.Model)
+	return strings.Contains(s, "things") || strings.Contains(s, "iotddc")
+}
+
+func edgePk(g dtos.GatewayResponse) string {
+	if strings.TrimSpace(g.Pk) != "" {
+		return g.Pk
+	}
+	return g.Sn
+}
+
+func (ctl *controller) loadEdgeGateway(c *gin.Context, id string) (dtos.GatewayResponse, bool) {
+	g, err := ctl.getGatewayApp().GatewayById(c, id)
+	if err != nil {
+		httphelper.RenderFail(c, err, c.Writer, ctl.lc)
+		return g, false
+	}
+	if !isEdgeGateway(g) {
+		httphelper.RenderFail(c, errort.NewCommonErr(errort.DefaultReqParamsError,
+			errort.NewMessageErr("该网关不是参考系统 /edge 网关，不支持设备控制", nil)), c.Writer, ctl.lc)
+		return g, false
+	}
+	return g, true
+}
+
+// @Tags    设备接入-网关
+// @Summary 重启参考系统网关
+// @Produce json
+// @Router  /api/v1/gateway/edge/restart [post]
+func (ctl *controller) GatewayEdgeRestart(c *gin.Context) {
+	var req gatewayEdgeRestartRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		httphelper.RenderFail(c, errort.NewCommonErr(errort.DefaultReqParamsError, err), c.Writer, ctl.lc)
+		return
+	}
+	g, ok := ctl.loadEdgeGateway(c, req.Id)
+	if !ok {
+		return
+	}
+	if err := container.EdgeCtlFrom(ctl.dic.Get).Restart(c.Request.Context(), edgePk(g), g.Sn); err != nil {
+		httphelper.RenderFail(c, err, c.Writer, ctl.lc)
+		return
+	}
+	httphelper.ResultSuccess(nil, c.Writer, ctl.lc)
+}
+
+// @Tags    设备接入-网关
+// @Summary 写参考系统网关下设备属性
+// @Produce json
+// @Router  /api/v1/gateway/edge/control [post]
+func (ctl *controller) GatewayEdgeControl(c *gin.Context) {
+	var req gatewayEdgeControlRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		httphelper.RenderFail(c, errort.NewCommonErr(errort.DefaultReqParamsError, err), c.Writer, ctl.lc)
+		return
+	}
+	g, ok := ctl.loadEdgeGateway(c, req.Id)
+	if !ok {
+		return
+	}
+	status, msg, err := container.EdgeCtlFrom(ctl.dic.Get).
+		SetProperty(c.Request.Context(), edgePk(g), g.Sn, req.Dn, req.Identifier, req.Value)
+	if err != nil {
+		httphelper.RenderFail(c, err, c.Writer, ctl.lc)
+		return
+	}
+	httphelper.ResultSuccess(map[string]interface{}{"status": status, "message": msg}, c.Writer, ctl.lc)
+}
+
+// @Tags    设备接入-网关
+// @Summary 拉取参考系统网关设备/测点树
+// @Produce json
+// @Router  /api/v1/gateway/edge/devices [get]
+func (ctl *controller) GatewayEdgeDevices(c *gin.Context) {
+	id := c.Query("id")
+	if strings.TrimSpace(id) == "" {
+		httphelper.RenderFail(c, errort.NewCommonErr(errort.DefaultReqParamsError,
+			errort.NewMessageErr("缺少网关 ID", nil)), c.Writer, ctl.lc)
+		return
+	}
+	g, ok := ctl.loadEdgeGateway(c, id)
+	if !ok {
+		return
+	}
+	tree, err := container.EdgeCtlFrom(ctl.dic.Get).TagTree(c.Request.Context(), edgePk(g), g.Sn)
+	if err != nil {
+		httphelper.RenderFail(c, err, c.Writer, ctl.lc)
+		return
+	}
+	httphelper.ResultSuccess(tree, c.Writer, ctl.lc)
 }

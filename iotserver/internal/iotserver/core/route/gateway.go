@@ -91,6 +91,10 @@ func RegisterGateway(engine *gin.Engine, dic *di.Container) {
 		v1Auth.DELETE("gateway/:id", ctl.Perm(middleware.PermGatewayRemove), ctl.GatewayDelete)
 		v1Auth.PUT("gateway/config", ctl.Perm(middleware.PermGatewayConfig), ctl.GatewayPushConfig)
 		v1Auth.POST("gateway/command", ctl.Perm(middleware.PermGatewayCommand), ctl.GatewayCommand)
+		// 参考系统（/edge）网关控制：重启 / 写属性 / 设备树
+		v1Auth.POST("gateway/edge/restart", ctl.Perm(middleware.PermGatewayCommand), ctl.GatewayEdgeRestart)
+		v1Auth.POST("gateway/edge/control", ctl.Perm(middleware.PermGatewayCommand), ctl.GatewayEdgeControl)
+		v1Auth.GET("gateway/edge/devices", ctl.Perm(middleware.PermGatewayList), ctl.GatewayEdgeDevices)
 	}
 	/******* 设备接入 - 方案（行业模板一键应用）*******/
 	{

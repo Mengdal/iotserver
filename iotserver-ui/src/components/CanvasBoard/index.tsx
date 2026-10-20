@@ -4,14 +4,14 @@ import { getVizBoard, VizBoardDetail, VizWidget } from '@/api'
 import GridCanvas, { GridCanvasItem } from '@/components/GridCanvas'
 import WidgetCard from '@/components/WidgetCard'
 import WidgetBody from '@/components/viz/WidgetBody'
-import { useVizData } from '@/components/viz/useVizData'
+import { effectiveInterval, useVizData } from '@/components/viz/useVizData'
 import { getWidgetManifest } from '@/components/viz/registry'
 import { isPlatformOnlyWidget } from '@/components/viz/platformScope'
 import { useVizMetricDefs } from '@/components/viz/widgets/MetricsEditor'
 import { isPlatformView } from '@/utils/platformViewGuard'
 import { flattenVizTree, groupByParent, isVizContainer } from '@/utils/vizTree'
 import './index.less'
-import { t } from '@/i18n'
+import { t, tt } from '@/i18n'
 
 interface CanvasBoardProps {
   /** 看板 ID（二选一） */
@@ -111,6 +111,8 @@ const CanvasBoard: React.FC<CanvasBoardProps> = ({ boardId, board: boardProp, cl
         loading: data.loading,
         // 文本组件正文：不传的话所有文本组件在只读渲染下都会显示「（空文本）」
         text: w.text,
+        // 自带取数接口的组件（排行榜）按同一套间隔自行轮询
+        refreshInterval: disableData ? 0 : effectiveInterval(w.refreshInterval, refreshInterval),
       }}
     />
   )
@@ -122,7 +124,7 @@ const CanvasBoard: React.FC<CanvasBoardProps> = ({ boardId, board: boardProp, cl
     if (isVizContainer(w)) {
       return (
         <div className="canvas-board__container">
-          <div className="canvas-board__container-title">{w.title || t('容器')}</div>
+          <div className="canvas-board__container-title">{tt(w.title) || t('容器')}</div>
           <div className="canvas-board__container-body">
             <GridCanvas
               boardKey={`${boardKey}:${w.id}`}

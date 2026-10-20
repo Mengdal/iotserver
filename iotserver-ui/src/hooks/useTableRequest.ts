@@ -37,10 +37,13 @@ export function useTableRequest<T> ({ onRequest }: PaginationParamsType<T>): {
         const { current, pageSize } = pagination
         const { success, result } = await onRequest({ ...params, page: current!, pageSize })
         if (success) {
-          const { list, total } = result
-          setDataSource(list)
-          setTotal(total)
-          if (list.length === 0 && current && current > 1) {
+          // 后端在「无数据」时可能返回 result.list = null（例如没有 code 的历史查询），
+          // 统一归一化成空数组，避免调用方 spread/map 时抛错。
+          const { list, total } = (result || {}) as any
+          const rows = Array.isArray(list) ? list : []
+          setDataSource(rows)
+          setTotal(Number(total) || 0)
+          if (rows.length === 0 && current && current > 1) {
             setPagination({ ...pagination, current: current - 1 })
           }
         }

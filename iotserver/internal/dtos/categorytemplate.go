@@ -32,18 +32,20 @@ type ThingModelTemplateSyncRequest struct {
 
 func CategoryTemplateResponseFromModel(m models.CategoryTemplate) CategoryTemplateResponse {
 	return CategoryTemplateResponse{
-		Id:           m.Id,
-		CategoryName: m.CategoryName,
-		CategoryKey:  m.CategoryKey,
-		Scene:        m.Scene,
+		Id:             m.Id,
+		CategoryName:   m.CategoryName,
+		CategoryNameEn: m.CategoryNameEn,
+		CategoryKey:    m.CategoryKey,
+		Scene:          m.Scene,
 	}
 }
 
 type CategoryTemplateResponse struct {
-	Id           string `json:"id"`
-	CategoryName string `json:"category_name"` //品类名称
-	CategoryKey  string `json:"category_key"`
-	Scene        string `json:"scene"` //所属场景
+	Id             string `json:"id"`
+	CategoryName   string `json:"category_name"` //品类名称
+	CategoryNameEn string `json:"category_name_en"`
+	CategoryKey    string `json:"category_key"`
+	Scene          string `json:"scene"` //所属场景
 }
 
 type CosCategoryTemplateResponse struct {
@@ -61,6 +63,7 @@ type ThingModelTemplateRequest struct {
 type ThingModelTemplateResponse struct {
 	Id             string `json:"id"`
 	CategoryName   string `json:"category_name"` //品类名称
+	CategoryNameEn string `json:"category_name_en"`
 	CategoryKey    string `json:"category_key"`
 	ThingModelJSON string `json:"thing_model_json"`
 	//models.Properties
@@ -72,11 +75,12 @@ type ThingModelTemplateResponse struct {
 func ThingModelTemplateResponseFromModel(m models.ThingModelTemplate) ThingModelTemplateResponse {
 	p, e, a := GetModelPropertyEventActionByThingModelTemplate(m.ThingModelJSON)
 	return ThingModelTemplateResponse{
-		CategoryKey:  m.CategoryKey,
-		CategoryName: m.CategoryName,
-		Properties:   p,
-		Events:       e,
-		Actions:      a,
+		CategoryKey:    m.CategoryKey,
+		CategoryName:   m.CategoryName,
+		CategoryNameEn: m.CategoryNameEn,
+		Properties:     p,
+		Events:         e,
+		Actions:        a,
 	}
 }
 

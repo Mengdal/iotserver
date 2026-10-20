@@ -62,6 +62,7 @@ import (
 	"iotserver/internal/pkg/handlers"
 	"iotserver/internal/pkg/logger"
 	"iotserver/internal/pkg/startup"
+	"iotserver/internal/tools/edgectl"
 	"iotserver/internal/tools/ekuiperclient"
 	"iotserver/internal/tools/gatewaymqtt"
 	"iotserver/internal/tools/hpcloudclient"
@@ -410,6 +411,19 @@ func (b *Bootstrap) initClient(ctx context.Context, wg *sync.WaitGroup, dic *di.
 	} else {
 		lc.Infof("参考系统接入服务已启动（按已登记网关逐个订阅，详见随后的「订阅已对齐」日志）")
 	}
+
+	// 参考系统控制通道：重启 / 标签树 / 属性写。实测 things 的 1883 端口承接这些管理命令，
+	// 与上行（EdgeIngest.Broker）分开配置；连接失败不阻断启动。
+	edgeUser, edgePass := configuration.EdgeIngest.Credentials(configuration.MessageQueue)
+	edgeCtl := edgectl.New(configuration.EdgeIngest.ControlBrokerURL(configuration.MessageQueue), edgeUser, edgePass, lc)
+	if err := edgeCtl.Start(); err != nil {
+		lc.Errorf("参考系统控制通道启动失败（网关控制不可用）: %v", err)
+	}
+	dic.Update(di.ServiceConstructorMap{
+		container.EdgeCtlName: func(get di.Get) interface{} {
+			return edgeCtl
+		},
+	})
 	return true
 }
 

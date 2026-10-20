@@ -15,11 +15,12 @@
 package models
 
 type CategoryTemplate struct {
-	Timestamps   `gorm:"embedded"`
-	Id           string `gorm:"id;primaryKey;not null;type:string;size:255;comment:主键"`
-	CategoryKey  string `json:"category_key" gorm:"type:string;size:255;comment:品类标识"`
-	CategoryName string `json:"category_name" gorm:"type:string;size:255;comment:品类名字"`
-	Scene        string `json:"scene" gorm:"type:string;size:255;comment:场景"`
+	Timestamps     `gorm:"embedded"`
+	Id             string `gorm:"id;primaryKey;not null;type:string;size:255;comment:主键"`
+	CategoryKey    string `json:"category_key" gorm:"type:string;size:255;comment:品类标识"`
+	CategoryName   string `json:"category_name" gorm:"type:string;size:255;comment:品类名字"`
+	CategoryNameEn string `json:"category_name_en" gorm:"type:string;size:255;comment:品类英文名字"`
+	Scene          string `json:"scene" gorm:"type:string;size:255;comment:场景"`
 }
 
 func (d *CategoryTemplate) TableName() string {

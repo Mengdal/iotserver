@@ -1,0 +1,348 @@
+{
+  "key": "pv_inverter",
+  "name": "光伏逆变器",
+  "industry": "能源电力",
+  "version": 1,
+  "icon": "database",
+  "description": "光伏逆变器直流/交流电压电流、有功功率与发电量监控",
+  "thingModelJson": {
+    "properties": [
+      {
+        "name": "直流电压",
+        "identifier": "dc_voltage",
+        "dataType": "FLOAT",
+        "description": "光伏阵列直流输入电压",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "1100",
+          "min": "0",
+          "step": "0.1",
+          "unit": "V",
+          "unitName": "伏"
+        },
+        "dataSpecsList": null,
+        "nameEn": "DC voltage",
+        "descriptionEn": "PV array DC input voltage"
+      },
+      {
+        "name": "直流电流",
+        "identifier": "dc_current",
+        "dataType": "FLOAT",
+        "description": "光伏阵列直流输入电流",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "20",
+          "min": "0",
+          "step": "0.1",
+          "unit": "A",
+          "unitName": "安"
+        },
+        "dataSpecsList": null,
+        "nameEn": "DC current",
+        "descriptionEn": "PV array DC input current"
+      },
+      {
+        "name": "交流电压",
+        "identifier": "ac_voltage",
+        "dataType": "FLOAT",
+        "description": "并网侧交流输出电压",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "300",
+          "min": "0",
+          "step": "0.1",
+          "unit": "V",
+          "unitName": "伏"
+        },
+        "dataSpecsList": null,
+        "nameEn": "AC voltage",
+        "descriptionEn": "Grid-side AC output voltage"
+      },
+      {
+        "name": "交流电流",
+        "identifier": "ac_current",
+        "dataType": "FLOAT",
+        "description": "并网侧交流输出电流",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "50",
+          "min": "0",
+          "step": "0.1",
+          "unit": "A",
+          "unitName": "安"
+        },
+        "dataSpecsList": null,
+        "nameEn": "AC current",
+        "descriptionEn": "Grid-side AC output current"
+      },
+      {
+        "name": "有功功率",
+        "identifier": "active_power",
+        "dataType": "FLOAT",
+        "description": "当前有功功率",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "120",
+          "min": "0",
+          "step": "0.1",
+          "unit": "kW",
+          "unitName": "千瓦"
+        },
+        "dataSpecsList": null,
+        "nameEn": "Active power",
+        "descriptionEn": "Current active power output"
+      },
+      {
+        "name": "当日发电量",
+        "identifier": "daily_energy",
+        "dataType": "FLOAT",
+        "description": "当日发电量",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "1000",
+          "min": "0",
+          "step": "0.1",
+          "unit": "kWh",
+          "unitName": "千瓦时"
+        },
+        "dataSpecsList": null,
+        "nameEn": "Daily generation",
+        "descriptionEn": "Energy generated today"
+      },
+      {
+        "name": "累计发电量",
+        "identifier": "total_energy",
+        "dataType": "FLOAT",
+        "description": "累计发电量",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "99999999",
+          "min": "0",
+          "step": "0.1",
+          "unit": "kWh",
+          "unitName": "千瓦时"
+        },
+        "dataSpecsList": null,
+        "nameEn": "Cumulative generation",
+        "descriptionEn": "Total energy generated"
+      },
+      {
+        "name": "逆变器状态",
+        "identifier": "inverter_status",
+        "dataType": "BOOL",
+        "description": "逆变器运行状态",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": null,
+        "dataSpecsList": [
+          {
+            "name": "Stop (停止)",
+            "value": 0
+          },
+          {
+            "name": "Running (运行)",
+            "value": 1
+          }
+        ],
+        "nameEn": "Inverter status",
+        "descriptionEn": "Inverter running status"
+      }
+    ],
+    "events": [
+      {
+        "eventName": "电网故障",
+        "eventType": "ERROR",
+        "identifier": "grid_fault",
+        "description": "电网电压或频率异常",
+        "required": false,
+        "outputData": [
+          {
+            "name": "故障码",
+            "identifier": "code",
+            "dataType": "INT",
+            "required": false,
+            "dataSpecs": {
+              "max": "999",
+              "min": "0",
+              "step": "1",
+              "unit": "",
+              "unitName": ""
+            },
+            "dataSpecsList": null,
+            "nameEn": "Fault code"
+          }
+        ],
+        "eventNameEn": "Grid fault",
+        "descriptionEn": "Grid voltage or frequency out of range"
+      },
+      {
+        "eventName": "过温报警",
+        "eventType": "ALERT",
+        "identifier": "over_temp",
+        "description": "逆变器温度超过上限",
+        "required": false,
+        "outputData": [
+          {
+            "name": "当前温度",
+            "identifier": "value",
+            "dataType": "FLOAT",
+            "required": false,
+            "dataSpecs": {
+              "max": "120",
+              "min": "-20",
+              "step": "0.1",
+              "unit": "℃",
+              "unitName": "摄氏度"
+            },
+            "dataSpecsList": null,
+            "nameEn": "Current temperature"
+          }
+        ],
+        "eventNameEn": "Over temperature",
+        "descriptionEn": "Inverter temperature above the upper limit"
+      },
+      {
+        "eventName": "通讯中断",
+        "eventType": "ALERT",
+        "identifier": "comm_lost",
+        "description": "逆变器与平台通讯中断",
+        "required": false,
+        "outputData": [
+          {
+            "name": "中断时间",
+            "identifier": "duration",
+            "dataType": "INT",
+            "required": false,
+            "dataSpecs": {
+              "max": "86400",
+              "min": "0",
+              "step": "1",
+              "unit": "s",
+              "unitName": "秒"
+            },
+            "dataSpecsList": null,
+            "nameEn": "Interruption duration"
+          }
+        ],
+        "eventNameEn": "Communication lost",
+        "descriptionEn": "Inverter lost communication with the platform"
+      }
+    ],
+    "services": [
+      {
+        "serviceName": "启动",
+        "identifier": "start",
+        "description": "启动光伏逆变器",
+        "required": false,
+        "callType": "ASYNC",
+        "inputParams": [],
+        "outParams": [],
+        "serviceNameEn": "Start",
+        "descriptionEn": "Start the PV inverter"
+      },
+      {
+        "serviceName": "停止",
+        "identifier": "stop",
+        "description": "停止光伏逆变器",
+        "required": false,
+        "callType": "ASYNC",
+        "inputParams": [],
+        "outParams": [],
+        "serviceNameEn": "Stop",
+        "descriptionEn": "Stop the PV inverter"
+      },
+      {
+        "serviceName": "复位",
+        "identifier": "reset",
+        "description": "复位光伏逆变器",
+        "required": false,
+        "callType": "ASYNC",
+        "inputParams": [],
+        "outParams": [],
+        "serviceNameEn": "Reset",
+        "descriptionEn": "Reset the PV inverter"
+      }
+    ]
+  },
+  "alarmRules": [
+    {
+      "name": "直流过压",
+      "propertyCode": "dc_voltage",
+      "operator": ">",
+      "value": "1000",
+      "alertLevel": 1,
+      "alertType": 1,
+      "silenceTime": 300,
+      "description": "直流电压高于 1000 V",
+      "nameEn": "DC overvoltage",
+      "descriptionEn": "DC voltage above 1000 V"
+    },
+    {
+      "name": "交流过压",
+      "propertyCode": "ac_voltage",
+      "operator": ">",
+      "value": "250",
+      "alertLevel": 1,
+      "alertType": 1,
+      "silenceTime": 300,
+      "description": "交流电压高于 250 V",
+      "nameEn": "AC overvoltage",
+      "descriptionEn": "AC voltage above 250 V"
+    },
+    {
+      "name": "逆变器过载",
+      "propertyCode": "active_power",
+      "operator": ">",
+      "value": "110",
+      "alertLevel": 2,
+      "alertType": 1,
+      "silenceTime": 300,
+      "description": "有功功率高于 110 kW",
+      "nameEn": "Inverter overload",
+      "descriptionEn": "Active power above 110 kW"
+    }
+  ],
+  "dashboard": {
+    "name": "光伏逆变器看板",
+    "widgets": [
+      {
+        "title": "有功功率趋势",
+        "type": "line",
+        "propertyCode": "active_power",
+        "timeRange": "1h",
+        "aggInterval": 60,
+        "aggMethod": "avg",
+        "titleEn": "Active power trend"
+      },
+      {
+        "title": "当前有功功率",
+        "type": "kpi",
+        "propertyCode": "active_power",
+        "titleEn": "Current active power"
+      },
+      {
+        "title": "当日发电量",
+        "type": "kpi",
+        "propertyCode": "daily_energy",
+        "titleEn": "Daily generation"
+      }
+    ],
+    "nameEn": "PV Inverter Dashboard"
+  },
+  "metrics": {
+    "running": "inverter_status",
+    "output": "daily_energy",
+    "good": null,
+    "reject": null,
+    "cycleTime": null
+  },
+  "nameEn": "PV Inverter",
+  "descriptionEn": "PV inverter DC/AC voltage, current, active power and generation monitoring"
+}

@@ -21,7 +21,9 @@
           "unit": "℃",
           "unitName": "摄氏度"
         },
-        "dataSpecsList": null
+        "dataSpecsList": null,
+        "nameEn": "Barrel temperature",
+        "descriptionEn": "Barrel zone 1 temperature"
       },
       {
         "name": "料筒二区温度",
@@ -37,7 +39,9 @@
           "unit": "℃",
           "unitName": "摄氏度"
         },
-        "dataSpecsList": null
+        "dataSpecsList": null,
+        "nameEn": "Barrel zone 2 temperature",
+        "descriptionEn": "Barrel zone 2 temperature"
       },
       {
         "name": "料筒三区温度",
@@ -53,7 +57,9 @@
           "unit": "℃",
           "unitName": "摄氏度"
         },
-        "dataSpecsList": null
+        "dataSpecsList": null,
+        "nameEn": "Barrel zone 3 temperature",
+        "descriptionEn": "Barrel zone 3 temperature"
       },
       {
         "name": "料筒四区温度",
@@ -69,7 +75,9 @@
           "unit": "℃",
           "unitName": "摄氏度"
         },
-        "dataSpecsList": null
+        "dataSpecsList": null,
+        "nameEn": "Barrel zone 4 temperature",
+        "descriptionEn": "Barrel zone 4 temperature"
       },
       {
         "name": "模具温度",
@@ -85,7 +93,9 @@
           "unit": "℃",
           "unitName": "摄氏度"
         },
-        "dataSpecsList": null
+        "dataSpecsList": null,
+        "nameEn": "Mold temperature",
+        "descriptionEn": "Mold cavity temperature"
       },
       {
         "name": "注射压力",
@@ -101,7 +111,9 @@
           "unit": "MPa",
           "unitName": "兆帕"
         },
-        "dataSpecsList": null
+        "dataSpecsList": null,
+        "nameEn": "Injection pressure",
+        "descriptionEn": "Injection stage hydraulic pressure"
       },
       {
         "name": "保压压力",
@@ -117,7 +129,9 @@
           "unit": "MPa",
           "unitName": "兆帕"
         },
-        "dataSpecsList": null
+        "dataSpecsList": null,
+        "nameEn": "Holding pressure",
+        "descriptionEn": "Holding stage pressure"
       },
       {
         "name": "锁模力",
@@ -133,7 +147,9 @@
           "unit": "kN",
           "unitName": "千牛"
         },
-        "dataSpecsList": null
+        "dataSpecsList": null,
+        "nameEn": "Clamping force",
+        "descriptionEn": "Mold clamping force"
       },
       {
         "name": "螺杆转速",
@@ -149,7 +165,9 @@
           "unit": "r/min",
           "unitName": "转每分钟"
         },
-        "dataSpecsList": null
+        "dataSpecsList": null,
+        "nameEn": "Screw speed",
+        "descriptionEn": "Plasticizing screw speed"
       },
       {
         "name": "周期时间",
@@ -165,7 +183,9 @@
           "unit": "s",
           "unitName": "秒"
         },
-        "dataSpecsList": null
+        "dataSpecsList": null,
+        "nameEn": "Cycle time",
+        "descriptionEn": "Single-mold cycle time"
       },
       {
         "name": "产量",
@@ -181,7 +201,9 @@
           "unit": "模",
           "unitName": "模"
         },
-        "dataSpecsList": null
+        "dataSpecsList": null,
+        "nameEn": "Output",
+        "descriptionEn": "Cumulative molded shots"
       },
       {
         "name": "良品数",
@@ -197,7 +219,9 @@
           "unit": "模",
           "unitName": "模"
         },
-        "dataSpecsList": null
+        "dataSpecsList": null,
+        "nameEn": "Good product count",
+        "descriptionEn": "Cumulative good molds"
       },
       {
         "name": "不良品数",
@@ -213,7 +237,9 @@
           "unit": "模",
           "unitName": "模"
         },
-        "dataSpecsList": null
+        "dataSpecsList": null,
+        "nameEn": "Rejected product count",
+        "descriptionEn": "Cumulative rejected molds"
       },
       {
         "name": "运行状态",
@@ -232,7 +258,9 @@
             "name": "运行",
             "value": 1
           }
-        ]
+        ],
+        "nameEn": "Running status",
+        "descriptionEn": "Injection molding machine running status"
       },
       {
         "name": "设定料筒温度",
@@ -248,7 +276,9 @@
           "unit": "℃",
           "unitName": "摄氏度"
         },
-        "dataSpecsList": null
+        "dataSpecsList": null,
+        "nameEn": "Target barrel temperature",
+        "descriptionEn": "Target barrel temperature, remotely configurable"
       }
     ],
     "events": [
@@ -271,7 +301,8 @@
               "unit": "℃",
               "unitName": "摄氏度"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Current temperature"
           },
           {
             "name": "温区",
@@ -285,9 +316,12 @@
               "unit": "段",
               "unitName": "段"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Temperature zone"
           }
-        ]
+        ],
+        "eventNameEn": "Overtemperature alarm",
+        "descriptionEn": "Barrel temperature above the upper limit"
       },
       {
         "eventName": "低压报警",
@@ -308,7 +342,8 @@
               "unit": "MPa",
               "unitName": "兆帕"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Current injection pressure"
           },
           {
             "name": "压力下限",
@@ -322,9 +357,12 @@
               "unit": "MPa",
               "unitName": "兆帕"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Lower pressure limit"
           }
-        ]
+        ],
+        "eventNameEn": "Low pressure alarm",
+        "descriptionEn": "Injection pressure below the lower limit"
       },
       {
         "eventName": "周期异常",
@@ -345,7 +383,8 @@
               "unit": "s",
               "unitName": "秒"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Current cycle"
           },
           {
             "name": "标准周期",
@@ -359,9 +398,12 @@
               "unit": "s",
               "unitName": "秒"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Standard cycle"
           }
-        ]
+        ],
+        "eventNameEn": "Cycle abnormality",
+        "descriptionEn": "Molding cycle time deviates from the standard"
       },
       {
         "eventName": "不良率超限",
@@ -382,7 +424,8 @@
               "unit": "%",
               "unitName": "百分比"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Defect rate"
           },
           {
             "name": "不良品数",
@@ -396,9 +439,12 @@
               "unit": "模",
               "unitName": "模"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Rejected product count"
           }
-        ]
+        ],
+        "eventNameEn": "Defect rate exceeded",
+        "descriptionEn": "Defect rate above the allowed limit"
       },
       {
         "eventName": "模式切换",
@@ -422,7 +468,8 @@
                 "name": "自动",
                 "value": 1
               }
-            ]
+            ],
+            "nameEn": "Current mode"
           },
           {
             "name": "切换时间",
@@ -430,9 +477,12 @@
             "dataType": "DATE",
             "required": false,
             "dataSpecs": null,
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Switching time"
           }
-        ]
+        ],
+        "eventNameEn": "Mode switch",
+        "descriptionEn": "Injection molding machine auto/manual mode switch"
       }
     ],
     "services": [
@@ -443,7 +493,9 @@
         "required": false,
         "callType": "ASYNC",
         "inputParams": [],
-        "outParams": []
+        "outParams": [],
+        "serviceNameEn": "Start",
+        "descriptionEn": "Start the equipment"
       },
       {
         "serviceName": "停止",
@@ -452,7 +504,9 @@
         "required": false,
         "callType": "ASYNC",
         "inputParams": [],
-        "outParams": []
+        "outParams": [],
+        "serviceNameEn": "Stop",
+        "descriptionEn": "Stop the equipment"
       },
       {
         "serviceName": "复位",
@@ -461,7 +515,9 @@
         "required": false,
         "callType": "ASYNC",
         "inputParams": [],
-        "outParams": []
+        "outParams": [],
+        "serviceNameEn": "Reset",
+        "descriptionEn": "Reset the equipment and counters"
       },
       {
         "serviceName": "自动手动切换",
@@ -485,10 +541,13 @@
                 "name": "自动",
                 "value": 1
               }
-            ]
+            ],
+            "nameEn": "Target mode"
           }
         ],
-        "outParams": []
+        "outParams": [],
+        "serviceNameEn": "Auto/manual switch",
+        "descriptionEn": "Switch the injection molding machine operating mode"
       },
       {
         "serviceName": "设定料筒温度",
@@ -509,10 +568,13 @@
               "unit": "℃",
               "unitName": "摄氏度"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Target temperature"
           }
         ],
-        "outParams": []
+        "outParams": [],
+        "serviceNameEn": "Target barrel temperature",
+        "descriptionEn": "Send the target temperature"
       },
       {
         "serviceName": "设定工艺参数",
@@ -533,7 +595,8 @@
               "unit": "MPa",
               "unitName": "兆帕"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Injection pressure"
           },
           {
             "name": "保压压力",
@@ -547,7 +610,8 @@
               "unit": "MPa",
               "unitName": "兆帕"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Holding pressure"
           },
           {
             "name": "螺杆转速",
@@ -561,10 +625,13 @@
               "unit": "r/min",
               "unitName": "转每分钟"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Screw speed"
           }
         ],
-        "outParams": []
+        "outParams": [],
+        "serviceNameEn": "Set process parameters",
+        "descriptionEn": "Batch send injection, holding and screw speed parameters"
       }
     ]
   },
@@ -577,7 +644,9 @@
       "alertLevel": 1,
       "alertType": 1,
       "silenceTime": 300,
-      "description": "料筒温度超过 260℃"
+      "description": "料筒温度超过 260℃",
+      "nameEn": "Barrel overtemperature",
+      "descriptionEn": "Barrel temperature above 260°C"
     },
     {
       "name": "注射压力低",
@@ -587,7 +656,9 @@
       "alertLevel": 2,
       "alertType": 1,
       "silenceTime": 600,
-      "description": "注射压力低于 40 MPa"
+      "description": "注射压力低于 40 MPa",
+      "nameEn": "Low injection pressure",
+      "descriptionEn": "Injection pressure below 40 MPa"
     },
     {
       "name": "周期超限",
@@ -597,7 +668,9 @@
       "alertLevel": 3,
       "alertType": 1,
       "silenceTime": 900,
-      "description": "成型周期超过 120 秒"
+      "description": "成型周期超过 120 秒",
+      "nameEn": "Cycle time exceeded",
+      "descriptionEn": "Molding cycle time above 120 seconds"
     },
     {
       "name": "模具温度高",
@@ -607,7 +680,9 @@
       "alertLevel": 2,
       "alertType": 1,
       "silenceTime": 600,
-      "description": "模具温度超过 120℃"
+      "description": "模具温度超过 120℃",
+      "nameEn": "High mold temperature",
+      "descriptionEn": "Mold temperature above 120°C"
     },
     {
       "name": "不良品数偏高",
@@ -617,7 +692,9 @@
       "alertLevel": 2,
       "alertType": 1,
       "silenceTime": 1800,
-      "description": "累计不良品模数超过 20"
+      "description": "累计不良品模数超过 20",
+      "nameEn": "High rejected product count",
+      "descriptionEn": "Cumulative rejected molds above 20"
     }
   ],
   "dashboard": {
@@ -629,14 +706,16 @@
         "propertyCode": "barrel_temp",
         "timeRange": "1h",
         "aggInterval": 60,
-        "aggMethod": "avg"
+        "aggMethod": "avg",
+        "titleEn": "Barrel temperature"
       },
       {
         "title": "当前周期",
         "type": "kpi",
         "propertyCode": "cycle_time",
         "unit": "s",
-        "decimals": 1
+        "decimals": 1,
+        "titleEn": "Current cycle"
       },
       {
         "title": "节拍",
@@ -644,21 +723,25 @@
         "propertyCode": "cycle_time",
         "unit": "s",
         "min": 0,
-        "max": 120
+        "max": 120,
+        "titleEn": "Takt time"
       },
       {
         "title": "产量",
         "type": "kpi",
         "propertyCode": "output_count",
         "unit": "模",
-        "decimals": 0
+        "decimals": 0,
+        "titleEn": "Output"
       },
       {
         "title": "注塑机运行总览",
         "type": "text",
-        "text": "注塑机运行与工艺参数综合监控"
+        "text": "注塑机运行与工艺参数综合监控",
+        "titleEn": "Injection Molding Machine Overview"
       }
-    ]
+    ],
+    "nameEn": "Injection Molding Machine Dashboard"
   },
   "metrics": {
     "running": "run_status",
@@ -666,5 +749,7 @@
     "good": "good_count",
     "reject": "reject_count",
     "cycleTime": "cycle_time"
-  }
+  },
+  "nameEn": "Injection Molding Machine",
+  "descriptionEn": "Injection molding machine operation monitoring and process parameter collection"
 }

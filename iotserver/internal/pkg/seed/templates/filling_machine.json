@@ -21,7 +21,9 @@
           "unit": "瓶",
           "unitName": "瓶"
         },
-        "dataSpecsList": null
+        "dataSpecsList": null,
+        "nameEn": "Output",
+        "descriptionEn": "Cumulative filling output"
       },
       {
         "name": "灌装速度",
@@ -37,7 +39,9 @@
           "unit": "瓶/min",
           "unitName": "瓶每分钟"
         },
-        "dataSpecsList": null
+        "dataSpecsList": null,
+        "nameEn": "Filling speed",
+        "descriptionEn": "Real-time filling speed"
       },
       {
         "name": "液位",
@@ -53,7 +57,9 @@
           "unit": "%",
           "unitName": "百分比"
         },
-        "dataSpecsList": null
+        "dataSpecsList": null,
+        "nameEn": "Liquid level",
+        "descriptionEn": "Material cylinder level percentage"
       },
       {
         "name": "节拍",
@@ -69,7 +75,9 @@
           "unit": "s",
           "unitName": "秒"
         },
-        "dataSpecsList": null
+        "dataSpecsList": null,
+        "nameEn": "Takt time",
+        "descriptionEn": "Takt time per bottle"
       },
       {
         "name": "灌装量",
@@ -85,7 +93,9 @@
           "unit": "mL",
           "unitName": "毫升"
         },
-        "dataSpecsList": null
+        "dataSpecsList": null,
+        "nameEn": "Filling volume",
+        "descriptionEn": "Actual filling volume per bottle"
       },
       {
         "name": "设定灌装量",
@@ -101,7 +111,9 @@
           "unit": "mL",
           "unitName": "毫升"
         },
-        "dataSpecsList": null
+        "dataSpecsList": null,
+        "nameEn": "Target filling volume",
+        "descriptionEn": "Target filling volume per bottle, remotely configurable"
       },
       {
         "name": "合格数",
@@ -117,7 +129,9 @@
           "unit": "瓶",
           "unitName": "瓶"
         },
-        "dataSpecsList": null
+        "dataSpecsList": null,
+        "nameEn": "Qualified count",
+        "descriptionEn": "Cumulative qualified bottles"
       },
       {
         "name": "不合格数",
@@ -133,7 +147,9 @@
           "unit": "瓶",
           "unitName": "瓶"
         },
-        "dataSpecsList": null
+        "dataSpecsList": null,
+        "nameEn": "Defective count",
+        "descriptionEn": "Cumulative defective bottles"
       },
       {
         "name": "运行状态",
@@ -152,7 +168,9 @@
             "name": "运行",
             "value": 1
           }
-        ]
+        ],
+        "nameEn": "Running status",
+        "descriptionEn": "Filling machine running status"
       },
       {
         "name": "灌装阀状态",
@@ -175,7 +193,9 @@
             "name": "故障",
             "value": 2
           }
-        ]
+        ],
+        "nameEn": "Filling valve status",
+        "descriptionEn": "Current filling valve status"
       },
       {
         "name": "料缸压力",
@@ -191,7 +211,9 @@
           "unit": "MPa",
           "unitName": "兆帕"
         },
-        "dataSpecsList": null
+        "dataSpecsList": null,
+        "nameEn": "Material cylinder pressure",
+        "descriptionEn": "Material cylinder feed pressure"
       },
       {
         "name": "灌装精度",
@@ -207,7 +229,9 @@
           "unit": "%",
           "unitName": "百分比"
         },
-        "dataSpecsList": null
+        "dataSpecsList": null,
+        "nameEn": "Filling accuracy",
+        "descriptionEn": "Metering deviation percentage"
       },
       {
         "name": "运行时长",
@@ -223,7 +247,9 @@
           "unit": "h",
           "unitName": "小时"
         },
-        "dataSpecsList": null
+        "dataSpecsList": null,
+        "nameEn": "Runtime",
+        "descriptionEn": "Equipment cumulative runtime"
       },
       {
         "name": "缺料状态",
@@ -242,7 +268,9 @@
             "name": "缺料",
             "value": 1
           }
-        ]
+        ],
+        "nameEn": "Material shortage status",
+        "descriptionEn": "Material cylinder feed status"
       }
     ],
     "events": [
@@ -265,7 +293,8 @@
               "unit": "%",
               "unitName": "百分比"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Liquid level"
           },
           {
             "name": "缺料状态",
@@ -282,9 +311,12 @@
                 "name": "缺料",
                 "value": 1
               }
-            ]
+            ],
+            "nameEn": "Material shortage status"
           }
-        ]
+        ],
+        "eventNameEn": "Material shortage alarm",
+        "descriptionEn": "Material cylinder shortage"
       },
       {
         "eventName": "液位低报警",
@@ -305,7 +337,8 @@
               "unit": "%",
               "unitName": "百分比"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Current level"
           },
           {
             "name": "液位下限",
@@ -319,9 +352,12 @@
               "unit": "%",
               "unitName": "百分比"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Lower liquid level limit"
           }
-        ]
+        ],
+        "eventNameEn": "Low liquid level alarm",
+        "descriptionEn": "Material cylinder level below the lower limit"
       },
       {
         "eventName": "计量偏差超限",
@@ -342,7 +378,8 @@
               "unit": "%",
               "unitName": "百分比"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Deviation"
           },
           {
             "name": "设定灌装量",
@@ -356,9 +393,12 @@
               "unit": "mL",
               "unitName": "毫升"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Target filling volume"
           }
-        ]
+        ],
+        "eventNameEn": "Metering deviation exceeded",
+        "descriptionEn": "Filling volume deviation outside the allowed range"
       },
       {
         "eventName": "灌装阀故障",
@@ -379,7 +419,8 @@
               "unit": "#",
               "unitName": "号"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Valve number"
           },
           {
             "name": "故障码",
@@ -393,9 +434,12 @@
               "unit": "",
               "unitName": "故障码"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Fault code"
           }
-        ]
+        ],
+        "eventNameEn": "Filling valve fault",
+        "descriptionEn": "Filling valve abnormal operation"
       },
       {
         "eventName": "设备启动",
@@ -410,7 +454,8 @@
             "dataType": "DATE",
             "required": false,
             "dataSpecs": null,
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Start time"
           },
           {
             "name": "启动方式",
@@ -427,9 +472,12 @@
                 "name": "自动",
                 "value": 1
               }
-            ]
+            ],
+            "nameEn": "Start mode"
           }
-        ]
+        ],
+        "eventNameEn": "Equipment started",
+        "descriptionEn": "Filling machine started"
       }
     ],
     "services": [
@@ -440,7 +488,9 @@
         "required": false,
         "callType": "ASYNC",
         "inputParams": [],
-        "outParams": []
+        "outParams": [],
+        "serviceNameEn": "Start",
+        "descriptionEn": "Start the filling machine"
       },
       {
         "serviceName": "停止",
@@ -449,7 +499,9 @@
         "required": false,
         "callType": "ASYNC",
         "inputParams": [],
-        "outParams": []
+        "outParams": [],
+        "serviceNameEn": "Stop",
+        "descriptionEn": "Stop the filling machine"
       },
       {
         "serviceName": "复位",
@@ -458,7 +510,9 @@
         "required": false,
         "callType": "ASYNC",
         "inputParams": [],
-        "outParams": []
+        "outParams": [],
+        "serviceNameEn": "Reset",
+        "descriptionEn": "Reset the equipment and counters"
       },
       {
         "serviceName": "设定灌装量",
@@ -479,10 +533,13 @@
               "unit": "mL",
               "unitName": "毫升"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Target filling volume"
           }
         ],
-        "outParams": []
+        "outParams": [],
+        "serviceNameEn": "Target filling volume",
+        "descriptionEn": "Send the target filling volume"
       },
       {
         "serviceName": "查询产量",
@@ -504,7 +561,8 @@
               "unit": "瓶",
               "unitName": "瓶"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Output"
           },
           {
             "name": "合格数",
@@ -518,7 +576,8 @@
               "unit": "瓶",
               "unitName": "瓶"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Qualified count"
           },
           {
             "name": "不合格数",
@@ -532,9 +591,12 @@
               "unit": "瓶",
               "unitName": "瓶"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Defective count"
           }
-        ]
+        ],
+        "serviceNameEn": "Query output",
+        "descriptionEn": "Query production counts"
       }
     ]
   },
@@ -547,7 +609,9 @@
       "alertLevel": 2,
       "alertType": 1,
       "silenceTime": 300,
-      "description": "料缸液位低于 20%"
+      "description": "料缸液位低于 20%",
+      "nameEn": "Low liquid level",
+      "descriptionEn": "Material cylinder level below 20%"
     },
     {
       "name": "计量偏差超限",
@@ -557,7 +621,9 @@
       "alertLevel": 2,
       "alertType": 1,
       "silenceTime": 600,
-      "description": "灌装计量偏差超过 2%"
+      "description": "灌装计量偏差超过 2%",
+      "nameEn": "Metering deviation exceeded",
+      "descriptionEn": "Filling metering deviation above 2%"
     },
     {
       "name": "不合格数偏高",
@@ -567,7 +633,9 @@
       "alertLevel": 3,
       "alertType": 1,
       "silenceTime": 1800,
-      "description": "累计不合格瓶数超过 50"
+      "description": "累计不合格瓶数超过 50",
+      "nameEn": "High defective count",
+      "descriptionEn": "Cumulative defective bottles above 50"
     },
     {
       "name": "节拍超限",
@@ -577,7 +645,9 @@
       "alertLevel": 3,
       "alertType": 1,
       "silenceTime": 900,
-      "description": "灌装节拍超过 30 秒"
+      "description": "灌装节拍超过 30 秒",
+      "nameEn": "Takt time exceeded",
+      "descriptionEn": "Filling takt time above 30 seconds"
     },
     {
       "name": "缺料",
@@ -587,7 +657,9 @@
       "alertLevel": 1,
       "alertType": 1,
       "silenceTime": 300,
-      "description": "料缸缺料"
+      "description": "料缸缺料",
+      "nameEn": "Material shortage",
+      "descriptionEn": "Material cylinder shortage"
     }
   ],
   "dashboard": {
@@ -599,7 +671,8 @@
         "propertyCode": "filling_speed",
         "timeRange": "1h",
         "aggInterval": 60,
-        "aggMethod": "avg"
+        "aggMethod": "avg",
+        "titleEn": "Filling speed trend"
       },
       {
         "title": "节拍趋势",
@@ -607,14 +680,16 @@
         "propertyCode": "cycle_time",
         "timeRange": "1h",
         "aggInterval": 60,
-        "aggMethod": "avg"
+        "aggMethod": "avg",
+        "titleEn": "Takt time trend"
       },
       {
         "title": "产量",
         "type": "kpi",
         "propertyCode": "output_count",
         "unit": "瓶",
-        "decimals": 0
+        "decimals": 0,
+        "titleEn": "Output"
       },
       {
         "title": "节拍",
@@ -622,21 +697,25 @@
         "propertyCode": "cycle_time",
         "unit": "s",
         "min": 0,
-        "max": 60
+        "max": 60,
+        "titleEn": "Takt time"
       },
       {
         "title": "不合格数",
         "type": "kpi",
         "propertyCode": "reject_count",
         "unit": "瓶",
-        "decimals": 0
+        "decimals": 0,
+        "titleEn": "Defective count"
       },
       {
         "title": "灌装机运行总览",
         "type": "text",
-        "text": "产量、速度、液位与计量精度综合监控"
+        "text": "产量、速度、液位与计量精度综合监控",
+        "titleEn": "Filling Machine Overview"
       }
-    ]
+    ],
+    "nameEn": "Filling Machine Dashboard"
   },
   "metrics": {
     "running": "run_status",
@@ -644,5 +723,7 @@
     "good": "good_count",
     "reject": "reject_count",
     "cycleTime": "cycle_time"
-  }
+  },
+  "nameEn": "Filling Machine",
+  "descriptionEn": "Filling machine output, speed, level and metering accuracy monitoring"
 }

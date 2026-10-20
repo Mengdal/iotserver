@@ -1,11 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Select, SelectProps } from 'antd'
 import { CategoryModal, CategoryModalRef } from './CategoryModal'
+import { localized } from '@/utils/localized'
 
 /** 外部预设的品类项（如从方案中心跳转创建产品时带来的方案品类） */
 export interface CategoryPresetOption {
   id: string
   category_name: string
+  category_name_en?: string
   category_key?: string
 }
 
@@ -33,7 +35,7 @@ export const CategorySelect: React.FC<CategorySelectProps> = (props) => {
     if (appliedPresetRef.current === presetOption.id) return
     appliedPresetRef.current = presetOption.id
     setInnerValue(presetOption.id)
-    setOptions([{ label: presetOption.category_name || presetOption.id, value: presetOption.id }])
+    setOptions([{ label: localized(presetOption.category_name, presetOption.category_name_en) || presetOption.id, value: presetOption.id }])
     onCategoryKeyChange?.(presetOption.category_key || presetOption.id)
   }, [presetOption, onCategoryKeyChange])
 
@@ -41,9 +43,9 @@ export const CategorySelect: React.FC<CategorySelectProps> = (props) => {
     <>
       <CategoryModal
         ref={categoryModalRef}
-        onChange={({ id, category_key, category_name }) => {
+        onChange={({ id, category_key, category_name, category_name_en }) => {
           setInnerValue(id)
-          setOptions([{ label: category_name, value: id }])
+          setOptions([{ label: localized(category_name, category_name_en), value: id }])
           selectProps.onChange?.(id, [])
           onCategoryKeyChange?.(category_key)
         }}

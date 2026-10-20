@@ -17,6 +17,7 @@ type SysMenuSearchRequest struct {
 type SysMenuAddRequest struct {
 	ParentId  string `json:"parentId"`
 	Name      string `json:"name" binding:"required"`
+	NameEn    string `json:"nameEn"`
 	Path      string `json:"path"`
 	Component string `json:"component"`
 	Icon      string `json:"icon"`
@@ -34,6 +35,7 @@ type SysMenuUpdateRequest struct {
 	Id        string `json:"id" binding:"required"`
 	ParentId  string `json:"parentId"`
 	Name      string `json:"name" binding:"required"`
+	NameEn    string `json:"nameEn"`
 	Path      string `json:"path"`
 	Component string `json:"component"`
 	Icon      string `json:"icon"`
@@ -82,6 +84,7 @@ type SysMenuResponse struct {
 	Id        string `json:"id"`
 	ParentId  string `json:"parentId"`
 	Name      string `json:"name"`
+	NameEn    string `json:"nameEn"`
 	Path      string `json:"path"`
 	Component string `json:"component"`
 	Icon      string `json:"icon"`

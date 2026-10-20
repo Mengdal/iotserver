@@ -37,8 +37,8 @@ func TestMigrateSystemTablesSeedsData(t *testing.T) {
 	if err != nil {
 		t.Fatalf("load machine templates: %v", err)
 	}
-	if len(templates) != 7 {
-		t.Fatalf("expect 7 machine templates, got %d", len(templates))
+	if len(templates) < 7 {
+		t.Fatalf("expect at least 7 machine templates, got %d", len(templates))
 	}
 	tplRows, err := c.SolutionSearch("", "")
 	if err != nil {

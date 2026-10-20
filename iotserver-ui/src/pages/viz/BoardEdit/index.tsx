@@ -15,14 +15,14 @@ import {
 import GridCanvas, { GridCanvasDropNode, GridCanvasItem } from '@/components/GridCanvas'
 import WidgetCard, { WidgetActions } from '@/components/WidgetCard'
 import WidgetBody from '@/components/viz/WidgetBody'
-import { useVizData } from '@/components/viz/useVizData'
+import { effectiveInterval, useVizData } from '@/components/viz/useVizData'
 import { getWidgetManifest, paletteManifests } from '@/components/viz/registry'
 import type { VizWidgetManifest } from '@/components/viz/types'
 import { SettingGroup, SettingRow } from '@/components/viz/widgets/SettingsLayout'
 import { collectDescendantIds, flattenVizTree, groupByParent, isVizContainer } from '@/utils/vizTree'
 import './index.less'
 import type { GridStackNode } from 'gridstack'
-import { t } from '@/i18n'
+import { t, tt } from '@/i18n'
 
 const { Text } = Typography
 
@@ -470,7 +470,7 @@ const BoardEdit: React.FC = () => {
       return (
         <div className="board-editor__container">
           <div className="board-editor__container-head">
-            <span className="board-editor__container-title">{w.title || t('容器')}</span>
+            <span className="board-editor__container-title">{tt(w.title) || t('容器')}</span>
             {menu.length > 0
               ? (
                 <Dropdown menu={{ items: menu }} trigger={['click']}>
@@ -518,6 +518,8 @@ const BoardEdit: React.FC = () => {
             data: data.results[w.id],
             loading: data.loading,
             text: w.text,
+            // 编辑态不轮询；只读态由排行榜这类自带取数的组件自行按间隔刷新
+            refreshInterval: readOnly ? effectiveInterval(w.refreshInterval, refreshInterval) : 0,
             onTextChange: (text: string) => setTextById(w.id, text),
             onConfigChange: (patch: Record<string, any>) => patchWidgetConfig(w.id, patch),
           }}
@@ -651,7 +653,7 @@ const BoardEdit: React.FC = () => {
               {settingsManifest.icon}
               <span>{settingsManifest.label}</span>
               {settingsWidget.title
-                ? <span className="board-editor__settings-title-sub">· {settingsWidget.title}</span>
+                ? <span className="board-editor__settings-title-sub">· {tt(settingsWidget.title)}</span>
                 : null}
             </span>
           )

@@ -165,8 +165,8 @@ func TestVizBoardSeeding(t *testing.T) {
 	t.Cleanup(func() { tenantplugin.SetPolicy(tenantplugin.PolicyWarn, nil) })
 
 	platformBoards := listBoards(t, env, env.token)
-	if len(platformBoards) != 3 {
-		t.Fatalf("平台应自动种入 3 块内置看板，实际 %d：%+v", len(platformBoards), platformBoards)
+	if len(platformBoards) != 4 {
+		t.Fatalf("平台应自动种入 4 块内置看板，实际 %d：%+v", len(platformBoards), platformBoards)
 	}
 	byId := make(map[string]boardListItem, len(platformBoards))
 	for _, b := range platformBoards {
@@ -184,13 +184,16 @@ func TestVizBoardSeeding(t *testing.T) {
 	if _, ok := byId["builtin-ops"]; !ok {
 		t.Fatalf("应有系统监控看板，实际 %+v", platformBoards)
 	}
+	if _, ok := byId["builtin-intro"]; !ok {
+		t.Fatalf("应有产品介绍看板，实际 %+v", platformBoards)
+	}
 
 	// 再查一次不应重复种（列表非空即不再触发）
-	if again := listBoards(t, env, env.token); len(again) != 3 {
+	if again := listBoards(t, env, env.token); len(again) != 4 {
 		t.Fatalf("重复查询不应重复种入，实际 %d：%+v", len(again), again)
 	}
 
-	// 租户：2 块（首页 + 监控），且拿不到平台自用的演示看板。
+	// 租户：首页看板 + 产品介绍看板，且拿不到平台自用的演示/系统监控看板。
 	// id 带租户后缀（全局主键，不能和平台的 builtin-home 撞），按名字断言。
 	_, userA := seedTenant(t, env, "vizseed_a")
 	tokenA := loginAs(t, env, userA, tenantTestPassword)
@@ -205,14 +208,17 @@ func TestVizBoardSeeding(t *testing.T) {
 	if home, ok := tenantNames["首页看板"]; !ok || !home.IsHome {
 		t.Fatalf("租户应有 isHome 的首页看板，实际 %+v", tenantBoards)
 	}
-	if _, ok := tenantNames["系统监控看板"]; !ok {
-		t.Fatalf("租户应有系统监控看板，实际 %+v", tenantBoards)
+	if _, ok := tenantNames["产品介绍看板"]; !ok {
+		t.Fatalf("租户应有产品介绍看板，实际 %+v", tenantBoards)
+	}
+	if _, ok := tenantNames["系统监控看板"]; ok {
+		t.Fatalf("租户不应拿到平台自用的系统监控看板，实际 %+v", tenantBoards)
 	}
 	if _, ok := tenantNames["组件演示看板"]; ok {
 		t.Fatalf("租户不应拿到平台自用的组件演示看板，实际 %+v", tenantBoards)
 	}
 
-	// 平台侧再确认一次：不同租户的种子互不干扰（各 2 块，id 不冲突）
+	// 平台侧再确认一次：不同租户的种子互不干扰（各 1 块，id 不冲突）
 	_, userB := seedTenant(t, env, "vizseed_b")
 	tokenB := loginAs(t, env, userB, tenantTestPassword)
 	if got := listBoards(t, env, tokenB); len(got) != 2 {
@@ -230,10 +236,10 @@ func TestVizBoardHomeSelfHeal(t *testing.T) {
 	tenantplugin.SetPolicy(tenantplugin.PolicyEnforce, nil)
 	t.Cleanup(func() { tenantplugin.SetPolicy(tenantplugin.PolicyWarn, nil) })
 
-	// 首次访问：列表为空 → 种入 3 块（含首页看板）
+	// 首次访问：列表为空 → 种入 4 块（含首页看板）
 	boards := listBoards(t, env, env.token)
-	if len(boards) != 3 {
-		t.Fatalf("首次应种入 3 块，实际 %d：%+v", len(boards), boards)
+	if len(boards) != 4 {
+		t.Fatalf("首次应种入 4 块，实际 %d：%+v", len(boards), boards)
 	}
 	homeId := ""
 	otherIds := make(map[string]bool)
@@ -253,8 +259,8 @@ func TestVizBoardHomeSelfHeal(t *testing.T) {
 
 	// 再访问：自动补回首页看板，且原有其它看板一个不少
 	after := listBoards(t, env, env.token)
-	if len(after) != 3 {
-		t.Fatalf("自愈后应回到 3 块（2 块保留 + 1 块补回），实际 %d：%+v", len(after), after)
+	if len(after) != 4 {
+		t.Fatalf("自愈后应回到 4 块（3 块保留 + 1 块补回），实际 %d：%+v", len(after), after)
 	}
 	homeCount := 0
 	for _, b := range after {

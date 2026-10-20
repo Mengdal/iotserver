@@ -316,7 +316,7 @@ const AlarmList: React.FC<AlarmListProps> = ({
                       忽略: 'gray',
                       未处理: 'orange',
                     }[record.status] || 'gray'} />}
-                    <Text className="ml5">{value || '-'}</Text>
+                    <Text className="ml5">{tt(value) || '-'}</Text>
                   </>
                 )
               },

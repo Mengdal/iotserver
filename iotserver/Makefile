@@ -6,6 +6,10 @@ UI_SRC ?= ../iotserver-ui/build
 UI_DST ?= cmd/iotserver-ui/build
 # 镜像地址：推送前用 make docker IMAGE=<你的仓库>/iotserver-core:v1.0 覆盖
 IMAGE ?= iotserver-core:v1.0
+# 是否推送：PUSH=1 构建并推送（默认）；PUSH=0 只构建到本机，供 docker compose 直接使用
+PUSH ?= 1
+# 目标平台：部署机不是 amd64 时覆盖，例如 PLATFORM=linux/arm64
+PLATFORM ?= linux/amd64
 
 # Docker socket 地址：平台要靠它拉驱动镜像。
 # macOS 上 Docker Desktop 的 socket 不在 /var/run/docker.sock，需要显式给 DOCKER_HOST；
@@ -24,6 +28,7 @@ help:
 	@echo "  make test         运行单元/集成测试"
 	@echo "  make fmt          格式化 Go 代码"
 	@echo "  make docker       构建并推送 Docker 镜像（先跑 make ui；镜像 $(IMAGE)）"
+	@echo "                    只构建到本机不推送：make docker PUSH=0" 
 	@echo "  make clean        清理二进制"
 
 # 本地编译并启动（先保证前端产物最新）
@@ -87,7 +92,11 @@ generate/api:
 # 因此首次构建前必须先执行 make ui（否则构建会失败）
 docker:
 	@test -f $(UI_DST)/index.html || (echo "缺少前端产物 $(UI_DST)，请先执行: make ui"; exit 1)
-	docker buildx build --platform linux/amd64 -t "$(IMAGE)" -f cmd/iotserver-core/Dockerfile --push .
+	@if [ "$(PUSH)" = "1" ]; then \
+		docker buildx build --platform $(PLATFORM) -t "$(IMAGE)" -f cmd/iotserver-core/Dockerfile --push . ; \
+	else \
+		docker buildx build --platform $(PLATFORM) -t "$(IMAGE)" -f cmd/iotserver-core/Dockerfile --load . ; \
+	fi
 
 clean:
 	rm -f $(BIN) $(BIN)-linux-amd64 cmd/iotserver-core/iotserver-core

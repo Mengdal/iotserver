@@ -247,10 +247,10 @@ const SysUserPage: React.FC = () => {
     {
       title: t('操作'),
       key: 'action',
-      width: 220,
+      width: 240,
       fixed: 'right',
       render: (_, record) => (
-        <Space size={4}>
+        <Space size={4} wrap={false} style={{ whiteSpace: 'nowrap' }}>
           {canEdit && <Button type="link" size="small" onClick={() => openEdit(record)}>{t('编辑')}</Button>}
           {canEdit && (
             <Button

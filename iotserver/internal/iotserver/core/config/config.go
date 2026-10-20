@@ -58,6 +58,10 @@ type ConfigurationStruct struct {
 type EdgeIngestInfo struct {
 	// Broker 参考系统 broker 地址，形如 tcp://host:1885
 	Broker string
+	// ControlBroker 参考系统的控制通道 broker（restart / 标签树 / 属性写）。
+	// 实测 things 的 1885 只桥接了上行与属性写，restart 与标签树在 1883；
+	// 留空则回落到 Broker。
+	ControlBroker string
 	// Username / Password 接入该 broker 的凭据（对方允许匿名访问时可留空）
 	Username string
 	Password string
@@ -160,6 +164,14 @@ func (e EdgeIngestInfo) BrokerURL(m MessageQueueInfo) string {
 		return b
 	}
 	return m.URL()
+}
+
+// ControlBrokerURL 参考系统控制通道实际使用的 broker 地址：未单独配置时回落到 Broker。
+func (e EdgeIngestInfo) ControlBrokerURL(m MessageQueueInfo) string {
+	if b := strings.TrimSpace(e.ControlBroker); b != "" {
+		return b
+	}
+	return e.BrokerURL(m)
 }
 
 // Credentials 参考系统接入使用的账号密码：单独配置优先，否则用 MessageQueue 里的可选凭据。

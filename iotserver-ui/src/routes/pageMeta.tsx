@@ -65,7 +65,9 @@ const pageMetas: Record<string, PageMeta> = {
   },
   // ===== 运维监控 =====
   '/monitor/systemMonitor': {
-    describe: t('系统监控展示平台自身的运行指标，包括 CPU、内存、网络与磁盘等资源使用情况，可按时间范围查看趋势，及时发现服务负载异常。'),
+    // 与首页一致：整页直接渲染系统监控看板，不要标题条
+    banner: 'none',
+    describe: t('系统监控展示平台自身的运行指标，包括 CPU、系统负载、内存与磁盘等资源使用情况，可按时间范围查看趋势，及时发现服务负载异常。'),
   },
   '/monitor/alarmCenter/list': {
     describe: t('平台提供监控告警功能，用户可以针对自己关心的业务指标设置告警规则，当监控指标满足条件触发后，支持以告警列表、钉钉机器人、微信机器人等方式通知用户，帮助用户快速处理故障，避免业务损失。'),
@@ -98,7 +100,9 @@ const pageMetas: Record<string, PageMeta> = {
     describe: t('个人中心可查看与修改当前账号的资料，并支持修改登录密码。'),
   },
   '/documents/documents': {
-    describe: t('工具与文档汇总平台的使用说明、接口文档与常用工具，帮助快速上手与二次开发。'),
+    // 产品介绍页：整页直接展示 hero + 能力介绍，不要标题条
+    banner: 'none',
+    describe: t('iotserver 物联网平台的产品介绍、核心能力与快速开始。'),
   },
   '/viz/dashboard': {
     describe: t('实时呈现平台运行数据：表格与图表随数据自动刷新，布局可直接拖动调整。'),

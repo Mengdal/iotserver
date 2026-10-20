@@ -104,7 +104,8 @@ func BoardPresetById(id string) (BoardPreset, bool) {
 //
 // 只替换同时满足以下条件的组件：
 //   - 组件 id 与内置定义一致；
-//   - 当前类型还是 text（说明还是种子里的占位文案，缺省类型也按 text 处理）；
+//   - 当前类型还是 text（说明还是种子里的占位文案，缺省类型也按 text 处理），
+//     或上一版临时新增过的 rank 组件（现已改为复用 table）；
 //   - 内置定义里该组件已经是别的类型。
 //
 // 用户改过类型的组件、自定义组件都不会被动；返回新的画布 JSON 与是否发生变化。
@@ -144,7 +145,12 @@ func UpgradeBoardWidgets(canvas string, presetCanvas json.RawMessage) (string, b
 		}
 		curType, _ := w["type"].(string)
 		nextType, _ := next["type"].(string)
-		if nextType == "" || nextType == curType || (curType != "" && curType != "text") {
+		if nextType == "" || nextType == curType {
+			continue
+		}
+		// 只升级内置占位组件（text）和上一版临时新增的 rank 组件；
+		// 用户自己换成别的类型时保持不动。
+		if curType != "" && curType != "text" && curType != "rank" {
 			continue
 		}
 		// 只换类型与内容：布局和标题沿用存量看板里的值，

@@ -1,0 +1,364 @@
+{
+  "key": "cnc_machine",
+  "name": "数控机床",
+  "industry": "离散制造",
+  "version": 1,
+  "icon": "database",
+  "description": "数控机床主轴转速、负载、进给速度、刀具磨损与冷却液温度监控",
+  "thingModelJson": {
+    "properties": [
+      {
+        "name": "主轴转速",
+        "identifier": "spindle_speed",
+        "dataType": "FLOAT",
+        "description": "主轴转速",
+        "required": false,
+        "rwFlag": "RW",
+        "dataSpecs": {
+          "max": "12000",
+          "min": "0",
+          "step": "1",
+          "unit": "rpm",
+          "unitName": "转每分钟"
+        },
+        "dataSpecsList": null,
+        "nameEn": "Spindle speed",
+        "descriptionEn": "Spindle rotation speed"
+      },
+      {
+        "name": "进给速度",
+        "identifier": "feed_rate",
+        "dataType": "FLOAT",
+        "description": "切削进给速度",
+        "required": false,
+        "rwFlag": "RW",
+        "dataSpecs": {
+          "max": "10000",
+          "min": "0",
+          "step": "1",
+          "unit": "mm/min",
+          "unitName": "毫米每分钟"
+        },
+        "dataSpecsList": null,
+        "nameEn": "Feed rate",
+        "descriptionEn": "Cutting feed rate"
+      },
+      {
+        "name": "主轴负载",
+        "identifier": "spindle_load",
+        "dataType": "FLOAT",
+        "description": "主轴负载百分比",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "120",
+          "min": "0",
+          "step": "0.1",
+          "unit": "%",
+          "unitName": "%"
+        },
+        "dataSpecsList": null,
+        "nameEn": "Spindle load",
+        "descriptionEn": "Spindle load percentage"
+      },
+      {
+        "name": "刀具磨损",
+        "identifier": "tool_wear",
+        "dataType": "FLOAT",
+        "description": "刀具磨损百分比",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "100",
+          "min": "0",
+          "step": "0.1",
+          "unit": "%",
+          "unitName": "%"
+        },
+        "dataSpecsList": null,
+        "nameEn": "Tool wear",
+        "descriptionEn": "Tool wear percentage"
+      },
+      {
+        "name": "累计加工数",
+        "identifier": "part_count",
+        "dataType": "INT",
+        "description": "累计加工零件数",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "9999999",
+          "min": "0",
+          "step": "1",
+          "unit": "pcs",
+          "unitName": "件"
+        },
+        "dataSpecsList": null,
+        "nameEn": "Cumulative parts",
+        "descriptionEn": "Cumulative machined parts"
+      },
+      {
+        "name": "运行状态",
+        "identifier": "run_status",
+        "dataType": "BOOL",
+        "description": "机床运行状态",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": null,
+        "dataSpecsList": [
+          {
+            "name": "Stop (停止)",
+            "value": 0
+          },
+          {
+            "name": "Running (运行)",
+            "value": 1
+          }
+        ],
+        "nameEn": "Running status",
+        "descriptionEn": "Machine running status"
+      },
+      {
+        "name": "冷却液温度",
+        "identifier": "coolant_temp",
+        "dataType": "FLOAT",
+        "description": "冷却液温度",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "80",
+          "min": "0",
+          "step": "0.1",
+          "unit": "℃",
+          "unitName": "摄氏度"
+        },
+        "dataSpecsList": null,
+        "nameEn": "Coolant temperature",
+        "descriptionEn": "Coolant temperature"
+      },
+      {
+        "name": "报警次数",
+        "identifier": "alarm_count",
+        "dataType": "INT",
+        "description": "当日累计报警次数",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "9999",
+          "min": "0",
+          "step": "1",
+          "unit": "次",
+          "unitName": "次"
+        },
+        "dataSpecsList": null,
+        "nameEn": "Alarm count",
+        "descriptionEn": "Alarms today"
+      }
+    ],
+    "events": [
+      {
+        "eventName": "刀具磨损报警",
+        "eventType": "ALERT",
+        "identifier": "tool_wear",
+        "description": "刀具磨损超过阈值",
+        "required": false,
+        "outputData": [
+          {
+            "name": "刀具磨损",
+            "identifier": "wear",
+            "dataType": "FLOAT",
+            "required": false,
+            "dataSpecs": {
+              "max": "100",
+              "min": "0",
+              "step": "0.1",
+              "unit": "%",
+              "unitName": "%"
+            },
+            "dataSpecsList": null,
+            "nameEn": "Tool wear"
+          }
+        ],
+        "eventNameEn": "Tool wear warning",
+        "descriptionEn": "Tool wear above the threshold"
+      },
+      {
+        "eventName": "主轴过载",
+        "eventType": "ALERT",
+        "identifier": "spindle_overload",
+        "description": "主轴负载超过上限",
+        "required": false,
+        "outputData": [
+          {
+            "name": "主轴负载",
+            "identifier": "load",
+            "dataType": "FLOAT",
+            "required": false,
+            "dataSpecs": {
+              "max": "120",
+              "min": "0",
+              "step": "0.1",
+              "unit": "%",
+              "unitName": "%"
+            },
+            "dataSpecsList": null,
+            "nameEn": "Spindle load"
+          }
+        ],
+        "eventNameEn": "Spindle overload",
+        "descriptionEn": "Spindle load above the upper limit"
+      },
+      {
+        "eventName": "机床故障",
+        "eventType": "ERROR",
+        "identifier": "machine_fault",
+        "description": "机床故障或意外停机",
+        "required": false,
+        "outputData": [
+          {
+            "name": "故障码",
+            "identifier": "code",
+            "dataType": "INT",
+            "required": false,
+            "dataSpecs": {
+              "max": "999",
+              "min": "0",
+              "step": "1",
+              "unit": "",
+              "unitName": ""
+            },
+            "dataSpecsList": null,
+            "nameEn": "Fault code"
+          }
+        ],
+        "eventNameEn": "Machine fault",
+        "descriptionEn": "Machine fault or unexpected stop"
+      }
+    ],
+    "services": [
+      {
+        "serviceName": "启动",
+        "identifier": "start",
+        "description": "启动数控机床",
+        "required": false,
+        "callType": "ASYNC",
+        "inputParams": [],
+        "outParams": [],
+        "serviceNameEn": "Start",
+        "descriptionEn": "Start the CNC machine"
+      },
+      {
+        "serviceName": "停止",
+        "identifier": "stop",
+        "description": "停止数控机床",
+        "required": false,
+        "callType": "ASYNC",
+        "inputParams": [],
+        "outParams": [],
+        "serviceNameEn": "Stop",
+        "descriptionEn": "Stop the CNC machine"
+      },
+      {
+        "serviceName": "主轴转速",
+        "identifier": "set_spindle_speed",
+        "description": "下发目标主轴转速",
+        "required": false,
+        "callType": "ASYNC",
+        "inputParams": [
+          {
+            "name": "目标转速",
+            "identifier": "speed",
+            "dataType": "FLOAT",
+            "required": false,
+            "dataSpecs": {
+              "max": "12000",
+              "min": "0",
+              "step": "1",
+              "unit": "rpm",
+              "unitName": "转每分钟"
+            },
+            "dataSpecsList": null,
+            "nameEn": "Target speed"
+          }
+        ],
+        "outParams": [],
+        "serviceNameEn": "Spindle speed",
+        "descriptionEn": "Send the target spindle speed"
+      }
+    ]
+  },
+  "alarmRules": [
+    {
+      "name": "主轴过载",
+      "propertyCode": "spindle_load",
+      "operator": ">",
+      "value": "85",
+      "alertLevel": 2,
+      "alertType": 1,
+      "silenceTime": 300,
+      "description": "主轴负载高于 85%",
+      "nameEn": "Spindle overload",
+      "descriptionEn": "Spindle load above 85%"
+    },
+    {
+      "name": "刀具磨损报警",
+      "propertyCode": "tool_wear",
+      "operator": ">",
+      "value": "80",
+      "alertLevel": 2,
+      "alertType": 1,
+      "silenceTime": 300,
+      "description": "刀具磨损高于 80%",
+      "nameEn": "Tool wear warning",
+      "descriptionEn": "Tool wear above 80%"
+    },
+    {
+      "name": "冷却液温度高",
+      "propertyCode": "coolant_temp",
+      "operator": ">",
+      "value": "45",
+      "alertLevel": 1,
+      "alertType": 1,
+      "silenceTime": 300,
+      "description": "冷却液温度高于 45℃",
+      "nameEn": "High coolant temperature",
+      "descriptionEn": "Coolant temperature above 45°C"
+    }
+  ],
+  "dashboard": {
+    "name": "数控机床看板",
+    "widgets": [
+      {
+        "title": "主轴负载趋势",
+        "type": "line",
+        "propertyCode": "spindle_load",
+        "timeRange": "1h",
+        "aggInterval": 60,
+        "aggMethod": "avg",
+        "titleEn": "Spindle load trend"
+      },
+      {
+        "title": "累计加工数",
+        "type": "kpi",
+        "propertyCode": "part_count",
+        "titleEn": "Cumulative parts"
+      },
+      {
+        "title": "主轴转速",
+        "type": "kpi",
+        "propertyCode": "spindle_speed",
+        "titleEn": "Spindle speed"
+      }
+    ],
+    "nameEn": "CNC Machine Dashboard"
+  },
+  "metrics": {
+    "running": "run_status",
+    "output": "part_count",
+    "good": null,
+    "reject": null,
+    "cycleTime": null
+  },
+  "nameEn": "CNC Machine",
+  "descriptionEn": "CNC spindle speed, load, feed rate, tool wear and coolant temperature monitoring"
+}

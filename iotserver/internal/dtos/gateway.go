@@ -20,11 +20,13 @@ type GatewayAddRequest struct {
 	Sn   string `json:"sn" binding:"required"`
 	// Pk 外部协议的产品标识。参考系统（/edge 协议）的网关身份是 {pk}/{sn}，
 	// 平台按它拼订阅主题；留空则用 sn 顶替（实测两者取值常相同）。自有协议不用它。
-	Pk     string `json:"pk"`
-	DeptId string `json:"deptId"`
-	Vendor string `json:"vendor"`
-	Model  string `json:"model"`
-	Remark string `json:"remark"`
+	Pk string `json:"pk"`
+	// Protocol 接入协议：gatewaymqtt（平台自有）/ edge（参考系统）
+	Protocol string `json:"protocol"`
+	DeptId   string `json:"deptId"`
+	Vendor   string `json:"vendor"`
+	Model    string `json:"model"`
+	Remark   string `json:"remark"`
 }
 
 // GatewayUpdateRequest 修改网关（SN 不可改：它同时是 MQTT clientId）
@@ -65,11 +67,13 @@ type GatewayMqttInfo struct {
 
 // GatewayResponse 网关详情
 type GatewayResponse struct {
-	Id     string `json:"id"`
-	Name   string `json:"name"`
-	Sn     string `json:"sn"`
-	Pk     string `json:"pk"`
-	DeptId string `json:"deptId"`
+	Id   string `json:"id"`
+	Name string `json:"name"`
+	Sn   string `json:"sn"`
+	Pk   string `json:"pk"`
+	// Protocol 接入协议：gatewaymqtt（平台自有）/ edge（参考系统）
+	Protocol string `json:"protocol"`
+	DeptId   string `json:"deptId"`
 	// DeptName 组织节点名称（列表展示「所属」用）
 	DeptName        string `json:"deptName"`
 	Vendor          string `json:"vendor"`

@@ -4,7 +4,7 @@ import { loadVizMetrics, VizMetricDef, VizSeriesRef } from '@/api'
 import { isPlatformView } from '@/utils/platformViewGuard'
 import SeriesEditor from './SeriesEditor'
 import { SettingRow } from './SettingsLayout'
-import { t } from '@/i18n'
+import { currentLocale, t, tt } from '@/i18n'
 
 export type VizBindMode = 'series' | 'metrics'
 
@@ -46,7 +46,15 @@ export function useVizMetricsOptions (kind: VizMetricKind = 'instant'): { option
   const options = useMemo(() => (list || [])
     .filter(m => m && m.key && (!m.platformOnly || isPlatformView()))
     .filter(m => (kind === 'series' ? m.kind === 'series' : m.kind !== 'series'))
-    .map(m => ({ label: m.label ? `${m.label}（${m.key}）` : m.key, value: m.key })), [list, kind])
+    // 指标名是后端下发的中文展示文案，按当前语言翻译；key 保留在括号里方便排查
+    .map(m => {
+      if (!m.label) return { label: m.key, value: m.key }
+      const label = tt(m.label)
+      return {
+        label: currentLocale() === 'en-US' ? `${label} (${m.key})` : `${label}（${m.key}）`,
+        value: m.key,
+      }
+    }), [list, kind])
 
   return { options, loading }
 }

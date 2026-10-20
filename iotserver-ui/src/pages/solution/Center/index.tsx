@@ -20,7 +20,6 @@ import {
   message,
 } from 'antd'
 import {
-  AppstoreOutlined,
   MinusCircleOutlined,
   PlusOutlined,
   SearchOutlined,
@@ -35,7 +34,6 @@ import {
   SolutionThingModelItem,
   SolutionThingModelItemType,
 } from '@/api'
-import { renderMenuIcon } from '@/components/IconSelect'
 import { DetailModal, DetailModalRef } from '@/pages/gateway/ProductManage/DeatilModal'
 import {
   BaseThingModelType,
@@ -46,6 +44,7 @@ import {
 import { useAuth } from '@/utils/auth'
 import * as P from '@/routes/permissions'
 import { t, tt } from '@/i18n'
+import { localized } from '@/utils/localized'
 
 const { useMessage } = message
 const { Text } = Typography
@@ -79,8 +78,10 @@ interface DataSpecItem {
 
 interface ThingModelProperty {
   name?: string
+  nameEn?: string
   identifier?: string
   description?: string
+  descriptionEn?: string
   dataType?: string
   /** R 只上报 / RW 可下发可上报 / W 只下发 */
   rwFlag?: string
@@ -90,8 +91,10 @@ interface ThingModelProperty {
 
 interface ThingModelEvent {
   eventName?: string
+  eventNameEn?: string
   identifier?: string
   description?: string
+  descriptionEn?: string
   /** ALERT 告警 / INFO 信息 / ERROR 错误 */
   eventType?: string
   outputData?: unknown[]
@@ -99,8 +102,10 @@ interface ThingModelEvent {
 
 interface ThingModelService {
   serviceName?: string
+  serviceNameEn?: string
   identifier?: string
   description?: string
+  descriptionEn?: string
   /** ASYNC 异步 / SYNC 同步 */
   callType?: string
   inputParams?: unknown[]
@@ -132,8 +137,10 @@ interface ThingRow {
 interface ThingItemFormValues {
   type: RowType
   name: string
+  nameEn?: string
   identifier: string
   description?: string
+  descriptionEn?: string
   dataType?: string
   rwFlag?: string
   min?: number
@@ -218,14 +225,16 @@ const propertyDefinition = (property: ThingModelProperty): string[] => {
     }
     if (!isEmptyValue(specs.step)) lines.push(t('步长: {{step}}', { step: specs.step }))
     if (!isEmptyValue(specs.unit)) {
-      lines.push(t('单位: {{unit}}{{p2}}', { unit: specs.unit, p2: isEmptyValue(specs.unitName) ? '' : ` (${specs.unitName})` }))
+      const unit = tt(specs.unit)
+      const unitName = isEmptyValue(specs.unitName) ? '' : tt(specs.unitName)
+      lines.push(t('单位: {{unit}}{{p2}}', { unit, p2: unitName && unitName !== unit ? ` (${unitName})` : '' }))
     }
     return lines
   }
   if (ENUM_TYPE.includes(dataType)) {
     return asArray(property.dataSpecsList)
       .filter(item => item && (!isEmptyValue(item.name) || !isEmptyValue(item.value)))
-      .map(item => `${isEmptyValue(item.name) ? '' : item.name}=${isEmptyValue(item.value) ? '' : item.value}`)
+      .map(item => `${isEmptyValue(item.name) ? '' : tt(item.name)}=${isEmptyValue(item.value) ? '' : item.value}`)
   }
   if (dataType === 'TEXT') {
     const length = property.dataSpecs?.length
@@ -242,7 +251,7 @@ const buildThingRows = (thingModel: ThingModel | null): ThingRow[] => {
     rows.push({
       id: `property-${item.identifier || index}`,
       type: 'property',
-      name: item.name || '-',
+      name: localized(item.name, item.nameEn) || '-',
       identifier: item.identifier || '-',
       dataType: item.dataType || '',
       rwFlag: item.rwFlag || '',
@@ -256,7 +265,7 @@ const buildThingRows = (thingModel: ThingModel | null): ThingRow[] => {
     rows.push({
       id: `event-${item.identifier || index}`,
       type: 'event',
-      name: item.eventName || '-',
+      name: localized(item.eventName, item.eventNameEn) || '-',
       identifier: item.identifier || '-',
       dataType: '',
       rwFlag: '',
@@ -270,7 +279,7 @@ const buildThingRows = (thingModel: ThingModel | null): ThingRow[] => {
     rows.push({
       id: `action-${item.identifier || index}`,
       type: 'action',
-      name: item.serviceName || '-',
+      name: localized(item.serviceName, item.serviceNameEn) || '-',
       identifier: item.identifier || '-',
       dataType: '',
       rwFlag: '',
@@ -335,7 +344,7 @@ const buildViewRecord = (row: ThingRow): ProductThingModelType => {
     id: row.id,
     name: row.name === '-' ? '' : row.name,
     code: row.identifier === '-' ? '' : row.identifier,
-    description: raw.description || '',
+    description: localized(raw.description, raw.descriptionEn),
   }
   if (row.type === 'property') {
     const specType = TYPE_SPEC_KEY[(raw.dataType || '').toUpperCase()] || 'text'
@@ -376,6 +385,7 @@ const buildSolutionThingModelItem = (
 ): { type: SolutionThingModelItemType, item: SolutionThingModelItem } | null => {
   const type = payload.thing_model_type as SolutionThingModelItemType
   const description = payload.description || ''
+  const descriptionEn = payload.description_en || ''
 
   if (type === 'property') {
     const property = (payload.property || {}) as Record<string, any>
@@ -383,12 +393,14 @@ const buildSolutionThingModelItem = (
     const dataType = String(property.type || '').toUpperCase()
     const item: SolutionThingModelItem = {
       name: payload.name,
+      nameEn: payload.name_en || '',
       identifier: payload.code,
       dataType,
       rwFlag: property.access_model,
       dataSpecs: null,
       dataSpecsList: null,
       description,
+      descriptionEn,
     }
     if (dataType === 'INT' || dataType === 'FLOAT') {
       item.dataSpecs = {
@@ -416,11 +428,13 @@ const buildSolutionThingModelItem = (
       type,
       item: {
         eventName: payload.name,
+        eventNameEn: payload.name_en || '',
         identifier: payload.code,
         eventType: String(event.event_type || '').toUpperCase(),
         // helper.ts 产出的字段名是 output_param，这里兼容两种写法
         outputData: event.output_params || event.output_param || [],
         description,
+        descriptionEn,
       },
     }
   }
@@ -431,6 +445,7 @@ const buildSolutionThingModelItem = (
       type,
       item: {
         serviceName: payload.name,
+        serviceNameEn: payload.name_en || '',
         identifier: payload.code,
         callType: String(action.call_type || '').toUpperCase(),
         inputParams: action.input_params || action.input_param || [],
@@ -583,14 +598,20 @@ const SolutionCenterPage: React.FC = () => {
 
   // ===== 物模型功能项：查看 / 新增 / 编辑 / 删除 =====
 
-  /** 「创建产品」：跳到产品管理并预选当前方案的品类（sol_<key> 即后端品类 id/category_key） */
+  /**
+   * 「创建产品」：跳到产品管理并预选当前方案的品类（sol_<key> 即后端品类 id/category_key）。
+   * 「自定义」页签下没有选中方案时也要能创建：此时只打开创建抽屉，不预选品类。
+   */
   const goCreateProduct = () => {
-    if (!currentSolution) return
     navigate('/gateway/product/manage', {
       state: {
         openAdd: true,
-        categoryTemplateId: 'sol_' + currentSolution.key,
-        categoryName: currentSolution.name,
+        ...(currentSolution
+          ? {
+            categoryTemplateId: 'sol_' + currentSolution.key,
+            categoryName: localized(currentSolution.name, currentSolution.nameEn),
+          }
+          : {}),
       },
     })
   }
@@ -632,8 +653,10 @@ const SolutionCenterPage: React.FC = () => {
     itemForm.setFieldsValue({
       type: row.type,
       name,
+      nameEn: raw.nameEn || raw.eventNameEn || raw.serviceNameEn || '',
       identifier: row.identifier === '-' ? '' : row.identifier,
       description: raw.description || '',
+      descriptionEn: raw.descriptionEn || '',
       dataType: raw.dataType || undefined,
       rwFlag: raw.rwFlag || 'R',
       min: raw.dataSpecs?.min,
@@ -656,9 +679,11 @@ const SolutionCenterPage: React.FC = () => {
     const item: Record<string, any> = {
       identifier: (values.identifier || '').trim(),
       description: values.description || '',
+      descriptionEn: values.descriptionEn || '',
     }
     if (formType === 'property') {
       item.name = (values.name || '').trim()
+      item.nameEn = (values.nameEn || '').trim()
       item.dataType = values.dataType
       item.rwFlag = values.rwFlag
       const dataType = (values.dataType || '').toUpperCase()
@@ -681,9 +706,11 @@ const SolutionCenterPage: React.FC = () => {
       }
     } else if (formType === 'event') {
       item.eventName = (values.name || '').trim()
+      item.eventNameEn = (values.nameEn || '').trim()
       item.eventType = values.eventType
     } else {
       item.serviceName = (values.name || '').trim()
+      item.serviceNameEn = (values.nameEn || '').trim()
       item.callType = values.callType
     }
     return item
@@ -837,6 +864,9 @@ const SolutionCenterPage: React.FC = () => {
       >
         <Input placeholder={t('请输入功能名称')} maxLength={64} />
       </Form.Item>
+      <Form.Item label={t('英文名称')} name="nameEn">
+        <Input placeholder={t('English name')} maxLength={64} />
+      </Form.Item>
       <Form.Item
         label={t('标识符')}
         name="identifier"
@@ -847,6 +877,9 @@ const SolutionCenterPage: React.FC = () => {
       </Form.Item>
       <Form.Item label={t('描述')} name="description">
         <Input.TextArea rows={2} placeholder={t('请输入描述')} maxLength={200} />
+      </Form.Item>
+      <Form.Item label={t('英文描述')} name="descriptionEn">
+        <Input.TextArea rows={2} placeholder={t('English description')} maxLength={200} />
       </Form.Item>
 
       {formType === 'property' && (
@@ -1041,9 +1074,8 @@ const SolutionCenterPage: React.FC = () => {
                     color: selected ? '#1677ff' : undefined,
                   }}
                 >
-                  {renderMenuIcon(item.icon) || <AppstoreOutlined />}
                   <span style={{ overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
-                    {item.name || item.key}
+                    {localized(item.name, item.nameEn) || item.key}
                   </span>
                 </div>
               )
@@ -1096,7 +1128,7 @@ const SolutionCenterPage: React.FC = () => {
               <Button
                 icon={<PlusOutlined />}
                 style={{ background: '#faad14', borderColor: '#faad14', color: '#fff' }}
-                disabled={!canApply || !currentSolution}
+                disabled={!canApply}
                 onClick={goCreateProduct}
               >
                 {t('创建产品')}

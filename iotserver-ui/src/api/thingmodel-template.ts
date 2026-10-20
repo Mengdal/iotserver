@@ -70,6 +70,7 @@ export interface Action {
 export interface ThingModelTemplate {
   id: string
   category_name: string
+  category_name_en?: string
   category_key: string
   thing_model_json: string
   properties: Property[]

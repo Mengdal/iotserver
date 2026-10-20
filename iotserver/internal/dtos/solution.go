@@ -11,11 +11,13 @@ type SolutionSearchRequest struct {
 type SolutionResponse struct {
 	Key            string `json:"key"`
 	Name           string `json:"name"`
+	NameEn         string `json:"nameEn"`
 	Industry       string `json:"industry"`
 	Version        int    `json:"version"`
 	BuiltIn        bool   `json:"builtIn"`
 	Icon           string `json:"icon"`
 	Description    string `json:"description"`
+	DescriptionEn  string `json:"descriptionEn"`
 	ThingModelJson string `json:"thingModelJson"`
 	AlarmRulesJson string `json:"alarmRulesJson"`
 	DashboardJson  string `json:"dashboardJson"`

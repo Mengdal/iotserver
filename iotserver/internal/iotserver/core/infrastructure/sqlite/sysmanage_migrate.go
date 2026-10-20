@@ -447,24 +447,30 @@ func (c *Client) seedSystemData() error {
 			}
 		}
 
+		/******* 存量平台值兼容 *******/
+		// 参考系统平台的取值从历史名称改为 things platform，存量产品/设备要一起迁移，
+		// 否则按平台筛选与驱动同步都会查不到旧数据。
+		if err := seed.MigrateLegacyPlatform(tx); err != nil {
+			return err
+		}
+		// 设备状态改为稳定代码（online/offline/...），存量中文值一并迁移
+		if err := seed.MigrateLegacyDeviceStatus(tx); err != nil {
+			return err
+		}
+		// 驱动名称去掉「协议驱动」后缀（驱动库 + 我的驱动实例名）
+		if err := seed.MigrateDriverNames(tx); err != nil {
+			return err
+		}
+		// 系统监控看板只保留给平台管理员，并去掉其中的业务组件
+		if err := seed.MigrateSystemBoardPlatformOnly(tx); err != nil {
+			return err
+		}
+
 		/******* 内置看板升级 *******/
 		// 存量看板里的占位组件（如首页看板的「设备消息量排名」文本）按内置定义升级成真实组件；
 		// 只替换组件 id 一致、类型仍然是 text 的项，用户改过类型的组件不会被动。
-		if preset, ok := seed.BoardPresetById("builtin-home"); ok {
-			var boards []models.VizBoard
-			if err := tx.Table((&models.VizBoard{}).TableName()).Find(&boards).Error; err != nil {
-				return err
-			}
-			for _, b := range boards {
-				next, changed := seed.UpgradeBoardWidgets(b.Canvas, preset.Canvas)
-				if !changed {
-					continue
-				}
-				if err := tx.Table((&models.VizBoard{}).TableName()).Where("id = ?", b.Id).
-					Update("canvas", next).Error; err != nil {
-					return err
-				}
-			}
+		if err := seed.UpgradeBuiltinBoards(tx); err != nil {
+			return err
 		}
 
 		/******* 内置管理员 *******/

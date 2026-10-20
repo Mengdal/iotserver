@@ -11,6 +11,8 @@ import (
 	"io"
 	"io/ioutil"
 	"iotserver/internal/pkg/utils"
+	"os"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -85,6 +87,21 @@ func NewDockerManager(ctx context.Context, dic *di.Container, dcm *dtos.DriverCo
 	// 而 SDK 默认连 /var/run/docker.sock（该路径在 macOS 上不存在），
 	// 不读环境变量就会报 "Cannot connect to the Docker daemon"。
 	// 未设置 DOCKER_HOST 时读到空值，退回 SDK 默认行为，不影响 Linux/容器内运行。
+	// 但 macOS 上直接 go run 时通常不会设置 DOCKER_HOST，这里自动探测 Docker Desktop
+	// 的 socket 并补上，否则「下载驱动」只会报 daemon 未运行。
+	if os.Getenv("DOCKER_HOST") == "" {
+		if home, homeErr := os.UserHomeDir(); homeErr == nil {
+			for _, path := range []string{
+				filepath.Join(home, ".docker", "run", "docker.sock"),
+				filepath.Join(home, ".docker", "desktop", "docker.sock"),
+			} {
+				if info, statErr := os.Stat(path); statErr == nil && !info.IsDir() {
+					_ = os.Setenv("DOCKER_HOST", "unix://"+path)
+					break
+				}
+			}
+		}
+	}
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithVersion(dcm.DockerApiVersion))
 	if err != nil {
 		return nil, err

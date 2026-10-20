@@ -1,7 +1,8 @@
-import React, { useMemo } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { Empty, Select, Spin, Switch, Table, Typography } from 'antd'
 import { TableOutlined } from '@ant-design/icons'
-import type { VizDataSeries, VizMetricValue, VizSeriesRef } from '@/api'
+import { getDeviceMessageRank } from '@/api'
+import type { VizDataSeries, VizMetricValue, VizRankItem, VizRankResult, VizSeriesRef } from '@/api'
 import type { VizWidgetManifest, VizWidgetSettingsProps } from '../types'
 import { formatTime, formatValue, latestPoint, seriesLabel, seriesUnit } from '../format'
 import DataBindingEditor from './MetricsEditor'
@@ -14,7 +15,14 @@ export interface TableConfig {
   series: VizSeriesRef[]
   /** 指标绑定（与 series 二选一；每个指标一行） */
   metrics?: string[]
+  /**
+   * 数据来源：缺省 = 设备测点 / 指标；
+   * deviceMessageRank = 设备消息量排行（复用表格组件渲染排名）
+   */
+  source?: 'deviceMessageRank'
   timeRange: string
+  /** 排行显示条数（source=deviceMessageRank 时生效） */
+  limit?: number
   /** true = 当前值（每行一条数据序列）；false = 历史明细（按时间合并） */
   latest: boolean
   pageSize: number
@@ -48,6 +56,87 @@ interface MetricRow {
   metric: string
   value: string
   unit: string
+}
+
+const RANK_LIMIT_OPTIONS = [3, 5, 10, 20].map(n => ({ label: String(n), value: n }))
+
+/**
+ * 设备消息量排行：复用「表格」组件的数据来源，不单独注册组件类型。
+ * 排行榜不走 useVizData 的批量取数，按看板/组件生效间隔自行轮询。
+ */
+const RankTable: React.FC<{ timeRange: string; limit: number; refreshInterval: number }> = ({
+  timeRange, limit, refreshInterval,
+}) => {
+  const [data, setData] = useState<VizRankResult | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [failed, setFailed] = useState(false)
+
+  useEffect(() => {
+    let alive = true
+    let timer: number | undefined
+    // showLoading=false 是后台静默刷新：保留旧数据，失败也不把已展示的榜单替换成错误态
+    const load = (showLoading: boolean) => {
+      if (showLoading) {
+        setLoading(true)
+        setFailed(false)
+      }
+      getDeviceMessageRank({ timeRange, limit })
+        .then(resp => {
+          if (!alive) return
+          if (resp.success && resp.result) {
+            setData(resp.result)
+          } else if (showLoading) {
+            setFailed(true)
+          }
+        })
+        .catch(() => { if (alive && showLoading) setFailed(true) })
+        .finally(() => { if (alive && showLoading) setLoading(false) })
+    }
+    load(true)
+    if (refreshInterval > 0) {
+      timer = window.setInterval(() => load(false), refreshInterval * 1000)
+    }
+    return () => {
+      alive = false
+      if (timer) window.clearInterval(timer)
+    }
+  }, [timeRange, limit, refreshInterval])
+
+  if (loading && !data) {
+    return <div style={{ textAlign: 'center', paddingTop: 12 }}><Spin /></div>
+  }
+  if (failed && !data) {
+    return <Text type="danger">{t('加载失败')}</Text>
+  }
+  const items = (data && data.items) || []
+  if (items.length === 0) {
+    return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t('暂无设备消息数据')} />
+  }
+  const total = Math.max(data?.total || 0, 1)
+  return (
+    <Table<VizRankItem>
+      size="small"
+      rowKey="deviceId"
+      dataSource={items}
+      pagination={false}
+      columns={[
+        { title: t('排名'), width: 60, render: (_value, _record, index) => index + 1 },
+        {
+          title: t('设备'),
+          dataIndex: 'deviceName',
+          ellipsis: true,
+          render: (value: string, record) => value || record.deviceId,
+        },
+        { title: t('消息数'), dataIndex: 'count', align: 'right' as const },
+        {
+          title: t('占比'),
+          width: 80,
+          align: 'right' as const,
+          render: (_value, record) => `${Math.round(record.count / total * 1000) / 10}%`,
+        },
+      ]}
+    />
+  )
 }
 
 const TableWidget: React.FC<{ config: TableConfig; ctx: any }> = ({ config, ctx }) => {
@@ -97,6 +186,17 @@ const TableWidget: React.FC<{ config: TableConfig; ctx: any }> = ({ config, ctx 
       }
     })
   }, [metricKeys, metricValues])
+
+  // 设备消息量排行：仍由「表格」组件渲染，只是数据来自排行接口
+  if (config.source === 'deviceMessageRank') {
+    return (
+      <RankTable
+        timeRange={config.timeRange || '7d'}
+        limit={config.limit || 5}
+        refreshInterval={ctx.refreshInterval || 0}
+      />
+    )
+  }
 
   if (!useMetric && (!config.series || config.series.length === 0)) {
     return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t('还没绑定数据（右上角菜单 → 配置本组件）')} />
@@ -162,49 +262,90 @@ const TableWidget: React.FC<{ config: TableConfig; ctx: any }> = ({ config, ctx 
 }
 
 const TableSettings: React.FC<VizWidgetSettingsProps<TableConfig>> = ({ config, onChange }) => {
-  const useMetric = (config.metrics || []).length > 0
+  const isRank = config.source === 'deviceMessageRank'
+  const useMetric = !isRank && (config.metrics || []).length > 0
   return (
     <>
-      <SettingGroup title={t('数据绑定')}>
-        <DataBindingEditor
-          series={config.series || []}
-          metrics={config.metrics}
-          onChange={patch => onChange(patch)}
-        />
-      </SettingGroup>
-      <SettingGroup title={t('显示设置')}>
-        {/* 「当前值 / 历史明细」只对设备测点有意义：指标是聚合值，没有历史明细 */}
-        {useMetric
-          ? <SettingRow hint={t('指标表格每个指标一行；「当前值 / 历史明细」只对设备测点生效。')} />
-          : (
-            <>
-              <SettingRow
-                label={t('当前值')}
-                inline
-                hint={t('每行显示一条数据序列的最新上报；关掉后按时间列出历史明细。')}
-              >
-                <Switch size="small" checked={config.latest !== false} onChange={v => onChange({ latest: v })} />
-              </SettingRow>
-              <SettingRow label={t('时间范围')}>
-                <Select
-                  style={{ width: '100%' }}
-                  value={config.timeRange || '24h'}
-                  options={RANGE_OPTIONS}
-                  disabled={config.latest !== false}
-                  onChange={v => onChange({ timeRange: v })}
-                />
-              </SettingRow>
-            </>
-          )}
-        <SettingRow label={t('每页条数')}>
+      <SettingGroup title={t('数据来源')}>
+        <SettingRow label={t('数据来源')}>
           <Select
             style={{ width: '100%' }}
-            value={config.pageSize || 10}
-            options={[10, 20, 50, 100].map(v => ({ label: String(v), value: v }))}
-            onChange={v => onChange({ pageSize: v })}
+            value={isRank ? 'deviceMessageRank' : 'device'}
+            options={[
+              { label: t('设备测点 / 指标'), value: 'device' },
+              { label: t('设备消息量排行'), value: 'deviceMessageRank' },
+            ]}
+            onChange={v => onChange(v === 'deviceMessageRank'
+              ? { source: 'deviceMessageRank', series: [], metrics: [], timeRange: '7d', limit: 5 }
+              : { source: undefined })}
           />
         </SettingRow>
       </SettingGroup>
+      {isRank
+        ? (
+          <SettingGroup title={t('数据设置')}>
+            <SettingRow label={t('时间范围')}>
+              <Select
+                style={{ width: '100%' }}
+                value={config.timeRange || '7d'}
+                options={RANGE_OPTIONS}
+                onChange={v => onChange({ timeRange: v })}
+              />
+            </SettingRow>
+            <SettingRow label={t('显示条数')}>
+              <Select
+                style={{ width: '100%' }}
+                value={config.limit || 5}
+                options={RANK_LIMIT_OPTIONS}
+                onChange={v => onChange({ limit: v })}
+              />
+            </SettingRow>
+          </SettingGroup>
+        )
+        : (
+          <>
+            <SettingGroup title={t('数据绑定')}>
+              <DataBindingEditor
+                series={config.series || []}
+                metrics={config.metrics}
+                onChange={patch => onChange(patch)}
+              />
+            </SettingGroup>
+            <SettingGroup title={t('显示设置')}>
+              {/* 「当前值 / 历史明细」只对设备测点有意义：指标是聚合值，没有历史明细 */}
+              {useMetric
+                ? <SettingRow hint={t('指标表格每个指标一行；「当前值 / 历史明细」只对设备测点生效。')} />
+                : (
+                  <>
+                    <SettingRow
+                      label={t('当前值')}
+                      inline
+                      hint={t('每行显示一条数据序列的最新上报；关掉后按时间列出历史明细。')}
+                    >
+                      <Switch size="small" checked={config.latest !== false} onChange={v => onChange({ latest: v })} />
+                    </SettingRow>
+                    <SettingRow label={t('时间范围')}>
+                      <Select
+                        style={{ width: '100%' }}
+                        value={config.timeRange || '24h'}
+                        options={RANGE_OPTIONS}
+                        disabled={config.latest !== false}
+                        onChange={v => onChange({ timeRange: v })}
+                      />
+                    </SettingRow>
+                  </>
+                )}
+              <SettingRow label={t('每页条数')}>
+                <Select
+                  style={{ width: '100%' }}
+                  value={config.pageSize || 10}
+                  options={[10, 20, 50, 100].map(v => ({ label: String(v), value: v }))}
+                  onChange={v => onChange({ pageSize: v })}
+                />
+              </SettingRow>
+            </SettingGroup>
+          </>
+        )}
     </>
   )
 }
@@ -223,13 +364,18 @@ export const tableManifest: VizWidgetManifest<TableConfig> = {
     latest: true,
     pageSize: 10,
   }),
-  buildQuery: config => ({
-    series: config.series || [],
-    metrics: config.metrics || [],
-    latest: config.latest !== false,
-    timeRange: config.timeRange || '24h',
-    limit: 500,
-  }),
+  buildQuery: config => (
+    config.source === 'deviceMessageRank'
+      // 排行数据由组件自己调 /viz/device-message-rank，不参与设备数据批量查询
+      ? { series: [], metrics: [] }
+      : {
+        series: config.series || [],
+        metrics: config.metrics || [],
+        latest: config.latest !== false,
+        timeRange: config.timeRange || '24h',
+        limit: 500,
+      }
+  ),
   render: ({ config, ctx }) => <TableWidget config={config} ctx={ctx} />,
   Settings: TableSettings,
 }

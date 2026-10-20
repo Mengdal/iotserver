@@ -40,6 +40,7 @@ func toGatewayResponse(g models.Gateway, deviceCount int64, deptNames map[string
 		Name:            g.Name,
 		Sn:              g.Sn,
 		Pk:              g.Pk,
+		Protocol:        g.Protocol,
 		DeptId:          g.DeptId,
 		DeptName:        deptNames[g.DeptId],
 		Vendor:          g.Vendor,

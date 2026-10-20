@@ -4,10 +4,12 @@ import {
   Button,
   Card,
   Col,
+  Divider,
   Empty,
   Form,
   Input,
   Modal,
+  Spin,
   Popconfirm,
   Row,
   Select,
@@ -21,6 +23,7 @@ import {
   CopyOutlined,
   EyeInvisibleOutlined,
   EyeTwoTone,
+  MinusCircleOutlined,
   PlusOutlined,
   ReloadOutlined,
   SearchOutlined,
@@ -32,8 +35,11 @@ import {
   addGateway,
   updateGateway,
   deleteGateway,
-  pushGatewayConfig,
   sendGatewayCommand,
+  edgeGatewayRestart,
+  edgeGatewayControl,
+  getEdgeGatewayDevices,
+  EdgeDeviceGroup,
   Gateway,
   GatewayMqttInfo,
   GatewayCommandType,
@@ -43,6 +49,58 @@ import { confirmPlatformViewAdd } from '@/utils/platformViewGuard'
 import { t } from '@/i18n'
 
 const { useMessage } = message
+
+interface ControlFormValues {
+  items?: Array<{ dn?: string, identifier?: string, value?: string }>
+}
+
+/** 参考系统标签树 → 设备分组（dn + 测点） */
+function parseEdgeDevices (raw: any): EdgeDeviceGroup[] {
+  const groups = new Map<string, EdgeDeviceGroup>()
+  const ensure = (dn: string, label?: string) => {
+    let group = groups.get(dn)
+    if (!group) {
+      group = { dn, label: label || dn, tags: [] }
+      groups.set(dn, group)
+    } else if (label && group.label === group.dn) {
+      group.label = label
+    }
+    return group
+  }
+  const walk = (node: any, inheritedDevice?: string) => {
+    if (!node || typeof node !== 'object') return
+    const name = String(node.name || '')
+    const id = String(node.id || '')
+    let device = inheritedDevice
+    if (node.deviceCode) {
+      device = String(node.deviceCode)
+      ensure(device, name)
+    }
+    if (id.includes('.')) {
+      const [prefix, code] = id.split('.')
+      device = device || prefix
+      ensure(device)
+      const group = ensure(device)
+      group.tags.push({ identifier: code, label: node.description || name || code })
+    }
+    if (Array.isArray(node.children)) {
+      const childDevice = node.deviceCode
+        ? String(node.deviceCode)
+        : (inheritedDevice || (id ? undefined : name) || device)
+      node.children.forEach((child: any) => walk(child, childDevice))
+    }
+  }
+  const data = Array.isArray(raw?.data) ? raw.data : (Array.isArray(raw) ? raw : [])
+  data.forEach((node: any) => walk(node))
+  return Array.from(groups.values()).filter(group => group.tags.length > 0)
+}
+
+/** 参考系统网关：配置只能存平台，下发不到真实网关 */
+function isEdgeGateway (gateway?: Gateway | null): boolean {
+  if (!gateway) return false
+  return gateway.protocol === 'edge' || /things|iotddc/i.test(`${gateway.vendor || ''} ${gateway.model || ''}`)
+}
+
 const { Text } = Typography
 
 /** 网关状态：0离线 1在线 2从未上线 */
@@ -54,9 +112,8 @@ const STATUS_META: Record<number, { text: string, color: string }> = {
 
 /** 命令中文名，仅用于提示 */
 const COMMAND_LABEL: Record<GatewayCommandType, string> = {
-  restart: '重启网关',
-  ota: '固件升级（OTA）',
-  sync: '同步配置/设备',
+  restart: t('重启网关'),
+  sync: t('同步设备'),
 }
 
 const formatTime = (value?: number) => (value ? dayjs(value).format('YYYY-MM-DD HH:mm:ss') : '-')
@@ -120,12 +177,17 @@ const GatewayManagePage: React.FC = () => {
   const [mqttGatewayName, setMqttGatewayName] = useState('')
   const [passwordVisible, setPasswordVisible] = useState(false)
 
-  // 下发配置
-  const [configOpen, setConfigOpen] = useState(false)
-  const [configTarget, setConfigTarget] = useState<Gateway | null>(null)
-  const [configText, setConfigText] = useState('')
-  const [configError, setConfigError] = useState('')
-  const [configSubmitting, setConfigSubmitting] = useState(false)
+  // 设备控制（参考系统 /edge 网关）
+  const [controlOpen, setControlOpen] = useState(false)
+  const [controlTarget, setControlTarget] = useState<Gateway | null>(null)
+  const [controlForm] = Form.useForm<ControlFormValues>()
+  const [controlDevices, setControlDevices] = useState<EdgeDeviceGroup[]>([])
+  const [controlLoading, setControlLoading] = useState(false)
+  const [controlSubmitting, setControlSubmitting] = useState(false)
+  const [controlResults, setControlResults] = useState<Array<{ ok: boolean, text: string }>>([])
+  // 同步设备结果
+  const [syncOpen, setSyncOpen] = useState(false)
+  const [syncDevices, setSyncDevices] = useState<EdgeDeviceGroup[]>([])
 
   // 下发命令
   const [commandOpen, setCommandOpen] = useState(false)
@@ -262,53 +324,66 @@ const GatewayManagePage: React.FC = () => {
     }
   }
 
-  // ===== 下发配置 =====
+  // ===== 设备控制（参考系统 /edge 网关）=====
 
-  const openConfig = (record: Gateway) => {
-    setConfigTarget(record)
-    setConfigError('')
-    let text = record.config || ''
-    if (text) {
-      // 能解析就格式化，便于编辑；解析失败按原样展示，提交时再报错
-      try {
-        text = JSON.stringify(JSON.parse(text), null, 2)
-      } catch (error) {
-        text = record.config || ''
-      }
-    }
-    setConfigText(text)
-    setConfigOpen(true)
-  }
-
-  const handleConfigSubmit = async () => {
-    if (!configTarget) return
-    const text = configText.trim()
-    if (!text) {
-      setConfigError(t('配置内容不能为空'))
-      return
-    }
+  const loadControlDevices = async (gatewayId: string) => {
+    setControlLoading(true)
     try {
-      JSON.parse(text)
-    } catch (error) {
-      setConfigError(t('不是合法的 JSON：{{message}}', { message: (error as Error).message }))
-      return
-    }
-    setConfigError('')
-    setConfigSubmitting(true)
-    try {
-      const resp = await pushGatewayConfig(configTarget.id, text)
+      const resp = await getEdgeGatewayDevices(gatewayId)
       if (resp.success) {
-        messageApi.open({
-          type: 'success',
-          content: t('配置已下发，新版本号：{{p1}}', { p1: resp.result?.configVersion ?? '-' }),
-        })
-        setConfigOpen(false)
-        loadData()
+        setControlDevices(parseEdgeDevices(resp.result))
       } else {
         messageApi.open({ type: 'error', content: resp.errorMsg })
       }
     } finally {
-      setConfigSubmitting(false)
+      setControlLoading(false)
+    }
+  }
+
+  const openControl = (record: Gateway) => {
+    setControlTarget(record)
+    setControlResults([])
+    setControlDevices([])
+    controlForm.resetFields()
+    controlForm.setFieldsValue({ items: [{ value: '' }] })
+    setControlOpen(true)
+    loadControlDevices(record.id)
+  }
+
+  const handleControlSubmit = async () => {
+    if (!controlTarget) return
+    let values: ControlFormValues
+    try {
+      values = await controlForm.validateFields()
+    } catch (error) {
+      return
+    }
+    const rows = (values.items || []).filter(row => row.dn && row.identifier)
+    if (rows.length === 0) {
+      messageApi.open({ type: 'warning', content: t('请至少填写一项控制') })
+      return
+    }
+    setControlSubmitting(true)
+    const results: Array<{ ok: boolean, text: string }> = []
+    try {
+      for (const row of rows) {
+        const resp = await edgeGatewayControl(controlTarget.id, row.dn!, row.identifier!, row.value || '')
+        if (resp.success) {
+          const ok = resp.result?.status === true
+          results.push({
+            ok,
+            text: `${row.dn}.${row.identifier}: ${ok ? t('成功') : (resp.result?.message || t('失败'))}`,
+          })
+        } else {
+          results.push({ ok: false, text: `${row.dn}.${row.identifier}: ${resp.errorMsg}` })
+        }
+      }
+      setControlResults(results)
+      if (results.every(item => item.ok)) {
+        messageApi.open({ type: 'success', content: t('控制指令已全部下发成功') })
+      }
+    } finally {
+      setControlSubmitting(false)
     }
   }
 
@@ -317,27 +392,45 @@ const GatewayManagePage: React.FC = () => {
   const openCommand = (record: Gateway) => {
     setCommandTarget(record)
     commandForm.resetFields()
-    commandForm.setFieldsValue({ command: 'restart', payload: '' })
+    commandForm.setFieldsValue({ command: 'restart' })
     setCommandOpen(true)
   }
 
   const handleCommandSubmit = async () => {
     if (!commandTarget) return
     const values = await commandForm.validateFields()
-    const payload = (values.payload || '').trim()
-    if (values.command === 'ota' && payload) {
-      try {
-        JSON.parse(payload)
-      } catch (error) {
-        messageApi.open({ type: 'error', content: t('payload 不是合法的 JSON：{{message}}', { message: (error as Error).message }) })
-        return
-      }
-    }
     setCommandSubmitting(true)
     try {
-      const resp = await sendGatewayCommand(commandTarget.id, values.command, payload || undefined)
+      if (values.command === 'sync') {
+        if (!isEdgeGateway(commandTarget)) {
+          // 自有协议网关仍走原来的 sync 命令
+          const resp = await sendGatewayCommand(commandTarget.id, 'sync')
+          if (resp.success) {
+            messageApi.open({ type: 'success', content: t('已下发「{{p1}}」命令', { p1: COMMAND_LABEL.sync }) })
+            setCommandOpen(false)
+          } else {
+            messageApi.open({ type: 'error', content: resp.errorMsg })
+          }
+          return
+        }
+        const resp = await getEdgeGatewayDevices(commandTarget.id)
+        if (resp.success) {
+          const devices = parseEdgeDevices(resp.result)
+          setSyncDevices(devices)
+          setSyncOpen(true)
+          setCommandOpen(false)
+          messageApi.open({ type: 'success', content: t('已同步 {{count}} 台设备', { count: devices.length }) })
+        } else {
+          messageApi.open({ type: 'error', content: resp.errorMsg })
+        }
+        return
+      }
+      // 重启：参考系统走 /edge/restart，自有协议走 iot/down/{sn}/cmd
+      const resp = isEdgeGateway(commandTarget)
+        ? await edgeGatewayRestart(commandTarget.id)
+        : await sendGatewayCommand(commandTarget.id, 'restart')
       if (resp.success) {
-        messageApi.open({ type: 'success', content: t('已下发「{{p1}}」命令', { p1: COMMAND_LABEL[values.command] }) })
+        messageApi.open({ type: 'success', content: t('已下发「{{p1}}」命令', { p1: COMMAND_LABEL.restart }) })
         setCommandOpen(false)
       } else {
         messageApi.open({ type: 'error', content: resp.errorMsg })
@@ -390,12 +483,12 @@ const GatewayManagePage: React.FC = () => {
     {
       title: t('操作'),
       key: 'action',
-      width: 250,
+      width: 340,
       fixed: 'right',
       render: (_, record) => (
-        <Space size={4} wrap>
+        <Space size={4} wrap={false} style={{ whiteSpace: 'nowrap' }}>
           {canEdit && <Button type="link" size="small" onClick={() => openEdit(record)}>{t('编辑')}</Button>}
-          {canConfig && <Button type="link" size="small" onClick={() => openConfig(record)}>{t('下发配置')}</Button>}
+          {canConfig && isEdgeGateway(record) && <Button type="link" size="small" onClick={() => openControl(record)}>{t('设备控制')}</Button>}
           {canCommand && <Button type="link" size="small" onClick={() => openCommand(record)}>{t('下发命令')}</Button>}
           {canRemove && (
             <Popconfirm
@@ -605,35 +698,112 @@ const GatewayManagePage: React.FC = () => {
         )}
       </Modal>
 
-      {/* ===== 下发配置 ===== */}
+      {/* ===== 设备控制（参考系统 /edge）===== */}
       <Modal
-        open={configOpen}
-        title={t('下发配置{{p1}}', { p1: configTarget ? `：${configTarget.name}` : '' })}
-        width={720}
+        open={controlOpen}
+        title={t('设备控制{{p1}}', { p1: controlTarget ? `：${controlTarget.name}` : '' })}
+        width={860}
         okText={t('下发')}
         cancelText={t('取消')}
         maskClosable={false}
-        confirmLoading={configSubmitting}
-        onOk={handleConfigSubmit}
-        onCancel={() => setConfigOpen(false)}
+        confirmLoading={controlSubmitting}
+        onOk={handleControlSubmit}
+        onCancel={() => setControlOpen(false)}
       >
         <Alert
           type="info"
           showIcon
           style={{ marginBottom: 12 }}
-          message={t('当前配置版本：{{p1}}，下发成功后版本号 +1', { p1: configTarget?.configVersion ? `v${configTarget.configVersion}` : t('无') })}
+          message={t('选择设备和测点后填写目标值；平台会把控制指令发给网关，并以网关回执为准。')}
         />
-        <Input.TextArea
-          rows={12}
-          value={configText}
-          onChange={e => {
-            setConfigText(e.target.value)
-            if (configError) setConfigError('')
-          }}
-          placeholder={t('请输入 JSON 配置，例如 {"interval":10}')}
-          style={{ fontFamily: 'monospace' }}
+        {controlLoading
+          ? <div style={{ padding: 32, textAlign: 'center' }}><Spin /></div>
+          : controlDevices.length === 0
+            ? <Alert type="warning" showIcon message={t('没有从网关拉到设备列表，请先在「下发命令」里执行一次「同步设备」')} />
+            : (
+              <Form form={controlForm} layout="vertical">
+                <Form.List name="items">
+                  {(fields, { add, remove }) => (
+                    <>
+                      {fields.map(({ key, name, ...rest }) => (
+                        <Space key={key} align="baseline" style={{ display: 'flex', marginBottom: 4, flexWrap: 'nowrap' }}>
+                          <Form.Item {...rest} name={[name, 'dn']} rules={[{ required: true, message: t('请选择设备') }]}>
+                            <Select
+                              style={{ width: 240 }}
+                              showSearch
+                              optionFilterProp="label"
+                              placeholder={t('设备')}
+                              options={controlDevices.map(group => ({ value: group.dn, label: `${group.label} (${group.dn})` }))}
+                            />
+                          </Form.Item>
+                          <Form.Item noStyle shouldUpdate={(prev, cur) => prev.items?.[name]?.dn !== cur.items?.[name]?.dn}>
+                            {({ getFieldValue }) => {
+                              const dn = getFieldValue(['items', name, 'dn'])
+                              const tags = controlDevices.find(group => group.dn === dn)?.tags || []
+                              return (
+                                <Form.Item {...rest} name={[name, 'identifier']} rules={[{ required: true, message: t('请选择测点') }]}>
+                                  <Select
+                                    style={{ width: 240 }}
+                                    showSearch
+                                    optionFilterProp="label"
+                                    placeholder={t('测点')}
+                                    options={tags.map(tag => ({ value: tag.identifier, label: `${tag.label} (${tag.identifier})` }))}
+                                  />
+                                </Form.Item>
+                              )
+                            }}
+                          </Form.Item>
+                          <Form.Item {...rest} name={[name, 'value']} rules={[{ required: true, message: t('请输入值') }]}>
+                            <Input style={{ width: 180 }} placeholder={t('目标值')} />
+                          </Form.Item>
+                          <MinusCircleOutlined onClick={() => remove(name)} style={{ color: '#999' }} />
+                        </Space>
+                      ))}
+                      <Button type="dashed" block icon={<PlusOutlined />} onClick={() => add({ value: '' })}>
+                        {t('添加控制项')}
+                      </Button>
+                    </>
+                  )}
+                </Form.List>
+              </Form>
+            )}
+        {controlResults.length > 0 && (
+          <div style={{ marginTop: 12 }}>
+            <Divider plain style={{ margin: '4px 0 8px' }}>{t('执行结果')}</Divider>
+            {controlResults.map((item, index) => (
+              <div key={index} style={{ color: item.ok ? '#389e0d' : '#cf1322', fontSize: 13 }}>
+                {item.ok ? '✓ ' : '✗ '}{item.text}
+              </div>
+            ))}
+          </div>
+        )}
+      </Modal>
+
+      {/* ===== 同步设备结果 ===== */}
+      <Modal
+        open={syncOpen}
+        title={t('已同步的设备')}
+        width={760}
+        footer={null}
+        onCancel={() => setSyncOpen(false)}
+      >
+        <Alert
+          type="info"
+          showIcon
+          style={{ marginBottom: 12 }}
+          message={t('设备清单来自网关标签树；平台会继续按该 SN 订阅上报，新设备上报后会自动注册。')}
         />
-        {configError && <Text type="danger">{configError}</Text>}
+        {syncDevices.length === 0
+          ? <Empty description={t('网关没有返回设备')} />
+          : syncDevices.map(group => (
+            <Card key={group.dn} size="small" title={`${group.label} (${group.dn})`} style={{ marginBottom: 8 }}>
+              <Space wrap>
+                {group.tags.map(tag => (
+                  <Tag key={tag.identifier}>{tag.label} ({tag.identifier})</Tag>
+                ))}
+              </Space>
+            </Card>
+          ))}
       </Modal>
 
       {/* ===== 下发命令 ===== */}
@@ -648,7 +818,7 @@ const GatewayManagePage: React.FC = () => {
         onOk={handleCommandSubmit}
         onCancel={() => setCommandOpen(false)}
       >
-        <Form form={commandForm} layout="vertical" initialValues={{ command: 'restart', payload: '' }}>
+        <Form form={commandForm} layout="vertical" initialValues={{ command: 'restart' }}>
           <Form.Item
             label={t('命令')}
             name="command"
@@ -656,27 +826,16 @@ const GatewayManagePage: React.FC = () => {
           >
             <Select
               options={[
-                { label: t('重启网关（restart）'), value: 'restart' },
-                { label: t('固件升级（ota）'), value: 'ota' },
-                { label: t('同步配置/设备（sync）'), value: 'sync' },
+                { label: t('重启网关'), value: 'restart' },
+                { label: t('同步设备（拉取网关设备与测点）'), value: 'sync' },
               ]}
             />
           </Form.Item>
-          <Form.Item noStyle shouldUpdate={(prev, cur) => prev.command !== cur.command}>
-            {({ getFieldValue }) => {
-              // 只有 OTA 需要额外填 payload（可空），其余命令不带参数
-              if (getFieldValue('command') !== 'ota') return null
-              return (
-                <Form.Item
-                  label={t('payload（JSON，可空）')}
-                  name="payload"
-                  tooltip={t('如固件下载地址等参数；留空则不带参数下发')}
-                >
-                  <Input.TextArea rows={5} placeholder={t('可空，例如 {"url":"http://example.com/fw.bin","version":"1.2.0"}')} />
-                </Form.Item>
-              )
-            }}
-          </Form.Item>
+          <Alert
+            type="info"
+            showIcon
+            message={t('参考系统网关：重启走 /edge/restart，同步设备会拉取该 SN 下的设备/测点树。')}
+          />
         </Form>
       </Modal>
     </Card>

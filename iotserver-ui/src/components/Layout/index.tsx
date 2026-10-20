@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { UserOutlined } from '@ant-design/icons'
 import { Layout, Space, Menu, Avatar, Dropdown, Modal, Form, Input, Select, MenuProps, message } from 'antd'
@@ -11,9 +11,13 @@ import type { BackendMenuItem, SubMenuType } from '@/routes/menus'
 import './style.less'
 import { clearUser, getCurrentTenantId, getUser, setCurrentTenantId, setUser } from '@/utils/auth'
 import { changePassword, getTenants, getUserGetInfo, updateUserProfile, Tenant } from '@/api'
-import { t, tt } from '@/i18n'
+import { currentLocale, t, tt } from '@/i18n'
 
 const { Header, Content, Sider } = Layout
+
+// 英文菜单名比中文长（如 Operations and monitoring），侧边栏需要更宽，否则文字会被截断。
+// 切换语言会整页刷新，因此这里取一次当前语言即可。
+const SIDER_WIDTH = currentLocale() === 'en-US' ? 260 : 200
 const { useForm } = Form
 const { useMessage } = message
 
@@ -68,9 +72,19 @@ const MainLayout: React.FC = () => {
 
   const siderMenus = useMemo(() => {
     const fromBackend = buildMenusFromBackend(backendMenus)
-    if (hasBackendMenus) return fromBackend
-    // 老版本登录态/接口异常时没有 menus 字段，先用前端内置菜单兜底，避免侧边栏空白
-    return buildMenus({ admin, permissions })
+    const menus = hasBackendMenus
+      // 老版本登录态/接口异常时没有 menus 字段，先用前端内置菜单兜底，避免侧边栏空白
+      ? fromBackend
+      : buildMenus({ admin, permissions })
+    // 系统监控看板只属于平台视图：平台管理员代管某个租户时，该租户下没有这块看板，
+    // 直接隐藏菜单（租户用户本身由后端 platform_only 过滤，不会下发这一项）。
+    if (!getCurrentTenantId()) return menus
+    const withoutSystemMonitor = (items: any[]): any[] => items
+      .filter(item => String(item?.key || '') !== '/monitor/systemMonitor')
+      .map(item => (Array.isArray(item?.children)
+        ? { ...item, children: withoutSystemMonitor(item.children) }
+        : item))
+    return withoutSystemMonitor(menus as any[])
   }, [backendMenus, hasBackendMenus, admin, permissions])
 
   // 每次进入/刷新页面都同步一次「当前用户的菜单与权限」
@@ -131,6 +145,8 @@ const MainLayout: React.FC = () => {
   }
 
   const [sliderMenuOpenKeys, setSliderMenuOpenKeys] = useState<string[]>([])
+  // 上一次渲染看到的路由：用于区分「真的换了页面」和「菜单/权限异步刷新」
+  const lastPathRef = useRef(location.pathname)
 
   // 侧边栏当前选中项：详情页/带过滤参数的列表页（如 /gateway/device/manage/:productId）
   // 没有与完整路径一一对应的菜单，回落到所属菜单，避免跳转后侧边栏没有任何高亮。
@@ -151,10 +167,16 @@ const MainLayout: React.FC = () => {
     return best || location.pathname
   }, [siderMenus, location.pathname])
 
+  // 内容区自己滚动（见 style.less）：切路由时手动回到顶部，保持原来整页滚动的体验。
+  // 只依赖 pathname：菜单/权限异步刷新（getUserGetInfo）不能把用户滚到一半的页面拉回顶部。
   useEffect(() => {
-    // 内容区自己滚动（见 style.less）：切路由时手动回到顶部，保持原来整页滚动的体验
     const view = document.querySelector('.main-view')
     if (view) view.scrollTop = 0
+  }, [location.pathname])
+
+  useEffect(() => {
+    const routeChanged = lastPathRef.current !== location.pathname
+    lastPathRef.current = location.pathname
     const { paths, titles } = siderMenus.reduce((r, menu) => {
       const item = menu as SubMenuType
       const children = (Array.isArray(item.children) ? item.children : []) as SubMenuType[]
@@ -190,7 +212,12 @@ const MainLayout: React.FC = () => {
     } else {
       document.title = brandName
     }
-    setSliderMenuOpenKeys(paths)
+    if (routeChanged) {
+      setSliderMenuOpenKeys(paths)
+    } else {
+      // 非路由变化（菜单/权限刷新）：只补齐当前页需要的展开项，保留用户手动展开的菜单
+      setSliderMenuOpenKeys(prev => Array.from(new Set([...prev, ...paths])))
+    }
   }, [location.pathname, siderMenus, selectedMenuKey])
 
   const handleOk = async () => {
@@ -339,7 +366,7 @@ const MainLayout: React.FC = () => {
       </Header>
       <Layout className="main-body" hasSider>
         <Sider
-          width={200}
+          width={SIDER_WIDTH}
           className="main-sider"
           theme="light"
           collapsible
@@ -366,7 +393,7 @@ const MainLayout: React.FC = () => {
             }}
           />
         </Sider>
-        <Layout className="main-container" style={{ marginLeft: collapsed ? 80 : 200 }}>
+        <Layout className="main-container" style={{ marginLeft: collapsed ? 80 : SIDER_WIDTH }}>
           <Content className="main-view">
             {showBanner && (
               <AdvanceBreadcrumb

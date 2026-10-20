@@ -132,7 +132,7 @@ type SeriesQuery struct {
 // 计数口径：
 //   - 本地/第三方产品（设备）= product.platform（device.platform）是否本地接入
 //     （constants.IotPlatform_LocalIot，与首页「平台概述」的本地/第三方同口径）；
-//   - 设备在线/离线/从未上线 = device.status（在线/离线/未激活，见 constants.DeviceStatus）；
+//   - 设备在线/离线/从未上线 = device.status（online/offline/inactive，见 constants.DeviceStatus）；
 //   - 网关在线/离线/从未上线 = gateway.status（1/0/2，见 models.GatewayStatus*）；
 //   - 未处理告警 = alert_list.status = 未处理；
 //   - 今日上报量 = msg_gather 中 date = 今天的 count 之和（该表按天落一条汇总，

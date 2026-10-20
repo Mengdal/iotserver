@@ -5,6 +5,7 @@ import { Badge, Button, Card, Descriptions, message, Tabs, Typography } from 'an
 import { EyeOutlined, EyeInvisibleOutlined, SyncOutlined } from '@ant-design/icons'
 import { getDeviceDetail, getProductInfo } from '@/api'
 import { deviceSyncSingle, IDeviceDetail } from '@/api/device'
+import { DEVICE_STATUS_COLORS, deviceStatusLabel } from '@/utils/deviceStatus'
 import { DetailTab1 } from './components/Tab1'
 import { DetailTab2 } from './components/Tab2'
 import { DetailTab3 } from './components/Tab3'
@@ -56,7 +57,12 @@ export const DeviceDetail:React.FC<DeviceDetailProps> = () => {
   // 获取产品详情
   const [productInfo, setProductInfo] = useState<ProductInfo>()
   const loadProductInfo = useCallback((detail?: IDeviceDetail) => {
-    getProductInfo<ProductInfo>(detail?.product_id!)
+    // 网关接入的设备可能没有绑定产品：没有 product_id 时不要再发空查询
+    if (!detail?.product_id) {
+      setProductInfo(undefined)
+      return
+    }
+    getProductInfo<ProductInfo>(detail.product_id)
       .then((resp) => {
         if (resp.success) {
           setProductInfo(resp.result)
@@ -118,21 +124,20 @@ export const DeviceDetail:React.FC<DeviceDetailProps> = () => {
           }
         >
           <Descriptions.Item label={t('设备所属产品')}>
-            <Link
-              style={{ fontSize: 12 }}
-              onClick={() => {
-                navigate(`/gateway/product/detail/${detail?.product_id}`)
-              }}
-            >{detail?.product_name}</Link>
+            {detail?.product_id
+              ? (
+                <Link
+                  style={{ fontSize: 12 }}
+                  onClick={() => {
+                    navigate(`/gateway/product/detail/${detail.product_id}`)
+                  }}
+                >{detail?.product_name}</Link>
+              )
+              : '-'}
           </Descriptions.Item>
           <Descriptions.Item label={t('设备状态')} span={2}>
-            <Badge color={{
-              在线: 'green',
-              离线: 'gray',
-              禁用: 'red',
-              未激活: 'orange',
-            }[detail?.status as string] || 'gray'} />
-            <Text className="ml5" style={{ fontSize: 12 }}>{tt(detail?.status) || t('未知')}</Text>
+            <Badge color={DEVICE_STATUS_COLORS[detail?.status as string] || 'gray'} />
+            <Text className="ml5" style={{ fontSize: 12 }}>{deviceStatusLabel(detail?.status)}</Text>
           </Descriptions.Item>
           <Descriptions.Item label={t('设备名称')}>{detail?.name}</Descriptions.Item>
           <Descriptions.Item label={t('设备ID')} span={2}>

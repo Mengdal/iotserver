@@ -21,7 +21,9 @@
           "unit": "件",
           "unitName": "件"
         },
-        "dataSpecsList": null
+        "dataSpecsList": null,
+        "nameEn": "Output",
+        "descriptionEn": "Cumulative packaging output"
       },
       {
         "name": "包装速度",
@@ -37,7 +39,9 @@
           "unit": "件/min",
           "unitName": "件每分钟"
         },
-        "dataSpecsList": null
+        "dataSpecsList": null,
+        "nameEn": "Packaging speed",
+        "descriptionEn": "Real-time packaging speed"
       },
       {
         "name": "封口温度",
@@ -53,7 +57,9 @@
           "unit": "℃",
           "unitName": "摄氏度"
         },
-        "dataSpecsList": null
+        "dataSpecsList": null,
+        "nameEn": "Sealing temperature",
+        "descriptionEn": "Measured heat-sealing jaw temperature"
       },
       {
         "name": "设定封口温度",
@@ -69,7 +75,9 @@
           "unit": "℃",
           "unitName": "摄氏度"
         },
-        "dataSpecsList": null
+        "dataSpecsList": null,
+        "nameEn": "Target sealing temperature",
+        "descriptionEn": "Target sealing temperature, remotely configurable"
       },
       {
         "name": "膜余量",
@@ -85,7 +93,9 @@
           "unit": "%",
           "unitName": "百分比"
         },
-        "dataSpecsList": null
+        "dataSpecsList": null,
+        "nameEn": "Film remaining",
+        "descriptionEn": "Remaining packaging film percentage"
       },
       {
         "name": "节拍",
@@ -101,7 +111,9 @@
           "unit": "s",
           "unitName": "秒"
         },
-        "dataSpecsList": null
+        "dataSpecsList": null,
+        "nameEn": "Takt time",
+        "descriptionEn": "Takt time per package"
       },
       {
         "name": "停机次数",
@@ -117,7 +129,9 @@
           "unit": "次",
           "unitName": "次"
         },
-        "dataSpecsList": null
+        "dataSpecsList": null,
+        "nameEn": "Downtime count",
+        "descriptionEn": "Cumulative downtime count today"
       },
       {
         "name": "合格数",
@@ -133,7 +147,9 @@
           "unit": "件",
           "unitName": "件"
         },
-        "dataSpecsList": null
+        "dataSpecsList": null,
+        "nameEn": "Qualified count",
+        "descriptionEn": "Cumulative qualified parts"
       },
       {
         "name": "不合格数",
@@ -149,7 +165,9 @@
           "unit": "件",
           "unitName": "件"
         },
-        "dataSpecsList": null
+        "dataSpecsList": null,
+        "nameEn": "Defective count",
+        "descriptionEn": "Cumulative defective parts"
       },
       {
         "name": "运行状态",
@@ -168,7 +186,9 @@
             "name": "运行",
             "value": 1
           }
-        ]
+        ],
+        "nameEn": "Running status",
+        "descriptionEn": "Packaging machine running status"
       },
       {
         "name": "卡料状态",
@@ -187,7 +207,9 @@
             "name": "卡料",
             "value": 1
           }
-        ]
+        ],
+        "nameEn": "Material jam status",
+        "descriptionEn": "Feed channel jam status"
       },
       {
         "name": "输送带速度",
@@ -203,7 +225,9 @@
           "unit": "m/min",
           "unitName": "米每分钟"
         },
-        "dataSpecsList": null
+        "dataSpecsList": null,
+        "nameEn": "Conveyor speed",
+        "descriptionEn": "Conveyor linear speed"
       },
       {
         "name": "运行时长",
@@ -219,7 +243,9 @@
           "unit": "h",
           "unitName": "小时"
         },
-        "dataSpecsList": null
+        "dataSpecsList": null,
+        "nameEn": "Runtime",
+        "descriptionEn": "Equipment cumulative runtime"
       },
       {
         "name": "气压",
@@ -235,7 +261,9 @@
           "unit": "MPa",
           "unitName": "兆帕"
         },
-        "dataSpecsList": null
+        "dataSpecsList": null,
+        "nameEn": "Air pressure",
+        "descriptionEn": "Pneumatic system pressure"
       }
     ],
     "events": [
@@ -258,7 +286,8 @@
               "unit": "℃",
               "unitName": "摄氏度"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Current temperature"
           },
           {
             "name": "设定温度",
@@ -272,9 +301,12 @@
               "unit": "℃",
               "unitName": "摄氏度"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Target temperature"
           }
-        ]
+        ],
+        "eventNameEn": "Sealing temperature abnormality",
+        "descriptionEn": "Sealing temperature outside the set range"
       },
       {
         "eventName": "膜尽报警",
@@ -295,9 +327,12 @@
               "unit": "%",
               "unitName": "百分比"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Film remaining"
           }
-        ]
+        ],
+        "eventNameEn": "Film run-out alarm",
+        "descriptionEn": "Packaging film is running out"
       },
       {
         "eventName": "卡料报警",
@@ -318,7 +353,8 @@
               "unit": "s",
               "unitName": "秒"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Downtime duration"
           },
           {
             "name": "卡料次数",
@@ -332,9 +368,12 @@
               "unit": "次",
               "unitName": "次"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Material jam count"
           }
-        ]
+        ],
+        "eventNameEn": "Material jam alarm",
+        "descriptionEn": "Material jam in the feed channel causing downtime"
       },
       {
         "eventName": "设备停机",
@@ -349,7 +388,8 @@
             "dataType": "DATE",
             "required": false,
             "dataSpecs": null,
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Downtime"
           },
           {
             "name": "停机原因",
@@ -374,9 +414,12 @@
                 "name": "计划停机",
                 "value": 4
               }
-            ]
+            ],
+            "nameEn": "Downtime reason"
           }
-        ]
+        ],
+        "eventNameEn": "Equipment stopped",
+        "descriptionEn": "Packaging machine stopped"
       },
       {
         "eventName": "产量达标",
@@ -397,7 +440,8 @@
               "unit": "件",
               "unitName": "件"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Output"
           },
           {
             "name": "目标产量",
@@ -411,9 +455,12 @@
               "unit": "件",
               "unitName": "件"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Target output"
           }
-        ]
+        ],
+        "eventNameEn": "Output target reached",
+        "descriptionEn": "Shift output reached the target"
       }
     ],
     "services": [
@@ -424,7 +471,9 @@
         "required": false,
         "callType": "ASYNC",
         "inputParams": [],
-        "outParams": []
+        "outParams": [],
+        "serviceNameEn": "Start",
+        "descriptionEn": "Start the packaging machine"
       },
       {
         "serviceName": "停止",
@@ -433,7 +482,9 @@
         "required": false,
         "callType": "ASYNC",
         "inputParams": [],
-        "outParams": []
+        "outParams": [],
+        "serviceNameEn": "Stop",
+        "descriptionEn": "Stop the packaging machine"
       },
       {
         "serviceName": "复位",
@@ -442,7 +493,9 @@
         "required": false,
         "callType": "ASYNC",
         "inputParams": [],
-        "outParams": []
+        "outParams": [],
+        "serviceNameEn": "Reset",
+        "descriptionEn": "Reset the equipment and counters"
       },
       {
         "serviceName": "设定封口温度",
@@ -463,10 +516,13 @@
               "unit": "℃",
               "unitName": "摄氏度"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Target temperature"
           }
         ],
-        "outParams": []
+        "outParams": [],
+        "serviceNameEn": "Target sealing temperature",
+        "descriptionEn": "Send the target sealing temperature"
       },
       {
         "serviceName": "查询产量",
@@ -488,7 +544,8 @@
               "unit": "件",
               "unitName": "件"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Output"
           },
           {
             "name": "合格数",
@@ -502,7 +559,8 @@
               "unit": "件",
               "unitName": "件"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Qualified count"
           },
           {
             "name": "不合格数",
@@ -516,9 +574,12 @@
               "unit": "件",
               "unitName": "件"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Defective count"
           }
-        ]
+        ],
+        "serviceNameEn": "Query output",
+        "descriptionEn": "Query production counts"
       }
     ]
   },
@@ -531,7 +592,9 @@
       "alertLevel": 1,
       "alertType": 1,
       "silenceTime": 300,
-      "description": "封口温度超过 180℃"
+      "description": "封口温度超过 180℃",
+      "nameEn": "High sealing temperature",
+      "descriptionEn": "Sealing temperature above 180°C"
     },
     {
       "name": "封口温度低",
@@ -541,7 +604,9 @@
       "alertLevel": 1,
       "alertType": 1,
       "silenceTime": 300,
-      "description": "封口温度低于 120℃"
+      "description": "封口温度低于 120℃",
+      "nameEn": "Low sealing temperature",
+      "descriptionEn": "Sealing temperature below 120°C"
     },
     {
       "name": "膜余量低",
@@ -551,7 +616,9 @@
       "alertLevel": 2,
       "alertType": 1,
       "silenceTime": 600,
-      "description": "包装膜余量低于 10%"
+      "description": "包装膜余量低于 10%",
+      "nameEn": "Low film remaining",
+      "descriptionEn": "Packaging film remaining below 10%"
     },
     {
       "name": "停机次数偏多",
@@ -561,7 +628,9 @@
       "alertLevel": 3,
       "alertType": 1,
       "silenceTime": 1800,
-      "description": "当日停机次数超过 10 次"
+      "description": "当日停机次数超过 10 次",
+      "nameEn": "High downtime count",
+      "descriptionEn": "More than 10 downtime events today"
     },
     {
       "name": "卡料",
@@ -571,7 +640,9 @@
       "alertLevel": 1,
       "alertType": 1,
       "silenceTime": 300,
-      "description": "进料通道卡料"
+      "description": "进料通道卡料",
+      "nameEn": "Material jam",
+      "descriptionEn": "Material jam in the feed channel"
     }
   ],
   "dashboard": {
@@ -583,7 +654,8 @@
         "propertyCode": "seal_temp",
         "timeRange": "1h",
         "aggInterval": 60,
-        "aggMethod": "avg"
+        "aggMethod": "avg",
+        "titleEn": "Sealing temperature trend"
       },
       {
         "title": "包装速度趋势",
@@ -591,14 +663,16 @@
         "propertyCode": "pack_speed",
         "timeRange": "1h",
         "aggInterval": 60,
-        "aggMethod": "avg"
+        "aggMethod": "avg",
+        "titleEn": "Packaging speed trend"
       },
       {
         "title": "产量",
         "type": "kpi",
         "propertyCode": "output_count",
         "unit": "件",
-        "decimals": 0
+        "decimals": 0,
+        "titleEn": "Output"
       },
       {
         "title": "封口温度",
@@ -606,21 +680,25 @@
         "propertyCode": "seal_temp",
         "unit": "℃",
         "min": 0,
-        "max": 300
+        "max": 300,
+        "titleEn": "Sealing temperature"
       },
       {
         "title": "膜余量",
         "type": "kpi",
         "propertyCode": "film_remain",
         "unit": "%",
-        "decimals": 1
+        "decimals": 1,
+        "titleEn": "Film remaining"
       },
       {
         "title": "包装机运行总览",
         "type": "text",
-        "text": "封口温度、膜余量与停机情况综合监控"
+        "text": "封口温度、膜余量与停机情况综合监控",
+        "titleEn": "Packaging Machine Overview"
       }
-    ]
+    ],
+    "nameEn": "Packaging Machine Dashboard"
   },
   "metrics": {
     "running": "run_status",
@@ -628,5 +706,7 @@
     "good": "good_count",
     "reject": "reject_count",
     "cycleTime": "cycle_time"
-  }
+  },
+  "nameEn": "Packaging Machine",
+  "descriptionEn": "Packaging machine sealing temperature, film remaining and downtime count monitoring"
 }

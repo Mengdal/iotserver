@@ -11,7 +11,8 @@ func TestUpgradeBoardWidgets(t *testing.T) {
 	if !ok {
 		t.Fatal("缺少首页看板预设")
 	}
-	if !strings.Contains(string(preset.Canvas), `"type": "rank"`) {
+	if !strings.Contains(string(preset.Canvas), `"type": "table"`) ||
+		!strings.Contains(string(preset.Canvas), `"source": "deviceMessageRank"`) {
 		t.Fatalf("首页看板预设里的排行榜组件没更新: %s", string(preset.Canvas))
 	}
 
@@ -23,8 +24,8 @@ func TestUpgradeBoardWidgets(t *testing.T) {
 	if !changed {
 		t.Fatal("占位组件应被升级")
 	}
-	if !strings.Contains(next, `"type":"rank"`) {
-		t.Fatalf("占位组件没变成排行榜: %s", next)
+	if !strings.Contains(next, `"type":"table"`) || !strings.Contains(next, `"source":"deviceMessageRank"`) {
+		t.Fatalf("占位组件没变成表格排行: %s", next)
 	}
 	if !strings.Contains(next, `"cols":12`) {
 		t.Fatalf("画布其它字段丢失: %s", next)
@@ -45,8 +46,15 @@ func TestUpgradeBoardWidgets(t *testing.T) {
 		t.Fatal("升级应幂等，第二次不应再变化")
 	}
 
+	// 上一版临时新增的 rank 组件也要升级成复用表格
+	rankOld := `{"widgets":[{"id":"home-msg-rank","type":"rank","config":{"timeRange":"7d","limit":5}}]}`
+	if upgraded, changed := UpgradeBoardWidgets(rankOld, preset.Canvas); !changed ||
+		!strings.Contains(upgraded, `"type":"table"`) {
+		t.Fatalf("rank 组件没升级成表格: %s", upgraded)
+	}
+
 	// 用户把该组件改成了别的类型：不要覆盖
-	edited := `{"widgets":[{"id":"home-msg-rank","type":"table","config":{}}]}`
+	edited := `{"widgets":[{"id":"home-msg-rank","type":"line","config":{}}]}`
 	if _, changed := UpgradeBoardWidgets(edited, preset.Canvas); changed {
 		t.Fatal("用户改过类型的组件不应被覆盖")
 	}

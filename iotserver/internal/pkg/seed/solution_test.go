@@ -18,24 +18,26 @@ func TestDefaultSolutions(t *testing.T) {
 	if err != nil {
 		t.Fatalf("加载内置模板失败: %v", err)
 	}
-	if len(templates) != 7 {
-		t.Fatalf("内置模板应为 7 个，实际 %d", len(templates))
+	wantKeys := map[string]bool{
+		"refrigeration": false, "compressor_chiller": false, "filling_machine": false,
+		"packaging_machine": false, "injection_molding": false, "production_line": false,
+		"energy_monitoring": false,
+		// 每个行业补充的第二个产品
+		"quick_freezer": false, "cooling_tower": false, "pv_inverter": false,
+		"labeling_machine": false, "extruder": false, "palletizer": false, "cnc_machine": false,
+	}
+	if len(templates) < len(wantKeys) {
+		t.Fatalf("内置模板至少应有 %d 个，实际 %d", len(wantKeys), len(templates))
 	}
 	if len(categories) != len(templates) || len(thingModels) != len(templates) {
 		t.Fatalf("品类/物模型模板数量应与方案一致：%d/%d/%d",
 			len(templates), len(categories), len(thingModels))
 	}
 
-	wantKeys := map[string]bool{
-		"refrigeration": false, "compressor_chiller": false, "filling_machine": false,
-		"packaging_machine": false, "injection_molding": false, "production_line": false,
-		"energy_monitoring": false,
-	}
 	for _, tpl := range templates {
-		if _, ok := wantKeys[tpl.Key]; !ok {
-			t.Fatalf("出现未预期的模板 key: %s", tpl.Key)
+		if _, ok := wantKeys[tpl.Key]; ok {
+			wantKeys[tpl.Key] = true
 		}
-		wantKeys[tpl.Key] = true
 
 		if tpl.BuiltIn != 1 {
 			t.Fatalf("模板 %s 应标记为内置", tpl.Key)

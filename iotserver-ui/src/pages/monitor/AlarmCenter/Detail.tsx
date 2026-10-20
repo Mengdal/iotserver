@@ -10,7 +10,7 @@ import { Card, Col, Row, Space, Button, Divider, Empty, Typography, Modal, Form,
 import { useParams } from 'react-router-dom'
 import dayjs from 'dayjs'
 import duration from 'dayjs/plugin/duration'
-import { t } from '@/i18n'
+import { t, tt } from '@/i18n'
 
 dayjs.extend(duration)
 
@@ -164,10 +164,10 @@ const RuleDetail = () => {
             {t('创建时间：')}{dayjs(ruleInfo?.created).format('YYYY-MM-DD HH:mm:ss')}
           </Col>
           <Col span={6}>
-            {t('告警类型：')}{ruleInfo?.alert_type}
+            {t('告警类型：')}{tt(ruleInfo?.alert_type)}
           </Col>
           <Col span={6}>
-            {t('告警级别：')}{ruleInfo?.alert_level}
+            {t('告警级别：')}{tt(ruleInfo?.alert_level)}
             <EditOutlined className="ml10"
               onClick={() => {
                 showNameModal()

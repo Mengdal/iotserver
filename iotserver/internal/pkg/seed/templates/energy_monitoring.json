@@ -21,7 +21,9 @@
           "unit": "V",
           "unitName": "伏特"
         },
-        "dataSpecsList": null
+        "dataSpecsList": null,
+        "nameEn": "Phase A voltage",
+        "descriptionEn": "Phase A voltage"
       },
       {
         "name": "B相电压",
@@ -37,7 +39,9 @@
           "unit": "V",
           "unitName": "伏特"
         },
-        "dataSpecsList": null
+        "dataSpecsList": null,
+        "nameEn": "Phase B voltage",
+        "descriptionEn": "Phase B voltage"
       },
       {
         "name": "C相电压",
@@ -53,7 +57,9 @@
           "unit": "V",
           "unitName": "伏特"
         },
-        "dataSpecsList": null
+        "dataSpecsList": null,
+        "nameEn": "Phase C voltage",
+        "descriptionEn": "Phase C voltage"
       },
       {
         "name": "A相电流",
@@ -69,7 +75,9 @@
           "unit": "A",
           "unitName": "安培"
         },
-        "dataSpecsList": null
+        "dataSpecsList": null,
+        "nameEn": "Phase A current",
+        "descriptionEn": "Phase A current"
       },
       {
         "name": "B相电流",
@@ -85,7 +93,9 @@
           "unit": "A",
           "unitName": "安培"
         },
-        "dataSpecsList": null
+        "dataSpecsList": null,
+        "nameEn": "Phase B current",
+        "descriptionEn": "Phase B current"
       },
       {
         "name": "C相电流",
@@ -101,7 +111,9 @@
           "unit": "A",
           "unitName": "安培"
         },
-        "dataSpecsList": null
+        "dataSpecsList": null,
+        "nameEn": "Phase C current",
+        "descriptionEn": "Phase C current"
       },
       {
         "name": "有功功率",
@@ -117,7 +129,9 @@
           "unit": "kW",
           "unitName": "千瓦"
         },
-        "dataSpecsList": null
+        "dataSpecsList": null,
+        "nameEn": "Active power",
+        "descriptionEn": "Total active power"
       },
       {
         "name": "无功功率",
@@ -133,7 +147,9 @@
           "unit": "kvar",
           "unitName": "千乏"
         },
-        "dataSpecsList": null
+        "dataSpecsList": null,
+        "nameEn": "Reactive power",
+        "descriptionEn": "Total reactive power"
       },
       {
         "name": "功率因数",
@@ -149,7 +165,9 @@
           "unit": "",
           "unitName": "功率因数"
         },
-        "dataSpecsList": null
+        "dataSpecsList": null,
+        "nameEn": "Power factor",
+        "descriptionEn": "Overall power factor"
       },
       {
         "name": "电能",
@@ -165,7 +183,9 @@
           "unit": "kW·h",
           "unitName": "千瓦时"
         },
-        "dataSpecsList": null
+        "dataSpecsList": null,
+        "nameEn": "Energy",
+        "descriptionEn": "Cumulative active energy"
       },
       {
         "name": "需量",
@@ -181,7 +201,9 @@
           "unit": "kW",
           "unitName": "千瓦"
         },
-        "dataSpecsList": null
+        "dataSpecsList": null,
+        "nameEn": "Demand",
+        "descriptionEn": "Current demand"
       },
       {
         "name": "频率",
@@ -197,7 +219,9 @@
           "unit": "Hz",
           "unitName": "赫兹"
         },
-        "dataSpecsList": null
+        "dataSpecsList": null,
+        "nameEn": "Frequency",
+        "descriptionEn": "Grid frequency"
       },
       {
         "name": "电能表状态",
@@ -220,7 +244,9 @@
             "name": "故障",
             "value": 2
           }
-        ]
+        ],
+        "nameEn": "Energy meter status",
+        "descriptionEn": "Energy meter communication and running status"
       }
     ],
     "events": [
@@ -250,7 +276,8 @@
                 "name": "C相",
                 "value": 2
               }
-            ]
+            ],
+            "nameEn": "Phase"
           },
           {
             "name": "电压",
@@ -264,9 +291,12 @@
               "unit": "V",
               "unitName": "伏特"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Voltage"
           }
-        ]
+        ],
+        "eventNameEn": "Overvoltage alarm",
+        "descriptionEn": "Phase voltage above the upper limit"
       },
       {
         "eventName": "欠压报警",
@@ -294,7 +324,8 @@
                 "name": "C相",
                 "value": 2
               }
-            ]
+            ],
+            "nameEn": "Phase"
           },
           {
             "name": "电压",
@@ -308,9 +339,12 @@
               "unit": "V",
               "unitName": "伏特"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Voltage"
           }
-        ]
+        ],
+        "eventNameEn": "Undervoltage alarm",
+        "descriptionEn": "Phase voltage below the lower limit"
       },
       {
         "eventName": "过流报警",
@@ -338,7 +372,8 @@
                 "name": "C相",
                 "value": 2
               }
-            ]
+            ],
+            "nameEn": "Phase"
           },
           {
             "name": "电流",
@@ -352,9 +387,12 @@
               "unit": "A",
               "unitName": "安培"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Current"
           }
-        ]
+        ],
+        "eventNameEn": "Overcurrent alarm",
+        "descriptionEn": "Phase current above the upper limit"
       },
       {
         "eventName": "功率因数低",
@@ -375,7 +413,8 @@
               "unit": "",
               "unitName": "功率因数"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Current power factor"
           },
           {
             "name": "下限",
@@ -389,9 +428,12 @@
               "unit": "",
               "unitName": "功率因数"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Lower limit"
           }
-        ]
+        ],
+        "eventNameEn": "Low power factor",
+        "descriptionEn": "Power factor below the lower limit"
       },
       {
         "eventName": "通讯中断",
@@ -406,7 +448,8 @@
             "dataType": "DATE",
             "required": false,
             "dataSpecs": null,
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Interruption duration"
           },
           {
             "name": "持续时长",
@@ -420,9 +463,12 @@
               "unit": "s",
               "unitName": "秒"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Duration"
           }
-        ]
+        ],
+        "eventNameEn": "Communication interruption",
+        "descriptionEn": "Energy meter communication interrupted"
       }
     ],
     "services": [
@@ -433,7 +479,9 @@
         "required": false,
         "callType": "ASYNC",
         "inputParams": [],
-        "outParams": []
+        "outParams": [],
+        "serviceNameEn": "Reset energy",
+        "descriptionEn": "Clear cumulative energy and restart metering"
       },
       {
         "serviceName": "查询实时电气参数",
@@ -455,7 +503,8 @@
               "unit": "V",
               "unitName": "伏特"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Phase A voltage"
           },
           {
             "name": "B相电压",
@@ -469,7 +518,8 @@
               "unit": "V",
               "unitName": "伏特"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Phase B voltage"
           },
           {
             "name": "C相电压",
@@ -483,7 +533,8 @@
               "unit": "V",
               "unitName": "伏特"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Phase C voltage"
           },
           {
             "name": "A相电流",
@@ -497,7 +548,8 @@
               "unit": "A",
               "unitName": "安培"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Phase A current"
           },
           {
             "name": "B相电流",
@@ -511,7 +563,8 @@
               "unit": "A",
               "unitName": "安培"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Phase B current"
           },
           {
             "name": "C相电流",
@@ -525,9 +578,12 @@
               "unit": "A",
               "unitName": "安培"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Phase C current"
           }
-        ]
+        ],
+        "serviceNameEn": "Query real-time electrical parameters",
+        "descriptionEn": "Query three-phase voltage and current"
       },
       {
         "serviceName": "查询电能统计",
@@ -549,7 +605,8 @@
               "unit": "kW·h",
               "unitName": "千瓦时"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Energy"
           },
           {
             "name": "需量",
@@ -563,7 +620,8 @@
               "unit": "kW",
               "unitName": "千瓦"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Demand"
           },
           {
             "name": "频率",
@@ -577,9 +635,12 @@
               "unit": "Hz",
               "unitName": "赫兹"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Frequency"
           }
-        ]
+        ],
+        "serviceNameEn": "Query energy statistics",
+        "descriptionEn": "Query energy, demand and frequency"
       },
       {
         "serviceName": "查询告警记录",
@@ -601,7 +662,8 @@
               "unit": "次",
               "unitName": "次"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Alarm count"
           },
           {
             "name": "最新告警时间",
@@ -609,9 +671,12 @@
             "dataType": "DATE",
             "required": false,
             "dataSpecs": null,
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Latest alarm time"
           }
-        ]
+        ],
+        "serviceNameEn": "Query alarm records",
+        "descriptionEn": "Query energy meter alarm records"
       }
     ]
   },
@@ -624,7 +689,9 @@
       "alertLevel": 1,
       "alertType": 1,
       "silenceTime": 300,
-      "description": "A 相电压超过 250 V"
+      "description": "A 相电压超过 250 V",
+      "nameEn": "Phase A overvoltage",
+      "descriptionEn": "Phase A voltage above 250 V"
     },
     {
       "name": "A相欠压",
@@ -634,7 +701,9 @@
       "alertLevel": 1,
       "alertType": 1,
       "silenceTime": 300,
-      "description": "A 相电压低于 190 V"
+      "description": "A 相电压低于 190 V",
+      "nameEn": "Phase A undervoltage",
+      "descriptionEn": "Phase A voltage below 190 V"
     },
     {
       "name": "A相过流",
@@ -644,7 +713,9 @@
       "alertLevel": 1,
       "alertType": 1,
       "silenceTime": 300,
-      "description": "A 相电流超过 400 A"
+      "description": "A 相电流超过 400 A",
+      "nameEn": "Phase A overcurrent",
+      "descriptionEn": "Phase A current above 400 A"
     },
     {
       "name": "功率因数低",
@@ -654,7 +725,9 @@
       "alertLevel": 3,
       "alertType": 1,
       "silenceTime": 1800,
-      "description": "功率因数低于 0.9"
+      "description": "功率因数低于 0.9",
+      "nameEn": "Low power factor",
+      "descriptionEn": "Power factor below 0.9"
     },
     {
       "name": "需量超限",
@@ -664,7 +737,9 @@
       "alertLevel": 2,
       "alertType": 1,
       "silenceTime": 900,
-      "description": "需量超过 800 kW"
+      "description": "需量超过 800 kW",
+      "nameEn": "Demand exceeded",
+      "descriptionEn": "Demand above 800 kW"
     }
   ],
   "dashboard": {
@@ -676,7 +751,8 @@
         "propertyCode": "voltage_a",
         "timeRange": "1h",
         "aggInterval": 60,
-        "aggMethod": "avg"
+        "aggMethod": "avg",
+        "titleEn": "Three-phase voltage trend"
       },
       {
         "title": "有功功率趋势",
@@ -684,14 +760,16 @@
         "propertyCode": "active_power",
         "timeRange": "1h",
         "aggInterval": 60,
-        "aggMethod": "avg"
+        "aggMethod": "avg",
+        "titleEn": "Active power trend"
       },
       {
         "title": "有功功率",
         "type": "kpi",
         "propertyCode": "active_power",
         "unit": "kW",
-        "decimals": 2
+        "decimals": 2,
+        "titleEn": "Active power"
       },
       {
         "title": "功率因数",
@@ -699,21 +777,25 @@
         "propertyCode": "power_factor",
         "unit": "",
         "min": 0,
-        "max": 1
+        "max": 1,
+        "titleEn": "Power factor"
       },
       {
         "title": "累计电能",
         "type": "kpi",
         "propertyCode": "energy",
         "unit": "kW·h",
-        "decimals": 1
+        "decimals": 1,
+        "titleEn": "Cumulative energy"
       },
       {
         "title": "能源监测总览",
         "type": "text",
-        "text": "配电回路电能质量与用能综合监控"
+        "text": "配电回路电能质量与用能综合监控",
+        "titleEn": "Energy Monitoring Overview"
       }
-    ]
+    ],
+    "nameEn": "Energy Monitoring Dashboard"
   },
   "metrics": {
     "running": null,
@@ -721,5 +803,7 @@
     "good": null,
     "reject": null,
     "cycleTime": null
-  }
+  },
+  "nameEn": "Energy Monitoring",
+  "descriptionEn": "Three-phase voltage, current, power, energy and demand monitoring for the distribution circuit"
 }

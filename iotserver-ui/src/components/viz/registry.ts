@@ -7,7 +7,6 @@ import { kpiManifest } from './widgets/KpiWidget'
 import { gaugeManifest } from './widgets/GaugeWidget'
 import { lineManifest } from './widgets/LineWidget'
 import { tableManifest } from './widgets/TableWidget'
-import { rankManifest } from './widgets/RankWidget'
 
 /**
  * 看板组件注册表
@@ -23,7 +22,6 @@ const manifests: VizWidgetManifest[] = [
   gaugeManifest,
   lineManifest,
   tableManifest,
-  rankManifest,
   // 已下线类型放在最后：只用于打开老看板时给占位提示
   legacyChartManifest,
 ]

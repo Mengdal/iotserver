@@ -661,5 +661,25 @@ func GetZhMessages() []*i18n.Message {
 			ID:    "cloudInstance.log_status",
 			Other: "服务 {{.name}} 日志运行/停止{{.status}}",
 		},
+		{
+			ID:    "online",
+			Other: "在线",
+		},
+		{
+			ID:    "offline",
+			Other: "离线",
+		},
+		{
+			ID:    "inactive",
+			Other: "未激活",
+		},
+		{
+			ID:    "disabled",
+			Other: "禁用",
+		},
+		{
+			ID:    "unknown",
+			Other: "未知",
+		},
 	}
 }

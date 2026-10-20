@@ -1,0 +1,367 @@
+{
+  "key": "quick_freezer",
+  "name": "速冻隧道",
+  "industry": "冷链仓储",
+  "version": 1,
+  "icon": "database",
+  "description": "速冻隧道出风/回风温度、网带速度、冻结时长与压缩机状态监控",
+  "thingModelJson": {
+    "properties": [
+      {
+        "name": "出风温度",
+        "identifier": "outlet_air_temp",
+        "dataType": "FLOAT",
+        "description": "隧道出风口温度",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "20",
+          "min": "-40",
+          "step": "0.1",
+          "unit": "℃",
+          "unitName": "摄氏度"
+        },
+        "dataSpecsList": null,
+        "nameEn": "Outlet air temperature",
+        "descriptionEn": "Air temperature at the tunnel outlet"
+      },
+      {
+        "name": "回风温度",
+        "identifier": "return_air_temp",
+        "dataType": "FLOAT",
+        "description": "隧道回风温度",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "20",
+          "min": "-40",
+          "step": "0.1",
+          "unit": "℃",
+          "unitName": "摄氏度"
+        },
+        "dataSpecsList": null,
+        "nameEn": "Return air temperature",
+        "descriptionEn": "Air temperature returning from the tunnel"
+      },
+      {
+        "name": "设定温度",
+        "identifier": "set_temp",
+        "dataType": "FLOAT",
+        "description": "目标冻结温度，支持远程下发",
+        "required": false,
+        "rwFlag": "RW",
+        "dataSpecs": {
+          "max": "20",
+          "min": "-40",
+          "step": "0.1",
+          "unit": "℃",
+          "unitName": "摄氏度"
+        },
+        "dataSpecsList": null,
+        "nameEn": "Target temperature",
+        "descriptionEn": "Target freezing temperature, remotely configurable"
+      },
+      {
+        "name": "网带速度",
+        "identifier": "belt_speed",
+        "dataType": "FLOAT",
+        "description": "速冻隧道网带速度",
+        "required": false,
+        "rwFlag": "RW",
+        "dataSpecs": {
+          "max": "5",
+          "min": "0",
+          "step": "0.1",
+          "unit": "m/min",
+          "unitName": "米每分钟"
+        },
+        "dataSpecsList": null,
+        "nameEn": "Conveyor speed",
+        "descriptionEn": "Tunnel conveyor speed"
+      },
+      {
+        "name": "冻结时长",
+        "identifier": "freezing_time",
+        "dataType": "INT",
+        "description": "物料在隧道内的冻结时长",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "120",
+          "min": "0",
+          "step": "1",
+          "unit": "min",
+          "unitName": "分钟"
+        },
+        "dataSpecsList": null,
+        "nameEn": "Freezing time",
+        "descriptionEn": "Time the product spends inside the tunnel"
+      },
+      {
+        "name": "压缩机状态",
+        "identifier": "compressor_status",
+        "dataType": "BOOL",
+        "description": "制冷压缩机运行状态",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": null,
+        "dataSpecsList": [
+          {
+            "name": "Stop (停止)",
+            "value": 0
+          },
+          {
+            "name": "Running (运行)",
+            "value": 1
+          }
+        ],
+        "nameEn": "Compressor status",
+        "descriptionEn": "Refrigeration compressor running status"
+      },
+      {
+        "name": "隧道门状态",
+        "identifier": "door_status",
+        "dataType": "BOOL",
+        "description": "隧道门开关状态",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": null,
+        "dataSpecsList": [
+          {
+            "name": "Closed (关闭)",
+            "value": 0
+          },
+          {
+            "name": "Open (开启)",
+            "value": 1
+          }
+        ],
+        "nameEn": "Tunnel door status",
+        "descriptionEn": "Tunnel door open/closed status"
+      },
+      {
+        "name": "当日产量",
+        "identifier": "daily_output",
+        "dataType": "INT",
+        "description": "当日速冻产量",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "999999",
+          "min": "0",
+          "step": "1",
+          "unit": "件",
+          "unitName": "件"
+        },
+        "dataSpecsList": null,
+        "nameEn": "Daily output",
+        "descriptionEn": "Packages frozen today"
+      }
+    ],
+    "events": [
+      {
+        "eventName": "高温报警",
+        "eventType": "ALERT",
+        "identifier": "high_temp",
+        "description": "出风温度超过上限",
+        "required": false,
+        "outputData": [
+          {
+            "name": "当前出风温度",
+            "identifier": "value",
+            "dataType": "FLOAT",
+            "required": false,
+            "dataSpecs": {
+              "max": "20",
+              "min": "-40",
+              "step": "0.1",
+              "unit": "℃",
+              "unitName": "摄氏度"
+            },
+            "dataSpecsList": null,
+            "nameEn": "Current outlet air temperature"
+          }
+        ],
+        "eventNameEn": "High temperature alarm",
+        "descriptionEn": "Outlet air temperature above the upper limit"
+      },
+      {
+        "eventName": "隧道门开启超时",
+        "eventType": "ALERT",
+        "identifier": "door_open",
+        "description": "隧道门开启超时未关闭",
+        "required": false,
+        "outputData": [
+          {
+            "name": "已开启时长",
+            "identifier": "duration",
+            "dataType": "INT",
+            "required": false,
+            "dataSpecs": {
+              "max": "3600",
+              "min": "0",
+              "step": "1",
+              "unit": "s",
+              "unitName": "秒"
+            },
+            "dataSpecsList": null,
+            "nameEn": "Open duration"
+          }
+        ],
+        "eventNameEn": "Tunnel door open too long",
+        "descriptionEn": "Tunnel door open for too long"
+      },
+      {
+        "eventName": "压缩机故障",
+        "eventType": "ERROR",
+        "identifier": "compressor_fault",
+        "description": "压缩机故障或意外停机",
+        "required": false,
+        "outputData": [
+          {
+            "name": "故障码",
+            "identifier": "code",
+            "dataType": "INT",
+            "required": false,
+            "dataSpecs": {
+              "max": "999",
+              "min": "0",
+              "step": "1",
+              "unit": "",
+              "unitName": ""
+            },
+            "dataSpecsList": null,
+            "nameEn": "Fault code"
+          }
+        ],
+        "eventNameEn": "Compressor fault",
+        "descriptionEn": "Compressor fault or unexpected stop"
+      }
+    ],
+    "services": [
+      {
+        "serviceName": "启动",
+        "identifier": "start",
+        "description": "启动速冻隧道",
+        "required": false,
+        "callType": "ASYNC",
+        "inputParams": [],
+        "outParams": [],
+        "serviceNameEn": "Start",
+        "descriptionEn": "Start the quick freezing tunnel"
+      },
+      {
+        "serviceName": "停止",
+        "identifier": "stop",
+        "description": "停止速冻隧道",
+        "required": false,
+        "callType": "ASYNC",
+        "inputParams": [],
+        "outParams": [],
+        "serviceNameEn": "Stop",
+        "descriptionEn": "Stop the quick freezing tunnel"
+      },
+      {
+        "serviceName": "设定温度",
+        "identifier": "set_temp",
+        "description": "下发目标冻结温度",
+        "required": false,
+        "callType": "ASYNC",
+        "inputParams": [
+          {
+            "name": "目标温度",
+            "identifier": "target",
+            "dataType": "FLOAT",
+            "required": false,
+            "dataSpecs": {
+              "max": "20",
+              "min": "-40",
+              "step": "0.1",
+              "unit": "℃",
+              "unitName": "摄氏度"
+            },
+            "dataSpecsList": null,
+            "nameEn": "Target temperature"
+          }
+        ],
+        "outParams": [],
+        "serviceNameEn": "Target temperature",
+        "descriptionEn": "Send the target freezing temperature"
+      }
+    ]
+  },
+  "alarmRules": [
+    {
+      "name": "出风温度高报警",
+      "propertyCode": "outlet_air_temp",
+      "operator": ">",
+      "value": "-15",
+      "alertLevel": 1,
+      "alertType": 1,
+      "silenceTime": 300,
+      "description": "出风温度高于 -15℃",
+      "nameEn": "High outlet air temperature",
+      "descriptionEn": "Outlet air temperature above -15°C"
+    },
+    {
+      "name": "压缩机停机",
+      "propertyCode": "compressor_status",
+      "operator": "=",
+      "value": "0",
+      "alertLevel": 2,
+      "alertType": 1,
+      "silenceTime": 300,
+      "description": "制冷压缩机停止运行",
+      "nameEn": "Compressor stopped",
+      "descriptionEn": "Refrigeration compressor stopped"
+    },
+    {
+      "name": "隧道门开启超时",
+      "propertyCode": "door_status",
+      "operator": "=",
+      "value": "1",
+      "alertLevel": 2,
+      "alertType": 1,
+      "silenceTime": 300,
+      "description": "隧道门处于开启状态",
+      "nameEn": "Tunnel door open too long",
+      "descriptionEn": "Tunnel door is open"
+    }
+  ],
+  "dashboard": {
+    "name": "速冻隧道看板",
+    "widgets": [
+      {
+        "title": "出风温度趋势",
+        "type": "line",
+        "propertyCode": "outlet_air_temp",
+        "timeRange": "1h",
+        "aggInterval": 60,
+        "aggMethod": "avg",
+        "titleEn": "Outlet air temperature trend"
+      },
+      {
+        "title": "当前出风温度",
+        "type": "kpi",
+        "propertyCode": "outlet_air_temp",
+        "titleEn": "Current outlet air temperature"
+      },
+      {
+        "title": "当日产量",
+        "type": "kpi",
+        "propertyCode": "daily_output",
+        "titleEn": "Daily output"
+      }
+    ],
+    "nameEn": "Quick Freezing Tunnel Dashboard"
+  },
+  "metrics": {
+    "running": "compressor_status",
+    "output": "daily_output",
+    "good": null,
+    "reject": null,
+    "cycleTime": "freezing_time"
+  },
+  "nameEn": "Quick Freezing Tunnel",
+  "descriptionEn": "Tunnel outlet/return air temperature, conveyor speed, freezing time and compressor status monitoring"
+}

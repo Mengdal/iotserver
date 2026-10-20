@@ -5,6 +5,7 @@ import { PlusOutlined, DeleteOutlined, LockOutlined, UnlockOutlined, SyncOutline
 import { getDevice, deleteDevice, deleteDevices, unBindDriver, useGetDeviceServers, useGetDeviceStatusTemplate, useGetIotPlatform, useGetProductList } from '@/api'
 import { useTableRequest } from '@/hooks'
 import { confirmPlatformViewAdd } from '@/utils/platformViewGuard'
+import { DEVICE_STATUS_COLORS, deviceStatusLabel } from '@/utils/deviceStatus'
 import { AddModal, AddModalRef } from './AddModal'
 import { EditModal, EditModalRef } from './EditModal'
 import { BatchBindModal, BatchBindModalRef } from './BatchBindModal'
@@ -111,7 +112,7 @@ const DevicesManage: React.FC<DevicesManageProps> = () => {
             <Select
               style={{ width: 180 }}
               placeholder={t('状态')}
-              options={[{ label: t('状态 (全部)'), value: '' }, ...statusOptions.map(i => ({ label: tt(i), value: i }))]}
+              options={[{ label: t('状态 (全部)'), value: '' }, ...statusOptions.map(i => ({ label: deviceStatusLabel(i), value: i }))]}
             />
           </Form.Item>
           <Form.Item key="name" name="name">
@@ -212,13 +213,8 @@ const DevicesManage: React.FC<DevicesManageProps> = () => {
               render (value, record) {
                 return (
                   <>
-                    <Badge color={{
-                      在线: 'green',
-                      离线: 'gray',
-                      禁用: 'red',
-                      未激活: 'orange',
-                    }[record.status] || 'gray'} />
-                    <Text className="ml5">{tt(value) || t('未知')}</Text>
+                    <Badge color={DEVICE_STATUS_COLORS[record.status] || 'gray'} />
+                    <Text className="ml5">{deviceStatusLabel(value)}</Text>
                   </>
                 )
               },

@@ -19,6 +19,7 @@ type ThingModelTemplate struct {
 	Id             string `gorm:"id;primaryKey;not null;type:string;size:255;comment:主键"`
 	CategoryKey    string `gorm:"type:string;size:255;comment:品类key"`
 	CategoryName   string `gorm:"type:string;size:255;comment:品类名字"`
+	CategoryNameEn string `gorm:"type:string;size:255;comment:品类英文名字"`
 	ThingModelJSON string `gorm:"type:text;comment:物模型信息"`
 }
 

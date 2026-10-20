@@ -1,0 +1,364 @@
+{
+  "key": "extruder",
+  "name": "挤出机",
+  "industry": "橡塑",
+  "version": 1,
+  "icon": "database",
+  "description": "挤出机机筒温度、熔体压力、螺杆转速与主机电流监控",
+  "thingModelJson": {
+    "properties": [
+      {
+        "name": "机筒温度",
+        "identifier": "barrel_temp",
+        "dataType": "FLOAT",
+        "description": "挤出机机筒温度",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "350",
+          "min": "0",
+          "step": "0.1",
+          "unit": "℃",
+          "unitName": "摄氏度"
+        },
+        "dataSpecsList": null,
+        "nameEn": "Barrel temperature",
+        "descriptionEn": "Extruder barrel temperature"
+      },
+      {
+        "name": "熔体压力",
+        "identifier": "melt_pressure",
+        "dataType": "FLOAT",
+        "description": "机头熔体压力",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "50",
+          "min": "0",
+          "step": "0.1",
+          "unit": "MPa",
+          "unitName": "兆帕"
+        },
+        "dataSpecsList": null,
+        "nameEn": "Melt pressure",
+        "descriptionEn": "Melt pressure at the die"
+      },
+      {
+        "name": "螺杆转速",
+        "identifier": "screw_speed",
+        "dataType": "FLOAT",
+        "description": "挤出机螺杆转速",
+        "required": false,
+        "rwFlag": "RW",
+        "dataSpecs": {
+          "max": "200",
+          "min": "0",
+          "step": "1",
+          "unit": "rpm",
+          "unitName": "转每分钟"
+        },
+        "dataSpecsList": null,
+        "nameEn": "Screw speed",
+        "descriptionEn": "Extruder screw rotation speed"
+      },
+      {
+        "name": "主机电流",
+        "identifier": "main_motor_current",
+        "dataType": "FLOAT",
+        "description": "主电机运行电流",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "400",
+          "min": "0",
+          "step": "0.1",
+          "unit": "A",
+          "unitName": "安"
+        },
+        "dataSpecsList": null,
+        "nameEn": "Main motor current",
+        "descriptionEn": "Main motor running current"
+      },
+      {
+        "name": "喂料速度",
+        "identifier": "feed_rate",
+        "dataType": "FLOAT",
+        "description": "喂料速度",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "100",
+          "min": "0",
+          "step": "0.1",
+          "unit": "kg/h",
+          "unitName": "千克每小时"
+        },
+        "dataSpecsList": null,
+        "nameEn": "Feed rate",
+        "descriptionEn": "Material feed rate"
+      },
+      {
+        "name": "真空度",
+        "identifier": "vacuum_pressure",
+        "dataType": "FLOAT",
+        "description": "机筒真空度",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "0",
+          "min": "-0.1",
+          "step": "0.001",
+          "unit": "MPa",
+          "unitName": "兆帕"
+        },
+        "dataSpecsList": null,
+        "nameEn": "Vacuum pressure",
+        "descriptionEn": "Barrel vacuum pressure"
+      },
+      {
+        "name": "运行状态",
+        "identifier": "run_status",
+        "dataType": "BOOL",
+        "description": "挤出机运行状态",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": null,
+        "dataSpecsList": [
+          {
+            "name": "Stop (停止)",
+            "value": 0
+          },
+          {
+            "name": "Running (运行)",
+            "value": 1
+          }
+        ],
+        "nameEn": "Running status",
+        "descriptionEn": "Extruder running status"
+      },
+      {
+        "name": "累计产量",
+        "identifier": "output_count",
+        "dataType": "INT",
+        "description": "累计挤出产量",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "9999999",
+          "min": "0",
+          "step": "1",
+          "unit": "kg",
+          "unitName": "千克"
+        },
+        "dataSpecsList": null,
+        "nameEn": "Cumulative output",
+        "descriptionEn": "Cumulative extrusion output"
+      }
+    ],
+    "events": [
+      {
+        "eventName": "超温报警",
+        "eventType": "ALERT",
+        "identifier": "over_temp",
+        "description": "机筒温度超过上限",
+        "required": false,
+        "outputData": [
+          {
+            "name": "当前机筒温度",
+            "identifier": "value",
+            "dataType": "FLOAT",
+            "required": false,
+            "dataSpecs": {
+              "max": "350",
+              "min": "0",
+              "step": "0.1",
+              "unit": "℃",
+              "unitName": "摄氏度"
+            },
+            "dataSpecsList": null,
+            "nameEn": "Current barrel temperature"
+          }
+        ],
+        "eventNameEn": "Over temperature",
+        "descriptionEn": "Barrel temperature above the upper limit"
+      },
+      {
+        "eventName": "熔体压力高",
+        "eventType": "ALERT",
+        "identifier": "high_pressure",
+        "description": "熔体压力超过上限",
+        "required": false,
+        "outputData": [
+          {
+            "name": "当前熔体压力",
+            "identifier": "value",
+            "dataType": "FLOAT",
+            "required": false,
+            "dataSpecs": {
+              "max": "50",
+              "min": "0",
+              "step": "0.1",
+              "unit": "MPa",
+              "unitName": "兆帕"
+            },
+            "dataSpecsList": null,
+            "nameEn": "Current melt pressure"
+          }
+        ],
+        "eventNameEn": "High melt pressure",
+        "descriptionEn": "Melt pressure above the upper limit"
+      },
+      {
+        "eventName": "螺杆故障",
+        "eventType": "ERROR",
+        "identifier": "screw_fault",
+        "description": "螺杆或主电机故障",
+        "required": false,
+        "outputData": [
+          {
+            "name": "故障码",
+            "identifier": "code",
+            "dataType": "INT",
+            "required": false,
+            "dataSpecs": {
+              "max": "999",
+              "min": "0",
+              "step": "1",
+              "unit": "",
+              "unitName": ""
+            },
+            "dataSpecsList": null,
+            "nameEn": "Fault code"
+          }
+        ],
+        "eventNameEn": "Screw fault",
+        "descriptionEn": "Screw or main motor fault"
+      }
+    ],
+    "services": [
+      {
+        "serviceName": "启动",
+        "identifier": "start",
+        "description": "启动挤出机",
+        "required": false,
+        "callType": "ASYNC",
+        "inputParams": [],
+        "outParams": [],
+        "serviceNameEn": "Start",
+        "descriptionEn": "Start the extruder"
+      },
+      {
+        "serviceName": "停止",
+        "identifier": "stop",
+        "description": "停止挤出机",
+        "required": false,
+        "callType": "ASYNC",
+        "inputParams": [],
+        "outParams": [],
+        "serviceNameEn": "Stop",
+        "descriptionEn": "Stop the extruder"
+      },
+      {
+        "serviceName": "螺杆转速",
+        "identifier": "set_screw_speed",
+        "description": "下发目标螺杆转速",
+        "required": false,
+        "callType": "ASYNC",
+        "inputParams": [
+          {
+            "name": "目标转速",
+            "identifier": "target",
+            "dataType": "FLOAT",
+            "required": false,
+            "dataSpecs": {
+              "max": "200",
+              "min": "0",
+              "step": "1",
+              "unit": "rpm",
+              "unitName": "转每分钟"
+            },
+            "dataSpecsList": null,
+            "nameEn": "Target screw speed"
+          }
+        ],
+        "outParams": [],
+        "serviceNameEn": "Screw speed",
+        "descriptionEn": "Send the target screw speed"
+      }
+    ]
+  },
+  "alarmRules": [
+    {
+      "name": "机筒超温",
+      "propertyCode": "barrel_temp",
+      "operator": ">",
+      "value": "240",
+      "alertLevel": 1,
+      "alertType": 1,
+      "silenceTime": 300,
+      "description": "机筒温度高于 240℃",
+      "nameEn": "Barrel over temperature",
+      "descriptionEn": "Barrel temperature above 240°C"
+    },
+    {
+      "name": "熔体压力高",
+      "propertyCode": "melt_pressure",
+      "operator": ">",
+      "value": "35",
+      "alertLevel": 2,
+      "alertType": 1,
+      "silenceTime": 300,
+      "description": "熔体压力高于 35 MPa",
+      "nameEn": "High melt pressure",
+      "descriptionEn": "Melt pressure above 35 MPa"
+    },
+    {
+      "name": "主机电流过高",
+      "propertyCode": "main_motor_current",
+      "operator": ">",
+      "value": "250",
+      "alertLevel": 2,
+      "alertType": 1,
+      "silenceTime": 300,
+      "description": "主机电流高于 250 A",
+      "nameEn": "High main motor current",
+      "descriptionEn": "Main motor current above 250 A"
+    }
+  ],
+  "dashboard": {
+    "name": "挤出机看板",
+    "widgets": [
+      {
+        "title": "机筒温度趋势",
+        "type": "line",
+        "propertyCode": "barrel_temp",
+        "timeRange": "1h",
+        "aggInterval": 60,
+        "aggMethod": "avg",
+        "titleEn": "Barrel temperature trend"
+      },
+      {
+        "title": "熔体压力",
+        "type": "kpi",
+        "propertyCode": "melt_pressure",
+        "titleEn": "Melt pressure"
+      },
+      {
+        "title": "螺杆转速",
+        "type": "kpi",
+        "propertyCode": "screw_speed",
+        "titleEn": "Screw speed"
+      }
+    ],
+    "nameEn": "Extruder Dashboard"
+  },
+  "metrics": {
+    "running": "run_status",
+    "output": "output_count",
+    "good": null,
+    "reject": null,
+    "cycleTime": null
+  },
+  "nameEn": "Extruder",
+  "descriptionEn": "Extruder barrel temperature, melt pressure, screw speed and motor current monitoring"
+}

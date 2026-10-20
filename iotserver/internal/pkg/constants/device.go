@@ -25,12 +25,14 @@ const (
 	DeviceOffline = "offline"
 )
 
+// 设备状态入库用稳定代码，不存展示文案：切换中英文时只翻译展示层，
+// 数据库与接口参数不随语言变化。
 const (
-	DeviceStatusUnKnow   DeviceStatus = "未知"
-	DeviceStatusOnline   DeviceStatus = "在线"
-	DeviceStatusOffline  DeviceStatus = "离线"
-	DeviceStatusUnActive DeviceStatus = "未激活"
-	DeviceStatusDisable  DeviceStatus = "禁用"
+	DeviceStatusUnKnow   DeviceStatus = "unknown"
+	DeviceStatusOnline   DeviceStatus = "online"
+	DeviceStatusOffline  DeviceStatus = "offline"
+	DeviceStatusUnActive DeviceStatus = "inactive"
+	DeviceStatusDisable  DeviceStatus = "disabled"
 )
 
 func (i DeviceStatus) TransformToDriverDeviceStatus() driverdevice.DeviceStatus {

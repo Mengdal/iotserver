@@ -28,6 +28,7 @@ const (
 
 // propRow 待写入的属性行
 type propRow struct {
+	tenantID string
 	deviceId string
 	code     string
 	ts       int64
@@ -37,6 +38,7 @@ type propRow struct {
 
 // payloadRow 待写入的事件/服务行
 type payloadRow struct {
+	tenantID string
 	deviceId string
 	code     string
 	ts       int64
@@ -118,13 +120,13 @@ func (c *Client) writeBatch(ctx context.Context, props []propRow, events, servic
 
 	if len(props) > 0 {
 		stmt, err := tx.PrepareContext(ctx, fmt.Sprintf(
-			"INSERT INTO %s.%s (device_id, code, ts_ms, num_value, text_value) VALUES (?, ?, ?, ?, ?)",
+			"INSERT INTO %s.%s (tenant_id, device_id, code, ts_ms, num_value, text_value) VALUES (?, ?, ?, ?, ?, ?)",
 			lakeAlias, tableProperty))
 		if err != nil {
 			return err
 		}
 		for _, row := range props {
-			if _, err = stmt.ExecContext(ctx, row.deviceId, row.code, row.ts, row.num, row.text); err != nil {
+			if _, err = stmt.ExecContext(ctx, row.tenantID, row.deviceId, row.code, row.ts, row.num, row.text); err != nil {
 				_ = stmt.Close()
 				return err
 			}
@@ -134,13 +136,13 @@ func (c *Client) writeBatch(ctx context.Context, props []propRow, events, servic
 
 	if len(events) > 0 {
 		stmt, err := tx.PrepareContext(ctx, fmt.Sprintf(
-			"INSERT INTO %s.%s (device_id, event_code, ts_ms, payload) VALUES (?, ?, ?, ?)",
+			"INSERT INTO %s.%s (tenant_id, device_id, event_code, ts_ms, payload) VALUES (?, ?, ?, ?, ?)",
 			lakeAlias, tableEvent))
 		if err != nil {
 			return err
 		}
 		for _, row := range events {
-			if _, err = stmt.ExecContext(ctx, row.deviceId, row.code, row.ts, row.payload); err != nil {
+			if _, err = stmt.ExecContext(ctx, row.tenantID, row.deviceId, row.code, row.ts, row.payload); err != nil {
 				_ = stmt.Close()
 				return err
 			}
@@ -150,13 +152,13 @@ func (c *Client) writeBatch(ctx context.Context, props []propRow, events, servic
 
 	if len(services) > 0 {
 		stmt, err := tx.PrepareContext(ctx, fmt.Sprintf(
-			"INSERT INTO %s.%s (device_id, code, ts_ms, payload) VALUES (?, ?, ?, ?)",
+			"INSERT INTO %s.%s (tenant_id, device_id, code, ts_ms, payload) VALUES (?, ?, ?, ?, ?)",
 			lakeAlias, tableService))
 		if err != nil {
 			return err
 		}
 		for _, row := range services {
-			if _, err = stmt.ExecContext(ctx, row.deviceId, row.code, row.ts, row.payload); err != nil {
+			if _, err = stmt.ExecContext(ctx, row.tenantID, row.deviceId, row.code, row.ts, row.payload); err != nil {
 				_ = stmt.Close()
 				return err
 			}

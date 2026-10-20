@@ -439,6 +439,7 @@ func (uapp *userApp) SysMenuAdd(ctx context.Context, req dtos.SysMenuAddRequest)
 		Id:         utils.GenUUID(),
 		ParentId:   parentId,
 		Name:       req.Name,
+		NameEn:     req.NameEn,
 		Path:       req.Path,
 		Component:  req.Component,
 		Icon:       req.Icon,
@@ -505,6 +506,7 @@ func (uapp *userApp) SysMenuUpdate(ctx context.Context, req dtos.SysMenuUpdateRe
 	}
 	menu.ParentId = parentId
 	menu.Name = req.Name
+	menu.NameEn = req.NameEn
 	menu.Path = req.Path
 	menu.Component = req.Component
 	menu.Icon = req.Icon

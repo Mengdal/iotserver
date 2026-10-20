@@ -70,6 +70,8 @@ PublishTopicPrefix = 'eventbus/in'
 # 本文件在仓库里：生产地址与凭据请按环境填写，提交前记得清空。
 [EdgeIngest]
 Broker = ''
+# 控制通道 broker（重启/标签树/属性写）；留空回落到 Broker
+# ControlBroker = 'tcp://host:1883'
 Username = ''
 Password = ''
 # 订阅刷新间隔（秒）：界面上增删网关后自动重订阅，无需重启服务；<=0 用默认值 60

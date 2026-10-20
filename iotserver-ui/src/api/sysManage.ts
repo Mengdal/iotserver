@@ -38,6 +38,8 @@ export interface SysMenu {
   id: string
   parentId: string
   name: string
+  /** 英文菜单名（英文界面优先显示） */
+  nameEn?: string
   path: string
   component: string
   icon: string

@@ -1,0 +1,364 @@
+{
+  "key": "cooling_tower",
+  "name": "冷却塔",
+  "industry": "暖通制冷",
+  "version": 1,
+  "icon": "database",
+  "description": "冷却塔进出水温度、逼近度、风机与振动监控",
+  "thingModelJson": {
+    "properties": [
+      {
+        "name": "进水温度",
+        "identifier": "inlet_water_temp",
+        "dataType": "FLOAT",
+        "description": "进入冷却塔的热水温度",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "60",
+          "min": "0",
+          "step": "0.1",
+          "unit": "℃",
+          "unitName": "摄氏度"
+        },
+        "dataSpecsList": null,
+        "nameEn": "Inlet water temperature",
+        "descriptionEn": "Hot water temperature entering the tower"
+      },
+      {
+        "name": "出水温度",
+        "identifier": "outlet_water_temp",
+        "dataType": "FLOAT",
+        "description": "冷却后的出水温度",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "60",
+          "min": "0",
+          "step": "0.1",
+          "unit": "℃",
+          "unitName": "摄氏度"
+        },
+        "dataSpecsList": null,
+        "nameEn": "Outlet water temperature",
+        "descriptionEn": "Cooled water temperature leaving the tower"
+      },
+      {
+        "name": "逼近度",
+        "identifier": "approach_temp",
+        "dataType": "FLOAT",
+        "description": "出水温度与湿球温度的差值",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "15",
+          "min": "0",
+          "step": "0.1",
+          "unit": "℃",
+          "unitName": "摄氏度"
+        },
+        "dataSpecsList": null,
+        "nameEn": "Approach temperature",
+        "descriptionEn": "Difference between outlet water and wet-bulb temperature"
+      },
+      {
+        "name": "风机状态",
+        "identifier": "fan_status",
+        "dataType": "BOOL",
+        "description": "冷却风机运行状态",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": null,
+        "dataSpecsList": [
+          {
+            "name": "Stop (停止)",
+            "value": 0
+          },
+          {
+            "name": "Running (运行)",
+            "value": 1
+          }
+        ],
+        "nameEn": "Fan status",
+        "descriptionEn": "Cooling fan running status"
+      },
+      {
+        "name": "风机转速",
+        "identifier": "fan_speed",
+        "dataType": "FLOAT",
+        "description": "冷却风机转速",
+        "required": false,
+        "rwFlag": "RW",
+        "dataSpecs": {
+          "max": "1500",
+          "min": "0",
+          "step": "1",
+          "unit": "rpm",
+          "unitName": "转每分钟"
+        },
+        "dataSpecsList": null,
+        "nameEn": "Fan speed",
+        "descriptionEn": "Cooling fan rotation speed"
+      },
+      {
+        "name": "补水量",
+        "identifier": "makeup_water_flow",
+        "dataType": "FLOAT",
+        "description": "冷却塔补水量",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "50",
+          "min": "0",
+          "step": "0.1",
+          "unit": "m³/h",
+          "unitName": "立方米每小时"
+        },
+        "dataSpecsList": null,
+        "nameEn": "Makeup water flow",
+        "descriptionEn": "Makeup water flow rate"
+      },
+      {
+        "name": "振动值",
+        "identifier": "vibration",
+        "dataType": "FLOAT",
+        "description": "冷却塔振动值",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "20",
+          "min": "0",
+          "step": "0.1",
+          "unit": "mm/s",
+          "unitName": "毫米每秒"
+        },
+        "dataSpecsList": null,
+        "nameEn": "Vibration",
+        "descriptionEn": "Cooling tower vibration level"
+      },
+      {
+        "name": "累计运行时长",
+        "identifier": "run_hours",
+        "dataType": "INT",
+        "description": "冷却塔累计运行时长",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "999999",
+          "min": "0",
+          "step": "1",
+          "unit": "h",
+          "unitName": "小时"
+        },
+        "dataSpecsList": null,
+        "nameEn": "Cumulative runtime",
+        "descriptionEn": "Cumulative cooling tower runtime"
+      }
+    ],
+    "events": [
+      {
+        "eventName": "出水温度高报警",
+        "eventType": "ALERT",
+        "identifier": "high_outlet_temp",
+        "description": "出水温度超过上限",
+        "required": false,
+        "outputData": [
+          {
+            "name": "当前出水温度",
+            "identifier": "value",
+            "dataType": "FLOAT",
+            "required": false,
+            "dataSpecs": {
+              "max": "60",
+              "min": "0",
+              "step": "0.1",
+              "unit": "℃",
+              "unitName": "摄氏度"
+            },
+            "dataSpecsList": null,
+            "nameEn": "Current outlet water temperature"
+          }
+        ],
+        "eventNameEn": "High outlet water temperature",
+        "descriptionEn": "Outlet water temperature above the upper limit"
+      },
+      {
+        "eventName": "风机故障",
+        "eventType": "ERROR",
+        "identifier": "fan_fault",
+        "description": "冷却风机故障或意外停机",
+        "required": false,
+        "outputData": [
+          {
+            "name": "故障码",
+            "identifier": "code",
+            "dataType": "INT",
+            "required": false,
+            "dataSpecs": {
+              "max": "999",
+              "min": "0",
+              "step": "1",
+              "unit": "",
+              "unitName": ""
+            },
+            "dataSpecsList": null,
+            "nameEn": "Fault code"
+          }
+        ],
+        "eventNameEn": "Fan fault",
+        "descriptionEn": "Cooling fan fault or unexpected stop"
+      },
+      {
+        "eventName": "水量不足报警",
+        "eventType": "ALERT",
+        "identifier": "low_water",
+        "description": "补水量不足",
+        "required": false,
+        "outputData": [
+          {
+            "name": "补水量",
+            "identifier": "flow",
+            "dataType": "FLOAT",
+            "required": false,
+            "dataSpecs": {
+              "max": "50",
+              "min": "0",
+              "step": "0.1",
+              "unit": "m³/h",
+              "unitName": "立方米每小时"
+            },
+            "dataSpecsList": null,
+            "nameEn": "Makeup water flow"
+          }
+        ],
+        "eventNameEn": "Low water flow",
+        "descriptionEn": "Insufficient makeup water flow"
+      }
+    ],
+    "services": [
+      {
+        "serviceName": "启动",
+        "identifier": "start",
+        "description": "启动冷却塔",
+        "required": false,
+        "callType": "ASYNC",
+        "inputParams": [],
+        "outParams": [],
+        "serviceNameEn": "Start",
+        "descriptionEn": "Start the cooling tower"
+      },
+      {
+        "serviceName": "停止",
+        "identifier": "stop",
+        "description": "停止冷却塔",
+        "required": false,
+        "callType": "ASYNC",
+        "inputParams": [],
+        "outParams": [],
+        "serviceNameEn": "Stop",
+        "descriptionEn": "Stop the cooling tower"
+      },
+      {
+        "serviceName": "风机转速",
+        "identifier": "set_fan_speed",
+        "description": "下发目标风机转速",
+        "required": false,
+        "callType": "ASYNC",
+        "inputParams": [
+          {
+            "name": "目标转速",
+            "identifier": "target",
+            "dataType": "FLOAT",
+            "required": false,
+            "dataSpecs": {
+              "max": "1500",
+              "min": "0",
+              "step": "1",
+              "unit": "rpm",
+              "unitName": "转每分钟"
+            },
+            "dataSpecsList": null,
+            "nameEn": "Target fan speed"
+          }
+        ],
+        "outParams": [],
+        "serviceNameEn": "Fan speed",
+        "descriptionEn": "Send the target fan speed"
+      }
+    ]
+  },
+  "alarmRules": [
+    {
+      "name": "出水温度高报警",
+      "propertyCode": "outlet_water_temp",
+      "operator": ">",
+      "value": "37",
+      "alertLevel": 1,
+      "alertType": 1,
+      "silenceTime": 300,
+      "description": "出水温度高于 37℃",
+      "nameEn": "High outlet water temperature",
+      "descriptionEn": "Outlet water temperature above 37°C"
+    },
+    {
+      "name": "逼近度偏大",
+      "propertyCode": "approach_temp",
+      "operator": ">",
+      "value": "5",
+      "alertLevel": 2,
+      "alertType": 1,
+      "silenceTime": 300,
+      "description": "逼近度高于 5℃，可能通风不足",
+      "nameEn": "Large approach temperature",
+      "descriptionEn": "Approach temperature above 5°C, possible insufficient air flow"
+    },
+    {
+      "name": "振动超标",
+      "propertyCode": "vibration",
+      "operator": ">",
+      "value": "7.1",
+      "alertLevel": 2,
+      "alertType": 1,
+      "silenceTime": 300,
+      "description": "振动值高于 7.1 mm/s",
+      "nameEn": "High vibration",
+      "descriptionEn": "Vibration above 7.1 mm/s"
+    }
+  ],
+  "dashboard": {
+    "name": "冷却塔看板",
+    "widgets": [
+      {
+        "title": "出水温度趋势",
+        "type": "line",
+        "propertyCode": "outlet_water_temp",
+        "timeRange": "1h",
+        "aggInterval": 60,
+        "aggMethod": "avg",
+        "titleEn": "Outlet water temperature trend"
+      },
+      {
+        "title": "当前出水温度",
+        "type": "kpi",
+        "propertyCode": "outlet_water_temp",
+        "titleEn": "Current outlet water temperature"
+      },
+      {
+        "title": "风机转速",
+        "type": "kpi",
+        "propertyCode": "fan_speed",
+        "titleEn": "Fan speed"
+      }
+    ],
+    "nameEn": "Cooling Tower Dashboard"
+  },
+  "metrics": {
+    "running": "fan_status",
+    "output": null,
+    "good": null,
+    "reject": null,
+    "cycleTime": null
+  },
+  "nameEn": "Cooling Tower",
+  "descriptionEn": "Cooling tower inlet/outlet water temperature, approach temperature, fan and vibration monitoring"
+}

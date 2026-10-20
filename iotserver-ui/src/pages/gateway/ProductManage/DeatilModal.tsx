@@ -143,8 +143,10 @@ export const DetailModal = forwardRef<DetailModalRef, DetailModalProps>(({ produ
                         thing_model_type,
                         product_id: productInfo?.id,
                         name: formValue?.name,
+                        name_en: formValue?.name_en,
                         code: formValue?.code,
                         description: formValue?.description,
+                        description_en: formValue?.description_en,
                         tag: '自定义',
                       }
 
@@ -316,11 +318,17 @@ export const DetailModal = forwardRef<DetailModalRef, DetailModalProps>(({ produ
             return null
           }}
         </Form.Item>
+        <Form.Item label={t('英文名称')} name="name_en">
+          <Input placeholder={t('English name')} />
+        </Form.Item>
         <Form.Item
           label={t('描述')}
           name="description"
         >
           <TextArea placeholder={t('请输入描述')} rows={4}></TextArea>
+        </Form.Item>
+        <Form.Item label={t('英文描述')} name="description_en">
+          <TextArea placeholder={t('English description')} rows={3}></TextArea>
         </Form.Item>
       </Form>
     </Drawer>

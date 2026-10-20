@@ -1,0 +1,364 @@
+{
+  "key": "labeling_machine",
+  "name": "贴标机",
+  "industry": "食品饮料",
+  "version": 1,
+  "icon": "database",
+  "description": "贴标速度、标签余量、贴标精度与剔除数监控",
+  "thingModelJson": {
+    "properties": [
+      {
+        "name": "贴标速度",
+        "identifier": "labeling_speed",
+        "dataType": "FLOAT",
+        "description": "每分钟贴标数量",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "300",
+          "min": "0",
+          "step": "1",
+          "unit": "pcs/min",
+          "unitName": "件每分钟"
+        },
+        "dataSpecsList": null,
+        "nameEn": "Labeling speed",
+        "descriptionEn": "Labels applied per minute"
+      },
+      {
+        "name": "标签余量",
+        "identifier": "label_remaining",
+        "dataType": "INT",
+        "description": "标签卷剩余数量",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "10000",
+          "min": "0",
+          "step": "1",
+          "unit": "pcs",
+          "unitName": "件"
+        },
+        "dataSpecsList": null,
+        "nameEn": "Label remaining",
+        "descriptionEn": "Remaining labels on the roll"
+      },
+      {
+        "name": "贴标偏差",
+        "identifier": "position_error",
+        "dataType": "FLOAT",
+        "description": "贴标位置偏差",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "10",
+          "min": "0",
+          "step": "0.1",
+          "unit": "mm",
+          "unitName": "毫米"
+        },
+        "dataSpecsList": null,
+        "nameEn": "Label position error",
+        "descriptionEn": "Deviation from the target label position"
+      },
+      {
+        "name": "剔除数",
+        "identifier": "reject_count",
+        "dataType": "INT",
+        "description": "当日剔除瓶数",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "99999",
+          "min": "0",
+          "step": "1",
+          "unit": "pcs",
+          "unitName": "件"
+        },
+        "dataSpecsList": null,
+        "nameEn": "Rejected count",
+        "descriptionEn": "Bottles rejected today"
+      },
+      {
+        "name": "累计产量",
+        "identifier": "output_count",
+        "dataType": "INT",
+        "description": "累计贴标产量",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "9999999",
+          "min": "0",
+          "step": "1",
+          "unit": "pcs",
+          "unitName": "件"
+        },
+        "dataSpecsList": null,
+        "nameEn": "Cumulative output",
+        "descriptionEn": "Cumulative labeled bottles"
+      },
+      {
+        "name": "运行状态",
+        "identifier": "run_status",
+        "dataType": "BOOL",
+        "description": "贴标机运行状态",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": null,
+        "dataSpecsList": [
+          {
+            "name": "Stop (停止)",
+            "value": 0
+          },
+          {
+            "name": "Running (运行)",
+            "value": 1
+          }
+        ],
+        "nameEn": "Running status",
+        "descriptionEn": "Labeling machine running status"
+      },
+      {
+        "name": "输送带速度",
+        "identifier": "conveyor_speed",
+        "dataType": "FLOAT",
+        "description": "输送带线速度",
+        "required": false,
+        "rwFlag": "RW",
+        "dataSpecs": {
+          "max": "60",
+          "min": "0",
+          "step": "0.1",
+          "unit": "m/min",
+          "unitName": "米每分钟"
+        },
+        "dataSpecsList": null,
+        "nameEn": "Conveyor speed",
+        "descriptionEn": "Conveyor linear speed"
+      },
+      {
+        "name": "报警次数",
+        "identifier": "alarm_count",
+        "dataType": "INT",
+        "description": "当日累计报警次数",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "9999",
+          "min": "0",
+          "step": "1",
+          "unit": "次",
+          "unitName": "次"
+        },
+        "dataSpecsList": null,
+        "nameEn": "Alarm count",
+        "descriptionEn": "Alarms today"
+      }
+    ],
+    "events": [
+      {
+        "eventName": "标签余量低",
+        "eventType": "ALERT",
+        "identifier": "label_low",
+        "description": "标签卷余量不足",
+        "required": false,
+        "outputData": [
+          {
+            "name": "标签余量",
+            "identifier": "remaining",
+            "dataType": "INT",
+            "required": false,
+            "dataSpecs": {
+              "max": "10000",
+              "min": "0",
+              "step": "1",
+              "unit": "pcs",
+              "unitName": "件"
+            },
+            "dataSpecsList": null,
+            "nameEn": "Label remaining"
+          }
+        ],
+        "eventNameEn": "Low label remaining",
+        "descriptionEn": "Label roll is running out"
+      },
+      {
+        "eventName": "贴标偏差超限",
+        "eventType": "ALERT",
+        "identifier": "position_error",
+        "description": "贴标位置偏差超过上限",
+        "required": false,
+        "outputData": [
+          {
+            "name": "偏差值",
+            "identifier": "value",
+            "dataType": "FLOAT",
+            "required": false,
+            "dataSpecs": {
+              "max": "10",
+              "min": "0",
+              "step": "0.1",
+              "unit": "mm",
+              "unitName": "毫米"
+            },
+            "dataSpecsList": null,
+            "nameEn": "Position error"
+          }
+        ],
+        "eventNameEn": "Label position error",
+        "descriptionEn": "Label position deviation above the limit"
+      },
+      {
+        "eventName": "标签卡料",
+        "eventType": "ERROR",
+        "identifier": "label_jam",
+        "description": "标签卡料或送标失败",
+        "required": false,
+        "outputData": [
+          {
+            "name": "故障码",
+            "identifier": "code",
+            "dataType": "INT",
+            "required": false,
+            "dataSpecs": {
+              "max": "999",
+              "min": "0",
+              "step": "1",
+              "unit": "",
+              "unitName": ""
+            },
+            "dataSpecsList": null,
+            "nameEn": "Fault code"
+          }
+        ],
+        "eventNameEn": "Label jam",
+        "descriptionEn": "Label jam or feed failure"
+      }
+    ],
+    "services": [
+      {
+        "serviceName": "启动",
+        "identifier": "start",
+        "description": "启动贴标机",
+        "required": false,
+        "callType": "ASYNC",
+        "inputParams": [],
+        "outParams": [],
+        "serviceNameEn": "Start",
+        "descriptionEn": "Start the labeling machine"
+      },
+      {
+        "serviceName": "停止",
+        "identifier": "stop",
+        "description": "停止贴标机",
+        "required": false,
+        "callType": "ASYNC",
+        "inputParams": [],
+        "outParams": [],
+        "serviceNameEn": "Stop",
+        "descriptionEn": "Stop the labeling machine"
+      },
+      {
+        "serviceName": "贴标速度",
+        "identifier": "set_speed",
+        "description": "下发目标贴标速度",
+        "required": false,
+        "callType": "ASYNC",
+        "inputParams": [
+          {
+            "name": "目标速度",
+            "identifier": "speed",
+            "dataType": "FLOAT",
+            "required": false,
+            "dataSpecs": {
+              "max": "300",
+              "min": "0",
+              "step": "1",
+              "unit": "pcs/min",
+              "unitName": "件每分钟"
+            },
+            "dataSpecsList": null,
+            "nameEn": "Target speed"
+          }
+        ],
+        "outParams": [],
+        "serviceNameEn": "Labeling speed",
+        "descriptionEn": "Send the target labeling speed"
+      }
+    ]
+  },
+  "alarmRules": [
+    {
+      "name": "标签余量低",
+      "propertyCode": "label_remaining",
+      "operator": "<",
+      "value": "100",
+      "alertLevel": 2,
+      "alertType": 1,
+      "silenceTime": 300,
+      "description": "标签余量少于 100 张",
+      "nameEn": "Low label remaining",
+      "descriptionEn": "Fewer than 100 labels remaining"
+    },
+    {
+      "name": "贴标偏差超限",
+      "propertyCode": "position_error",
+      "operator": ">",
+      "value": "1.5",
+      "alertLevel": 2,
+      "alertType": 1,
+      "silenceTime": 300,
+      "description": "贴标位置偏差大于 1.5 mm",
+      "nameEn": "Label position error",
+      "descriptionEn": "Label position deviation above 1.5 mm"
+    },
+    {
+      "name": "剔除数偏高",
+      "propertyCode": "reject_count",
+      "operator": ">",
+      "value": "50",
+      "alertLevel": 1,
+      "alertType": 1,
+      "silenceTime": 300,
+      "description": "当日剔除数超过 50",
+      "nameEn": "High rejected count",
+      "descriptionEn": "More than 50 rejected bottles today"
+    }
+  ],
+  "dashboard": {
+    "name": "贴标机看板",
+    "widgets": [
+      {
+        "title": "贴标速度趋势",
+        "type": "line",
+        "propertyCode": "labeling_speed",
+        "timeRange": "1h",
+        "aggInterval": 60,
+        "aggMethod": "avg",
+        "titleEn": "Labeling speed trend"
+      },
+      {
+        "title": "累计产量",
+        "type": "kpi",
+        "propertyCode": "output_count",
+        "titleEn": "Cumulative output"
+      },
+      {
+        "title": "标签余量",
+        "type": "kpi",
+        "propertyCode": "label_remaining",
+        "titleEn": "Label remaining"
+      }
+    ],
+    "nameEn": "Labeling Machine Dashboard"
+  },
+  "metrics": {
+    "running": "run_status",
+    "output": "output_count",
+    "good": null,
+    "reject": "reject_count",
+    "cycleTime": null
+  },
+  "nameEn": "Labeling Machine",
+  "descriptionEn": "Labeling speed, label remaining, position accuracy and rejected count monitoring"
+}

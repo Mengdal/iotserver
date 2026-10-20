@@ -29,7 +29,7 @@ import {
   SysMenu,
 } from '@/api'
 import { useAuth } from '@/utils/auth'
-import { t } from '@/i18n'
+import { currentLocale, t, tt } from '@/i18n'
 
 const { useMessage } = message
 
@@ -41,7 +41,9 @@ interface MenuTreeNode {
 
 function toTreeData (list: SysMenu[]): MenuTreeNode[] {
   return list.map(item => {
-    const node: MenuTreeNode = { key: item.id, title: item.menuType === 'F' ? t('{{name}}（按钮）', { name: item.name }) : item.name }
+    // 英文界面优先用菜单自带的英文名，其次词条翻译；按钮节点再补「（按钮）」后缀
+    const name = currentLocale() === 'en-US' && item.nameEn ? item.nameEn : tt(item.name)
+    const node: MenuTreeNode = { key: item.id, title: item.menuType === 'F' ? t('{{name}}（按钮）', { name }) : name }
     if (item.children && item.children.length > 0) {
       node.children = toTreeData(item.children)
     }
@@ -212,7 +214,7 @@ const SysRolePage: React.FC = () => {
   }
 
   const columns: ColumnsType<SysRole> = [
-    { title: t('角色名称'), dataIndex: 'name', width: 180 },
+    { title: t('角色名称'), dataIndex: 'name', width: 180, render: (value: string) => tt(value) },
     { title: t('权限字符'), dataIndex: 'roleKey', width: 160, render: (value: string) => <Tag color="blue">{value}</Tag> },
     { title: t('显示顺序'), dataIndex: 'sort', width: 100 },
     {
@@ -237,10 +239,10 @@ const SysRolePage: React.FC = () => {
     {
       title: t('操作'),
       key: 'action',
-      width: 200,
+      width: 240,
       fixed: 'right',
       render: (_, record) => (
-        <Space size={4}>
+        <Space size={4} wrap={false} style={{ whiteSpace: 'nowrap' }}>
           {canEdit && <Button type="link" size="small" onClick={() => openEdit(record)}>{t('编辑')}</Button>}
           {canEdit && <Button type="link" size="small" onClick={() => openMenus(record)}>{t('菜单权限')}</Button>}
           {canRemove && record.roleKey !== 'admin' && (
@@ -402,7 +404,7 @@ const SysRolePage: React.FC = () => {
 
       <Drawer
         open={menuModalOpen}
-        title={t('菜单权限{{p1}}', { p1: menuRole ? ` - ${menuRole.name}` : '' })}
+        title={t('菜单权限{{p1}}', { p1: menuRole ? ` - ${tt(menuRole.name)}` : '' })}
         placement="right"
         width={520}
         onClose={() => setMenuModalOpen(false)}

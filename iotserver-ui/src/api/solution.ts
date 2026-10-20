@@ -12,8 +12,10 @@ import { CommonResponse } from '@/types'
 export interface Solution {
   /** 方案标识，如 injection_molding */
   key: string
-  /** 方案名称，如 注塑机 */
+  /** 方案名称（中文），如 注塑机 */
   name: string
+  /** 方案英文名称 */
+  nameEn?: string
   /** 行业，如 橡塑 */
   industry: string
   version: number
@@ -22,6 +24,8 @@ export interface Solution {
   /** 图标名（与菜单图标集一致，如 database） */
   icon: string
   description: string
+  /** 英文描述 */
+  descriptionEn?: string
   /** 物模型 JSON 字符串：{properties,events,services} */
   thingModelJson: string
   /** 告警预设 JSON 字符串：[{name,propertyCode,operator,value,alertLevel,...}] */

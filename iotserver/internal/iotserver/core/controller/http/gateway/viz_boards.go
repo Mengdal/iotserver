@@ -93,6 +93,14 @@ func (ctl *controller) loadVizBoards(ctx context.Context) []vizBoardRecord {
 			return nil
 		}
 	}
+	// 存量安装没有「产品介绍看板」时补一块（新装已在种全套里含它）。
+	// 看板管理里删除后，下次打开列表会再次补回。
+	if !vizHasIntro(rows) {
+		ctl.seedIntroBoard(ctx)
+		if rows, err = ctl.db(ctx).VizBoards(); err != nil {
+			return nil
+		}
+	}
 	return vizRecordsFromRows(rows)
 }
 
@@ -159,6 +167,47 @@ func vizHasHome(rows []models.VizBoard) bool {
 		}
 	}
 	return false
+}
+
+// vizHasIntro 是否已有产品介绍看板
+func vizHasIntro(rows []models.VizBoard) bool {
+	for _, r := range rows {
+		if r.Id == "builtin-intro" || strings.HasPrefix(r.Id, "builtin-intro-") || r.Name == "产品介绍看板" {
+			return true
+		}
+	}
+	return false
+}
+
+// seedIntroBoard 只补一块「产品介绍看板」（存量安装 / 被删后的自愈）
+func (ctl *controller) seedIntroBoard(ctx context.Context) {
+	preset, ok := seed.BoardPresetById("builtin-intro")
+	if !ok {
+		return
+	}
+	idSuffix := "-" + tenant.FromContext(ctx).TenantID
+	if tenant.IsPlatformScope(ctx) {
+		idSuffix = ""
+	}
+	var cv vizCanvas
+	if err := json.Unmarshal(preset.Canvas, &cv); err != nil {
+		ctl.lc.Warnf("内置看板 %s 的画布解析失败: %s", preset.Id, err.Error())
+		return
+	}
+	if err := cv.normalize(preset.Name); err != nil {
+		ctl.lc.Warnf("内置看板 %s 校验失败: %s", preset.Id, err.Error())
+		return
+	}
+	rec := vizBoardRecord{
+		Id:     preset.Id + idSuffix,
+		Name:   preset.Name,
+		Icon:   preset.Icon,
+		Canvas: &cv,
+	}
+	touchVizBoard(&rec)
+	if err := ctl.mergeSaveBoards(ctx, []vizBoardRecord{rec}); err != nil {
+		ctl.lc.Warnf("补入产品介绍看板失败: %s", err.Error())
+	}
 }
 
 // seedDefaultBoards 种入内置看板（部署自带）。

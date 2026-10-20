@@ -6,6 +6,7 @@ import { useTableRequest } from '@/hooks'
 import { CategoryTemplate } from './types'
 import { StandardFuncModal, StandardFuncModalRef } from './StandardFuncModal'
 import { t } from '@/i18n'
+import { localized } from '@/utils/localized'
 
 const { Text } = Typography
 
@@ -78,7 +79,7 @@ export const CategoryModal = forwardRef<CategoryModalRef, CategoryModalProps>(({
         rowKey="id"
         size="small"
         columns={[
-          { title: t('品类名称'), key: 'category_name', dataIndex: 'category_name' },
+          { title: t('品类名称'), key: 'category_name', dataIndex: 'category_name', render: (_value: string, record: CategoryTemplate) => localized(record.category_name, record.category_name_en) },
           { title: t('所属场景'), key: 'scene', dataIndex: 'scene' },
           {
             title: t('操作'),

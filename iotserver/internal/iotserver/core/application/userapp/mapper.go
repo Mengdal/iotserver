@@ -77,6 +77,7 @@ func toMenuResponse(m models.Menu) dtos.SysMenuResponse {
 		Id:        m.Id,
 		ParentId:  m.ParentId,
 		Name:      m.Name,
+		NameEn:    m.NameEn,
 		Path:      m.Path,
 		Component: m.Component,
 		Icon:      m.Icon,

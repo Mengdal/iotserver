@@ -73,7 +73,7 @@ const AlarmRules: React.FC<AlarmRulesProps> = () => {
                   : '-'
               },
             },
-            { title: t('告警类型'), key: 'alert_type', dataIndex: 'alert_type', width: '6em' },
+            { title: t('告警类型'), key: 'alert_type', dataIndex: 'alert_type', width: '6em', render: (value: string) => tt(value) },
             { title: t('告警级别'), key: 'alert_level', dataIndex: 'alert_level', width: '6em', render: (value: string) => tt(value) },
             {
               title: t('创建时间'),

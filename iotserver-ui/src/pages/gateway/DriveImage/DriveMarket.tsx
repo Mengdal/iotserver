@@ -192,14 +192,21 @@ const DriveMarket: React.FC<DriveMarketProps> = () => {
           </Button>
         </Form.Item>
       </Form>
-      <Tabs
-        activeKey={activeKey}
-        onChange={(e) => {
-          setActiveKey(e)
-        }}
-        destroyInactiveTabPane={true}
-        items={tabList?.map((item) => ({ key: item.id, label: item.name, children: <CardItem id={item.id} params={params}></CardItem> })) || []}
-      ></Tabs>
+      {/* 只有一个分类时不显示分类页签：避免出现「协议驱动」这种只有一个选项的多余 tab */}
+      {tabList.length > 1
+        ? (
+          <Tabs
+            activeKey={activeKey}
+            onChange={(e) => {
+              setActiveKey(e)
+            }}
+            destroyInactiveTabPane={true}
+            items={tabList.map((item) => ({ key: item.id, label: item.name, children: <CardItem id={item.id} params={params}></CardItem> }))}
+          />
+        )
+        : tabList.length === 1
+          ? <CardItem id={tabList[0].id} params={params} />
+          : <Empty description={t('暂无数据')} />}
     </>
   )
 }

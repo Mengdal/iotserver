@@ -11,6 +11,17 @@ import { t } from '@/i18n'
 
 const { Text, Title } = Typography
 
+/** 「实时刷新」开关的本地记忆：手动刷新页面后保持用户上次的选择 */
+const AUTO_REFRESH_KEY = '$device-auto-refresh$'
+
+function readAutoRefresh (): boolean {
+  try {
+    return localStorage.getItem(AUTO_REFRESH_KEY) === '1'
+  } catch (error) {
+    return false
+  }
+}
+
 export interface DetailTab1Props {
 
 }
@@ -22,17 +33,27 @@ export const DetailTab1: React.FC<DetailTab1Props> = () => {
   const tab1ModalRef = useRef<Tab1ModalRef>(null)
 
   const [lists, setLists] = useState<DeviceProperty[]>([])
-  const [checked, setChecked] = useState<boolean>(false)
+  const [checked, setChecked] = useState<boolean>(readAutoRefresh)
+
+  const handleAutoRefreshChange = (next: boolean) => {
+    setChecked(next)
+    try {
+      localStorage.setItem(AUTO_REFRESH_KEY, next ? '1' : '0')
+    } catch (error) {
+      // 无痕模式等禁用 localStorage：忽略，开关本次会话仍然生效
+    }
+  }
 
   const load = useCallback(() => {
     getDeviceProperty(params.id!).then(resp => {
       if (resp.success) {
-        setLists(resp.result)
+        const rows = resp.result || []
+        setLists(rows)
 
         const code = searchParams.get('code')
         console.log('code', code)
         if (code) {
-          const item = resp.result.find((item) => item.code === code)
+          const item = rows.find((item) => item.code === code)
           console.log('item', item, tab1ModalRef.current?.open)
           item && setTimeout(() => tab1ModalRef.current?.open(item), 0)
         }
@@ -68,7 +89,7 @@ export const DetailTab1: React.FC<DetailTab1Props> = () => {
       <div className="mb10" style={{ display: 'flex', justifyContent: 'flex-end' }}>
         <Form layout="inline">
           <Form.Item label={t('实时刷新')}>
-            <Switch checked={checked} onChange={setChecked}/>
+            <Switch checked={checked} onChange={handleAutoRefreshChange}/>
           </Form.Item>
         </Form>
       </div>

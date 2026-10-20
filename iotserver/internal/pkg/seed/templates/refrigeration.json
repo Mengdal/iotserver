@@ -21,7 +21,9 @@
           "unit": "℃",
           "unitName": "摄氏度"
         },
-        "dataSpecsList": null
+        "dataSpecsList": null,
+        "nameEn": "Cold storage temperature",
+        "descriptionEn": "Real-time temperature inside the cold room"
       },
       {
         "name": "回温",
@@ -37,7 +39,9 @@
           "unit": "℃",
           "unitName": "摄氏度"
         },
-        "dataSpecsList": null
+        "dataSpecsList": null,
+        "nameEn": "Return air temperature",
+        "descriptionEn": "Evaporator return air temperature"
       },
       {
         "name": "设定温度",
@@ -53,7 +57,9 @@
           "unit": "℃",
           "unitName": "摄氏度"
         },
-        "dataSpecsList": null
+        "dataSpecsList": null,
+        "nameEn": "Target temperature",
+        "descriptionEn": "Target cold storage temperature, remotely configurable"
       },
       {
         "name": "温度偏差",
@@ -69,7 +75,9 @@
           "unit": "℃",
           "unitName": "摄氏度"
         },
-        "dataSpecsList": null
+        "dataSpecsList": null,
+        "nameEn": "Temperature deviation",
+        "descriptionEn": "Deviation between cold storage temperature and target"
       },
       {
         "name": "压缩机状态",
@@ -88,7 +96,9 @@
             "name": "运行",
             "value": 1
           }
-        ]
+        ],
+        "nameEn": "Compressor status",
+        "descriptionEn": "Compressor running status"
       },
       {
         "name": "化霜状态",
@@ -111,7 +121,9 @@
             "name": "滴水延时",
             "value": 2
           }
-        ]
+        ],
+        "nameEn": "Defrost status",
+        "descriptionEn": "Evaporator defrost status"
       },
       {
         "name": "门开关",
@@ -130,7 +142,9 @@
             "name": "打开",
             "value": 1
           }
-        ]
+        ],
+        "nameEn": "Door switch",
+        "descriptionEn": "Cold room door switch status"
       },
       {
         "name": "库门开启时长",
@@ -146,7 +160,9 @@
           "unit": "s",
           "unitName": "秒"
         },
-        "dataSpecsList": null
+        "dataSpecsList": null,
+        "nameEn": "Door open duration",
+        "descriptionEn": "Duration of the current cold room door opening"
       },
       {
         "name": "能耗",
@@ -162,7 +178,9 @@
           "unit": "kW·h",
           "unitName": "千瓦时"
         },
-        "dataSpecsList": null
+        "dataSpecsList": null,
+        "nameEn": "Energy consumption",
+        "descriptionEn": "Cumulative unit energy consumption"
       },
       {
         "name": "运行时长",
@@ -178,7 +196,9 @@
           "unit": "h",
           "unitName": "小时"
         },
-        "dataSpecsList": null
+        "dataSpecsList": null,
+        "nameEn": "Runtime",
+        "descriptionEn": "Compressor cumulative runtime"
       },
       {
         "name": "运行状态",
@@ -197,7 +217,9 @@
             "name": "运行",
             "value": 1
           }
-        ]
+        ],
+        "nameEn": "Running status",
+        "descriptionEn": "Overall refrigeration unit running status"
       },
       {
         "name": "化霜周期",
@@ -213,7 +235,9 @@
           "unit": "min",
           "unitName": "分钟"
         },
-        "dataSpecsList": null
+        "dataSpecsList": null,
+        "nameEn": "Defrost cycle",
+        "descriptionEn": "Interval between two defrost cycles"
       },
       {
         "name": "冷凝压力",
@@ -229,7 +253,9 @@
           "unit": "MPa",
           "unitName": "兆帕"
         },
-        "dataSpecsList": null
+        "dataSpecsList": null,
+        "nameEn": "Condensing pressure",
+        "descriptionEn": "Refrigerant pressure on the condenser side"
       },
       {
         "name": "蒸发温度",
@@ -245,7 +271,9 @@
           "unit": "℃",
           "unitName": "摄氏度"
         },
-        "dataSpecsList": null
+        "dataSpecsList": null,
+        "nameEn": "Evaporating temperature",
+        "descriptionEn": "Evaporator outlet temperature"
       }
     ],
     "events": [
@@ -268,7 +296,8 @@
               "unit": "℃",
               "unitName": "摄氏度"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Current cold storage temperature"
           },
           {
             "name": "设定温度",
@@ -282,9 +311,12 @@
               "unit": "℃",
               "unitName": "摄氏度"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Target temperature"
           }
-        ]
+        ],
+        "eventNameEn": "High temperature alarm",
+        "descriptionEn": "Cold storage temperature above the upper limit"
       },
       {
         "eventName": "低温报警",
@@ -305,7 +337,8 @@
               "unit": "℃",
               "unitName": "摄氏度"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Current cold storage temperature"
           },
           {
             "name": "下限温度",
@@ -319,9 +352,12 @@
               "unit": "℃",
               "unitName": "摄氏度"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Lower temperature limit"
           }
-        ]
+        ],
+        "eventNameEn": "Low temperature alarm",
+        "descriptionEn": "Cold storage temperature below the lower limit"
       },
       {
         "eventName": "开门超时",
@@ -342,9 +378,12 @@
               "unit": "s",
               "unitName": "秒"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Open duration"
           }
-        ]
+        ],
+        "eventNameEn": "Door open timeout",
+        "descriptionEn": "Cold room door left open too long"
       },
       {
         "eventName": "化霜异常",
@@ -372,7 +411,8 @@
                 "name": "滴水延时",
                 "value": 2
               }
-            ]
+            ],
+            "nameEn": "Defrost status"
           },
           {
             "name": "持续时长",
@@ -386,9 +426,12 @@
               "unit": "s",
               "unitName": "秒"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Duration"
           }
-        ]
+        ],
+        "eventNameEn": "Defrost abnormality",
+        "descriptionEn": "Defrost timeout or abnormal defrost temperature"
       },
       {
         "eventName": "断电恢复",
@@ -403,7 +446,8 @@
             "dataType": "DATE",
             "required": false,
             "dataSpecs": null,
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Recovery time"
           },
           {
             "name": "断电时长",
@@ -417,9 +461,12 @@
               "unit": "s",
               "unitName": "秒"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Power outage duration"
           }
-        ]
+        ],
+        "eventNameEn": "Power recovery",
+        "descriptionEn": "Power restored after an outage"
       }
     ],
     "services": [
@@ -430,7 +477,9 @@
         "required": false,
         "callType": "ASYNC",
         "inputParams": [],
-        "outParams": []
+        "outParams": [],
+        "serviceNameEn": "Start",
+        "descriptionEn": "Start the refrigeration unit"
       },
       {
         "serviceName": "停止",
@@ -439,7 +488,9 @@
         "required": false,
         "callType": "ASYNC",
         "inputParams": [],
-        "outParams": []
+        "outParams": [],
+        "serviceNameEn": "Stop",
+        "descriptionEn": "Stop the refrigeration unit"
       },
       {
         "serviceName": "设定温度",
@@ -460,10 +511,13 @@
               "unit": "℃",
               "unitName": "摄氏度"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Target temperature"
           }
         ],
-        "outParams": []
+        "outParams": [],
+        "serviceNameEn": "Target temperature",
+        "descriptionEn": "Send the target cold storage temperature"
       },
       {
         "serviceName": "强制化霜",
@@ -484,10 +538,13 @@
               "unit": "min",
               "unitName": "分钟"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Defrost duration"
           }
         ],
-        "outParams": []
+        "outParams": [],
+        "serviceNameEn": "Force defrost",
+        "descriptionEn": "Manually trigger one defrost cycle"
       },
       {
         "serviceName": "查询运行状态",
@@ -509,7 +566,8 @@
               "unit": "℃",
               "unitName": "摄氏度"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Cold storage temperature"
           },
           {
             "name": "回温",
@@ -523,7 +581,8 @@
               "unit": "℃",
               "unitName": "摄氏度"
             },
-            "dataSpecsList": null
+            "dataSpecsList": null,
+            "nameEn": "Return air temperature"
           },
           {
             "name": "压缩机状态",
@@ -540,9 +599,12 @@
                 "name": "运行",
                 "value": 1
               }
-            ]
+            ],
+            "nameEn": "Compressor status"
           }
-        ]
+        ],
+        "serviceNameEn": "Query running status",
+        "descriptionEn": "Query key unit operating parameters"
       }
     ]
   },
@@ -555,7 +617,9 @@
       "alertLevel": 1,
       "alertType": 1,
       "silenceTime": 300,
-      "description": "库温超过 8℃"
+      "description": "库温超过 8℃",
+      "nameEn": "High cold storage temperature alarm",
+      "descriptionEn": "Cold storage temperature above 8°C"
     },
     {
       "name": "库温低报警",
@@ -565,7 +629,9 @@
       "alertLevel": 1,
       "alertType": 1,
       "silenceTime": 300,
-      "description": "库温低于 -25℃"
+      "description": "库温低于 -25℃",
+      "nameEn": "Low cold storage temperature alarm",
+      "descriptionEn": "Cold storage temperature below -25°C"
     },
     {
       "name": "开门超时",
@@ -575,7 +641,9 @@
       "alertLevel": 2,
       "alertType": 1,
       "silenceTime": 600,
-      "description": "库门开启超过 300 秒"
+      "description": "库门开启超过 300 秒",
+      "nameEn": "Door open timeout",
+      "descriptionEn": "Cold room door open for more than 300 seconds"
     },
     {
       "name": "压缩机停机",
@@ -585,7 +653,9 @@
       "alertLevel": 2,
       "alertType": 1,
       "silenceTime": 600,
-      "description": "压缩机非计划停机"
+      "description": "压缩机非计划停机",
+      "nameEn": "Compressor stopped",
+      "descriptionEn": "Unplanned compressor downtime"
     },
     {
       "name": "能耗异常",
@@ -595,7 +665,9 @@
       "alertLevel": 3,
       "alertType": 1,
       "silenceTime": 1800,
-      "description": "单日能耗超过 500 kW·h"
+      "description": "单日能耗超过 500 kW·h",
+      "nameEn": "Energy consumption abnormality",
+      "descriptionEn": "Daily energy consumption above 500 kWh"
     }
   ],
   "dashboard": {
@@ -607,7 +679,8 @@
         "propertyCode": "store_temp",
         "timeRange": "1h",
         "aggInterval": 60,
-        "aggMethod": "avg"
+        "aggMethod": "avg",
+        "titleEn": "Cold storage temperature trend"
       },
       {
         "title": "回温趋势",
@@ -615,14 +688,16 @@
         "propertyCode": "return_temp",
         "timeRange": "1h",
         "aggInterval": 60,
-        "aggMethod": "avg"
+        "aggMethod": "avg",
+        "titleEn": "Return air temperature trend"
       },
       {
         "title": "当前库温",
         "type": "kpi",
         "propertyCode": "store_temp",
         "unit": "℃",
-        "decimals": 1
+        "decimals": 1,
+        "titleEn": "Current cold storage temperature"
       },
       {
         "title": "库温",
@@ -630,21 +705,25 @@
         "propertyCode": "store_temp",
         "unit": "℃",
         "min": -40,
-        "max": 50
+        "max": 50,
+        "titleEn": "Cold storage temperature"
       },
       {
         "title": "累计能耗",
         "type": "kpi",
         "propertyCode": "energy_consumption",
         "unit": "kW·h",
-        "decimals": 1
+        "decimals": 1,
+        "titleEn": "Cumulative energy consumption"
       },
       {
         "title": "制冷机组运行总览",
         "type": "text",
-        "text": "冷库温度、化霜、门禁与能耗综合监控"
+        "text": "冷库温度、化霜、门禁与能耗综合监控",
+        "titleEn": "Refrigeration Unit Overview"
       }
-    ]
+    ],
+    "nameEn": "Cold Storage Refrigeration Unit Dashboard"
   },
   "metrics": {
     "running": "run_status",
@@ -652,5 +731,7 @@
     "good": null,
     "reject": null,
     "cycleTime": null
-  }
+  },
+  "nameEn": "Cold Storage Refrigeration Unit",
+  "descriptionEn": "Cold storage temperature, defrost, access control and unit energy monitoring"
 }

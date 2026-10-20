@@ -221,10 +221,10 @@ const SysDeptPage: React.FC = () => {
     {
       title: t('操作'),
       key: 'action',
-      width: 200,
+      width: 220,
       fixed: 'right',
       render: (_, record) => (
-        <Space size={4}>
+        <Space size={4} wrap={false} style={{ whiteSpace: 'nowrap' }}>
           {canAdd && <Button type="link" size="small" onClick={() => openAdd(record.id)}>{t('新增下级')}</Button>}
           {canEdit && <Button type="link" size="small" onClick={() => openEdit(record)}>{t('编辑')}</Button>}
           {canRemove && (

@@ -36,11 +36,13 @@ func batchUpsertSolution(c *Client, list []models.Solution) (int64, error) {
 		if err := c.Pool.Table(models.TableSolution).Where("`key` = ? AND tenant_id = '' AND built_in = 1", t.Key).Updates(map[string]interface{}{
 			"tenant_id":        t.TenantId,
 			"name":             t.Name,
+			"name_en":          t.NameEn,
 			"industry":         t.Industry,
 			"version":          t.Version,
 			"built_in":         t.BuiltIn,
 			"icon":             t.Icon,
 			"description":      t.Description,
+			"description_en":   t.DescriptionEn,
 			"thing_model_json": t.ThingModelJson,
 			"alarm_rules_json": t.AlarmRulesJson,
 			"dashboard_json":   t.DashboardJson,

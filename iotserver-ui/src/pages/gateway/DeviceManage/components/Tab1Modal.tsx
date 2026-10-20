@@ -1,9 +1,10 @@
 import dayjs from 'dayjs'
-import React, { forwardRef, useEffect, useImperativeHandle, useState } from 'react'
+import React, { forwardRef, useEffect, useImperativeHandle, useMemo, useState } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
-import { Button, DatePicker, Form, Modal, Table } from 'antd'
+import { Button, DatePicker, Empty, Form, Modal, Segmented, Table } from 'antd'
+import { Line } from '@ant-design/plots'
 // import { ExclamationCircleOutlined } from '@ant-design/icons'
-import { DeviceProperty, getHistoryProperty, HistoryProperty } from '@/api/device-thingmodel'
+import { DeviceProperty, getHistoryProperty, ReportDaum } from '@/api/device-thingmodel'
 import { useTableRequest } from '@/hooks'
 import { t } from '@/i18n'
 
@@ -38,9 +39,14 @@ export const Tab1Modal = forwardRef<Tab1ModalRef, Tab1ModalProps>((props, ref) =
   // const [dataSource, setDataSource] = useState<ReportDaum[]>([])
   // const [loading, setLoading] = useState<boolean>(false)
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false)
-  const { loading, dataSource, pagination, search } = useTableRequest<HistoryProperty>({
+  // 历史数据展示方式：表格 / 折线图
+  const [viewMode, setViewMode] = useState<'table' | 'chart'>('table')
+  const { loading, dataSource, pagination, search } = useTableRequest<ReportDaum>({
     onRequest: (param) => {
-      console.log('param', param)
+      // 弹窗未打开 / 还没选中属性时不要发历史查询（原来会请求 code=undefined）
+      if (!record?.code) {
+        return Promise.resolve({ success: true, result: { list: [], total: 0, page: 1, pageSize: 10 } } as any)
+      }
       const [start, end] = form.getFieldValue('range') || []
       return getHistoryProperty(params.id!, {
         ...param,
@@ -50,6 +56,11 @@ export const Tab1Modal = forwardRef<Tab1ModalRef, Tab1ModalProps>((props, ref) =
       })
     },
   })
+
+  // 图表按时间正序展示；表格保留接口原来的倒序（dataSource 已由 hook 归一化为数组）
+  const chartRows = useMemo(() => [...(dataSource || [])]
+    .sort((a, b) => a.time - b.time)
+    .map(item => ({ time: dayjs(item.time).format('MM-DD HH:mm:ss'), value: item.value })), [dataSource])
 
   useImperativeHandle(ref, () => {
     return {
@@ -178,29 +189,61 @@ export const Tab1Modal = forwardRef<Tab1ModalRef, Tab1ModalProps>((props, ref) =
         </Form.Item>
       </Form>
 
-      <Table
-        bordered
-        size="small"
-        scroll={{ y: 400 }}
-        loading={loading}
-        dataSource={dataSource}
-        pagination={pagination}
-        rowKey="time"
-        columns={[
-          {
-            title: t('时间'),
-            key: 'time',
-            dataIndex: 'time',
-            width: 500,
-            render (value) {
-              return dayjs(value).format('YYYY-MM-DD HH:mm:ss')
-            },
-          },
-          { title: t('原始值'), key: 'value', dataIndex: 'value' },
-        ]}
-      >
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+        <Segmented
+          size="small"
+          value={viewMode}
+          onChange={value => setViewMode(value as 'table' | 'chart')}
+          options={[
+            { label: t('表格'), value: 'table' },
+            { label: t('图表'), value: 'chart' },
+          ]}
+        />
+      </div>
 
-      </Table>
+      {viewMode === 'chart'
+        ? (
+          chartRows.length === 0
+            ? <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t('暂无数据')} />
+            : (
+              <div style={{ height: 420 }}>
+                <Line
+                  data={chartRows}
+                  xField="time"
+                  yField="value"
+                  smooth
+                  animation={false}
+                  autoFit
+                  xAxis={{ label: { autoHide: true, autoRotate: false } }}
+                  yAxis={{ label: { formatter: (v: string) => v } }}
+                  tooltip={{ showMarkers: true }}
+                />
+              </div>
+            )
+        )
+        : (
+          <Table
+            bordered
+            size="small"
+            scroll={{ y: 400 }}
+            loading={loading}
+            dataSource={dataSource}
+            pagination={pagination}
+            rowKey="time"
+            columns={[
+              {
+                title: t('时间'),
+                key: 'time',
+                dataIndex: 'time',
+                width: 500,
+                render (value) {
+                  return dayjs(value).format('YYYY-MM-DD HH:mm:ss')
+                },
+              },
+              { title: t('原始值'), key: 'value', dataIndex: 'value' },
+            ]}
+          />
+        )}
     </Modal>
   )
 })

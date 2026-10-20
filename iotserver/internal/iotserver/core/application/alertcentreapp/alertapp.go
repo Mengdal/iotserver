@@ -433,6 +433,9 @@ func (p alertApp) AlertRuleById(ctx context.Context, id string) (dtos.RuleRespon
 		case "sum":
 			valueType = "求和值"
 		}
+		// 条件描述由后端拼装：标签部分按请求语言翻译，产品/设备/功能名仍是用户数据。
+		lang := i18n.GetLang(ctx)
+		tr := func(key string) string { return i18n.Trans(lang, key, nil) }
 		var condition string
 		switch rule.Trigger {
 		case constants.DeviceDataTrigger:
@@ -440,24 +443,24 @@ func (p alertApp) AlertRuleById(ctx context.Context, id string) (dtos.RuleRespon
 				if valueType == "" {
 					valueType = "原始值"
 				}
-				condition = string(constants.DeviceDataTrigger) + ": 产品: " + product.Name + " | " +
-					"设备: " + device.Name + " | " +
-					"功能: " + propertyCodeName + " | " +
-					"触发条件: " + valueType + " " + rule.Option["decide_condition"]
+				condition = tr(string(constants.DeviceDataTrigger)) + ": " + tr("产品") + ": " + product.Name + " | " +
+					tr("设备") + ": " + device.Name + " | " +
+					tr("功能") + ": " + propertyCodeName + " | " +
+					tr("触发条件") + ": " + tr(valueType) + " " + rule.Option["decide_condition"]
 			} else {
-				condition = string(constants.DeviceDataTrigger) + ": 产品: " + product.Name + " | " +
-					"设备: " + device.Name + " | " +
-					"功能: " + propertyCodeName + " | " +
-					"触发条件: " + valueType + " " + fmt.Sprintf("(%s)", rule.Option["value_cycle"]) + " " + rule.Option["decide_condition"]
+				condition = tr(string(constants.DeviceDataTrigger)) + ": " + tr("产品") + ": " + product.Name + " | " +
+					tr("设备") + ": " + device.Name + " | " +
+					tr("功能") + ": " + propertyCodeName + " | " +
+					tr("触发条件") + ": " + tr(valueType) + " " + fmt.Sprintf("(%s)", rule.Option["value_cycle"]) + " " + rule.Option["decide_condition"]
 			}
 		case constants.DeviceEventTrigger:
-			condition = string(constants.DeviceEventTrigger) + ": 产品: " + product.Name + " | " +
-				"设备: " + device.Name + " | " +
-				fmt.Sprintf("事件 = %s", eventCodeName)
+			condition = tr(string(constants.DeviceEventTrigger)) + ": " + tr("产品") + ": " + product.Name + " | " +
+				tr("设备") + ": " + device.Name + " | " +
+				tr("事件") + " = " + eventCodeName
 		case constants.DeviceStatusTrigger:
-			condition = string(constants.DeviceStatusTrigger) + ": 产品: " + product.Name + " | " +
-				"设备: " + device.Name + " | " +
-				fmt.Sprintf("设备状态 = %s", rule.Option["status"])
+			condition = tr(string(constants.DeviceStatusTrigger)) + ": " + tr("产品") + ": " + product.Name + " | " +
+				tr("设备") + ": " + device.Name + " | " +
+				tr("设备状态") + " = " + tr(rule.Option["status"])
 		default:
 			condition = ""
 		}

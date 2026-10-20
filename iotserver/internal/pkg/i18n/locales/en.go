@@ -1163,6 +1163,78 @@ func GetEnMessages() []*i18n.Message {
 			ID:    "离线",
 			Other: "Offline",
 		},
+		{
+			ID:    "产品",
+			Other: "Product",
+		},
+		{
+			ID:    "设备",
+			Other: "Device",
+		},
+		{
+			ID:    "功能",
+			Other: "Function",
+		},
+		{
+			ID:    "触发条件",
+			Other: "Condition",
+		},
+		{
+			ID:    "事件",
+			Other: "Event",
+		},
+		{
+			ID:    "设备状态",
+			Other: "Device status",
+		},
+		{
+			ID:    "原始值",
+			Other: "Raw value",
+		},
+		{
+			ID:    "平均值",
+			Other: "Average",
+		},
+		{
+			ID:    "最大值",
+			Other: "Maximum",
+		},
+		{
+			ID:    "最小值",
+			Other: "Minimum",
+		},
+		{
+			ID:    "求和值",
+			Other: "Sum",
+		},
+		{
+			ID:    "该网关不是参考系统 /edge 网关，不支持设备控制",
+			Other: "This gateway is not a reference-system /edge gateway; device control is not supported.",
+		},
+		{
+			ID:    "缺少网关 ID",
+			Other: "Missing gateway ID.",
+		},
+		{
+			ID:    "online",
+			Other: "Online",
+		},
+		{
+			ID:    "offline",
+			Other: "Offline",
+		},
+		{
+			ID:    "inactive",
+			Other: "Inactive",
+		},
+		{
+			ID:    "disabled",
+			Other: "Disabled",
+		},
+		{
+			ID:    "unknown",
+			Other: "Unknown",
+		},
 
 		// 告警通知正文（钉钉 / 企业微信）
 		{

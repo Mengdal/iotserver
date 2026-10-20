@@ -24,8 +24,14 @@
 
 ARG BUILDER_BASE=golang:1.24-bookworm
 ARG RUNTIME_BASE=debian:bookworm-slim
+# Go 模块代理：国内网络构建时可传 --build-arg GOPROXY=https://goproxy.cn,direct
+ARG GOPROXY=https://proxy.golang.org,direct
 
 FROM ${BUILDER_BASE} AS builder
+
+# 全局 ARG 在 stage 内要重新声明才能用于 ENV
+ARG GOPROXY
+ENV GOPROXY=${GOPROXY}
 
 WORKDIR /edge
 
@@ -55,5 +61,8 @@ WORKDIR /var/bin/
 
 COPY --from=builder /edge/iotserver-core /bin/
 COPY --from=builder /edge/cmd/iotserver-ui/build /var/bin/cmd/iotserver-ui/build
+# 默认部署配置：compose 会用挂载的 config/configuration.toml 覆盖；
+# 镜像单独 docker run 时也有可用配置，不至于因缺少 --confdir 文件起不来。
+COPY --from=builder /edge/manifest/docker/config/configuration.toml /etc/iotserver-core/configuration.toml
 
 CMD ["/bin/sh", "-c", "/bin/iotserver-core --confdir=/etc/iotserver-core/configuration.toml"]

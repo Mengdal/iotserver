@@ -31,6 +31,7 @@ import (
 	"iotserver/internal/models"
 	"iotserver/internal/pkg/constants"
 	"iotserver/internal/pkg/logger"
+	"iotserver/internal/pkg/tenant"
 )
 
 const (
@@ -46,6 +47,9 @@ const (
 
 	defaultPageSize = 10
 	maxPageSize     = 1000
+
+	// platformTenantID 平台作用域写入使用的租户标识（空串，与 pkg/tenant 的约定一致）
+	platformTenantID = ""
 )
 
 // Client DuckLake 数据层实现
@@ -149,19 +153,30 @@ func (c *Client) DataFileCount() (int, error) {
 //
 // 每次 Insert 使用同一个毫秒时间戳（与上报批次一致）。
 func (c *Client) Insert(ctx context.Context, table string, data map[string]interface{}) (err error) {
+	tenantID := tenantIDOf(ctx)
 	switch {
 	case strings.HasPrefix(table, eventPrefix):
-		return c.insertEvents(ctx, strings.TrimPrefix(table, eventPrefix), data)
+		return c.insertEvents(ctx, tenantID, strings.TrimPrefix(table, eventPrefix), data)
 	case strings.HasPrefix(table, servicePrefix):
-		return c.insertServices(ctx, strings.TrimPrefix(table, servicePrefix), data)
+		return c.insertServices(ctx, tenantID, strings.TrimPrefix(table, servicePrefix), data)
 	default:
 		deviceId := strings.TrimPrefix(table, constants.DB_PREFIX)
-		return c.insertProperties(ctx, deviceId, data, dtos.ReportData{})
+		return c.insertProperties(ctx, tenantID, deviceId, data, dtos.ReportData{})
 	}
 }
 
+// tenantIDOf 从上下文取租户标识；平台作用域或无租户上下文时返回空串。
+// 与 duckdb 数据层保持一致，排行榜等按租户过滤的查询依赖这一列。
+func tenantIDOf(ctx context.Context) string {
+	tc := tenant.FromContext(ctx)
+	if tc.Platform {
+		return platformTenantID
+	}
+	return tc.TenantID
+}
+
 // insertProperties 属性入缓冲（攒批后由 flushPending 一次落盘）
-func (c *Client) insertProperties(ctx context.Context, deviceId string, data map[string]interface{}, meta dtos.ReportData) error {
+func (c *Client) insertProperties(ctx context.Context, tenantID, deviceId string, data map[string]interface{}, meta dtos.ReportData) error {
 	if deviceId == "" {
 		return fmt.Errorf("ducklake: deviceId is empty")
 	}
@@ -176,12 +191,12 @@ func (c *Client) insertProperties(ctx context.Context, deviceId string, data map
 			}
 		}
 		num, text := splitValue(value)
-		c.enqueueProperty(propRow{deviceId: deviceId, code: code, ts: ts, num: num, text: text})
+		c.enqueueProperty(propRow{tenantID: tenantID, deviceId: deviceId, code: code, ts: ts, num: num, text: text})
 	}
 	return nil
 }
 
-func (c *Client) insertEvents(ctx context.Context, deviceId string, data map[string]interface{}) error {
+func (c *Client) insertEvents(ctx context.Context, tenantID, deviceId string, data map[string]interface{}) error {
 	if deviceId == "" {
 		return fmt.Errorf("ducklake: deviceId is empty")
 	}
@@ -191,12 +206,12 @@ func (c *Client) insertEvents(ctx context.Context, deviceId string, data map[str
 		if eventTime > 0 {
 			ts = eventTime
 		}
-		c.enqueueEvent(payloadRow{deviceId: deviceId, code: code, ts: ts, payload: body})
+		c.enqueueEvent(payloadRow{tenantID: tenantID, deviceId: deviceId, code: code, ts: ts, payload: body})
 	}
 	return nil
 }
 
-func (c *Client) insertServices(ctx context.Context, deviceId string, data map[string]interface{}) error {
+func (c *Client) insertServices(ctx context.Context, tenantID, deviceId string, data map[string]interface{}) error {
 	if deviceId == "" {
 		return fmt.Errorf("ducklake: deviceId is empty")
 	}
@@ -206,7 +221,7 @@ func (c *Client) insertServices(ctx context.Context, deviceId string, data map[s
 		if eventTime > 0 {
 			ts = eventTime
 		}
-		c.enqueueService(payloadRow{deviceId: deviceId, code: code, ts: ts, payload: body})
+		c.enqueueService(payloadRow{tenantID: tenantID, deviceId: deviceId, code: code, ts: ts, payload: body})
 	}
 	return nil
 }
@@ -495,17 +510,25 @@ func (c *Client) ensureTables(ctx context.Context) error {
 	ctx = normalizeCtx(ctx)
 	stmts := []string{
 		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s.%s (
-			device_id VARCHAR, code VARCHAR, ts_ms BIGINT, num_value DOUBLE, text_value VARCHAR
+			tenant_id VARCHAR, device_id VARCHAR, code VARCHAR, ts_ms BIGINT, num_value DOUBLE, text_value VARCHAR
 		)`, lakeAlias, tableProperty),
 		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s.%s (
-			device_id VARCHAR, event_code VARCHAR, ts_ms BIGINT, payload VARCHAR
+			tenant_id VARCHAR, device_id VARCHAR, event_code VARCHAR, ts_ms BIGINT, payload VARCHAR
 		)`, lakeAlias, tableEvent),
 		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s.%s (
-			device_id VARCHAR, code VARCHAR, ts_ms BIGINT, payload VARCHAR
+			tenant_id VARCHAR, device_id VARCHAR, code VARCHAR, ts_ms BIGINT, payload VARCHAR
 		)`, lakeAlias, tableService),
 	}
 	for _, stmt := range stmts {
 		if _, err := c.db.ExecContext(ctx, stmt); err != nil {
+			return err
+		}
+	}
+	// 兼容旧表：早期版本的 lake 表没有 tenant_id 列（CREATE TABLE IF NOT EXISTS 不会补列），
+	// 排行榜等按租户过滤的查询会依赖它。
+	for _, table := range []string{tableProperty, tableEvent, tableService} {
+		if _, err := c.db.ExecContext(ctx, fmt.Sprintf(
+			"ALTER TABLE %s.%s ADD COLUMN IF NOT EXISTS tenant_id VARCHAR", lakeAlias, table)); err != nil {
 			return err
 		}
 	}

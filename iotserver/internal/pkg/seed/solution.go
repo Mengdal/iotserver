@@ -24,10 +24,12 @@ var solutionFS embed.FS
 type SolutionFile struct {
 	Key            string          `json:"key"`
 	Name           string          `json:"name"`
+	NameEn         string          `json:"nameEn"`
 	Industry       string          `json:"industry"`
 	Version        int             `json:"version"`
 	Icon           string          `json:"icon"`
 	Description    string          `json:"description"`
+	DescriptionEn  string          `json:"descriptionEn"`
 	ThingModelJson json.RawMessage `json:"thingModelJson"`
 	AlarmRules     []SolutionAlarm `json:"alarmRules"`
 	Dashboard      json.RawMessage `json:"dashboard"`
@@ -106,26 +108,30 @@ func LoadSolutions() ([]SolutionSet, error) {
 				Key:            f.Key,
 				TenantId:       "", // 平台内置，所有租户可见
 				Name:           f.Name,
+				NameEn:         f.NameEn,
 				Industry:       f.Industry,
 				Version:        f.Version,
 				BuiltIn:        1,
 				Icon:           f.Icon,
 				Description:    f.Description,
+				DescriptionEn:  f.DescriptionEn,
 				ThingModelJson: string(f.ThingModelJson),
 				AlarmRulesJson: string(alarmJSON),
 				DashboardJson:  string(f.Dashboard),
 				MetricsJson:    metrics,
 			},
 			CategoryTpl: models.CategoryTemplate{
-				Id:           categoryKey,
-				CategoryKey:  categoryKey,
-				CategoryName: f.Name,
-				Scene:        f.Industry,
+				Id:             categoryKey,
+				CategoryKey:    categoryKey,
+				CategoryName:   f.Name,
+				CategoryNameEn: f.NameEn,
+				Scene:          f.Industry,
 			},
 			ThingModelTpl: models.ThingModelTemplate{
 				Id:             "tmt-" + f.Key,
 				CategoryKey:    categoryKey,
 				CategoryName:   f.Name,
+				CategoryNameEn: f.NameEn,
 				ThingModelJSON: string(f.ThingModelJson),
 			},
 		})

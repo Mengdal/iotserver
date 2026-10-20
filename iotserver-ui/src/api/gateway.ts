@@ -32,6 +32,8 @@ export interface Gateway {
   deptName?: string
   vendor: string
   model: string
+  /** 接入协议：gatewaymqtt（平台自有）/ edge（参考系统） */
+  protocol?: string
   firmwareVersion: string
   /** 采集/上报配置（JSON 字符串） */
   config: string
@@ -54,7 +56,7 @@ export interface Gateway {
 }
 
 /** 可下发的网关命令 */
-export type GatewayCommandType = 'restart' | 'ota' | 'sync'
+export type GatewayCommandType = 'restart' | 'sync'
 
 // ===== 网关管理 =====
 
@@ -107,11 +109,57 @@ export function pushGatewayConfig<T = { configVersion: number }> (id: string, co
   })
 }
 
-/** 下发命令：restart / ota / sync，payload 为可选 JSON 字符串（如 OTA 固件地址） */
+/** 下发命令：restart / sync（ota 已下线） */
 export function sendGatewayCommand<T = void> (id: string, command: GatewayCommandType, payload?: string) {
   return httpRequest<any, CommonResponse<T>>({
     url: '/api/v1/gateway/command',
     method: 'post',
     data: { id, command, payload },
   })
+}
+
+/* ---------------------------- 参考系统（/edge）网关控制 ---------------------------- */
+
+/** 重启参考系统网关（/edge/restart/{pk}/{sn}/notify） */
+export function edgeGatewayRestart<T = void> (id: string) {
+  return httpRequest<any, CommonResponse<T>>({
+    url: '/api/v1/gateway/edge/restart',
+    method: 'post',
+    data: { id },
+  })
+}
+
+/** 写设备属性（/edge/property/{pk}/{sn}/set） */
+export function edgeGatewayControl<T = { status: boolean, message?: string }> (
+  id: string, dn: string, identifier: string, value: string,
+) {
+  return httpRequest<any, CommonResponse<T>>({
+    url: '/api/v1/gateway/edge/control',
+    method: 'post',
+    data: { id, dn, identifier, value },
+  })
+}
+
+/** 拉取参考系统网关设备/测点树（/edge/scadaGetTagsTree/.../get） */
+export function getEdgeGatewayDevices<T = any> (id: string) {
+  return httpRequest<any, CommonResponse<T>>({
+    url: '/api/v1/gateway/edge/devices',
+    method: 'get',
+    params: { id },
+  })
+}
+
+export interface EdgeDeviceTag {
+  /** 属性标识（不含设备名前缀），如 tag0001 */
+  identifier: string
+  /** 展示名，如 K1 */
+  label: string
+}
+
+export interface EdgeDeviceGroup {
+  /** 网关内设备标识（dn），如 user */
+  dn: string
+  /** 展示名，如 用户点 */
+  label: string
+  tags: EdgeDeviceTag[]
 }
