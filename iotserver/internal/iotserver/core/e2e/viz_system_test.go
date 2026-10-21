@@ -175,10 +175,10 @@ func TestVizBoardSeeding(t *testing.T) {
 			t.Fatalf("内置看板 %s 不应是空看板", b.Id)
 		}
 	}
-	if home, ok := byId["builtin-home"]; !ok || !home.IsHome || home.Name != "首页看板" {
+	if home, ok := byId["builtin-home"]; !ok || !home.IsHome || home.Name != "Home Board" {
 		t.Fatalf("应有 isHome 的首页看板，实际 %+v（返回=%v）", home, ok)
 	}
-	if demo, ok := byId["builtin-demo"]; !ok || !demo.IsDefault || demo.Name != "组件演示看板" {
+	if demo, ok := byId["builtin-demo"]; !ok || !demo.IsDefault || demo.Name != "Component Demo" {
 		t.Fatalf("应有 isDefault 的组件演示看板，实际 %+v（返回=%v）", demo, ok)
 	}
 	if _, ok := byId["builtin-ops"]; !ok {
@@ -202,13 +202,13 @@ func TestVizBoardSeeding(t *testing.T) {
 	for _, b := range tenantBoards {
 		tenantNames[b.Name] = b
 	}
-	if home, ok := tenantNames["首页看板"]; !ok || !home.IsHome {
+	if home, ok := tenantNames["Home Board"]; !ok || !home.IsHome {
 		t.Fatalf("租户应有 isHome 的首页看板，实际 %+v", tenantBoards)
 	}
-	if demo, ok := tenantNames["组件演示看板"]; !ok || !demo.IsDefault {
+	if demo, ok := tenantNames["Component Demo"]; !ok || !demo.IsDefault {
 		t.Fatalf("租户应有 isDefault 的组件演示看板，实际 %+v", tenantBoards)
 	}
-	if _, ok := tenantNames["系统监控看板"]; ok {
+	if _, ok := tenantNames["System Monitoring"]; ok {
 		t.Fatalf("租户不应拿到平台自用的系统监控看板，实际 %+v", tenantBoards)
 	}
 

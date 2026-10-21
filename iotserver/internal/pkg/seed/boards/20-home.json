@@ -1,6 +1,6 @@
 {
   "id": "builtin-home",
-  "name": "首页看板",
+  "name": "Home Board",
   "icon": "dashboard",
   "scope": "all",
   "isHome": true,
@@ -13,7 +13,12 @@
         "title": "平台概述",
         "showTitle": true,
         "type": "stats",
-        "layout": { "x": 0, "y": 0, "w": 12, "h": 5 },
+        "layout": {
+          "x": 0,
+          "y": 0,
+          "w": 12,
+          "h": 5
+        },
         "config": {
           "tiles": [
             {
@@ -22,8 +27,14 @@
               "icon": "appstore",
               "tone": "blue",
               "tags": [
-                { "label": "本地", "metric": "product.self" },
-                { "label": "第三方", "metric": "product.other" }
+                {
+                  "label": "本地",
+                  "metric": "product.self"
+                },
+                {
+                  "label": "第三方",
+                  "metric": "product.other"
+                }
               ]
             },
             {
@@ -32,8 +43,14 @@
               "icon": "devices",
               "tone": "cyan",
               "tags": [
-                { "label": "本地", "metric": "device.self" },
-                { "label": "第三方", "metric": "device.other" }
+                {
+                  "label": "本地",
+                  "metric": "device.self"
+                },
+                {
+                  "label": "第三方",
+                  "metric": "device.other"
+                }
               ]
             },
             {
@@ -42,8 +59,14 @@
               "icon": "gateway",
               "tone": "green",
               "tags": [
-                { "label": "在线", "metric": "gateway.online" },
-                { "label": "离线", "metric": "gateway.offline" }
+                {
+                  "label": "在线",
+                  "metric": "gateway.online"
+                },
+                {
+                  "label": "离线",
+                  "metric": "gateway.offline"
+                }
               ]
             },
             {
@@ -61,10 +84,17 @@
         "title": "设备消息总数",
         "showTitle": true,
         "type": "line",
-        "layout": { "x": 0, "y": 5, "w": 8, "h": 8 },
+        "layout": {
+          "x": 0,
+          "y": 5,
+          "w": 8,
+          "h": 8
+        },
         "config": {
           "series": [],
-          "metrics": ["report.daily"],
+          "metrics": [
+            "report.daily"
+          ],
           "timeRange": "7d",
           "aggInterval": 0,
           "aggMethod": "avg",
@@ -79,7 +109,12 @@
         "title": "设备消息量排名",
         "showTitle": true,
         "type": "table",
-        "layout": { "x": 8, "y": 5, "w": 4, "h": 8 },
+        "layout": {
+          "x": 8,
+          "y": 5,
+          "w": 4,
+          "h": 8
+        },
         "config": {
           "source": "deviceMessageRank",
           "series": [],

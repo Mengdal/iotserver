@@ -113,13 +113,18 @@ func (uapp *userApp) UserLogin(ctx context.Context, req dtos.LoginRequest) (res 
 		return res, errort.NewCommonErr(errort.AppAccountDisabled, fmt.Errorf("account %s is disabled", req.Username))
 	}
 
-	// 到期校验：平台管理员（tenant_id=''）不受影响；租户查不到时不阻碍登录，仅告警
+	// 可用性校验：租户停用/到期都拒绝登录；平台管理员（tenant_id=''）不受影响；
+	// 租户查不到时不阻碍登录，仅告警
 	if user.TenantId != "" {
 		t, tErr := platformDb.TenantById(user.TenantId)
 		if tErr != nil {
 			if uapp.lc != nil {
 				uapp.lc.Warnf("登录到期校验: 租户 %s 查询失败，按不阻碍处理: %v", user.TenantId, tErr)
 			}
+		} else if t.Status == 0 {
+			uapp.saveLoginLog(ctx, user.TenantId, req.Username, models.LoginStatusFail, "租户已停用")
+			return res, errort.NewCommonErr(errort.AppTenantDisabled,
+				fmt.Errorf("tenant %s is disabled", t.Id))
 		} else if t.ExpireAt > 0 && time.Now().UnixMilli() > t.ExpireAt {
 			uapp.saveLoginLog(ctx, user.TenantId, req.Username, models.LoginStatusFail, "租户已到期")
 			return res, errort.NewCommonErr(errort.AppTenantExpired,
@@ -539,6 +544,30 @@ func (uapp *userApp) OpenApiUserLogin(ctx context.Context, req dtos.LoginRequest
 	return td, nil
 }
 
+// tenantAccessErr 校验租户可用性（停用 / 到期）。
+// 租户查不到时按「不阻碍」处理（删除竞态），与登录路径保持一致。
+func (uapp *userApp) tenantAccessErr(ctx context.Context, tenantId string) error {
+	if tenantId == "" {
+		return nil
+	}
+	t, err := uapp.dbClient.WithCtx(tenant.Platform(ctx)).TenantById(tenantId)
+	if err != nil {
+		if uapp.lc != nil {
+			uapp.lc.Warnf("租户可用性校验: 租户 %s 查询失败，按不阻碍处理: %v", tenantId, err)
+		}
+		return nil
+	}
+	if t.Status == 0 {
+		return errort.NewCommonErr(errort.AppTenantDisabled,
+			fmt.Errorf("tenant %s is disabled", t.Id))
+	}
+	if t.ExpireAt > 0 && time.Now().UnixMilli() > t.ExpireAt {
+		return errort.NewCommonErr(errort.AppTenantExpired,
+			fmt.Errorf("tenant %s expired at %d", t.Id, t.ExpireAt))
+	}
+	return nil
+}
+
 // CreateTokenDetail 根据用户名生成 token（OpenAPI 用）
 //
 // token 必须带上租户/部门/数据范围：OpenAPI 请求同样走租户隔离，
@@ -566,6 +595,10 @@ func (uapp *userApp) CreateTokenDetail(userName string) (*dtos.TokenDetail, erro
 		adminRole, scope := uapp.roleInfo(sysDb, user.Id)
 		dataScope = scope
 		platformAdmin = adminRole && user.TenantId == ""
+	}
+	// OpenAPI 登录与刷新 token 都要遵守租户停用/到期规则
+	if err := uapp.tenantAccessErr(context.Background(), tenantId); err != nil {
+		return nil, err
 	}
 	base := middleware.CustomClaims{
 		ID:            userID,

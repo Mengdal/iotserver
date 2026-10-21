@@ -29,6 +29,7 @@ import {
   addSolutionThingModelItem,
   deleteSolutionThingModelItem,
   editSolutionThingModelItem,
+  getSolution,
   getSolutions,
   Solution,
   SolutionThingModelItem,
@@ -466,6 +467,9 @@ const SolutionCenterPage: React.FC = () => {
   const detailModalRef = useRef<DetailModalRef>(null)
 
   const [loading, setLoading] = useState(false)
+  // 列表只加载摘要；选中方案后再拉完整物模型，避免一次传输所有模板的大 JSON
+  const [detailLoading, setDetailLoading] = useState(false)
+  const [detailNonce, setDetailNonce] = useState(0)
   /** Layout banner 上的插槽（搜索框要压在 banner 上） */
   const [bannerSlot, setBannerSlot] = useState<HTMLElement | null>(null)
   /** 全量方案：页签、左侧列表、当前方案都从这里派生 */
@@ -499,9 +503,11 @@ const SolutionCenterPage: React.FC = () => {
   const loadSolutions = useCallback(async () => {
     try {
       setLoading(true)
-      const resp = await getSolutions<Solution[]>()
+      const resp = await getSolutions<Solution[]>({ summary: true })
       if (resp.success) {
         setSolutions(resp.result || [])
+        // 摘要列表会把详情字段清空，触发一次当前选中方案的详情刷新
+        setDetailNonce(n => n + 1)
       } else {
         messageApi.open({ type: 'error', content: resp.errorMsg || t('方案列表加载失败') })
       }
@@ -573,6 +579,30 @@ const SolutionCenterPage: React.FC = () => {
     () => solutions.find(item => item.key === selectedKey) || null,
     [solutions, selectedKey],
   )
+
+  // 按需加载选中方案的完整内容（物模型/告警/看板预设）
+  useEffect(() => {
+    if (!selectedKey) {
+      setDetailLoading(false)
+      return
+    }
+    let alive = true
+    setDetailLoading(true)
+    getSolution(selectedKey)
+      .then(resp => {
+        if (!alive) return
+        if (!resp.success || !resp.result) {
+          messageApi.open({ type: 'error', content: resp.errorMsg || t('方案详情加载失败') })
+          return
+        }
+        setSolutions(prev => prev.map(item => (item.key === selectedKey ? { ...item, ...resp.result } : item)))
+      })
+      .catch(() => {
+        if (alive) messageApi.open({ type: 'error', content: t('方案详情加载失败，请稍后重试') })
+      })
+      .finally(() => { if (alive) setDetailLoading(false) })
+    return () => { alive = false }
+  }, [selectedKey, detailNonce, messageApi])
 
   /** 复用的产品物模型抽屉：方案物模型提交走 onSubmit，产品 id 只用于 payload 兜底 */
   const detailProductInfo = useMemo(
@@ -1140,7 +1170,7 @@ const SolutionCenterPage: React.FC = () => {
             rowKey={record => `${record.type}${record.identifier}`}
             size="small"
             bordered
-            loading={loading}
+            loading={loading || detailLoading}
             columns={columns}
             dataSource={filteredRows}
             scroll={{ x: 'max-content' }}

@@ -1,0 +1,515 @@
+{
+  "key": "industrial_gateway",
+  "name": "工业网关",
+  "nameEn": "Industrial Gateway",
+  "industry": "网关设备",
+  "version": 1,
+  "icon": "database",
+  "description": "参考系统工业网关的系统状态、网络、SIM 与定位信息",
+  "descriptionEn": "System status, network, SIM and location information for reference-system industrial gateways",
+  "thingModelJson": {
+    "properties": [
+      {
+        "name": "网口列表",
+        "identifier": "ALL_NET",
+        "dataType": "TEXT",
+        "description": "网口列表（IP/掩码/网关）",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": null,
+        "dataSpecsList": null,
+        "nameEn": "Network interfaces",
+        "descriptionEn": "List of network interfaces (IP/netmask/gateway)"
+      },
+      {
+        "name": "CPU使用率",
+        "identifier": "CPU_USAGE",
+        "dataType": "FLOAT",
+        "description": "网关 CPU 使用率",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "100",
+          "min": "0",
+          "step": "0.1",
+          "unit": "%",
+          "unitName": "百分比"
+        },
+        "dataSpecsList": null,
+        "nameEn": "CPU usage",
+        "descriptionEn": "Gateway CPU usage"
+      },
+      {
+        "name": "信号质量",
+        "identifier": "CSQ",
+        "dataType": "INT",
+        "description": "蜂窝信号质量（CSQ）",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "31",
+          "min": "0",
+          "step": "1",
+          "unit": "",
+          "unitName": ""
+        },
+        "dataSpecsList": null,
+        "nameEn": "Signal quality",
+        "descriptionEn": "Cellular signal quality (CSQ)"
+      },
+      {
+        "name": "运营商",
+        "identifier": "Cops",
+        "dataType": "TEXT",
+        "description": "当前 SIM 卡运营商",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": null,
+        "dataSpecsList": null,
+        "nameEn": "Service provider",
+        "descriptionEn": "Current SIM service provider"
+      },
+      {
+        "name": "设备1在线状态",
+        "identifier": "Device1_status",
+        "dataType": "BOOL",
+        "description": "子设备 Device1 在线状态",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": null,
+        "dataSpecsList": [
+          {
+            "name": "离线",
+            "value": 0
+          },
+          {
+            "name": "在线",
+            "value": 1
+          }
+        ],
+        "nameEn": "Device 1 online status",
+        "descriptionEn": "Online status of sub-device Device1"
+      },
+      {
+        "name": "SIM ICCID",
+        "identifier": "ICCID",
+        "dataType": "TEXT",
+        "description": "SIM 卡的 ICCID",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": null,
+        "dataSpecsList": null,
+        "nameEn": "SIM ICCID",
+        "descriptionEn": "ICCID of the SIM card"
+      },
+      {
+        "name": "IMEI",
+        "identifier": "IMEI",
+        "dataType": "TEXT",
+        "description": "GSM 模块的 IMEI",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": null,
+        "dataSpecsList": null,
+        "nameEn": "IMEI",
+        "descriptionEn": "IMEI of the GSM module"
+      },
+      {
+        "name": "IMSI",
+        "identifier": "IMSI",
+        "dataType": "TEXT",
+        "description": "SIM 卡的 IMSI",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": null,
+        "dataSpecsList": null,
+        "nameEn": "IMSI",
+        "descriptionEn": "IMSI of the SIM card"
+      },
+      {
+        "name": "IO总点数",
+        "identifier": "IOPoints",
+        "dataType": "INT",
+        "description": "网关下的 IO 总点数",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "100000",
+          "min": "0",
+          "step": "1",
+          "unit": "",
+          "unitName": ""
+        },
+        "dataSpecsList": null,
+        "nameEn": "Total I/O points",
+        "descriptionEn": "Total number of I/O points"
+      },
+      {
+        "name": "纬度",
+        "identifier": "LATITUDE",
+        "dataType": "FLOAT",
+        "description": "GPS 纬度",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "90",
+          "min": "-90",
+          "step": "1e-06",
+          "unit": "°",
+          "unitName": "度"
+        },
+        "dataSpecsList": null,
+        "nameEn": "Latitude",
+        "descriptionEn": "GPS latitude"
+      },
+      {
+        "name": "经度",
+        "identifier": "LONGITUDE",
+        "dataType": "FLOAT",
+        "description": "GPS 经度",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "180",
+          "min": "-180",
+          "step": "1e-06",
+          "unit": "°",
+          "unitName": "度"
+        },
+        "dataSpecsList": null,
+        "nameEn": "Longitude",
+        "descriptionEn": "GPS longitude"
+      },
+      {
+        "name": "位置区_小区ID",
+        "identifier": "Lac_ci",
+        "dataType": "TEXT",
+        "description": "位置区编号_小区ID",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": null,
+        "dataSpecsList": null,
+        "nameEn": "Location area / cell ID",
+        "descriptionEn": "Location area code and cell ID"
+      },
+      {
+        "name": "内存信息",
+        "identifier": "MEMORY",
+        "dataType": "TEXT",
+        "description": "[内存大小(M), 空闲大小(M), 使用率(%)]",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": null,
+        "dataSpecsList": null,
+        "nameEn": "Memory info",
+        "descriptionEn": "[Memory size (M), free size (M), usage rate (%)]"
+      },
+      {
+        "name": "LTE信号质量",
+        "identifier": "QCSQ",
+        "dataType": "TEXT",
+        "description": "LTE 信号质量（RSSI,RSRP,RSRQ,SINR）",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": null,
+        "dataSpecsList": null,
+        "nameEn": "LTE signal quality",
+        "descriptionEn": "LTE signal quality (RSSI, RSRP, RSRQ, SINR)"
+      },
+      {
+        "name": "程序启动时间",
+        "identifier": "START_TIME",
+        "dataType": "TEXT",
+        "description": "网关程序启动时间",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": null,
+        "dataSpecsList": null,
+        "nameEn": "Program start time",
+        "descriptionEn": "Program start time of the gateway"
+      },
+      {
+        "name": "存储信息",
+        "identifier": "STORAGE",
+        "dataType": "TEXT",
+        "description": "[存储大小(M), 空闲大小(M), 使用率(%)]",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": null,
+        "dataSpecsList": null,
+        "nameEn": "Storage info",
+        "descriptionEn": "[Storage size (M), free size (M), usage rate (%)]"
+      },
+      {
+        "name": "温湿度仪在线状态",
+        "identifier": "THmeter_status",
+        "dataType": "BOOL",
+        "description": "子设备 THmeter 在线状态",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": null,
+        "dataSpecsList": [
+          {
+            "name": "离线",
+            "value": 0
+          },
+          {
+            "name": "在线",
+            "value": 1
+          }
+        ],
+        "nameEn": "THmeter online status",
+        "descriptionEn": "Online status of sub-device THmeter"
+      },
+      {
+        "name": "系统时间",
+        "identifier": "TIME",
+        "dataType": "TEXT",
+        "description": "网关系统时间",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": null,
+        "dataSpecsList": null,
+        "nameEn": "System time",
+        "descriptionEn": "Gateway system time"
+      },
+      {
+        "name": "分钟",
+        "identifier": "TIME_MINUTE",
+        "dataType": "INT",
+        "description": "当前分钟（0~59）",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "59",
+          "min": "0",
+          "step": "1",
+          "unit": "",
+          "unitName": ""
+        },
+        "dataSpecsList": null,
+        "nameEn": "Minute",
+        "descriptionEn": "Current minute (0-59)"
+      },
+      {
+        "name": "秒",
+        "identifier": "TIME_SECOND",
+        "dataType": "INT",
+        "description": "当前秒（0~59）",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "59",
+          "min": "0",
+          "step": "1",
+          "unit": "",
+          "unitName": ""
+        },
+        "dataSpecsList": null,
+        "nameEn": "Second",
+        "descriptionEn": "Current second (0-59)"
+      }
+    ],
+    "events": [
+      {
+        "eventName": "网关离线",
+        "eventType": "ALERT",
+        "identifier": "gateway_offline",
+        "description": "网关断开与平台的连接",
+        "required": false,
+        "outputData": [
+          {
+            "name": "设备标识",
+            "identifier": "device",
+            "dataType": "TEXT",
+            "required": false,
+            "dataSpecs": null,
+            "dataSpecsList": null,
+            "nameEn": "Device key"
+          },
+          {
+            "name": "离线时间",
+            "identifier": "time",
+            "dataType": "DATE",
+            "required": false,
+            "dataSpecs": null,
+            "dataSpecsList": null,
+            "nameEn": "Offline time"
+          }
+        ],
+        "eventNameEn": "Gateway offline",
+        "descriptionEn": "Gateway disconnected from the platform"
+      },
+      {
+        "eventName": "子设备状态变化",
+        "eventType": "INFO",
+        "identifier": "sub_device_status",
+        "description": "网关下子设备在线状态发生变化",
+        "required": false,
+        "outputData": [
+          {
+            "name": "设备标识",
+            "identifier": "device",
+            "dataType": "TEXT",
+            "required": false,
+            "dataSpecs": null,
+            "dataSpecsList": null,
+            "nameEn": "Device key"
+          },
+          {
+            "name": "在线状态",
+            "identifier": "online",
+            "dataType": "BOOL",
+            "required": false,
+            "dataSpecs": null,
+            "dataSpecsList": [
+              {
+                "name": "离线",
+                "value": 0
+              },
+              {
+                "name": "在线",
+                "value": 1
+              }
+            ],
+            "nameEn": "Online status"
+          }
+        ],
+        "eventNameEn": "Sub-device status changed",
+        "descriptionEn": "Online status of a sub-device changed"
+      }
+    ],
+    "services": [
+      {
+        "serviceName": "重启网关",
+        "identifier": "reboot",
+        "description": "重启参考系统网关",
+        "required": false,
+        "callType": "ASYNC",
+        "inputParams": [],
+        "outParams": [],
+        "serviceNameEn": "Reboot gateway",
+        "descriptionEn": "Reboot the reference-system gateway"
+      },
+      {
+        "serviceName": "查询系统信息",
+        "identifier": "query_system_info",
+        "description": "查询网关 CPU、内存与存储信息",
+        "required": false,
+        "callType": "SYNC",
+        "inputParams": [],
+        "outParams": [
+          {
+            "name": "CPU使用率",
+            "identifier": "CPU_USAGE",
+            "dataType": "FLOAT",
+            "required": false,
+            "dataSpecs": {
+              "max": "100",
+              "min": "0",
+              "step": "0.1",
+              "unit": "%",
+              "unitName": "百分比"
+            },
+            "dataSpecsList": null,
+            "nameEn": "CPU usage"
+          },
+          {
+            "name": "内存信息",
+            "identifier": "MEMORY",
+            "dataType": "TEXT",
+            "required": false,
+            "dataSpecs": null,
+            "dataSpecsList": null,
+            "nameEn": "Memory info"
+          },
+          {
+            "name": "存储信息",
+            "identifier": "STORAGE",
+            "dataType": "TEXT",
+            "required": false,
+            "dataSpecs": null,
+            "dataSpecsList": null,
+            "nameEn": "Storage info"
+          }
+        ],
+        "serviceNameEn": "Query system info",
+        "descriptionEn": "Query gateway CPU, memory and storage info"
+      }
+    ]
+  },
+  "alarmRules": [
+    {
+      "name": "CPU使用率过高",
+      "propertyCode": "CPU_USAGE",
+      "operator": ">",
+      "value": "85",
+      "alertLevel": 2,
+      "alertType": 1,
+      "silenceTime": 300,
+      "description": "网关 CPU 使用率超过 85%",
+      "nameEn": "High CPU usage"
+    },
+    {
+      "name": "信号质量弱",
+      "propertyCode": "CSQ",
+      "operator": "<",
+      "value": "8",
+      "alertLevel": 3,
+      "alertType": 1,
+      "silenceTime": 600,
+      "description": "蜂窝信号质量低于 8",
+      "nameEn": "Weak signal quality"
+    },
+    {
+      "name": "IO点数异常",
+      "propertyCode": "IOPoints",
+      "operator": "=",
+      "value": "0",
+      "alertLevel": 3,
+      "alertType": 1,
+      "silenceTime": 600,
+      "description": "网关下未识别到任何 IO 点",
+      "nameEn": "No I/O points"
+    }
+  ],
+  "dashboard": {
+    "name": "工业网关看板",
+    "nameEn": "Industrial Gateway Dashboard",
+    "widgets": [
+      {
+        "title": "CPU使用率趋势",
+        "titleEn": "CPU usage trend",
+        "type": "line",
+        "propertyCode": "CPU_USAGE",
+        "timeRange": "1h",
+        "aggInterval": 60,
+        "aggMethod": "avg"
+      },
+      {
+        "title": "信号质量",
+        "titleEn": "Signal quality",
+        "type": "kpi",
+        "propertyCode": "CSQ"
+      },
+      {
+        "title": "IO总点数",
+        "titleEn": "Total I/O points",
+        "type": "kpi",
+        "propertyCode": "IOPoints"
+      },
+      {
+        "title": "网关说明",
+        "titleEn": "Gateway overview",
+        "type": "text",
+        "text": "参考系统工业网关的系统状态、网络与定位信息。",
+        "textEn": "System status, network and location information reported by the reference-system gateway."
+      }
+    ]
+  },
+  "metrics": {
+    "cpu": "CPU_USAGE",
+    "signal": "CSQ",
+    "ioPoints": "IOPoints"
+  }
+}

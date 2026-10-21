@@ -97,13 +97,14 @@ func (app *gatewayApp) GatewayAdd(ctx context.Context, req dtos.GatewayAddReques
 		return res, errort.NewCommonErr(errort.DefaultReqParamsError, errort.NewMessageErr("网关序列号不能为空", nil))
 	}
 	g, err := app.dbClient.WithCtx(ctx).AddGateway(models.Gateway{
-		Name:   strings.TrimSpace(req.Name),
-		Sn:     sn,
-		Pk:     strings.TrimSpace(req.Pk),
-		DeptId: req.DeptId,
-		Vendor: req.Vendor,
-		Model:  req.Model,
-		Remark: req.Remark,
+		Name:     strings.TrimSpace(req.Name),
+		Sn:       sn,
+		Pk:       strings.TrimSpace(req.Pk),
+		Protocol: strings.TrimSpace(req.Protocol),
+		DeptId:   req.DeptId,
+		Vendor:   req.Vendor,
+		Model:    req.Model,
+		Remark:   req.Remark,
 	})
 	if err != nil {
 		return res, err

@@ -5,6 +5,9 @@ package dtos
 // SolutionSearchRequest 模板列表查询
 type SolutionSearchRequest struct {
 	Industry string `schema:"industry,omitempty" form:"industry"`
+	// Summary 只返回列表展示需要的元数据，不带物模型/告警/看板等大字段。
+	// 方案中心列表用摘要加载，选中某个方案后再调详情接口取完整内容。
+	Summary bool `schema:"summary,omitempty" form:"summary"`
 }
 
 // SolutionResponse 模板详情（含物模型/告警/看板预设）

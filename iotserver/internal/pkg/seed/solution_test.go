@@ -25,6 +25,8 @@ func TestDefaultSolutions(t *testing.T) {
 		// 每个行业补充的第二个产品
 		"quick_freezer": false, "cooling_tower": false, "pv_inverter": false,
 		"labeling_machine": false, "extruder": false, "palletizer": false, "cnc_machine": false,
+		// 参考系统网关产品模板（系统状态/网络/SIM/定位）
+		"industrial_gateway": false,
 	}
 	if len(templates) < len(wantKeys) {
 		t.Fatalf("内置模板至少应有 %d 个，实际 %d", len(wantKeys), len(templates))

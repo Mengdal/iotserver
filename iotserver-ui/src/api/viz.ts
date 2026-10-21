@@ -76,6 +76,8 @@ export interface VizWidget {
   type?: VizWidgetType | string
   /** 文本组件正文（type=text 时用） */
   text?: string
+  /** 文本组件英文正文（中英双语看板，按当前语言展示/编辑） */
+  textEn?: string
   layout: VizLayout
   /**
    * 数据类组件的配置：每个类型自己的 schema（见 src/components/viz/widgets）。

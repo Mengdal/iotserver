@@ -40,6 +40,8 @@ interface BrandField {
   hint?: string
   boxWidth?: number
   boxHeight?: number
+  /** favicon 这类图标统一存 PNG */
+  preferPng?: boolean
 }
 
 const TEXT_FIELDS: BrandField[] = [
@@ -49,7 +51,7 @@ const TEXT_FIELDS: BrandField[] = [
 
 const IMAGE_FIELDS: BrandField[] = [
   { key: 'platform.logo', label: t('系统 logo'), type: 'image', hint: SIZE_HINT.logo, boxWidth: 120, boxHeight: 120 },
-  { key: 'platform.favicon', label: t('浏览器标签'), type: 'image', hint: SIZE_HINT.favicon, boxWidth: 120, boxHeight: 120 },
+  { key: 'platform.favicon', label: t('浏览器标签'), type: 'image', hint: SIZE_HINT.favicon, boxWidth: 120, boxHeight: 120, preferPng: true },
 ]
 
 const BG_FIELD: BrandField = {
@@ -173,6 +175,7 @@ const SysSetPage: React.FC = () => {
           width={field.boxWidth || 120}
           height={field.boxHeight || 120}
           disabled={!canEdit}
+          preferPng={field.preferPng}
         />
       </Form.Item>
     )
@@ -183,7 +186,7 @@ const SysSetPage: React.FC = () => {
     <Alert
       type="info"
       showIcon
-      message={t('系统配置为平台级（全局唯一），保存后对所有租户生效；如需按租户区分，请使用各业务模块自己的配置。')}
+      message={t('系统配置为平台级（全局唯一），品牌、登录页与安全策略保存后对所有租户统一生效；租户级参数（如数据保留天数）请在「租户管理」中配置。')}
       style={{ marginBottom: 16 }}
     />
   )

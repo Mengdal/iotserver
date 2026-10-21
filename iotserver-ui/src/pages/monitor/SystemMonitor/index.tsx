@@ -19,7 +19,14 @@ const SystemMonitor: React.FC = () => {
     getVizBoards()
       .then((resp) => {
         if (resp.success) {
-          setBoard((resp.result.list || []).find(b => b.name === '系统监控看板'))
+          // 按 id 找内置系统看板（名称已统一英文，不能只靠中文名匹配）
+          const isSystemBoard = (b: VizBoard) =>
+            b.id === 'builtin-ops'
+            || b.id.startsWith('builtin-ops-')
+            || b.id.startsWith('bd-tenant-monitor')
+            || b.name === 'System Monitoring'
+            || b.name === '系统监控看板'
+          setBoard((resp.result.list || []).find(isSystemBoard))
         } else {
           setError(resp.errorMsg || t('看板加载失败'))
         }

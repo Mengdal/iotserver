@@ -1,6 +1,6 @@
 {
   "id": "builtin-ops",
-  "name": "系统监控看板",
+  "name": "System Monitoring",
   "icon": "area-chart",
   "scope": "platform",
   "canvas": {

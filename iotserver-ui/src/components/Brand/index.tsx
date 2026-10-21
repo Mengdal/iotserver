@@ -47,18 +47,69 @@ const BrandContext = createContext<BrandContextValue>({
   reload: async () => {},
 })
 
+/** 根据地址推断 favicon 的 MIME；无法判断时不写 type，交给浏览器嗅探 */
+function faviconMime (href: string): string {
+  if (href.startsWith('data:image/svg')) return 'image/svg+xml'
+  if (href.startsWith('data:image/png')) return 'image/png'
+  if (href.startsWith('data:image/jpeg') || href.startsWith('data:image/jpg')) return 'image/jpeg'
+  if (href.startsWith('data:image/x-icon') || href.startsWith('data:image/vnd.microsoft.icon')) return 'image/x-icon'
+  if (/\.svg(\?|$)/i.test(href)) return 'image/svg+xml'
+  if (/\.png(\?|$)/i.test(href)) return 'image/png'
+  if (/\.ico(\?|$)/i.test(href)) return 'image/x-icon'
+  return ''
+}
+
+/** 把任意图片转成 64×64 PNG（浏览器对 JPEG favicon 支持不一致） */
+function toPngDataUrl (src: string, size = 64): Promise<string> {
+  return new Promise(resolve => {
+    const img = new Image()
+    img.onload = () => {
+      const canvas = document.createElement('canvas')
+      canvas.width = size
+      canvas.height = size
+      const ctx = canvas.getContext('2d')
+      if (!ctx) {
+        resolve(src)
+        return
+      }
+      ctx.drawImage(img, 0, 0, size, size)
+      try {
+        resolve(canvas.toDataURL('image/png'))
+      } catch (error) {
+        resolve(src)
+      }
+    }
+    img.onerror = () => resolve(src)
+    img.src = src
+  })
+}
+
+let faviconSeq = 0
+
 /** 把 data URL 或图片地址设置为浏览器标签图标（始终有值） */
-function applyFavicon (href: string) {
-  const selector = 'link[data-brand-favicon]'
-  let link = document.querySelector<HTMLLinkElement>(selector)
+async function applyFavicon (href: string) {
+  const seq = ++faviconSeq
+  let src = href
+  // 历史上传的 favicon 可能是 JPEG：先转成 PNG 再设置
+  if (src.startsWith('data:image/jpeg') || src.startsWith('data:image/jpg')) {
+    src = await toPngDataUrl(src)
+    if (seq !== faviconSeq) return
+  }
+  // index.html 自带一条默认 favicon；不清掉的话多条 rel=icon 可能被浏览器选错
+  document.querySelectorAll<HTMLLinkElement>('link[rel~="icon"]').forEach(link => {
+    if (!link.hasAttribute('data-brand-favicon')) link.remove()
+  })
+  let link = document.querySelector<HTMLLinkElement>('link[data-brand-favicon]')
   if (!link) {
     link = document.createElement('link')
     link.rel = 'icon'
     link.setAttribute('data-brand-favicon', '1')
     document.head.appendChild(link)
   }
-  link.type = href.startsWith('data:') && href.includes('svg') ? 'image/svg+xml' : 'image/x-icon'
-  link.href = href
+  const mime = faviconMime(src)
+  if (mime) link.type = mime
+  else link.removeAttribute('type')
+  link.href = src
 }
 
 export const BrandProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -90,7 +141,7 @@ export const BrandProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // 应用浏览器标签文字与图标
   useEffect(() => {
-    applyFavicon(assets.favicon)
+    applyFavicon(assets.favicon).catch(() => { /* 图标加载失败不影响页面 */ })
     document.documentElement.setAttribute('data-site-name', site.name || '')
   }, [assets.favicon, site.name])
 

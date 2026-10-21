@@ -23,6 +23,7 @@ const (
 	errCodeTenantExpired  = 21711
 	errCodeTenantQuota    = 21712
 	errCodeTenantNotEmpty = 21713
+	errCodeTenantDisabled = 21715
 )
 
 // platformCtx / tenantCtxOf 测试用上下文构造
@@ -112,7 +113,7 @@ func TestTenantDeleteProtection(t *testing.T) {
 		t.Fatalf("建内置看板租户失败: %v", err)
 	}
 	if err = env.client.WithCtx(tenantCtxOf(builtinTenant.Id)).VizBoardsReplace([]models.VizBoard{{
-		Id: "builtin-home-" + builtinTenant.Id, Name: "首页看板", IsHome: 1,
+		Id: "builtin-home-" + builtinTenant.Id, Name: "Home Board", IsHome: 1,
 	}}); err != nil {
 		t.Fatalf("写入内置看板失败: %v", err)
 	}
@@ -283,4 +284,57 @@ func TestTenantExpiryGuard(t *testing.T) {
 	if resp.ErrorCode == errCodeTenantExpired {
 		t.Fatalf("租户查不到时不应按到期拦截: %s", resp.ErrorMsg)
 	}
+}
+
+// TestTenantDisabledGuard 停用校验：已有会话被中间件拦截 + 登录被拒绝；重新启用后恢复。
+func TestTenantDisabledGuard(t *testing.T) {
+	env := setupTestEnv(t)
+	tc, username := seedTenant(t, env, "disableguard")
+	// 停用前先登录，拿到一个「当时合法、之后应失效」的会话
+	token := loginAs(t, env, username, tenantTestPassword)
+
+	setTenantQuota(t, env, tc.Id, func(x *models.Tenant) { x.Status = 0 })
+
+	// ① 已登录会话继续请求 → 中间件拦截
+	w := doRequest(env.engine, http.MethodGet, "/api/v1/user/getinfo", token, nil)
+	resp := parseResponse(t, w)
+	if resp.Success {
+		t.Fatal("已停用租户的会话不应继续可用")
+	}
+	if resp.ErrorCode != errCodeTenantDisabled {
+		t.Fatalf("期望 errorCode %d，实际 %d（%s）", errCodeTenantDisabled, resp.ErrorCode, resp.ErrorMsg)
+	}
+
+	// ② 停用后重新登录 → 拒绝并提示
+	loginBody, _ := json.Marshal(dtos.LoginRequest{Username: username, Password: tenantTestPassword})
+	w = doRequest(env.engine, http.MethodPost, "/api/v1/auth/login", "", loginBody)
+	resp = parseResponse(t, w)
+	if resp.Success {
+		t.Fatal("已停用租户应拒绝登录")
+	}
+	if resp.ErrorCode != errCodeTenantDisabled ||
+		(!strings.Contains(resp.ErrorMsg, "租户已停用") && !strings.Contains(resp.ErrorMsg, "disabled")) {
+		t.Fatalf("期望「租户已停用」提示 %d，实际 %d（%s）", errCodeTenantDisabled, resp.ErrorCode, resp.ErrorMsg)
+	}
+
+	// OpenAPI 登录同样要遵守租户停用规则
+	w = doRequest(env.engine, http.MethodPost, "/v1.0/openapi/auth/login", "", loginBody)
+	resp = parseResponse(t, w)
+	if resp.Success {
+		t.Fatal("已停用租户不应允许 OpenAPI 登录")
+	}
+
+	// ③ 平台管理员（平台视图 / 代管已停用租户）不受影响，保留排障能力
+	w = doRequest(env.engine, http.MethodGet, "/api/v1/user/getinfo", env.token, nil)
+	if resp = parseResponse(t, w); !resp.Success {
+		t.Fatalf("平台管理员不应受租户停用影响: %v", resp.ErrorMsg)
+	}
+	w = doRequestWithTenant(env.engine, http.MethodGet, "/api/v1/user/getinfo", env.token, tc.Id, nil)
+	if resp = parseResponse(t, w); !resp.Success {
+		t.Fatalf("平台管理员代管已停用租户应可用: %v", resp.ErrorMsg)
+	}
+
+	// ④ 重新启用后可以正常登录
+	setTenantQuota(t, env, tc.Id, func(x *models.Tenant) { x.Status = 1 })
+	loginAs(t, env, username, tenantTestPassword)
 }

@@ -16,16 +16,16 @@
 package gatewayingest
 
 import (
-	"iotserver/internal/pkg/errort"
 	"context"
 	"encoding/json"
 	"fmt"
+	"iotserver/internal/pkg/errort"
 	"strings"
 	"sync"
 	"time"
 
-	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/LMgateways/iotserver-driver-proto/thingmodel"
+	mqtt "github.com/eclipse/paho.mqtt.golang"
 
 	"iotserver/internal/dtos"
 	coreConfig "iotserver/internal/iotserver/core/config"
@@ -145,7 +145,7 @@ func New(dic *di.Container) *Service {
 func (s *Service) Start() error {
 	req := dtos.NewMQTTClient{
 		Broker:   s.config().MessageQueue.URL(),
-		ClientId: "iotserver-core-gateway",
+		ClientId: pkgMQTT.InstanceClientID("iotserver-core-gateway"),
 		Username: s.config().MessageQueue.Optional["Username"],
 		Password: s.config().MessageQueue.Optional["Password"],
 		SubTopics: []string{

@@ -461,6 +461,14 @@ func (c *Client) seedSystemData() error {
 		if err := seed.MigrateDriverNames(tx); err != nil {
 			return err
 		}
+		// 内置驱动市场（MQTT / TCP / HTTP）：空库启动时补种，避免「暂无数据」
+		if err := seed.EnsureBuiltinDriverLibraries(tx); err != nil {
+			return err
+		}
+		// 参考系统 /edge 网关的 protocol 落到 edge（历史数据回填）
+		if err := seed.MigrateEdgeGatewayProtocol(tx); err != nil {
+			return err
+		}
 		// 系统监控看板只保留给平台管理员，并去掉其中的业务组件
 		if err := seed.MigrateSystemBoardPlatformOnly(tx); err != nil {
 			return err
@@ -470,6 +478,13 @@ func (c *Client) seedSystemData() error {
 		// 存量看板里的占位组件（如首页看板的「设备消息量排名」文本）按内置定义升级成真实组件；
 		// 只替换组件 id 一致、类型仍然是 text 的项，用户改过类型的组件不会被动。
 		if err := seed.UpgradeBuiltinBoards(tx); err != nil {
+			return err
+		}
+		// 内置看板名称统一英文；存量演示看板补英文正文
+		if err := seed.MigrateBuiltinBoardNames(tx); err != nil {
+			return err
+		}
+		if err := seed.UpgradeBuiltinBoardTexts(tx); err != nil {
 			return err
 		}
 		// 存量租户补齐组件演示看板（新版本普通租户内置首页 + 演示两块）

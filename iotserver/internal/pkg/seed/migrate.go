@@ -50,6 +50,106 @@ func MigrateLegacyDeviceStatus(tx *gorm.DB) error {
 	return nil
 }
 
+// MigrateEdgeGatewayProtocol 把参考系统（things / iotddc）网关的 protocol 回填为 edge。
+//
+// 早期网关没有 protocol 字段，只靠 vendor/model 识别；后来新增了显式协议值。
+// 统一落成 edge 后，前端按「参考系统网关」展示与操作不再依赖厂商字符串。
+// 自有协议网关（gatewaymqtt）不受影响。
+func MigrateEdgeGatewayProtocol(tx *gorm.DB) error {
+	if !tx.Migrator().HasTable("gateway") {
+		return nil
+	}
+	return tx.Exec(
+		"UPDATE gateway SET protocol = ? WHERE (vendor LIKE ? OR vendor LIKE ? OR model LIKE ? OR model LIKE ?) AND (protocol = '' OR protocol = ?)",
+		models.GatewayProtocolEdge, "%things%", "%iotddc%", "%things%", "%iotddc%", models.GatewayProtocolNative,
+	).Error
+}
+
+// EnsureBuiltinDriverLibraries 种入内置驱动市场（MQTT / TCP / HTTP）。
+//
+// 早期这些记录是手工写库的，新部署从空库启动时驱动市场会一直显示「暂无数据」。
+// 这里按固定 id 幂等插入，已有记录不覆盖（保留用户下载后更新的版本/镜像信息）。
+func EnsureBuiltinDriverLibraries(tx *gorm.DB) error {
+	if !tx.Migrator().HasTable("device_library") {
+		return nil
+	}
+	now := time.Now().UnixMilli()
+	if tx.Migrator().HasTable("driver_classify") {
+		var classifyCount int64
+		if err := tx.Table("driver_classify").Where("id = ?", "1").Count(&classifyCount).Error; err != nil {
+			return err
+		}
+		if classifyCount == 0 {
+			classify := models.DriverClassify{Id: "1", Name: "协议驱动"}
+			classify.Created, classify.Modified = now, now
+			if err := tx.Table("driver_classify").Create(&classify).Error; err != nil {
+				return err
+			}
+		}
+	}
+
+	libs := []models.DeviceLibrary{
+		{
+			Id: "dl-mqtt-driver", Name: "MQTT", Protocol: "MQTT", Version: "1.0.1",
+			Description:    "驱动内嵌 MQTT broker，设备直连上报 JSON 报文。支持属性/事件上报与平台下发命令转发。",
+			ContainerName:  "driver-mqtt",
+			DockerRepoName: "lmgateways/iotserver-mqtt-driver",
+			DockerImageId:  "ghcr.io/lmgateways/iotserver-mqtt-driver:1.0.1",
+			IsInternal:     true, Language: "Go",
+			SupportVersions: models.SupportVersions{
+				{Version: "1.0.0"},
+				{Version: "1.0.1", IsDefault: true},
+			},
+		},
+		{
+			Id: "dl-tcp-driver", Name: "TCP", Protocol: "TCP", Version: "1.0.1",
+			Description:    "驱动监听 TCP 端口，设备以「按行分隔的 JSON」接入：先发 {\"sn\":\"...\"} 握手，再发属性/事件帧。",
+			ContainerName:  "driver-tcp",
+			DockerRepoName: "lmgateways/iotserver-tcp-driver",
+			DockerImageId:  "ghcr.io/lmgateways/iotserver-tcp-driver:1.0.1",
+			IsInternal:     true, Language: "Go",
+			SupportVersions: models.SupportVersions{
+				{Version: "1.0.0"},
+				{Version: "1.0.1", IsDefault: true},
+			},
+		},
+		{
+			Id: "dl-http-driver", Name: "HTTP", Protocol: "HTTP", Version: "1.0.1",
+			Description:    "设备用 HTTP POST 上报数据（/ingest/{sn}），通过轮询接口取平台下发的命令。",
+			ContainerName:  "driver-http",
+			DockerRepoName: "lmgateways/iotserver-http-driver",
+			IsInternal:     true, Language: "Go",
+			SupportVersions: models.SupportVersions{
+				{Version: "1.0.0"},
+				{Version: "1.0.1", IsDefault: true},
+			},
+		},
+	}
+	for i := range libs {
+		// 内嵌 DeviceMarket 的提升字段不能在字面量里赋值（Go 1.24 限制），这里统一补
+		repo := strings.ToLower(libs[i].Name)
+		libs[i].ClassifyId = 1
+		libs[i].Manual = "https://github.com/LMgateways/iotserver-" + repo + "-driver#readme"
+		libs[i].Icon = "https://raw.githubusercontent.com/LMgateways/iotserver-" + repo + "-driver/main/docs/icon.svg"
+	}
+	for _, lib := range libs {
+		var count int64
+		if err := tx.Table("device_library").
+			Where("id = ? OR (name = ? AND protocol = ?)", lib.Id, lib.Name, lib.Protocol).
+			Count(&count).Error; err != nil {
+			return err
+		}
+		if count > 0 {
+			continue
+		}
+		lib.Created, lib.Modified = now, now
+		if err := tx.Table("device_library").Create(&lib).Error; err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // MigrateDriverNames 去掉驱动名称里的「协议驱动」后缀。
 // 驱动名称本身就是协议名（MQTT / HTTP / TCP），带后缀既冗余又要额外做国际化；
 // 同步处理驱动库与「我的驱动」里的实例名，存量数据启动时一次性修正。
@@ -76,13 +176,13 @@ func MigrateSystemBoardPlatformOnly(tx *gorm.DB) error {
 		return nil
 	}
 	if err := tx.Exec(
-		"DELETE FROM viz_board WHERE tenant_id <> '' AND (name = ? OR id LIKE ? OR id LIKE ?)",
-		"系统监控看板", "builtin-ops%", "bd-tenant-monitor%",
+		"DELETE FROM viz_board WHERE tenant_id <> '' AND (name = ? OR name = ? OR id LIKE ? OR id LIKE ?)",
+		"系统监控看板", "System Monitoring", "builtin-ops%", "bd-tenant-monitor%",
 	).Error; err != nil {
 		return err
 	}
 	var boards []models.VizBoard
-	if err := tx.Table("viz_board").Where("tenant_id = '' AND name = ?", "系统监控看板").
+	if err := tx.Table("viz_board").Where("tenant_id = '' AND name IN ?", []string{"系统监控看板", "System Monitoring"}).
 		Find(&boards).Error; err != nil {
 		return err
 	}
@@ -166,6 +266,125 @@ func UpgradeBuiltinBoards(tx *gorm.DB) error {
 		}
 		if err := tx.Table((&models.VizBoard{}).TableName()).Where("id = ?", b.Id).
 			Update("canvas", next).Error; err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// MigrateBuiltinBoardNames 把内置看板名称统一为英文。
+//
+// 看板名称属于展示层数据，内置看板在中文界面也使用同一套英文名称，
+// 避免中英切换时名称与内容风格不一致。只迁移历史中文名；用户改过的名称不覆盖。
+func MigrateBuiltinBoardNames(tx *gorm.DB) error {
+	if !tx.Migrator().HasTable("viz_board") {
+		return nil
+	}
+	renames := []struct {
+		name       string
+		conditions string
+		args       []interface{}
+	}{
+		{"Component Demo", "name = ?", []interface{}{"组件演示看板"}},
+		{"Home Board", "name = ?", []interface{}{"首页看板"}},
+		{"System Monitoring", "name = ?", []interface{}{"系统监控看板"}},
+	}
+	for _, item := range renames {
+		if err := tx.Table("viz_board").Where(item.conditions, item.args...).
+			Update("name", item.name).Error; err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// UpgradeBuiltinBoardTexts 给存量内置演示看板的文本组件补英文正文（textEn）。
+//
+// 只处理组件 id 与文本都未改过的内置内容；用户自己改过的正文不覆盖。
+func UpgradeBuiltinBoardTexts(tx *gorm.DB) error {
+	if !tx.Migrator().HasTable("viz_board") {
+		return nil
+	}
+	preset, ok := BoardPresetById("builtin-demo")
+	if !ok {
+		return nil
+	}
+	var pcv map[string]interface{}
+	if err := json.Unmarshal(preset.Canvas, &pcv); err != nil {
+		return nil
+	}
+	type pair struct{ text, textEn string }
+	want := map[string]pair{}
+	var collect func(list []interface{})
+	collect = func(list []interface{}) {
+		for _, item := range list {
+			w, ok := item.(map[string]interface{})
+			if !ok {
+				continue
+			}
+			if id, _ := w["id"].(string); id != "" {
+				text, _ := w["text"].(string)
+				textEn, _ := w["textEn"].(string)
+				if text != "" && textEn != "" {
+					want[id] = pair{text: text, textEn: textEn}
+				}
+			}
+			if children, ok := w["children"].([]interface{}); ok {
+				collect(children)
+			}
+		}
+	}
+	if widgets, ok := pcv["widgets"].([]interface{}); ok {
+		collect(widgets)
+	}
+	if len(want) == 0 {
+		return nil
+	}
+
+	var boards []models.VizBoard
+	if err := tx.Table("viz_board").Where("id LIKE ?", "builtin-demo%").
+		Find(&boards).Error; err != nil {
+		return err
+	}
+	for _, b := range boards {
+		var cv map[string]interface{}
+		if err := json.Unmarshal([]byte(b.Canvas), &cv); err != nil {
+			continue
+		}
+		changed := false
+		var walk func(list []interface{})
+		walk = func(list []interface{}) {
+			for _, item := range list {
+				w, ok := item.(map[string]interface{})
+				if !ok {
+					continue
+				}
+				id, _ := w["id"].(string)
+				if p, ok := want[id]; ok {
+					text, _ := w["text"].(string)
+					textEn, _ := w["textEn"].(string)
+					if text == p.text && textEn == "" {
+						w["textEn"] = p.textEn
+						changed = true
+					}
+				}
+				if children, ok := w["children"].([]interface{}); ok {
+					walk(children)
+				}
+			}
+		}
+		if widgets, ok := cv["widgets"].([]interface{}); ok {
+			walk(widgets)
+		}
+		if !changed {
+			continue
+		}
+		raw, err := json.Marshal(cv)
+		if err != nil {
+			continue
+		}
+		if err := tx.Table("viz_board").Where("id = ?", b.Id).
+			Update("canvas", string(raw)).Error; err != nil {
 			return err
 		}
 	}

@@ -61,11 +61,19 @@ export interface SolutionApplyResponse {
 // ===== 方案中心 =====
 
 /** 方案列表：result 直接是数组，不是分页对象 */
-export function getSolutions<T = Solution[]> (params?: { industry?: string }) {
+export function getSolutions<T = Solution[]> (params?: { industry?: string, summary?: boolean }) {
   return httpRequest<any, CommonResponse<T>>({
     url: '/api/v1/solutions',
     method: 'get',
     params,
+  })
+}
+
+/** 方案详情（含物模型/告警/看板预设）；列表只取摘要时用它按需加载 */
+export function getSolution<T = Solution> (key: string) {
+  return httpRequest<any, CommonResponse<T>>({
+    url: `/api/v1/solution/${key}`,
+    method: 'get',
   })
 }
 

@@ -11,7 +11,7 @@ import { useVizMetricDefs } from '@/components/viz/widgets/MetricsEditor'
 import { isPlatformView } from '@/utils/platformViewGuard'
 import { flattenVizTree, groupByParent, isVizContainer } from '@/utils/vizTree'
 import './index.less'
-import { t, tt } from '@/i18n'
+import { currentLocale, t, tt } from '@/i18n'
 
 interface CanvasBoardProps {
   /** 看板 ID（二选一） */
@@ -109,8 +109,8 @@ const CanvasBoard: React.FC<CanvasBoardProps> = ({ boardId, board: boardProp, cl
         readOnly: true,
         data: data.results[w.id],
         loading: data.loading,
-        // 文本组件正文：不传的话所有文本组件在只读渲染下都会显示「（空文本）」
-        text: w.text,
+        // 文本组件正文：英文优先用 textEn，没有时用词条翻译兜底
+        text: currentLocale() === 'en-US' ? (w.textEn || tt(w.text || '')) : w.text,
         // 自带取数接口的组件（排行榜）按同一套间隔自行轮询
         refreshInterval: disableData ? 0 : effectiveInterval(w.refreshInterval, refreshInterval),
       }}

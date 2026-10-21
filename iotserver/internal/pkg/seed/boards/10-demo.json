@@ -1,6 +1,6 @@
 {
   "id": "builtin-demo",
-  "name": "组件演示看板",
+  "name": "Component Demo",
   "icon": "appstore",
   "scope": "all",
   "isDefault": true,
@@ -13,23 +13,40 @@
         "title": "文本 · 小卡",
         "showTitle": true,
         "type": "text",
-        "layout": { "x": 0, "y": 0, "w": 3, "h": 4 },
-        "text": "文本组件\n标题栏可拖动、右下角可缩放；\n编辑态点正文直接改字，失焦即保存。"
+        "layout": {
+          "x": 0,
+          "y": 0,
+          "w": 3,
+          "h": 4
+        },
+        "text": "文本组件\n标题栏可拖动、右下角可缩放；\n编辑态点正文直接改字，失焦即保存。",
+        "textEn": "Text widget\nDrag the title bar to move it and the bottom-right corner to resize; in edit mode click the body and type — changes are saved on blur."
       },
       {
         "id": "demo-text-w",
         "title": "文本 · 宽卡",
         "showTitle": true,
         "type": "text",
-        "layout": { "x": 3, "y": 0, "w": 9, "h": 4 },
-        "text": "文本组件（12 列里占 9 列宽）——正文支持多行与换行。\n编辑态：点正文直接改，点空白处失焦保存；查看态：只看不编辑。\n卡片高度不够时，正文区域会自己滚动，标题栏和卡片尺寸不受影响。"
+        "layout": {
+          "x": 3,
+          "y": 0,
+          "w": 9,
+          "h": 4
+        },
+        "text": "文本组件（12 列里占 9 列宽）——正文支持多行与换行。\n编辑态：点正文直接改，点空白处失焦保存；查看态：只看不编辑。\n卡片高度不够时，正文区域会自己滚动，标题栏和卡片尺寸不受影响。",
+        "textEn": "Text widget (9 of 12 columns wide) — the body supports multiple lines and wrapping.\nEdit mode: click the body to edit; click elsewhere to blur and save. View mode: read-only.\nIf the card is too short, the body scrolls on its own; the title bar and card size are unaffected."
       },
       {
         "id": "demo-stats",
         "title": "统计卡 · 一卡多个指标",
         "showTitle": true,
         "type": "stats",
-        "layout": { "x": 0, "y": 4, "w": 12, "h": 5 },
+        "layout": {
+          "x": 0,
+          "y": 4,
+          "w": 12,
+          "h": 5
+        },
         "config": {
           "tiles": [
             {
@@ -38,8 +55,14 @@
               "icon": "appstore",
               "tone": "blue",
               "tags": [
-                { "label": "本地", "metric": "product.self" },
-                { "label": "第三方", "metric": "product.other" }
+                {
+                  "label": "本地",
+                  "metric": "product.self"
+                },
+                {
+                  "label": "第三方",
+                  "metric": "product.other"
+                }
               ]
             },
             {
@@ -48,8 +71,14 @@
               "icon": "devices",
               "tone": "cyan",
               "tags": [
-                { "label": "本地", "metric": "device.self" },
-                { "label": "第三方", "metric": "device.other" }
+                {
+                  "label": "本地",
+                  "metric": "device.self"
+                },
+                {
+                  "label": "第三方",
+                  "metric": "device.other"
+                }
               ]
             },
             {
@@ -67,10 +96,17 @@
         "title": "折线图 · 面积填充",
         "showTitle": true,
         "type": "line",
-        "layout": { "x": 0, "y": 9, "w": 7, "h": 8 },
+        "layout": {
+          "x": 0,
+          "y": 9,
+          "w": 7,
+          "h": 8
+        },
         "config": {
           "series": [],
-          "metrics": ["report.daily"],
+          "metrics": [
+            "report.daily"
+          ],
           "timeRange": "7d",
           "aggInterval": 0,
           "aggMethod": "avg",
@@ -85,31 +121,54 @@
         "title": "文本 · 长文（正文可滚动）",
         "showTitle": true,
         "type": "text",
-        "layout": { "x": 7, "y": 9, "w": 5, "h": 8 },
-        "text": "这块是「长文本」示例：卡片固定 5×8，正文比卡片高，所以正文区域会出现滚动条。\n\n内容可以换成：数据口径说明、值班联系方式、变更记录……\n\n文本组件支持任意长度（后端上限 4000 字）。编辑态点一下正文就能改；右上角切到「查看」后是只读的。\n\n拖动标题栏移动、拖右下角改大小，布局改动会显示「未保存」。"
+        "layout": {
+          "x": 7,
+          "y": 9,
+          "w": 5,
+          "h": 8
+        },
+        "text": "这块是「长文本」示例：卡片固定 5×8，正文比卡片高，所以正文区域会出现滚动条。\n\n内容可以换成：数据口径说明、值班联系方式、变更记录……\n\n文本组件支持任意长度（后端上限 4000 字）。编辑态点一下正文就能改；右上角切到「查看」后是只读的。\n\n拖动标题栏移动、拖右下角改大小，布局改动会显示「未保存」。",
+        "textEn": "This is the \"long text\" example: the card is fixed at 5×8 and the body is taller than the card, so the body area scrolls.\n\nYou can replace the content with data definitions, on-call contacts, change logs, and so on.\n\nThe text widget supports any length (backend limit: 4000 characters). In edit mode click the body to edit; switch to \"View\" in the top-right to make it read-only.\n\nDrag the title bar to move it and the bottom-right corner to resize; layout changes show \"Unsaved\"."
       },
       {
         "id": "demo-container",
         "title": "容器 · 装子组件（可嵌套）",
         "showTitle": true,
         "type": "container",
-        "layout": { "x": 0, "y": 17, "w": 12, "h": 9 },
+        "layout": {
+          "x": 0,
+          "y": 17,
+          "w": 12,
+          "h": 9
+        },
         "children": [
           {
             "id": "demo-container-left",
             "title": "容器内 · 左",
             "showTitle": true,
             "type": "text",
-            "layout": { "x": 0, "y": 0, "w": 6, "h": 4 },
-            "text": "容器里的子组件 A。\n容器是排版用的，可以往里拖文本或空容器。"
+            "layout": {
+              "x": 0,
+              "y": 0,
+              "w": 6,
+              "h": 4
+            },
+            "text": "容器里的子组件 A。\n容器是排版用的，可以往里拖文本或空容器。",
+            "textEn": "Child widget A inside the container.\nContainers are for layout; drag text or empty containers into them."
           },
           {
             "id": "demo-container-right",
             "title": "容器内 · 右",
             "showTitle": true,
             "type": "text",
-            "layout": { "x": 6, "y": 0, "w": 6, "h": 4 },
-            "text": "容器里的子组件 B。\n容器自己的标题栏也能拖动，整块一起移动。"
+            "layout": {
+              "x": 6,
+              "y": 0,
+              "w": 6,
+              "h": 4
+            },
+            "text": "容器里的子组件 B。\n容器自己的标题栏也能拖动，整块一起移动。",
+            "textEn": "Child widget B inside the container.\nThe container's own title bar can also be dragged to move the whole block."
           }
         ]
       }

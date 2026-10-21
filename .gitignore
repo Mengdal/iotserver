@@ -44,6 +44,8 @@ iotserver/cmd/iotserver-ui/build/**/*.map
 
 # ===== 本地品牌素材与旧版截图（保留在本地，不入库）=====
 /robx-logo*.png
+# 本地图标素材（仅用于上传 favicon，不入库）
+/robx-icon/
 /iotserver/manifest/image/
 
 # ===== 本地测试配置（不入库）=====

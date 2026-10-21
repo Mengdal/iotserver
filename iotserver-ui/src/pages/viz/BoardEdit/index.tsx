@@ -22,7 +22,7 @@ import { SettingGroup, SettingRow } from '@/components/viz/widgets/SettingsLayou
 import { collectDescendantIds, flattenVizTree, groupByParent, isVizContainer } from '@/utils/vizTree'
 import './index.less'
 import type { GridStackNode } from 'gridstack'
-import { t, tt } from '@/i18n'
+import { t, tt, currentLocale } from '@/i18n'
 
 const { Text } = Typography
 
@@ -91,6 +91,8 @@ const BoardEdit: React.FC = () => {
   const navigate = useNavigate()
   const isNew = id === 'new'
 
+  // 看板正文按语言分开存：英文编辑 textEn，中文编辑 text
+  const english = currentLocale() === 'en-US'
   const [name, setName] = useState(t('新建看板'))
   // widgets 是**扁平**的（含所有层级），归属关系单独放 parentOf：跨子网格拖拽只改归属
   const [widgets, setWidgets] = useState<VizWidget[]>([])
@@ -298,7 +300,7 @@ const BoardEdit: React.FC = () => {
 
   const removeById = (widgetId: string) => removeWidget(widgetId)
 
-  const setTextById = (widgetId: string, text: string) => updateWidget(widgetId, { text })
+  const setTextById = (widgetId: string, text: string) => updateWidget(widgetId, english ? { textEn: text } : { text })
 
   // 事件处理放进 ref：actions 本身引用不变，React.memo 才能挡住拖动时的重渲染
   const handlersRef = useRef({ duplicateById, removeById })
@@ -517,7 +519,7 @@ const BoardEdit: React.FC = () => {
             readOnly,
             data: data.results[w.id],
             loading: data.loading,
-            text: w.text,
+            text: english ? (w.textEn || tt(w.text || '')) : (w.text || ''),
             // 编辑态不轮询；只读态由排行榜这类自带取数的组件自行按间隔刷新
             refreshInterval: readOnly ? effectiveInterval(w.refreshInterval, refreshInterval) : 0,
             onTextChange: (text: string) => setTextById(w.id, text),

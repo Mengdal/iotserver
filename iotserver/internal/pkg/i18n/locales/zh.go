@@ -144,6 +144,10 @@ func GetZhMessages() []*i18n.Message {
 			Other: `{{.info}}`,
 		},
 		{
+			ID:    "21715",
+			Other: `租户已停用，请联系平台管理员`,
+		},
+		{
 			ID:    "21714",
 			Other: `{{.info}}`,
 		},

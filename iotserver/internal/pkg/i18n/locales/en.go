@@ -144,6 +144,10 @@ func GetEnMessages() []*i18n.Message {
 			Other: `{{.info}}`,
 		},
 		{
+			ID:    "21715",
+			Other: `The tenant account has been disabled. Please contact the platform administrator.`,
+		},
+		{
 			ID:    "21714",
 			Other: `{{.info}}`,
 		},
@@ -802,6 +806,10 @@ func GetEnMessages() []*i18n.Message {
 		{
 			ID:    "文本组件超过 {{.p1}} 字",
 			Other: "Text widget exceeds {{.p1}} characters",
+		},
+		{
+			ID:    "文本组件（英文）超过 {{.p1}} 字",
+			Other: "English text widget exceeds {{.p1}} characters",
 		},
 		{
 			ID:    "方案 {{.p1}} 不存在",

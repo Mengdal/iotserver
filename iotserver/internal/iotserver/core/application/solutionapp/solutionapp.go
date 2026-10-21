@@ -154,7 +154,14 @@ func (app *machineTemplateApp) SolutionSearch(ctx context.Context, req dtos.Solu
 	}
 	out := make([]dtos.SolutionResponse, 0, len(list))
 	for _, tpl := range list {
-		out = append(out, machineTemplateResponseFromModel(tpl))
+		item := machineTemplateResponseFromModel(tpl)
+		if req.Summary {
+			item.ThingModelJson = ""
+			item.AlarmRulesJson = ""
+			item.DashboardJson = ""
+			item.MetricsJson = ""
+		}
+		out = append(out, item)
 	}
 	return out, nil
 }

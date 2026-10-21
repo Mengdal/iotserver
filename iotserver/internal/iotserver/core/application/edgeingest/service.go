@@ -46,8 +46,9 @@ import (
 )
 
 const (
-	// mqttClientID 订阅参考系统上行所用的 clientId，与自有协议的服务区分开
-	mqttClientID = "iotserver-core-edge"
+	// mqttClientIDPrefix 订阅参考系统上行所用的 clientId 前缀。
+	// 实际 clientId 会拼上实例后缀，避免多个平台实例连同一个 broker 时互相踢下线。
+	mqttClientIDPrefix = "iotserver-core-edge"
 	// deviceOnlineThrottle 同一设备最多多久写一次「置在线」。
 	// 网关是按包上报的，同一设备不必每包都写一次元数据库。
 	deviceOnlineThrottle = 30 * time.Second
@@ -106,7 +107,7 @@ func (s *Service) Start() error {
 	username, password := cfg.EdgeIngest.Credentials(cfg.MessageQueue)
 	req := dtos.NewMQTTClient{
 		Broker:   cfg.EdgeIngest.BrokerURL(cfg.MessageQueue),
-		ClientId: mqttClientID,
+		ClientId: pkgMQTT.InstanceClientID(mqttClientIDPrefix),
 		Username: username,
 		Password: password,
 		// 初始不订阅：主题要按网关表逐个拼，见下面的 syncSubscriptions

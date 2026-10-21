@@ -21,6 +21,7 @@ import (
 	"iotserver/internal/iotserver/core/container"
 	"iotserver/internal/pkg/errort"
 	pkgMQTT "iotserver/internal/tools/mqttclient"
+	"strings"
 )
 
 func (msp *MessageApp) connectMQTT() (mqttClient pkgMQTT.MQTTClient) {
@@ -52,9 +53,14 @@ func (msp *MessageApp) connectMQTT() (mqttClient pkgMQTT.MQTTClient) {
 func (tmq *MessageApp) prepareMqttConnectParams() (req dtos.NewMQTTClient, consumeCallback mqtt.MessageHandler, err error) {
 	config := container.ConfigurationFrom(tmq.dic.Get)
 
+	clientId := config.MessageQueue.Optional["ClientId"]
+	if strings.TrimSpace(clientId) == "" {
+		// 未显式配置时用实例级唯一 clientId；空 clientId 在部分 broker 上也会互踢。
+		clientId = pkgMQTT.InstanceClientID("iotserver-core-bus")
+	}
 	req = dtos.NewMQTTClient{
 		Broker:   config.MessageQueue.URL(),
-		ClientId: config.MessageQueue.Optional["ClientId"],
+		ClientId: clientId,
 		Username: config.MessageQueue.Optional["Username"],
 		Password: config.MessageQueue.Optional["Password"],
 	}

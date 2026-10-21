@@ -45,6 +45,8 @@ const (
 	AppTenantNotEmpty uint32 = 21713
 	// AppMenuHasTenantChildren 平台菜单下仍挂着租户自建菜单，不允许删除（避免产生孤儿菜单）
 	AppMenuHasTenantChildren uint32 = 21714
+	// AppTenantDisabled 租户已停用：登录与请求中间件都会拦截
+	AppTenantDisabled uint32 = 21715
 
 	DeviceLibraryMustDeleteDeviceService uint32 = 20201
 	DeviceLibraryUpgradeIng              uint32 = 20204

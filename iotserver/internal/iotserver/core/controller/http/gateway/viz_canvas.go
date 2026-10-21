@@ -73,8 +73,10 @@ type vizWidget struct {
 	ShowTitle bool   `json:"showTitle"`
 	// Type 组件类型，取值见 vizWidgetRegistry。
 	// 未知类型原样保留（新版本前端建的组件在旧后端上不会被改写成文本而丢内容）
-	Type   string    `json:"type,omitempty"`
-	Text   string    `json:"text,omitempty"`
+	Type string `json:"type,omitempty"`
+	Text string `json:"text,omitempty"`
+	// TextEn 文本组件的英文正文（中英双语看板内容，按当前语言选择展示/编辑）
+	TextEn string    `json:"textEn,omitempty"`
 	Layout vizLayout `json:"layout"`
 	// Config 数据类组件的配置：每个类型自己的 schema，后端只负责补默认值与大小校验
 	Config map[string]interface{} `json:"config,omitempty"`
@@ -336,6 +338,9 @@ func (cv *vizCanvas) normalize(boardName string) error {
 			case w.Type == vizWidgetText:
 				if len([]rune(strings.TrimSpace(w.Text))) > vizTextMaxLen {
 					return errort.NewMessageErr("文本组件超过 {{.p1}} 字", map[string]interface{}{"p1": vizTextMaxLen})
+				}
+				if len([]rune(strings.TrimSpace(w.TextEn))) > vizTextMaxLen {
+					return errort.NewMessageErr("文本组件（英文）超过 {{.p1}} 字", map[string]interface{}{"p1": vizTextMaxLen})
 				}
 				w.Config = nil
 			case !known:

@@ -488,8 +488,16 @@ const GatewayManagePage: React.FC = () => {
       render: (_, record) => (
         <Space size={4} wrap={false} style={{ whiteSpace: 'nowrap' }}>
           {canEdit && <Button type="link" size="small" onClick={() => openEdit(record)}>{t('编辑')}</Button>}
-          {canConfig && isEdgeGateway(record) && <Button type="link" size="small" onClick={() => openControl(record)}>{t('设备控制')}</Button>}
-          {canCommand && <Button type="link" size="small" onClick={() => openCommand(record)}>{t('下发命令')}</Button>}
+          {canConfig && isEdgeGateway(record) && (
+            <Button type="link" size="small" disabled={record.status !== 1} onClick={() => openControl(record)}>
+              {t('设备控制')}
+            </Button>
+          )}
+          {canCommand && (
+            <Button type="link" size="small" disabled={record.status !== 1} onClick={() => openCommand(record)}>
+              {t('下发命令')}
+            </Button>
+          )}
           {canRemove && (
             <Popconfirm
               title={t('确认删除该网关？删除后该网关的设备绑定关系不会级联清除。')}
@@ -787,23 +795,48 @@ const GatewayManagePage: React.FC = () => {
         footer={null}
         onCancel={() => setSyncOpen(false)}
       >
-        <Alert
-          type="info"
-          showIcon
-          style={{ marginBottom: 12 }}
-          message={t('设备清单来自网关标签树；平台会继续按该 SN 订阅上报，新设备上报后会自动注册。')}
-        />
         {syncDevices.length === 0
           ? <Empty description={t('网关没有返回设备')} />
-          : syncDevices.map(group => (
-            <Card key={group.dn} size="small" title={`${group.label} (${group.dn})`} style={{ marginBottom: 8 }}>
-              <Space wrap>
-                {group.tags.map(tag => (
-                  <Tag key={tag.identifier}>{tag.label} ({tag.identifier})</Tag>
-                ))}
-              </Space>
-            </Card>
-          ))}
+          : (
+            <>
+              <div style={{ marginBottom: 12, color: '#667085', fontSize: 13 }}>
+                {t('共 {{devices}} 台设备，{{tags}} 个测点', {
+                  devices: syncDevices.length,
+                  tags: syncDevices.reduce((sum, group) => sum + group.tags.length, 0),
+                })}
+              </div>
+              <Table<EdgeDeviceGroup>
+                size="small"
+                rowKey="dn"
+                pagination={false}
+                scroll={{ y: 420 }}
+                dataSource={syncDevices}
+                columns={[
+                  {
+                    title: t('设备'),
+                    dataIndex: 'label',
+                    width: 200,
+                    ellipsis: true,
+                    render: (value: string, record) => value || record.dn,
+                  },
+                  { title: t('设备标识'), dataIndex: 'dn', width: 200, ellipsis: true },
+                  {
+                    title: t('测点'),
+                    dataIndex: 'tags',
+                    render: (tags: EdgeDeviceGroup['tags']) => (
+                      <Space size={[4, 4]} wrap>
+                        {tags.map(tag => (
+                          <Tag key={tag.identifier} style={{ marginInlineEnd: 0 }}>
+                            {tag.label} ({tag.identifier})
+                          </Tag>
+                        ))}
+                      </Space>
+                    ),
+                  },
+                ]}
+              />
+            </>
+          )}
       </Modal>
 
       {/* ===== 下发命令 ===== */}
@@ -831,11 +864,6 @@ const GatewayManagePage: React.FC = () => {
               ]}
             />
           </Form.Item>
-          <Alert
-            type="info"
-            showIcon
-            message={t('参考系统网关：重启走 /edge/restart，同步设备会拉取该 SN 下的设备/测点树。')}
-          />
         </Form>
       </Modal>
     </Card>

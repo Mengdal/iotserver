@@ -14,6 +14,8 @@ export interface ImageUploaderProps {
   width?: number
   height?: number
   disabled?: boolean
+  /** 统一输出 PNG（favicon 这类小图标用）：浏览器对 JPEG/其它格式的图标支持不一致 */
+  preferPng?: boolean
 }
 
 /** 读取文件为 data URL */
@@ -27,7 +29,7 @@ function readAsDataURL (file: File): Promise<string> {
 }
 
 /** 用 canvas 压缩，避免把大图塞进配置表 */
-function compress (dataUrl: string, maxSize: number, quality = 0.9): Promise<string> {
+function compress (dataUrl: string, maxSize: number, quality = 0.9, preferPng = false): Promise<string> {
   return new Promise(resolve => {
     const img = new Image()
     img.onload = () => {
@@ -44,7 +46,7 @@ function compress (dataUrl: string, maxSize: number, quality = 0.9): Promise<str
         return
       }
       ctx.drawImage(img, 0, 0, w, h)
-      const isPng = dataUrl.startsWith('data:image/png')
+      const isPng = preferPng || dataUrl.startsWith('data:image/png')
       resolve(canvas.toDataURL(isPng ? 'image/png' : 'image/jpeg', quality))
     }
     img.onerror = () => resolve(dataUrl)
@@ -58,7 +60,7 @@ function compress (dataUrl: string, maxSize: number, quality = 0.9): Promise<str
  * 不在旁边额外放「替换 / 删除」按钮。
  * 图片以 data URL 回填表单，随系统配置一起保存。
  */
-const ImageUploader: React.FC<ImageUploaderProps> = ({ value, onChange, width = 120, height = 120, disabled }) => {
+const ImageUploader: React.FC<ImageUploaderProps> = ({ value, onChange, width = 120, height = 120, disabled, preferPng }) => {
   const [messageApi, contextHolder] = useMessage()
   const [hover, setHover] = useState(false)
 
@@ -73,10 +75,10 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ value, onChange, width = 
     }
     const raw = await readAsDataURL(file)
     // 按预览框尺寸推导压缩上限：背景图这类大图放宽到 1200，小图 512
-    const compressed = await compress(raw, Math.max(width, height) > 200 ? 1200 : 512)
+    const compressed = await compress(raw, Math.max(width, height) > 200 ? 1200 : 512, 0.9, preferPng)
     onChange?.(compressed)
     return Upload.LIST_IGNORE
-  }, [messageApi, onChange, width, height])
+  }, [messageApi, onChange, width, height, preferPng])
 
   return (
     <>
