@@ -988,8 +988,8 @@ func GetEnMessages() []*i18n.Message {
 			Other: "Failed to set device properties: {{.p1}}",
 		},
 		{
-			ID:    "该租户下仍有 {{.p1}} 个用户、{{.p2}} 台设备、{{.p3}} 台网关、{{.p4}} 个产品、{{.p5}} 个看板，请先清理",
-			Other: "This tenant still has {{.p1}} users, {{.p2}} devices, {{.p3}} gateways, {{.p4}} products and {{.p5}} boards; clean them up first",
+			ID:    "该租户下仍有 {{.p1}} 个用户、{{.p2}} 台设备、{{.p3}} 台网关、{{.p4}} 个产品、{{.p5}} 个自定义看板，请先清理",
+			Other: "This tenant still has {{.p1}} users, {{.p2}} devices, {{.p3}} gateways, {{.p4}} products and {{.p5}} custom boards; clean them up first",
 		},
 		{
 			ID:    "请先配置执行动作",

@@ -66,3 +66,58 @@ func (c *Client) VizBoards() ([]models.VizBoard, error) {
 func (c *Client) VizBoardsReplace(list []models.VizBoard) error {
 	return vizBoardsReplace(c, list)
 }
+
+// VizBoardsByTenant 显式按 tenant_id 查询看板（不依赖租户插件的隐式过滤）。
+func (c *Client) VizBoardsByTenant(tenantId string) ([]models.VizBoard, error) {
+	var list []models.VizBoard
+	if err := c.Pool.Table(models.TableVizBoard).Where("tenant_id = ?", tenantId).
+		Order("update_at desc").Find(&list).Error; err != nil {
+		return nil, errort.NewCommonEdgeX(errort.DefaultSystemError, "viz board query failed", err)
+	}
+	return list, nil
+}
+
+// VizBoardsReplaceByTenant 在指定租户内覆盖式保存看板：
+// 列表内按 id upsert，列表外（已删除）的删除，且所有条件都带 tenant_id。
+func (c *Client) VizBoardsReplaceByTenant(tenantId string, list []models.VizBoard) error {
+	now := time.Now().UnixMilli()
+	return c.Pool.Transaction(func(tx *gorm.DB) error {
+		ids := make([]string, 0, len(list))
+		for _, b := range list {
+			ids = append(ids, b.Id)
+			var count int64
+			if err := tx.Table(models.TableVizBoard).
+				Where("id = ? AND tenant_id = ?", b.Id, tenantId).Count(&count).Error; err != nil {
+				return err
+			}
+			if count > 0 {
+				if err := tx.Table(models.TableVizBoard).
+					Where("id = ? AND tenant_id = ?", b.Id, tenantId).
+					Updates(map[string]interface{}{
+						"name":       b.Name,
+						"icon":       b.Icon,
+						"canvas":     b.Canvas,
+						"is_default": b.IsDefault,
+						"is_home":    b.IsHome,
+						"update_at":  b.UpdateAt,
+						"modified":   now,
+					}).Error; err != nil {
+					return err
+				}
+				continue
+			}
+			b.TenantId = tenantId
+			b.Timestamps = models.Timestamps{Created: now, Modified: now}
+			if err := tx.Table(models.TableVizBoard).Create(&b).Error; err != nil {
+				return err
+			}
+		}
+		if len(ids) == 0 {
+			return tx.Table(models.TableVizBoard).Where("tenant_id = ?", tenantId).
+				Delete(&models.VizBoard{}).Error
+		}
+		return tx.Table(models.TableVizBoard).
+			Where("tenant_id = ? AND id NOT IN ?", tenantId, ids).
+			Delete(&models.VizBoard{}).Error
+	})
+}

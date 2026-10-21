@@ -2,7 +2,7 @@
   "id": "builtin-demo",
   "name": "组件演示看板",
   "icon": "appstore",
-  "scope": "platform",
+  "scope": "all",
   "isDefault": true,
   "canvas": {
     "cols": 12,

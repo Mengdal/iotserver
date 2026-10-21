@@ -105,6 +105,42 @@ func TestTenantDeleteProtection(t *testing.T) {
 	if _, err = env.client.WithCtx(platformCtx()).TenantById(empty.Id); err == nil {
 		t.Fatal("删除后租户应查不到")
 	}
+
+	// ===== 只有内置看板：内置看板是系统种入的，不应挡住删除，删除时一并清理 =====
+	builtinTenant, err := env.client.WithCtx(platformCtx()).AddTenant(models.Tenant{Code: "delbuiltin", Name: "内置看板租户"})
+	if err != nil {
+		t.Fatalf("建内置看板租户失败: %v", err)
+	}
+	if err = env.client.WithCtx(tenantCtxOf(builtinTenant.Id)).VizBoardsReplace([]models.VizBoard{{
+		Id: "builtin-home-" + builtinTenant.Id, Name: "首页看板", IsHome: 1,
+	}}); err != nil {
+		t.Fatalf("写入内置看板失败: %v", err)
+	}
+	if resp = parseResponse(t, doRequest(env.engine, http.MethodDelete, "/api/v1/tenant/"+builtinTenant.Id, env.token, nil)); !resp.Success {
+		t.Fatalf("只有内置看板的租户应允许删除，实际失败: %v", resp.ErrorMsg)
+	}
+	if boards, bErr := env.client.WithCtx(tenantCtxOf(builtinTenant.Id)).VizBoards(); bErr != nil || len(boards) != 0 {
+		t.Fatalf("删除租户后应清理其看板，实际 %d 块（err=%v）", len(boards), bErr)
+	}
+
+	// ===== 用户自建看板：仍然保护，不允许删除 =====
+	customTenant, err := env.client.WithCtx(platformCtx()).AddTenant(models.Tenant{Code: "delcustom", Name: "自建看板租户"})
+	if err != nil {
+		t.Fatalf("建自建看板租户失败: %v", err)
+	}
+	if err = env.client.WithCtx(tenantCtxOf(customTenant.Id)).VizBoardsReplace([]models.VizBoard{{
+		Id: "custom-board", Name: "客户看板",
+	}}); err != nil {
+		t.Fatalf("写入自建看板失败: %v", err)
+	}
+	w = doRequest(env.engine, http.MethodDelete, "/api/v1/tenant/"+customTenant.Id, env.token, nil)
+	resp = parseResponse(t, w)
+	if resp.Success || resp.ErrorCode != errCodeTenantNotEmpty {
+		t.Fatalf("有自建看板的租户不应允许删除，实际 success=%v code=%d msg=%s", resp.Success, resp.ErrorCode, resp.ErrorMsg)
+	}
+	if !strings.Contains(resp.ErrorMsg, "1 个自定义看板") {
+		t.Fatalf("删除保护错误信息应只统计自建看板：%s", resp.ErrorMsg)
+	}
 }
 
 // TestTenantDeviceQuotaEnforced 设备配额：超限拒绝并带当前值/上限；配额=0 不限

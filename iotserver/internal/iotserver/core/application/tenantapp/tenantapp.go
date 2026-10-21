@@ -154,21 +154,46 @@ func (app *tenantApp) TenantDelete(ctx context.Context, id string) error {
 	if err != nil {
 		return err
 	}
-	boards, err := db.TenantVizBoardCount(id)
+	// 看板只统计「用户自建」的：内置看板（首页/组件演示等）是系统自动种入的脚手架，
+	// 不应该挡住租户删除；租户删除后会连同看板一起清理。
+	boards, err := db.VizBoards()
 	if err != nil {
 		return err
 	}
-	if users+devices+gateways+products+boards > 0 {
-		return errort.NewCommonErr(errort.AppTenantNotEmpty, errort.NewMessageErr("该租户下仍有 {{.p1}} 个用户、{{.p2}} 台设备、{{.p3}} 台网关、{{.p4}} 个产品、{{.p5}} 个看板，请先清理", map[string]interface{}{"p1": users, "p2": devices, "p3": gateways, "p4": products, "p5": boards}))
+	customBoards := int64(0)
+	for _, b := range boards {
+		if !isBuiltinVizBoard(b) {
+			customBoards++
+		}
+	}
+	if users+devices+gateways+products+customBoards > 0 {
+		return errort.NewCommonErr(errort.AppTenantNotEmpty, errort.NewMessageErr("该租户下仍有 {{.p1}} 个用户、{{.p2}} 台设备、{{.p3}} 台网关、{{.p4}} 个产品、{{.p5}} 个自定义看板，请先清理", map[string]interface{}{"p1": users, "p2": devices, "p3": gateways, "p4": products, "p5": customBoards}))
 	}
 	if err = app.dbClient.WithCtx(ctx).DeleteTenant(id); err != nil {
 		return err
+	}
+	// 看板随租户一起清理；失败不回滚删除（与菜单定制数据一致）
+	if err = db.VizBoardsReplace(nil); err != nil && app.lc != nil {
+		app.lc.Warnf("删除租户 %s 后清理看板失败: %v", id, err)
 	}
 	// 菜单定制数据清理失败不回滚删除：菜单定制属于展示层数据，缺失不影响主体删除
 	if err = app.dbClient.WithCtx(ctx).CleanupTenantMenuRecords(id); err != nil && app.lc != nil {
 		app.lc.Warnf("删除租户 %s 后清理菜单定制数据失败: %v", id, err)
 	}
 	return nil
+}
+
+// isBuiltinVizBoard 是否为系统内置看板。
+// id 前缀 builtin-/bd- 覆盖现有与历史命名，名称兜底覆盖手工导入的旧数据。
+func isBuiltinVizBoard(b models.VizBoard) bool {
+	if strings.HasPrefix(b.Id, "builtin-") || strings.HasPrefix(b.Id, "bd-") {
+		return true
+	}
+	switch b.Name {
+	case "首页看板", "组件演示看板", "系统监控看板", "产品介绍看板":
+		return true
+	}
+	return false
 }
 
 // TenantById 租户详情

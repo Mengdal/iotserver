@@ -68,6 +68,21 @@ func (ctl *controller) db(ctx context.Context) interfaces.DBClient {
 	return container.DBClientFrom(ctl.dic.Get).WithCtx(ctx)
 }
 
+// boardTenantId 看板数据的有效租户：
+// 平台管理员在「平台视图」（未代管租户）时是空串，即平台自己的看板；
+// 代管租户 / 普通租户时是该租户 ID。看板属于租户配置，不能跨租户混在一起
+// （同名看板会重复，且「设为首页/默认」会互相覆盖）。
+func boardTenantId(ctx context.Context) string {
+	return tenant.FromContext(ctx).TenantID
+}
+
+// boardDB 看板读写使用的 DB 客户端。
+// 用平台作用域绕过租户插件的隐式过滤，再由仓储方法显式传 tenant_id：
+// 空租户在 Enforce 策略下会被插件判为「无上下文」而返回空集。
+func (ctl *controller) boardDB(ctx context.Context) interfaces.DBClient {
+	return container.DBClientFrom(ctl.dic.Get).WithCtx(tenant.Platform(ctx))
+}
+
 // loadVizBoards 读看板列表（落库，按租户隔离）。
 //
 // 种入内置看板的两个时机（新建/删除都不影响）：
@@ -75,7 +90,8 @@ func (ctl *controller) db(ctx context.Context) interfaces.DBClient {
 //   - 有看板、但一块都没设成「首页看板」 → 只补一块内置首页看板
 //     （首页整页渲染首页看板，这个槽位不能空，存量安装靠它自愈）。
 func (ctl *controller) loadVizBoards(ctx context.Context) []vizBoardRecord {
-	rows, err := ctl.db(ctx).VizBoards()
+	tenantId := boardTenantId(ctx)
+	rows, err := ctl.boardDB(ctx).VizBoardsByTenant(tenantId)
 	if err != nil {
 		ctl.lc.Warn(fmt.Sprintf("查询看板失败: %s", err.Error()))
 		return nil
@@ -89,15 +105,7 @@ func (ctl *controller) loadVizBoards(ctx context.Context) []vizBoardRecord {
 	}
 	if needSeed {
 		ctl.seedDefaultBoards(ctx, onlyHome)
-		if rows, err = ctl.db(ctx).VizBoards(); err != nil {
-			return nil
-		}
-	}
-	// 存量安装没有「产品介绍看板」时补一块（新装已在种全套里含它）。
-	// 看板管理里删除后，下次打开列表会再次补回。
-	if !vizHasIntro(rows) {
-		ctl.seedIntroBoard(ctx)
-		if rows, err = ctl.db(ctx).VizBoards(); err != nil {
+		if rows, err = ctl.boardDB(ctx).VizBoardsByTenant(tenantId); err != nil {
 			return nil
 		}
 	}
@@ -156,7 +164,7 @@ func (ctl *controller) saveVizBoards(ctx context.Context, boards []vizBoardRecor
 			UpdateAt:  b.UpdateAt,
 		})
 	}
-	return ctl.db(ctx).VizBoardsReplace(list)
+	return ctl.boardDB(ctx).VizBoardsReplaceByTenant(boardTenantId(ctx), list)
 }
 
 // vizHasHome 是否已有「首页看板」（首页整页渲染它，不能空）
@@ -169,50 +177,9 @@ func vizHasHome(rows []models.VizBoard) bool {
 	return false
 }
 
-// vizHasIntro 是否已有产品介绍看板
-func vizHasIntro(rows []models.VizBoard) bool {
-	for _, r := range rows {
-		if r.Id == "builtin-intro" || strings.HasPrefix(r.Id, "builtin-intro-") || r.Name == "产品介绍看板" {
-			return true
-		}
-	}
-	return false
-}
-
-// seedIntroBoard 只补一块「产品介绍看板」（存量安装 / 被删后的自愈）
-func (ctl *controller) seedIntroBoard(ctx context.Context) {
-	preset, ok := seed.BoardPresetById("builtin-intro")
-	if !ok {
-		return
-	}
-	idSuffix := "-" + tenant.FromContext(ctx).TenantID
-	if tenant.IsPlatformScope(ctx) {
-		idSuffix = ""
-	}
-	var cv vizCanvas
-	if err := json.Unmarshal(preset.Canvas, &cv); err != nil {
-		ctl.lc.Warnf("内置看板 %s 的画布解析失败: %s", preset.Id, err.Error())
-		return
-	}
-	if err := cv.normalize(preset.Name); err != nil {
-		ctl.lc.Warnf("内置看板 %s 校验失败: %s", preset.Id, err.Error())
-		return
-	}
-	rec := vizBoardRecord{
-		Id:     preset.Id + idSuffix,
-		Name:   preset.Name,
-		Icon:   preset.Icon,
-		Canvas: &cv,
-	}
-	touchVizBoard(&rec)
-	if err := ctl.mergeSaveBoards(ctx, []vizBoardRecord{rec}); err != nil {
-		ctl.lc.Warnf("补入产品介绍看板失败: %s", err.Error())
-	}
-}
-
 // seedDefaultBoards 种入内置看板（部署自带）。
 //
-// 平台租户得到首页/演示/监控三块，普通租户得到首页/监控两块（见 pkg/seed/boards.go）；
+// 平台租户得到首页/演示/监控三块，普通租户得到首页/演示两块（见 pkg/seed/boards.go）；
 // onlyHome = true 时只补首页看板（存量安装"有看板但没设首页"的自愈场景）。
 // 画布走一遍 normalize 校验，保证内置 JSON 与编辑器保存的走同一套规则；id 稳定。
 //
@@ -266,7 +233,7 @@ func (ctl *controller) seedDefaultBoards(ctx context.Context, onlyHome bool) {
 // 不能直接 saveVizBoards(seeded)：那是「整体替换」，只补一块首页看板的自愈场景下
 // 会把该租户其它看板全部删掉。这里按 id 合并：内置覆盖同 id 项，其余原样保留。
 func (ctl *controller) mergeSaveBoards(ctx context.Context, seeded []vizBoardRecord) error {
-	rows, err := ctl.db(ctx).VizBoards()
+	rows, err := ctl.boardDB(ctx).VizBoardsByTenant(boardTenantId(ctx))
 	if err != nil {
 		return err
 	}

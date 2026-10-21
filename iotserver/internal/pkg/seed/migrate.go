@@ -3,6 +3,7 @@ package seed
 import (
 	"encoding/json"
 	"strings"
+	"time"
 
 	"gorm.io/gorm"
 
@@ -165,6 +166,62 @@ func UpgradeBuiltinBoards(tx *gorm.DB) error {
 		}
 		if err := tx.Table((&models.VizBoard{}).TableName()).Where("id = ?", b.Id).
 			Update("canvas", next).Error; err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// EnsureTenantBuiltinBoards 给存量租户补齐内置「组件演示看板」。
+//
+// 新版本普通租户与平台一样自带首页 + 组件演示两块看板；旧版本只种了首页，
+// 升级时在这里补齐。只在该租户还没有这块看板时插入，避免重复。
+// 租户已有别的默认看板时，补入的这块不再标记为默认，保持「每租户一个默认看板」。
+func EnsureTenantBuiltinBoards(tx *gorm.DB) error {
+	if !tx.Migrator().HasTable("viz_board") || !tx.Migrator().HasTable("tenant") {
+		return nil
+	}
+	preset, ok := BoardPresetById("builtin-demo")
+	if !ok {
+		return nil
+	}
+	var tenantIds []string
+	if err := tx.Table("tenant").Pluck("id", &tenantIds).Error; err != nil {
+		return err
+	}
+	now := time.Now().UnixMilli()
+	// 平台自身的看板由首次访问时的种入逻辑统一处理；这里只补存量租户，
+	// 避免提前插入一块「默认看板」导致平台无法再种入完整的一套（首页/演示/监控）。
+	for _, tenantId := range tenantIds {
+		boardId := preset.Id + "-" + tenantId
+		// 按 id 或名称判重：看板管理里手工建的同名看板也算已有，避免升级后出现两块
+		var count int64
+		if err := tx.Table("viz_board").
+			Where("id = ? OR (tenant_id = ? AND name = ?)", boardId, tenantId, preset.Name).
+			Count(&count).Error; err != nil {
+			return err
+		}
+		if count > 0 {
+			continue
+		}
+		var defaults int64
+		if err := tx.Table("viz_board").Where("tenant_id = ? AND is_default = 1", tenantId).
+			Count(&defaults).Error; err != nil {
+			return err
+		}
+		board := models.VizBoard{
+			Id:       boardId,
+			Name:     preset.Name,
+			Icon:     preset.Icon,
+			Canvas:   string(preset.Canvas),
+			UpdateAt: now,
+		}
+		board.TenantId = tenantId
+		board.Created, board.Modified = now, now
+		if defaults == 0 {
+			board.IsDefault = 1
+		}
+		if err := tx.Table("viz_board").Create(&board).Error; err != nil {
 			return err
 		}
 	}

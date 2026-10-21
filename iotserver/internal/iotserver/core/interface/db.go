@@ -80,6 +80,11 @@ type DBClient interface {
 	// ===== 画布看板（落库，按租户隔离）=====
 	VizBoards() ([]models.VizBoard, error)
 	VizBoardsReplace(list []models.VizBoard) error
+	// VizBoardsByTenant / VizBoardsReplaceByTenant 显式按 tenant_id 读写看板。
+	// 看板控制器用它们在平台视图（租户 ID 为空）下只操作平台自己的看板，
+	// 避免平台作用域跨租户读写时出现同名看板互相覆盖。
+	VizBoardsByTenant(tenantId string) ([]models.VizBoard, error)
+	VizBoardsReplaceByTenant(tenantId string, list []models.VizBoard) error
 
 	// ===== 方案（行业方案包）=====
 	BatchUpsertSolution(list []models.Solution) (int64, error)

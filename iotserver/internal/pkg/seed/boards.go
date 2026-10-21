@@ -7,6 +7,7 @@ import (
 )
 
 // 内置看板（部署自带的初始内容）：首页看板、组件演示看板、系统监控看板。
+// 普通租户种入首页与组件演示两块；系统监控看板只给平台管理员。
 //
 // 为什么用 go:embed 而不是读文件：运行镜像只带二进制与前端产物（见 Dockerfile），
 // 早期"从 .viz-boards.json 迁移"的机制在容器部署里根本不生效——编译期内嵌才跟得上部署。
@@ -23,7 +24,7 @@ type BoardScope string
 const (
 	// BoardScopePlatform 平台租户：全部内置看板
 	BoardScopePlatform BoardScope = "platform"
-	// BoardScopeTenant 普通租户：首页 + 系统监控（组件演示看板是平台自用的）
+	// BoardScopeTenant 普通租户：首页 + 组件演示（系统监控看板是平台自用的）
 	BoardScopeTenant BoardScope = "tenant"
 )
 

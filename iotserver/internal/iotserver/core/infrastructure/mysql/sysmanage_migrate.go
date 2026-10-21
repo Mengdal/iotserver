@@ -446,6 +446,10 @@ func (c *Client) seedSystemData() error {
 		if err := seed.UpgradeBuiltinBoards(tx); err != nil {
 			return err
 		}
+		// 存量租户补齐组件演示看板（新版本普通租户内置首页 + 演示两块）
+		if err := seed.EnsureTenantBuiltinBoards(tx); err != nil {
+			return err
+		}
 
 		/******* 内置管理员 *******/
 		var adminCount int64
