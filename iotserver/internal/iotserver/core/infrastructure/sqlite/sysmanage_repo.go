@@ -595,8 +595,7 @@ func sysMenuPrefsByTenant(c *Client, tenantId string) ([]models.TenantMenuPref, 
 	return list, nil
 }
 
-// upsertSysMenuPref 按 (tenant_id, menu_id) 幂等写入；用「先查后写」而不是方言 upsert，
-// 让 sqlite / mysql 两个后端共用同一份实现。
+// upsertSysMenuPref 按 (tenant_id, menu_id) 幂等写入；用「先查后写」而不是方言 upsert。
 func upsertSysMenuPref(c *Client, p models.TenantMenuPref) (models.TenantMenuPref, error) {
 	var exist models.TenantMenuPref
 	err := c.Pool.Table(models.TableTenantMenuPref).

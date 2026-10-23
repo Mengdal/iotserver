@@ -27,11 +27,11 @@ func TestValidateType(t *testing.T) {
 	if err := validate("ok", "不支持的类型", map[string]interface{}{}); err == nil {
 		t.Fatal("非法类型应报错")
 	}
-	for _, resourceType := range []string{"HTTP推送", "消息对队列MQTT", "消息队列Kafka", "InfluxDB", "TDengine"} {
+	for _, resourceType := range []string{"HTTP推送", "消息对队列MQTT", "消息队列Kafka", "InfluxDB"} {
 		if err := validate("ok", resourceType, map[string]interface{}{
 			"url": "http://x", "server": "127.0.0.1:1883", "topic": "t",
 			"brokers": "127.0.0.1:9092", "addr": "127.0.0.1:8086", "databasename": "db",
-			"host": "127.0.0.1", "database": "iot", "table": "tb",
+			"measurement": "sensor",
 		}); err != nil {
 			t.Fatalf("类型 %s 必填齐全时应通过: %v", resourceType, err)
 		}
@@ -53,9 +53,8 @@ func TestValidateRequiredOptions(t *testing.T) {
 		{"消息队列Kafka", map[string]interface{}{"brokers": "127.0.0.1:9092"}, true},
 		{"消息队列Kafka", map[string]interface{}{"brokers": "127.0.0.1:9092", "topic": "t"}, false},
 		{"InfluxDB", map[string]interface{}{"addr": "127.0.0.1:8086"}, true},
-		{"InfluxDB", map[string]interface{}{"addr": "127.0.0.1:8086", "databasename": "db"}, false},
-		{"TDengine", map[string]interface{}{"host": "127.0.0.1"}, true},
-		{"TDengine", map[string]interface{}{"host": "h", "database": "d", "table": "t"}, false},
+		{"InfluxDB", map[string]interface{}{"addr": "127.0.0.1:8086", "databasename": "db"}, true}, // 缺 measurement
+		{"InfluxDB", map[string]interface{}{"addr": "127.0.0.1:8086", "databasename": "db", "measurement": "sensor"}, false},
 	}
 	for _, tt := range cases {
 		err := validate("合法名称", tt.resourceType, tt.option)

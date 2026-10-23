@@ -16,7 +16,7 @@
 #
 #  ----------------------------------------------------------------------------------
 #
-#  注意：ducklake 数据层依赖官方 DuckDB Go 驱动（github.com/duckdb/duckdb-go/v2），
+#  注意：DuckDB 数据层依赖官方 DuckDB Go 驱动（github.com/duckdb/duckdb-go/v2），
 #  该驱动要求 Go >= 1.24 且需要 CGO，因此：
 #    1) 构建镜像必须是 Go >= 1.24 且带 C 工具链（bookworm 系列自带 gcc）；
 #    2) 运行镜像需要 glibc —— DuckDB 的静态库按 glibc 构建，不要用 alpine/musl。

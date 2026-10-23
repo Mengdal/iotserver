@@ -2,9 +2,9 @@ import dayjs from 'dayjs'
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { Button, Card, Descriptions, Table, Tag, message, Space, Typography, Popconfirm, Form, Select, Input } from 'antd'
-import { SyncOutlined, PlusOutlined, MinusCircleFilled, CheckCircleFilled } from '@ant-design/icons'
+import { PlusOutlined, MinusCircleFilled, CheckCircleFilled } from '@ant-design/icons'
 import { AdvanceBreadcrumb } from '@/components/Breadcrumb'
-import { getProductInfo, deleteThingModel, productSync } from '@/api'
+import { getProductInfo, deleteThingModel } from '@/api'
 import { DetailModal, DetailModalRef } from './DeatilModal'
 import { TypeSpecMap } from './helper'
 import { ProductActions, ProductEvents, ProductInfo, ProductProperties, ProductThingModelType, TypeSpec } from './types'
@@ -29,7 +29,6 @@ const ProductDetail = () => {
   const [messageApi, contextHolder] = useMessage()
 
   const [form] = useForm()
-  const [submitting, setSubmitting] = useState(false)
   const [productInfo, setProductInfo] = useState<ProductInfo>()
 
   const isCloudProduct = useMemo(() => productInfo?.cloud_instance_id, [productInfo])
@@ -125,32 +124,6 @@ const ProductDetail = () => {
                 </Popconfirm>
               </>}
               column={2}
-              extra={
-                isCloudProduct && <Button
-                  type="link"
-                  size="small"
-                  loading={submitting}
-                  disabled={submitting}
-                  icon={<SyncOutlined />}
-                  style={{ fontSize: 12 }}
-                  onClick={() => {
-                    setSubmitting(true)
-                    productSync({ product_id: params.id! })
-                      .then((resp) => {
-                        if (resp.success) {
-                          message.success(t('同步成功'))
-                          loadProductInfo()
-                        } else {
-                          message.error(resp.errorMsg)
-                        }
-                      }).catch((err) => {
-                        console.log(err)
-                      }).finally(() => {
-                        setSubmitting(false)
-                      })
-                  }}
-                >{t('同步产品')}</Button>
-              }
               labelStyle={{ fontSize: 12, color: '#8a949c' }}
               contentStyle={{ fontSize: 12 }}
             >
@@ -162,7 +135,6 @@ const ProductDetail = () => {
               <Descriptions.Item label={t('协议类型')}>{tt(productInfo?.protocol)}</Descriptions.Item>
               <Descriptions.Item label={t('创建时间')}>{dayjs(productInfo?.created_at).format('YYYY-MM-DD HH:mm:ss')}</Descriptions.Item>
               <Descriptions.Item label={t('厂商名称')}>{productInfo?.factory}</Descriptions.Item>
-              {isCloudProduct && <Descriptions.Item label={t('最后一次同步时间')}>{dayjs(productInfo?.last_sync_time).format('YYYY-MM-DD HH:mm:ss')}</Descriptions.Item>}
               <Descriptions.Item label={t('描述')}>{productInfo?.description}</Descriptions.Item>
             </Descriptions>
           </div>

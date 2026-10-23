@@ -47,7 +47,6 @@ require (
 	google.golang.org/protobuf v1.36.11
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	gopkg.in/yaml.v3 v3.0.1
-	gorm.io/driver/mysql v1.0.1
 	gorm.io/driver/sqlite v1.3.6
 	gorm.io/gorm v1.23.8
 )
@@ -75,7 +74,6 @@ require (
 	github.com/go-playground/locales v0.14.0 // indirect
 	github.com/go-playground/universal-translator v0.18.0 // indirect
 	github.com/go-playground/validator/v10 v10.11.1 // indirect
-	github.com/go-sql-driver/mysql v1.5.0 // indirect
 	github.com/go-viper/mapstructure/v2 v2.5.0 // indirect
 	github.com/goccy/go-json v0.10.5 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect

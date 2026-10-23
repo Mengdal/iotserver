@@ -108,7 +108,6 @@ func TestCheckTCPBasedTypes(t *testing.T) {
 		}
 	}()
 	addr := ln.Addr().String()
-	port := ln.Addr().(*net.TCPAddr).Port
 
 	// Kafka：brokers 可达
 	if err := Check(string(constants.KafkaResource), map[string]interface{}{
@@ -133,16 +132,6 @@ func TestCheckTCPBasedTypes(t *testing.T) {
 		t.Fatal("缺 brokers 应失败")
 	}
 
-	// TDengine：端口可达但非 TDengine 协议 → Ping 失败（必须返回错误而不是 panic）
-	if err := Check(string(constants.TDengineResource), map[string]interface{}{
-		"host": "127.0.0.1", "port": port, "database": "iot", "timeout": 800,
-	}); err == nil {
-		t.Fatal("非 TDengine 服务应验证失败")
-	}
-	// TDengine：缺 host
-	if err := Check(string(constants.TDengineResource), map[string]interface{}{"database": "iot"}); err == nil {
-		t.Fatal("缺 host 应失败")
-	}
 }
 
 func TestCheckUnsupportedType(t *testing.T) {

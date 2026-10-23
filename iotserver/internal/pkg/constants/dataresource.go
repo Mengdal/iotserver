@@ -17,11 +17,10 @@ package constants
 type DataResourceType string
 
 const (
-	HttpResource  DataResourceType = "HTTP推送"
-	MQTTResource  DataResourceType = "消息对队列MQTT"
-	KafkaResource DataResourceType = "消息队列Kafka"
+	HttpResource     DataResourceType = "HTTP推送"
+	MQTTResource     DataResourceType = "消息对队列MQTT"
+	KafkaResource    DataResourceType = "消息队列Kafka"
 	InfluxDBResource DataResourceType = "InfluxDB"
-	TDengineResource DataResourceType = "TDengine"
 )
 
-var DataResources = []DataResourceType{HttpResource, MQTTResource, KafkaResource, InfluxDBResource, TDengineResource}
+var DataResources = []DataResourceType{HttpResource, MQTTResource, KafkaResource, InfluxDBResource}

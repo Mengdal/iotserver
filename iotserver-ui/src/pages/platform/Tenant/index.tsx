@@ -358,6 +358,8 @@ const TenantPage: React.FC = () => {
         }}
       />
 
+      {/* 关闭动画结束时 rc-motion 会先把透明度重置为 1 再 display:none，合成层上会闪一帧完整弹窗；
+          这里直接关闭动画，取消后立即消失 */}
       <Modal
         open={modalOpen}
         title={editing ? t('编辑租户') : t('新增租户')}
@@ -365,6 +367,8 @@ const TenantPage: React.FC = () => {
         okText={t('确定')}
         cancelText={t('取消')}
         maskClosable={false}
+        transitionName=""
+        maskTransitionName=""
         confirmLoading={submitting}
         onOk={handleSubmit}
         onCancel={() => setModalOpen(false)}

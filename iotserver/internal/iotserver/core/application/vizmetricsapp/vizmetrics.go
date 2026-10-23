@@ -25,7 +25,7 @@
 //   - 指标清单只在本文件定义（GET /api/v1/viz/metrics 直接返回），前后端不各写一份；
 //   - 统计一律走调用方传入的 DBClient（调用方需已 WithCtx），因此 GORM 租户插件
 //     自动生效：租户视图只算本租户的行，平台视图算全平台（与
-//     infrastructure/{sqlite,mysql}/tenant_repo.go 的计数口径一致）；
+//     infrastructure/sqlite/tenant_repo.go 的计数口径一致）；
 //   - PlatformOnly 指标只在平台视图返回：租户视图直接省略该项，不报错；
 //   - 未登记的 key 直接忽略，不报错、不返回；
 //   - 值为 0 也照常返回（调用方不要因为 0 而省略）；

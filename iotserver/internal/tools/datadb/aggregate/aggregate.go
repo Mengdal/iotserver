@@ -1,6 +1,6 @@
 // Package aggregate 提供历史数据的聚合（时间分桶 + 聚合方法）能力。
 //
-// 该实现是后端无关的纯函数：SQL 型数据层（如 DuckLake）在 SQL 里分桶，
+// 该实现是后端无关的纯函数：SQL 型数据层在 SQL 里分桶，
 // 本地 KV / 内存型数据层（LevelDB、TStorage）先取回范围内全部原始行，再调用这里的 Bucketize。
 //
 // 语义约定（有测试覆盖）：

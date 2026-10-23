@@ -5,7 +5,6 @@ import HttpPush from './HttpPush1'
 import MessageMQTT from './MessageMQTT'
 import MessageKafka from './MessageKafka'
 import InfluxDB from './InfluxDB'
-import TDengine from './TDengine'
 import { getTypeResource } from '@/api'
 import useRequest from '@/hooks/useRequest'
 // import Redis from './Redis'
@@ -19,7 +18,6 @@ enum typeEnum {
   消息对队列MQTT = '消息对队列MQTT',
   消息队列Kafka = '消息队列Kafka',
   InfluxDB = 'InfluxDB',
-  TDengine = 'TDengine',
 }
 
 const typeComponent = {
@@ -27,7 +25,6 @@ const typeComponent = {
   [typeEnum.消息对队列MQTT]: <MessageMQTT/>,
   [typeEnum.消息队列Kafka]: <MessageKafka/>,
   [typeEnum.InfluxDB]: <InfluxDB/>,
-  [typeEnum.TDengine]: <TDengine/>,
 }
 
 const ResourceManage: React.FC<ResourceManageProps> = () => {

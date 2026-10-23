@@ -4,15 +4,13 @@
 //   - HTTP推送：按 option 里的 url/method/headers/timeout 发一次请求，2xx/3xx 视为成功；
 //   - 消息对队列MQTT：用 paho 建立真实 MQTT 连接（CONNECT），连接成功即可；
 //   - 消息队列Kafka：对 brokers 做 TCP 连通性检查（项目未引入 Kafka 客户端，仅验证可达性）；
-//   - InfluxDB：请求 {addr}/ping，2xx 视为成功；
-//   - TDengine：用 taosWS 驱动按 host/port/user/password/database 连接并 Ping。
+//   - InfluxDB：请求 {addr}/ping，2xx 视为成功。
 //
 // 所有检查共用 defaultTimeout，失败返回带原因的 error（调用方据此把 health 置为 false）。
 package healthcheck
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"iotserver/internal/pkg/errort"
@@ -121,8 +119,6 @@ func Check(resourceType string, option map[string]interface{}) error {
 		return checkKafka(option)
 	case constants.InfluxDBResource:
 		return checkInfluxDB(option)
-	case constants.TDengineResource:
-		return checkTDengine(option)
 	default:
 		return errort.NewMessageErr("不支持的资源类型: {{.p1}}", map[string]interface{}{"p1": resourceType})
 	}
@@ -282,62 +278,6 @@ func checkInfluxDB(option map[string]interface{}) error {
 		return nil
 	}
 	return errort.NewMessageErr("服务返回状态码 {{.p1}}", map[string]interface{}{"p1": resp.StatusCode})
-}
-
-// checkTDengine 通过 taosAdapter 的 REST 接口验证连通性。
-// 说明：这里刻意不用 taos 驱动——它的 init 里有 unsafe 指针运算，
-// 会把驱动依赖带进应用层并让 `go test -race` 直接崩溃（checkptr fatal）。
-func checkTDengine(option map[string]interface{}) error {
-	host := str(option, "host")
-	if host == "" {
-		return errort.NewMessageErr("缺少主机地址", nil)
-	}
-	port := intOf(option, "port")
-	if port <= 0 {
-		port = 6041 // taosAdapter 默认 REST 端口
-	}
-	user := str(option, "user")
-	if user == "" {
-		user = "root"
-	}
-	if err := checkTargetAddr(fmt.Sprintf("%s:%d", host, port)); err != nil {
-		return err
-	}
-
-	timeout := timeoutOf(option)
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-
-	body := strings.NewReader("SHOW DATABASES")
-	url := fmt.Sprintf("http://%s:%d/rest/sql", host, port)
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, body)
-	if err != nil {
-		return errort.NewMessageErr("请求构造失败: {{.p1}}", map[string]interface{}{"p1": err})
-	}
-	req.SetBasicAuth(user, str(option, "password"))
-	req.Header.Set("Content-Type", "text/plain")
-
-	resp, err := newHTTPClient(timeout).Do(req)
-	if err != nil {
-		return errort.NewMessageErr("连接失败: {{.p1}}", map[string]interface{}{"p1": err})
-	}
-	defer resp.Body.Close()
-	respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return errort.NewMessageErr("服务返回状态码 {{.p1}}", map[string]interface{}{"p1": resp.StatusCode})
-	}
-	// taosAdapter 用 {"code":0,...} 表示成功
-	var result struct {
-		Code int    `json:"code"`
-		Desc string `json:"desc"`
-	}
-	if err = json.Unmarshal(respBody, &result); err != nil {
-		return errort.NewMessageErr("响应解析失败: {{.p1}}", map[string]interface{}{"p1": err})
-	}
-	if result.Code != 0 {
-		return errort.NewMessageErr("TDengine 返回错误: {{.p1}}", map[string]interface{}{"p1": result.Desc})
-	}
-	return nil
 }
 
 /** ***************************** 工具 ***************************** **/

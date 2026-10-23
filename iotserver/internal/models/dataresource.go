@@ -20,13 +20,13 @@ func (o *DataResourceOption) Scan(value interface{}) error {
 	return GormScanWrap(value, o)
 }
 
-// DataResource 数据资源实例（HTTP推送 / MQTT / Kafka / InfluxDB / TDengine）
+// DataResource 数据资源实例（HTTP推送 / MQTT / Kafka / InfluxDB）
 type DataResource struct {
 	Id string `json:"id" gorm:"column:id;primaryKey;type:string;size:64;comment:主键"`
 	TenantField
 	Name string `json:"name" gorm:"column:name;type:string;size:64;index;comment:实例名称"`
 	Type string `json:"type" gorm:"column:type;type:string;size:64;index;comment:资源类型"`
-	// 列名用 option_json：option 是 MySQL 保留字
+	// 列名用 option_json：option 是 SQL 保留字
 	Option DataResourceOption `json:"option" gorm:"column:option_json;type:text;comment:连接参数(JSON)"`
 	// Health 最近一次验证结果；nil 表示尚未验证（前端显示 '-'）
 	Health *bool `json:"health" gorm:"column:health;comment:最近一次验证结果"`

@@ -1,6 +1,6 @@
 package dtos
 
-// 高级能力-资源管理（HTTP推送 / MQTT / Kafka / InfluxDB / TDengine）
+// 高级能力-资源管理（HTTP推送 / MQTT / Kafka / InfluxDB）
 
 // DataResourceAddRequest 新增资源实例
 type DataResourceAddRequest struct {

@@ -11,8 +11,6 @@ import (
 type DialectorType string
 
 const (
-	DIALECTOR_MYSQL  DialectorType = "mysql"
-	DIALECTOR_PGSQL  DialectorType = "postgres"
 	DIALECTOR_SQLITE DialectorType = "sqlite"
 )
 
@@ -45,10 +43,6 @@ func (provider *batchProvider) Update(engine *gorm.DB, records [][]interface{}) 
 
 func (provider *batchProvider) engineJudge(engine gorm.DB) DialectorType {
 	switch engine.Dialector.Name() {
-	//case (&postgres.Dialector{}).Name():
-	//	return DIALECTOR_PGSQL
-	//case (&mysql.Dialector{}).Name():
-	//	return DIALECTOR_MYSQL
 	case (&sqlite.Dialector{}).Name():
 		return DIALECTOR_SQLITE
 	default:
@@ -58,10 +52,6 @@ func (provider *batchProvider) engineJudge(engine gorm.DB) DialectorType {
 
 func (provider *batchProvider) constructSQL(records [][]interface{}, dialectorType DialectorType) (string, error) {
 	switch dialectorType {
-	case DIALECTOR_PGSQL:
-		return provider.constructPGSQL(records), nil
-	case DIALECTOR_MYSQL:
-		return provider.constructMYSQL(records), nil
 	case DIALECTOR_SQLITE:
 		return provider.constructSQLite(records), nil
 	default:
@@ -69,33 +59,7 @@ func (provider *batchProvider) constructSQL(records [][]interface{}, dialectorTy
 	}
 }
 
-func (provider *batchProvider) constructMYSQL(records [][]interface{}) string {
-	var (
-		valueNames        string
-		valuePlaceHolder  string
-		valuePlaceHolders string
-		sql               string
-	)
-	valueNames = strings.Join(provider.Fields, ", ")
-	valuePlaceHolder = strings.Repeat("?,", len(provider.Fields))
-	valuePlaceHolder = "(" + valuePlaceHolder[:len(valuePlaceHolder)-1] + "),"
-	valuePlaceHolders = strings.Repeat(valuePlaceHolder, len(records))
-	valuePlaceHolders = valuePlaceHolders[:len(valuePlaceHolders)-1]
-	sql = "insert into " + provider.TableName + " (" + valueNames + ") values" + valuePlaceHolders
-	var onDups []string
-	sql += " on duplicate key "
-	if len(provider.UpdateFields) > 0 {
-		for _, field := range provider.UpdateFields {
-			onDups = append(onDups, field+"=values("+field+")")
-		}
-		sql += "update " + strings.Join(onDups, ", ")
-	} else {
-		sql += "nothing"
-	}
-	return sql
-}
-
-func (provider *batchProvider) constructPGSQL(records [][]interface{}) string {
+func (provider *batchProvider) constructUpsert(records [][]interface{}) string {
 	var (
 		valueNames        string
 		valuePlaceHolder  string
@@ -124,7 +88,7 @@ func (provider *batchProvider) constructPGSQL(records [][]interface{}) string {
 }
 
 func (provider *batchProvider) constructSQLite(records [][]interface{}) string {
-	return provider.constructPGSQL(records)
+	return provider.constructUpsert(records)
 }
 
 func (provider *batchProvider) load(engine *gorm.DB, records [][]interface{}) error {

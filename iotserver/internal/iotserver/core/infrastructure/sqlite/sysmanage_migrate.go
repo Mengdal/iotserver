@@ -117,7 +117,7 @@ func (c *Client) MigrateSystemTables() error {
 // device 表的 (gateway_id, device_key) 只对**网关接入的设备**唯一——
 // 平台手工创建与驱动接入的设备这两列都是空串，普通唯一索引会立刻冲突。
 //
-// SQLite 支持带 WHERE 的部分索引；MySQL 不支持（其版本见 mysql 包，为显式空实现）。
+// SQLite 支持带 WHERE 的部分索引。
 func (c *Client) ensurePartialUniqueIndexes() error {
 	pool := c.Pool.WithContext(tenant.Platform(context.Background()))
 	const (

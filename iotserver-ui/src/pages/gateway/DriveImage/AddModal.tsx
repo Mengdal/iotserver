@@ -49,7 +49,6 @@ export const AddModal = forwardRef<AddModalRef, AddModalProps>(({ onFinish }, re
       open={isModalOpen}
       width={550}
       closable={false}
-      maskClosable={false}
       headerStyle={{ height: 51 }}
       destroyOnClose
       extra={<CloseOutlined onClick={handleClose} />}

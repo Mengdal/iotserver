@@ -45,13 +45,12 @@ type CreateRule struct {
 }
 
 type Actions struct {
-	Rest     map[string]interface{} `json:"rest,omitempty"`
-	MQTT     map[string]interface{} `json:"mqtt,omitempty"`
-	Kafka    map[string]interface{} `json:"kafka,omitempty"`
-	Zmq      map[string]interface{} `json:"zmq,omitempty"`
-	Redis    map[string]interface{} `json:"redis,omitempty"`
-	Influx   map[string]interface{} `json:"influx,omitempty"`
-	Tdengine map[string]interface{} `json:"tdengine,omitempty"`
+	Rest   map[string]interface{} `json:"rest,omitempty"`
+	MQTT   map[string]interface{} `json:"mqtt,omitempty"`
+	Kafka  map[string]interface{} `json:"kafka,omitempty"`
+	Zmq    map[string]interface{} `json:"zmq,omitempty"`
+	Redis  map[string]interface{} `json:"redis,omitempty"`
+	Influx map[string]interface{} `json:"influx,omitempty"`
 }
 
 type Rest struct {

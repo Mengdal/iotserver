@@ -1,10 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { AdvanceBreadcrumb } from '@/components/Breadcrumb'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { Badge, Button, Card, Descriptions, message, Tabs, Typography } from 'antd'
-import { EyeOutlined, EyeInvisibleOutlined, SyncOutlined } from '@ant-design/icons'
+import { Badge, Card, Descriptions, Tabs, Typography } from 'antd'
+import { EyeOutlined, EyeInvisibleOutlined } from '@ant-design/icons'
 import { getDeviceDetail, getProductInfo } from '@/api'
-import { deviceSyncSingle, IDeviceDetail } from '@/api/device'
+import { IDeviceDetail } from '@/api/device'
 import { DEVICE_STATUS_COLORS, deviceStatusLabel } from '@/utils/deviceStatus'
 import { DetailTab1 } from './components/Tab1'
 import { DetailTab2 } from './components/Tab2'
@@ -28,7 +28,6 @@ export const DeviceDetail:React.FC<DeviceDetailProps> = () => {
   const [activeKey, setActiveKey] = useState('1')
   const [detail, setDetail] = useState<IDeviceDetail>()
   const [visible, setVisible] = useState<boolean>(false)
-  const [submitting, setSubmitting] = useState(false)
 
   const isCloudDevice = useMemo(() => detail?.cloud_device_id, [detail])
 
@@ -96,32 +95,6 @@ export const DeviceDetail:React.FC<DeviceDetailProps> = () => {
           column={3}
           labelStyle={{ fontSize: 12, color: '#8a949c' }}
           contentStyle={{ fontSize: 12 }}
-          extra={
-            isCloudDevice && <Button
-              type="link"
-              size="small"
-              loading={submitting}
-              disabled={submitting}
-              icon={<SyncOutlined />}
-              style={{ fontSize: 12 }}
-              onClick={() => {
-                setSubmitting(true)
-                deviceSyncSingle({ device_id: params.id! })
-                  .then((resp) => {
-                    if (resp.success) {
-                      message.success(t('同步成功'))
-                      loadDetail()
-                    } else {
-                      message.error(resp.errorMsg)
-                    }
-                  }).catch((err) => {
-                    console.log(err)
-                  }).finally(() => {
-                    setSubmitting(false)
-                  })
-              }}
-            >{t('同步设备')}</Button>
-          }
         >
           <Descriptions.Item label={t('设备所属产品')}>
             {detail?.product_id

@@ -46,7 +46,6 @@ export const CategoryModal = forwardRef<CategoryModalRef, CategoryModalProps>(({
       open={isModalOpen}
       width={550}
       closable={false}
-      maskClosable={false}
       destroyOnClose={false}
       headerStyle={{ height: 51 }}
       onClose={handleClose}

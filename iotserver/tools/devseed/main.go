@@ -10,7 +10,6 @@ package main
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -24,22 +23,18 @@ import (
 	"iotserver/internal/pkg/constants"
 	"iotserver/internal/pkg/logger"
 	"iotserver/internal/tools/datadb/duckdb"
-	"iotserver/internal/tools/datadb/ducklake"
 )
 
 var (
-	apiBase  = flag.String("api", "http://127.0.0.1:3000", "后端地址")
-	dbPath   = flag.String("db", "manifest/docker/db-data/duckdb/core-data.duckdb", "DuckDB 数据库文件路径")
-	user     = flag.String("user", "admin", "登录账号")
-	pass     = flag.String("pass", "admin123", "登录密码")
-	days     = flag.Int("days", 7, "生成最近多少天的数据")
-	stepMin  = flag.Int("step", 5, "采样间隔（分钟）")
-	clean    = flag.Bool("clean", false, "仅清理，不生成")
-	skipDB   = flag.Bool("skip-db", false, "只通过接口建产品/设备，不写数据层（服务在跑时用）")
-	deviceF  = flag.String("device", "", "离线模式：直接对指定 deviceId 写历史数据（不需要服务在跑）")
-	backend  = flag.String("backend", "duckdb", "数据层类型：duckdb | ducklake")
-	lakeCat  = flag.String("lake-catalog", "manifest/docker/db-data/ducklake/catalog.db", "ducklake catalog 路径")
-	lakeData = flag.String("lake-data", "manifest/docker/db-data/ducklake/data", "ducklake Parquet 目录")
+	apiBase = flag.String("api", "http://127.0.0.1:3000", "后端地址")
+	dbPath  = flag.String("db", "manifest/docker/db-data/duckdb/core-data.duckdb", "DuckDB 数据库文件路径")
+	user    = flag.String("user", "admin", "登录账号")
+	pass    = flag.String("pass", "admin123", "登录密码")
+	days    = flag.Int("days", 7, "生成最近多少天的数据")
+	stepMin = flag.Int("step", 5, "采样间隔（分钟）")
+	clean   = flag.Bool("clean", false, "仅清理，不生成")
+	skipDB  = flag.Bool("skip-db", false, "只通过接口建产品/设备，不写数据层（服务在跑时用）")
+	deviceF = flag.String("device", "", "离线模式：直接对指定 deviceId 写历史数据（不需要服务在跑）")
 )
 
 type client struct {
@@ -210,9 +205,6 @@ func main() {
 
 // writeHistory 按 DataDBClient 的 key 规范写入设备属性历史，返回写入条数
 func writeHistory(lc logger.LoggingClient, deviceId string) int {
-	if *backend == "ducklake" {
-		return writeHistoryDuckLake(lc, deviceId)
-	}
 	cli, err := duckdb.NewClient(dtos.Configuration{DataSource: *dbPath}, lc)
 	if err != nil {
 		panic(err)
@@ -284,49 +276,4 @@ func findDevice(c *client, name string) string {
 		}
 	}
 	return ""
-}
-
-// writeHistoryDuckLake 通过 DuckLake 数据层写入属性历史
-func writeHistoryDuckLake(lc logger.LoggingClient, deviceId string) int {
-	cli, err := ducklake.NewClient(dtos.Configuration{DataSource: *lakeCat, Dsn: *lakeData}, lc)
-	if err != nil {
-		panic(err)
-	}
-	defer cli.CloseSession()
-
-	codes := []string{"temp", "humidity"}
-	now := time.Now()
-	total := 0
-	for _, code := range codes {
-		for t := now.AddDate(0, 0, -*days); t.Before(now); t = t.Add(time.Duration(*stepMin) * time.Minute) {
-			ts := t.UnixNano() / int64(time.Millisecond)
-			var v float64
-			if code == "temp" {
-				v = 22 + 6*math.Sin(float64(t.Hour())/24*2*math.Pi) + rand.Float64()
-			} else {
-				v = 45 + 15*math.Sin(float64(t.Hour())/24*2*math.Pi) + rand.Float64()*3
-			}
-			data := map[string]interface{}{code: dtos.ReportData{Value: math.Round(v*10) / 10, Time: ts}}
-			if err := cli.Insert(context.Background(), deviceId, data); err != nil {
-				panic(err)
-			}
-			total++
-		}
-		fmt.Printf("✅ 写入 %s 历史到 DuckLake 完成\n", code)
-	}
-
-	// 文本型属性：用于验证「计数/首值/末值」，每 30 分钟一个状态
-	modes := []string{"auto", "manual", "off", "idle"}
-	step := 0
-	for t := now.AddDate(0, 0, -*days); t.Before(now); t = t.Add(30 * time.Minute) {
-		ts := t.UnixNano() / int64(time.Millisecond)
-		data := map[string]interface{}{"mode": dtos.ReportData{Value: modes[step%len(modes)], Time: ts}}
-		if err := cli.Insert(context.Background(), deviceId, data); err != nil {
-			panic(err)
-		}
-		step++
-		total++
-	}
-	fmt.Printf("✅ 写入 mode 文本历史到 DuckLake 完成（%d 条）\n", step)
-	return total
 }

@@ -1,7 +1,7 @@
 import dayjs from 'dayjs'
 import React, { useEffect, useRef, useState } from 'react'
 import { Table, Card, Form, Input, Select, Button, Space, message, Typography, Popconfirm, Badge } from 'antd'
-import { PlusOutlined, DeleteOutlined, LockOutlined, UnlockOutlined, SyncOutlined, ReloadOutlined } from '@ant-design/icons'
+import { PlusOutlined, DeleteOutlined, LockOutlined, UnlockOutlined, ReloadOutlined } from '@ant-design/icons'
 import { getDevice, deleteDevice, deleteDevices, unBindDriver, useGetDeviceServers, useGetDeviceStatusTemplate, useGetIotPlatform, useGetProductList } from '@/api'
 import { useTableRequest } from '@/hooks'
 import { confirmPlatformViewAdd } from '@/utils/platformViewGuard'
@@ -9,7 +9,6 @@ import { DEVICE_STATUS_COLORS, deviceStatusLabel } from '@/utils/deviceStatus'
 import { AddModal, AddModalRef } from './AddModal'
 import { EditModal, EditModalRef } from './EditModal'
 import { BatchBindModal, BatchBindModalRef } from './BatchBindModal'
-import { DeviceSyncModal, DeviceSyncModalRef } from './DeviceSyncModal'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { DevicesType } from '@/api/devices'
 import { t, tt } from '@/i18n'
@@ -33,7 +32,6 @@ const DevicesManage: React.FC<DevicesManageProps> = () => {
   const addModalRef = useRef<AddModalRef>(null)
   const editModalRef = useRef<EditModalRef>(null)
   const batchBindModalRef = useRef<BatchBindModalRef>(null)
-  const deviceSyncModalRef = useRef<DeviceSyncModalRef>(null)
 
   const [messageApi, contextHolder] = useMessage()
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([])
@@ -58,13 +56,6 @@ const DevicesManage: React.FC<DevicesManageProps> = () => {
       <EditModal
         ref={editModalRef}
         onFinish={reload}
-      />
-      <DeviceSyncModal
-        ref={deviceSyncModalRef}
-        options={deviceServersOptions}
-        onFinish={() => {
-          reload()
-        }}
       />
       <BatchBindModal
         ref={batchBindModalRef}
@@ -183,11 +174,6 @@ const DevicesManage: React.FC<DevicesManageProps> = () => {
             >
               <Button className="ml10" disabled={!selectedRowKeys?.length}><DeleteOutlined />{t('批量删除')}</Button>
             </Popconfirm>
-            <Button className="ml10"
-              onClick={() => {
-                deviceSyncModalRef.current?.open()
-              }}
-            ><SyncOutlined />{t('设备同步')}</Button>
             <Button className="ml10"
               onClick={() => {
                 reload()

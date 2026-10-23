@@ -194,7 +194,6 @@ const DevicesManage: React.FC<DevicesManageProps> = () => {
         open={open}
         width={900}
         closable={false}
-        maskClosable={false}
         headerStyle={{ height: 51 }}
         destroyOnClose
         extra={<CloseOutlined onClick={onClose} />}

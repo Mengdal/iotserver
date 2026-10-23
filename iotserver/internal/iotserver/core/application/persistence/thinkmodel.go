@@ -30,7 +30,7 @@ import (
 
 // persistApp 时序数据持久化。
 //
-// 数据层只剩 DuckDB（单文件列存），DuckLake 作为可选形态共用同一套编排逻辑，
+// 数据层使用 DuckDB（单文件列存），共用同一套编排逻辑，
 // 因此这里不再按 GetDataDBType() 分发。
 //
 // 租户作用域：所有读写都从传入的 ctx 取租户（见 pkg/tenant）。

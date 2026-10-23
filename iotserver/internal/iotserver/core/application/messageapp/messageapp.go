@@ -17,8 +17,8 @@ package messageapp
 import (
 	"context"
 	"encoding/json"
-	"github.com/kirinlabs/HttpRequest"
 	"github.com/LMgateways/iotserver-driver-proto/drivercommon"
+	"github.com/kirinlabs/HttpRequest"
 	"iotserver/internal/dtos"
 	coreContainer "iotserver/internal/iotserver/core/container"
 	interfaces "iotserver/internal/iotserver/core/interface"
@@ -26,6 +26,7 @@ import (
 	"iotserver/internal/pkg/di"
 	"iotserver/internal/pkg/errort"
 	"iotserver/internal/pkg/logger"
+	"iotserver/internal/pkg/tenant"
 	"strconv"
 	"strings"
 	"time"
@@ -92,9 +93,25 @@ func (tmq *MessageApp) initeKuiperStreams() {
 	}
 }
 
+// tenantIDFor 解析消息所属租户：优先取上下文，上下文没有时按设备归属补查。
+func (tmq *MessageApp) tenantIDFor(ctx context.Context, deviceID string) string {
+	if tc := tenant.FromContext(ctx); tc.TenantID != "" {
+		return tc.TenantID
+	}
+	if deviceID == "" {
+		return ""
+	}
+	device, err := tmq.dbClient.WithCtx(tenant.Platform(context.Background())).DeviceById(deviceID)
+	if err != nil {
+		return ""
+	}
+	return device.TenantId
+}
+
 func (tmq *MessageApp) DeviceStatusToMessageBus(ctx context.Context, deviceId, deviceStatus string) {
 	var messageBus dtos.MessageBus
 	messageBus.DeviceId = deviceId
+	messageBus.TenantId = tmq.tenantIDFor(ctx, deviceId)
 	messageBus.MessageType = "DEVICE_STATUS"
 	messageBus.Data = map[string]interface{}{
 		"status": deviceStatus,
@@ -105,6 +122,7 @@ func (tmq *MessageApp) DeviceStatusToMessageBus(ctx context.Context, deviceId, d
 
 }
 func (tmq *MessageApp) ThingModelMsgReport(ctx context.Context, msg dtos.ThingModelMessage) (*drivercommon.CommonResponse, error) {
+	msg.TenantId = tmq.tenantIDFor(ctx, msg.Cid)
 	tmq.pushMsgToMessageBus(msg.TransformMessageBus())
 	persistItf := coreContainer.PersistItfFrom(tmq.dic.Get)
 	err := persistItf.SaveDeviceThingModelData(ctx, msg)

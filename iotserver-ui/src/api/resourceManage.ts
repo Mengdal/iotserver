@@ -160,26 +160,6 @@ export interface InfluxDBResource {
   }
 }
 
-export interface TDengineResource {
-  id: string
-  name: string
-  type: string
-  option: {
-    host: string
-    port: number
-    user: string
-    password: string
-    database: string
-    table: string
-    fields: string
-    provideTs: boolean
-    tsFieldName: string
-    sTable: string
-    tagFields: string
-    tableDataField: string
-  }
-}
-
 export function editResource<T> (data: any) {
   return httpRequest<any, CommonResponse<T>>({
     url: '/api/v1/dataresource',

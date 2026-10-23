@@ -13,21 +13,20 @@ import (
 	interfaces "iotserver/internal/iotserver/core/interface"
 	"iotserver/internal/models"
 	"iotserver/internal/pkg/logger"
-	"iotserver/internal/tools/datadb/ducklake"
+	"iotserver/internal/tools/datadb/duckdb"
 )
 
-// newDuckLakeClientForTest 建临时湖；扩展不可用时跳过（离线环境需预置 ducklake 扩展）
-func newDuckLakeClientForTest(t *testing.T) interfaces.DataDBClient {
+// newBatchBackfillClientForTest 建临时 DuckDB 数据文件
+func newBatchBackfillClientForTest(t *testing.T) interfaces.DataDBClient {
 	t.Helper()
 	dir := t.TempDir()
 	cfg := dtos.Configuration{
-		DataSource: filepath.Join(dir, "catalog.db"),
-		Dsn:        filepath.Join(dir, "data"),
+		DataSource: filepath.Join(dir, "core-data.duckdb"),
 	}
 	lc := logger.NewClient("persist-batch-test", "error", "")
-	client, err := ducklake.NewClient(cfg, lc)
+	client, err := duckdb.NewClient(cfg, lc)
 	if err != nil {
-		t.Skipf("ducklake 不可用（需要 ducklake 扩展）: %v", err)
+		t.Fatalf("open duckdb: %v", err)
 	}
 	t.Cleanup(func() { client.CloseSession() })
 	return client
@@ -37,11 +36,11 @@ func newDuckLakeClientForTest(t *testing.T) interfaces.DataDBClient {
 // 网关补传的历史数据必须落到**原始采集时刻**，而不是平台接收时刻。
 //
 // 覆盖三件事：
-//  1. DuckLake 分支支持 DATA_BATCH_REPORT（此前缺失会静默丢数据）；
+//  1. DuckDB 分支支持 DATA_BATCH_REPORT；
 //  2. 每个测点带自己的时间戳（同一批可包含不同时刻）；
 //  3. 未带时间的测点回落到批次时间。
 func TestBatchBackfillKeepsOriginalTimestamps(t *testing.T) {
-	dl := newDuckLakeClientForTest(t)
+	dl := newBatchBackfillClientForTest(t)
 	app := &persistApp{
 		dataDbClient: dl,
 		lc:           logger.NewClient("persist-batch-test", "error", ""),
@@ -113,7 +112,7 @@ func TestBatchBackfillKeepsOriginalTimestamps(t *testing.T) {
 
 // TestBatchBackfillEventsAndIdempotentKey 批量补传事件 + 同一时间点重复写入的行为说明
 func TestBatchBackfillEvents(t *testing.T) {
-	dl := newDuckLakeClientForTest(t)
+	dl := newBatchBackfillClientForTest(t)
 	app := &persistApp{
 		dataDbClient: dl,
 		lc:           logger.NewClient("persist-batch-test", "error", ""),

@@ -33,14 +33,14 @@ func NewHpcloud(lc logger.LoggingClient) Hpcloud {
 	}
 }
 
-func (h hpcloud) Add(service, filePath string) *hpcloudClient {
+func (h *hpcloud) Add(service, filePath string) *hpcloudClient {
 	h.lock.Lock()
 	defer h.lock.Unlock()
 	h.hpcloudMap[service] = newhpcloudClient(filePath)
 	return h.hpcloudMap[service]
 }
 
-func (h hpcloud) Get(serviceId string) *hpcloudClient {
+func (h *hpcloud) Get(serviceId string) *hpcloudClient {
 	h.lock.Lock()
 	defer h.lock.Unlock()
 	return h.hpcloudMap[serviceId]

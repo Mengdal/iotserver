@@ -67,7 +67,7 @@ type DeviceMsgCounter interface {
 //
 // 保留策略由应用层驱动（见 application/retention.go）：按租户读取各自的保留天数，
 // 逐租户调用 PurgeTenantBefore，这样改配置不必重启，也才能做到分级保留。
-// 未实现该能力的数据层（如 ducklake）保留自带的全局维护逻辑。
+// 未实现该能力的数据层保留自带的维护逻辑。
 type DataPurger interface {
 	// PurgeBefore 清理所有租户 cutoff（毫秒）之前的数据
 	PurgeBefore(ctx context.Context, cutoffMillis int64) (int64, error)

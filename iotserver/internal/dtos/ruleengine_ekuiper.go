@@ -39,9 +39,20 @@ func GetRuleEngineEkuiperActions(resourceType string, option map[string]interfac
 	case constants.KafkaResource:
 		return []Actions{{Kafka: props}}, nil
 	case constants.InfluxDBResource:
+		// 资源表单字段与 eKuiper influx sink 属性名不同，这里做一次映射：
+		//   databasename -> database
+		//   tagkey/tagvalue -> tags: {tagkey: tagvalue}
+		if db, ok := props["databasename"]; ok {
+			props["database"] = db
+			delete(props, "databasename")
+		}
+		if key, ok := props["tagkey"].(string); ok && key != "" {
+			value, _ := props["tagvalue"].(string)
+			props["tags"] = map[string]string{key: value}
+		}
+		delete(props, "tagkey")
+		delete(props, "tagvalue")
 		return []Actions{{Influx: props}}, nil
-	case constants.TDengineResource:
-		return []Actions{{Tdengine: props}}, nil
 	default:
 		return nil, fmt.Errorf("不支持的数据资源类型: %s", resourceType)
 	}

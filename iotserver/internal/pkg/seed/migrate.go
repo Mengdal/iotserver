@@ -249,7 +249,7 @@ func removeSystemBoardBusinessWidgets(canvas string) (string, bool) {
 
 // UpgradeBuiltinBoards 把存量内置看板里的占位组件按最新内置定义升级。
 // 只替换组件 id 一致、类型仍然是 text 的项，用户改过类型的组件不会被动。
-// SQLite / MySQL 两套迁移共用这一份实现，避免逻辑各改一遍后漂移。
+// SQLite 迁移共用这一份实现，避免逻辑各改一遍后漂移。
 func UpgradeBuiltinBoards(tx *gorm.DB) error {
 	preset, ok := BoardPresetById("builtin-home")
 	if !ok {

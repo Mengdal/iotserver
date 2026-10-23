@@ -1,4 +1,4 @@
-.PHONY: help build build-linux run start ui ui-ensure build-ui sync-ui clean test fmt generate/api docker
+.PHONY: help build build-linux run start ui ui-ensure build-ui sync-ui clean test fmt generate/api docker docker-ekuiper
 # 本地二进制名（go build 默认输出到当前目录）
 BIN ?= iotserver-core
 # 前端产物目录与后端托管目录
@@ -6,6 +6,8 @@ UI_SRC ?= ../iotserver-ui/build
 UI_DST ?= cmd/iotserver-ui/build
 # 镜像地址：推送前用 make docker IMAGE=<你的仓库>/iotserver-core:v1.0 覆盖
 IMAGE ?= iotserver-core:v1.0
+# eKuiper 镜像：内置 Kafka / InfluxDB sink 插件（官方预编译插件下载 403，镜像内从源码编译）
+EKUIPER_IMAGE ?= iotserver-ekuiper:2.4.2
 # 是否推送：PUSH=1 构建并推送（默认）；PUSH=0 只构建到本机，供 docker compose 直接使用
 PUSH ?= 1
 # 目标平台：部署机不是 amd64 时覆盖，例如 PLATFORM=linux/arm64
@@ -27,8 +29,8 @@ help:
 	@echo "  make start        用 go run 直接启动（开发用；会自动保证前端最新）"
 	@echo "  make test         运行单元/集成测试"
 	@echo "  make fmt          格式化 Go 代码"
-	@echo "  make docker       构建并推送 Docker 镜像（先跑 make ui；镜像 $(IMAGE)）"
-	@echo "                    只构建到本机不推送：make docker PUSH=0" 
+	@echo "  make docker       构建并推送 Docker 镜像（先跑 make ui；核心镜像 $(IMAGE)，eKuiper 镜像 $(EKUIPER_IMAGE)）"
+	@echo "                    只构建到本机不推送：make docker PUSH=0"
 	@echo "  make clean        清理二进制"
 
 # 本地编译并启动（先保证前端产物最新）
@@ -41,7 +43,7 @@ $(BIN):
 build: $(BIN)
 
 # 交叉编译 linux/amd64（部署用）。
-# ducklake 依赖 CGO + DuckDB 静态库，需要 linux 版 C 工具链
+# DuckDB 依赖 CGO + DuckDB 静态库，需要 linux 版 C 工具链
 # （本机 macOS 无法直接交叉编译，建议在容器里执行：见 Dockerfile）
 build-linux:
 	CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -o $(BIN)-linux-amd64 ./cmd/iotserver-core
@@ -90,12 +92,19 @@ generate/api:
 
 # 构建并推送镜像。注意：Dockerfile 会把 $(UI_DST) 复制进镜像，
 # 因此首次构建前必须先执行 make ui（否则构建会失败）
-docker:
+docker: docker-ekuiper
 	@test -f $(UI_DST)/index.html || (echo "缺少前端产物 $(UI_DST)，请先执行: make ui"; exit 1)
 	@if [ "$(PUSH)" = "1" ]; then \
 		docker buildx build --platform $(PLATFORM) -t "$(IMAGE)" -f cmd/iotserver-core/Dockerfile --push . ; \
 	else \
 		docker buildx build --platform $(PLATFORM) -t "$(IMAGE)" -f cmd/iotserver-core/Dockerfile --load . ; \
+	fi
+
+docker-ekuiper:
+	@if [ "$(PUSH)" = "1" ]; then \
+		docker buildx build --platform $(PLATFORM) -t "$(EKUIPER_IMAGE)" -f manifest/docker/ekuiper/Dockerfile --push manifest/docker/ekuiper ; \
+	else \
+		docker buildx build --platform $(PLATFORM) -t "$(EKUIPER_IMAGE)" -f manifest/docker/ekuiper/Dockerfile --load manifest/docker/ekuiper ; \
 	fi
 
 clean:

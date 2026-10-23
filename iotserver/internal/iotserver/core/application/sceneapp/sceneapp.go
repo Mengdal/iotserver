@@ -158,6 +158,9 @@ func (app *sceneApp) SceneUpdate(ctx context.Context, req dtos.SceneUpdateReques
 	if err = checkSceneParam(req.Conditions, req.Actions); err != nil {
 		return err
 	}
+	if err = app.validateSceneOwnership(ctx, req.Conditions, req.Actions); err != nil {
+		return err
+	}
 
 	if isTimerScene(req.Conditions) {
 		// 定时场景由平台调度器执行，不产生 eKuiper 规则；若历史上有规则则清掉
@@ -196,8 +199,9 @@ func (app *sceneApp) SceneDelete(ctx context.Context, id string) error {
 	if err = app.dbClient.WithCtx(ctx).DeleteScene(id); err != nil {
 		return err
 	}
-	// 日志随场景一起清理，避免残留孤儿数据
-	if err = app.dbClient.WithCtx(ctx).DeleteSceneLogsBySceneId(id); err != nil {
+	// 日志随场景一起清理，避免残留孤儿数据。
+	// 场景 ID 全局唯一，历史日志可能写在平台作用域（旧回调路径），这里按场景 ID 全量清理。
+	if err = app.dbClient.WithCtx(tenant.Platform(ctx)).DeleteSceneLogsBySceneId(id); err != nil {
 		app.lc.Warnf("delete scene %s logs failed: %v", id, err)
 	}
 	return nil
@@ -219,6 +223,9 @@ func (app *sceneApp) SceneStart(ctx context.Context, id string) error {
 	}
 	// 库中数据可能早于加固写入（或被人直接改库），启动前再校验一次
 	if err := checkSceneParam(scene.Conditions, scene.Actions); err != nil {
+		return err
+	}
+	if err := app.validateSceneOwnership(ctx, scene.Conditions, scene.Actions); err != nil {
 		return err
 	}
 
@@ -265,7 +272,8 @@ func (app *sceneApp) ExecuteSceneByRule(ctx context.Context, payload map[string]
 	if ruleId == "" {
 		return errort.NewCommonErr(errort.DefaultReqParamsError, errort.NewMessageErr("缺少 rule_id", nil))
 	}
-	scene, err := app.dbClient.WithCtx(ctx).SceneById(ruleId)
+	// 回调接口免鉴权，没有请求租户；按场景归属还原租户上下文（平台作用域用于查场景）
+	scene, err := app.dbClient.WithCtx(tenant.Platform(ctx)).SceneById(ruleId)
 	if err != nil {
 		return err
 	}
@@ -275,14 +283,15 @@ func (app *sceneApp) ExecuteSceneByRule(ctx context.Context, payload map[string]
 		app.lc.Warnf("scene %s(%s) is not running, trigger ignored", scene.Name, scene.Id)
 		return errort.NewCommonErr(errort.SceneRuleParamsError, errort.NewMessageErr("场景未启用，忽略触发", nil))
 	}
-	app.runSceneActions(ctx, &scene)
+	app.runSceneActions(sceneCtx(ctx, &scene), &scene)
 	return nil
 }
 
 // ExecuteScene 定时触发：按场景ID执行动作（并在执行前复核启用状态，
 // 避免「已到期但在途被停止」的场景仍然写设备）
 func (app *sceneApp) ExecuteScene(ctx context.Context, sceneId string) {
-	scene, err := app.dbClient.WithCtx(ctx).SceneById(sceneId)
+	// 定时任务从后台 goroutine 触发，没有请求租户；平台作用域查场景，执行时还原场景租户
+	scene, err := app.dbClient.WithCtx(tenant.Platform(ctx)).SceneById(sceneId)
 	if err != nil {
 		app.lc.Warnf("timer scene %s not found: %v", sceneId, err)
 		return
@@ -291,7 +300,17 @@ func (app *sceneApp) ExecuteScene(ctx context.Context, sceneId string) {
 		app.lc.Infof("timer scene %s is not running, skip", sceneId)
 		return
 	}
-	app.runSceneActions(ctx, &scene)
+	app.runSceneActions(sceneCtx(ctx, &scene), &scene)
+}
+
+// sceneCtx 场景执行上下文：回调/定时任务没有请求租户，按场景归属还原租户作用域。
+// 否则场景日志会写到平台租户（tenant_id 为空），租户侧永远查不到；
+// 开启 Enforce 后这类写入还会被直接拒绝。
+func sceneCtx(ctx context.Context, scene *models.Scene) context.Context {
+	if scene.TenantId == "" {
+		return tenant.Platform(ctx)
+	}
+	return tenant.With(ctx, tenant.Context{TenantID: scene.TenantId})
 }
 
 // safeExecuteScene 定时任务的 goroutine 入口：兜住 panic，避免打挂整个进程
@@ -683,6 +702,43 @@ func checkDecideCondition(specsType, decideCondition string) error {
 }
 
 // checkSceneParam 触发条件与执行动作校验
+// validateSceneOwnership 校验触发条件与动作里引用的设备/产品归属当前租户。
+//
+// 触发条件里的 device_id 会被拼进 eKuiper SQL；如果不校验归属，
+// 知道其他租户 device_id 的租户可以监听对方的数据（动作执行时才会因作用域失败）。
+func (app *sceneApp) validateSceneOwnership(ctx context.Context, conditions []models.SceneCondition, actions []models.SceneAction) error {
+	// 平台视图 / 平台级场景允许引用任意租户的设备；普通租户必须校验归属
+	if tenant.FromContext(ctx).Platform {
+		return nil
+	}
+	for _, condition := range conditions {
+		if condition.Option == nil {
+			continue
+		}
+		if id := strings.TrimSpace(condition.Option["device_id"]); id != "" {
+			if _, err := app.dbClient.WithCtx(ctx).DeviceById(id); err != nil {
+				return errort.NewCommonErr(errort.DefaultReqParamsError,
+					errort.NewMessageErr("设备不存在或不属于当前租户", nil))
+			}
+		}
+		if id := strings.TrimSpace(condition.Option["product_id"]); id != "" {
+			if _, err := app.dbClient.WithCtx(ctx).ProductById(id); err != nil {
+				return errort.NewCommonErr(errort.DefaultReqParamsError,
+					errort.NewMessageErr("产品不存在或不属于当前租户", nil))
+			}
+		}
+	}
+	for _, action := range actions {
+		if id := strings.TrimSpace(action.DeviceId); id != "" {
+			if _, err := app.dbClient.WithCtx(ctx).DeviceById(id); err != nil {
+				return errort.NewCommonErr(errort.DefaultReqParamsError,
+					errort.NewMessageErr("设备不存在或不属于当前租户", nil))
+			}
+		}
+	}
+	return nil
+}
+
 func checkSceneParam(conditions []models.SceneCondition, actions []models.SceneAction) error {
 	if len(conditions) == 0 {
 		return errort.NewCommonErr(errort.SceneRuleParamsError, errort.NewMessageErr("请配置触发条件", nil))
@@ -771,7 +827,7 @@ func checkSceneParam(conditions []models.SceneCondition, actions []models.SceneA
 	return nil
 }
 
-// checkDescription 描述长度校验（与模型列宽一致，避免 MySQL 严格模式报错/SQLite 无感超长）
+// checkDescription 描述长度校验（与模型列宽一致，避免超长）
 func checkDescription(description string) error {
 	if len([]rune(description)) > maxDescriptionLen {
 		return errort.NewCommonErr(errort.DefaultReqParamsError,

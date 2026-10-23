@@ -218,14 +218,6 @@ func ProductSearchOpenApiFromModel(p models.Product) ProductSearchOpenApiRespons
 	}
 }
 
-type ProductSyncRequest struct {
-	CloudInstanceId string `json:"cloud_instance_id"`
-}
-
-type ProductSyncByIdRequest struct {
-	ProductId string `json:"product_id"`
-}
-
 type ProductAddRequest struct {
 	Name string `json:"name"` //产品名字
 	//Platform           string `json:"platform"`

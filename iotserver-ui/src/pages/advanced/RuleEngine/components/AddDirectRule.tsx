@@ -326,7 +326,6 @@ export const AddDirectRule = forwardRef<AddDirectRuleRef, AddDirectRuleProps>(({
       open={isModalOpen}
       width={700}
       closable={false}
-      maskClosable={false}
       headerStyle={{ height: 51 }}
       destroyOnClose
       extra={<CloseOutlined onClick={handleClose} />}

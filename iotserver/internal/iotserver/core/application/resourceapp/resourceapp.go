@@ -15,7 +15,6 @@ import (
 	"iotserver/internal/pkg/errort"
 	"iotserver/internal/pkg/i18n"
 	"iotserver/internal/pkg/logger"
-	"iotserver/internal/pkg/tenant"
 	"iotserver/internal/pkg/valid"
 	"iotserver/internal/tools/healthcheck"
 )
@@ -37,8 +36,7 @@ var requiredOptions = map[constants.DataResourceType][]string{
 	constants.HttpResource:     {"url"},
 	constants.MQTTResource:     {"server", "topic"},
 	constants.KafkaResource:    {"brokers", "topic"},
-	constants.InfluxDBResource: {"addr", "databasename"},
-	constants.TDengineResource: {"host", "database", "table"},
+	constants.InfluxDBResource: {"addr", "databasename", "measurement"},
 }
 
 type resourceApp struct {
@@ -103,7 +101,7 @@ func (app *resourceApp) DataResourceUpdate(ctx context.Context, req dtos.DataRes
 		return err
 	}
 	// 前端拿到的密码是打码值，原样提交时保留库中真实密码
-	option, err := app.keepMaskedSecrets(req.Id, normalizeOption(req.Option))
+	option, err := app.keepMaskedSecrets(ctx, req.Id, normalizeOption(req.Option))
 	if err != nil {
 		return err
 	}
@@ -126,7 +124,7 @@ func (app *resourceApp) DataResourceDelete(ctx context.Context, id string) error
 /** ***************************** 验证 ***************************** **/
 
 // keepMaskedSecrets 提交值里仍为打码值的敏感字段，用库中原值替换
-func (app *resourceApp) keepMaskedSecrets(id string, option map[string]interface{}) (models.DataResourceOption, error) {
+func (app *resourceApp) keepMaskedSecrets(ctx context.Context, id string, option map[string]interface{}) (models.DataResourceOption, error) {
 	needKeep := false
 	for _, key := range sensitiveOptionKeys {
 		if v, ok := option[key]; ok {
@@ -139,8 +137,8 @@ func (app *resourceApp) keepMaskedSecrets(id string, option map[string]interface
 	if !needKeep {
 		return models.DataResourceOption(option), nil
 	}
-	// 平台作用域：系统路径，不按租户过滤
-	old, err := app.dbClient.WithCtx(tenant.Platform(context.Background())).DataResourceById(id)
+	// 必须按当前租户读取：该路径由用户请求触发，不能借打码值读到其他租户的资源
+	old, err := app.dbClient.WithCtx(ctx).DataResourceById(id)
 	if err != nil {
 		return nil, err
 	}

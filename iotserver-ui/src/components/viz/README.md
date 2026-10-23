@@ -81,11 +81,11 @@ export const myManifest: VizWidgetManifest<MyConfig> = {
 | `POST /api/v1/viz/boards/:id/active` | 设为首页看板 / 数据看板整页 |
 
 取数实现见 `iotserver/internal/iotserver/core/controller/http/gateway/viz_data.go`，
-走平台自己的数据层（ducklake / tstorage / leveldb / tdengine 四选一），
+走平台自己的 DuckDB 数据层，
 支持 `aggInterval` + `aggMethod` 库内分桶。
 
 > ⚠️ 一个容易踩的坑：数据层在「不传时间范围 + `Last`」时只回溯最近 30 分钟
-> （`ducklake/helpers.go` 的 `timeWindow`、`tstorage/client.go` 的半小时窗口），
+> （`duckdb/helpers.go` 的 `timeWindow`），
 > 设备半小时没上报就会查空。所以取数接口在 latest 模式下**总是显式给回看窗口**。
 
 ## 权限

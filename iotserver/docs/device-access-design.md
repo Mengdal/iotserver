@@ -161,7 +161,7 @@ device_tag: device_id, code, name, type, unit, access_mode, source(auto|manual),
 | `Gateway` 加 `Pk`；唯一键 (tenant, pk, sn) | `models/gateway.go` |
 | `Device` 加 `provision_source`/`provision_state` + 唯一索引；新增 `device_tag` | `models/device.go`、新 `models/device_tag.go` |
 | 读路径测点回落（产品物模型 → 设备级测点表） | `application/persistence/thinkmodel_lake.go`（`propertyUnit` 与查询侧） |
-| DB 接口与实现 | `core/interface/`、`infrastructure/sqlite/`（+ mysql 侧同步） |
+| DB 接口与实现 | `core/interface/`、`infrastructure/sqlite/` |
 | 主题常量 | `tools/gatewaymqtt/publisher.go`（或新包） |
 | 建表/索引迁移 | `core/bootstrap/database`（参考 commit `67f9177` 的补表方式） |
 | 前端：展示 `dn`/自动发现测点、标记未校准、排除名单配置 | `iotserver-ui/src/pages/gateway/DeviceManage`、`api/gateway.ts` |

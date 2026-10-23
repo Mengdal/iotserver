@@ -1,6 +1,6 @@
 // Package tenant 提供 GORM 层的行级租户隔离。
 //
-// 工作方式：在 sqlite/mysql 的 gorm.DB 上注册 Query/Update/Delete/Create 回调，
+// 工作方式：在 sqlite 的 gorm.DB 上注册 Query/Update/Delete/Create 回调，
 // 对 models.TenantScopedTableNames() 里的表自动追加 tenant_id 条件（查询/更新/删除）
 // 或强制写入当前租户（新增）。
 //

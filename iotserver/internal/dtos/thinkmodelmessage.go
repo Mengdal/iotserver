@@ -25,6 +25,9 @@ type ThingModelMessage struct {
 	Cid         string `json:"cid"`     // 下发的目标设备id
 	OpType      int32  `json:"op_type"` // 消息类型
 	Data        string `json:"data"`    // 云端下发消息内容
+	// TenantId 消息所属租户。消息总线是所有租户共享的 topic，
+	// 规则引擎需要按它做强制过滤，避免跨租户读数据。
+	TenantId string `json:"tenantId,omitempty"`
 }
 
 func (m *ThingModelMessage) String() string {
@@ -34,6 +37,7 @@ func (m *ThingModelMessage) String() string {
 
 type MessageBus struct {
 	DeviceId    string      `json:"deviceId"`
+	TenantId    string      `json:"tenantId,omitempty"`
 	MessageType string      `json:"messageType"`
 	Data        interface{} `json:"data"`
 }
@@ -41,6 +45,7 @@ type MessageBus struct {
 func (m *ThingModelMessage) TransformMessageBus() []byte {
 	var messageBus MessageBus
 	messageBus.DeviceId = m.Cid
+	messageBus.TenantId = m.TenantId
 	messageBus.MessageType = thingmodel.OperationType_name[m.OpType]
 	data := make(map[string]interface{})
 	err := json.Unmarshal([]byte(m.Data), &data)

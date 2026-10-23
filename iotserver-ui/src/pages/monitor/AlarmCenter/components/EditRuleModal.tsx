@@ -263,7 +263,6 @@ export const EditRuleModal = forwardRef<EditRuleModalRef, EditRuleModalProps>(({
       open={isModalOpen}
       width={650}
       closable={false}
-      maskClosable={false}
       headerStyle={{ height: 51 }}
       destroyOnClose
       extra={<CloseOutlined onClick={handleClose} />}

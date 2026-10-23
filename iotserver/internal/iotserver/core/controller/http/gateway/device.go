@@ -399,9 +399,9 @@ func (ctl *controller) DeviceThingModelServiceDataSearch(c *gin.Context) {
 
 func (ctl *controller) DeviceStatusTemplate(c *gin.Context) {
 	lc := ctl.lc
-	var deviceStatus []constants.DeviceStatus
-	deviceStatus = append(append(append(deviceStatus),
-		constants.DeviceStatusOnline),
-		constants.DeviceStatusOffline)
+	deviceStatus := []constants.DeviceStatus{
+		constants.DeviceStatusOnline,
+		constants.DeviceStatusOffline,
+	}
 	httphelper.ResultSuccess(deviceStatus, c.Writer, lc)
 }

@@ -78,7 +78,7 @@ func (app *ruleEngineApp) RuleEngineSearch(ctx context.Context, req dtos.RuleEng
 	if err != nil {
 		return nil, 0, err
 	}
-	out, err := app.toResponses(list)
+	out, err := app.toResponses(ctx, list)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -91,7 +91,7 @@ func (app *ruleEngineApp) RuleEngineById(ctx context.Context, id string) (dtos.R
 	if err != nil {
 		return dtos.RuleEngineSearchQueryResponse{}, err
 	}
-	list, err := app.toResponses([]models.RuleEngine{rule})
+	list, err := app.toResponses(ctx, []models.RuleEngine{rule})
 	if err != nil {
 		return dtos.RuleEngineSearchQueryResponse{}, err
 	}
@@ -120,11 +120,15 @@ func (app *ruleEngineApp) RuleEngineAdd(ctx context.Context, req dtos.RuleEngine
 	if err := checkTextLen(req.Description, req.Filter.Sql); err != nil {
 		return err
 	}
-	resource, err := app.checkParam(req.Name, req.DataResourceId, req.ResourceTypeValue())
+	resource, err := app.checkParam(ctx, req.Name, req.DataResourceId, req.ResourceTypeValue())
 	if err != nil {
 		return err
 	}
 	sql := dtos.BuildRuleEngineSql(req.Filter.Sql, req.Filter.SelectName, req.Filter.Condition)
+	sql, err = enforceTenantFilter(sql, tenant.FromContext(ctx).TenantID)
+	if err != nil {
+		return err
+	}
 	actions, err := dtos.GetRuleEngineEkuiperActions(resource.Type, resource.Option)
 	if err != nil {
 		return errort.NewCommonErr(errort.DefaultReqParamsError, err)
@@ -186,11 +190,15 @@ func (app *ruleEngineApp) RuleEngineUpdate(ctx context.Context, req dtos.RuleEng
 	if old.Status == string(constants.RuleEngineStart) {
 		return errort.NewCommonErr(errort.RuleEngineIsStartingNotAllowUpdate, nil)
 	}
-	resource, err := app.checkParam(req.Name, req.DataResourceId, req.ResourceTypeValue())
+	resource, err := app.checkParam(ctx, req.Name, req.DataResourceId, req.ResourceTypeValue())
 	if err != nil {
 		return err
 	}
 	sql := dtos.BuildRuleEngineSql(req.Filter.Sql, req.Filter.SelectName, req.Filter.Condition)
+	sql, err = enforceTenantFilter(sql, tenant.FromContext(ctx).TenantID)
+	if err != nil {
+		return err
+	}
 	actions, err := dtos.GetRuleEngineEkuiperActions(resource.Type, resource.Option)
 	if err != nil {
 		return errort.NewCommonErr(errort.DefaultReqParamsError, err)
@@ -249,7 +257,7 @@ func (app *ruleEngineApp) RuleEngineStart(ctx context.Context, id string) error 
 		return err
 	}
 	// 绑定资源可能已被删除或改动，启动前重新校验并按最新配置下发
-	resource, err := app.checkParam(rule.Name, rule.DataResourceId, rule.ResourceType)
+	resource, err := app.checkParam(ctx, rule.Name, rule.DataResourceId, rule.ResourceType)
 	if err != nil {
 		return err
 	}
@@ -258,6 +266,17 @@ func (app *ruleEngineApp) RuleEngineStart(ctx context.Context, id string) error 
 		return errort.NewCommonErr(errort.DefaultReqParamsError, err)
 	}
 
+	// 存量规则可能是在加固前保存的：启动前再强制加一次租户过滤
+	sql, err := enforceTenantFilter(rule.Filter.Sql, tenant.FromContext(ctx).TenantID)
+	if err != nil {
+		return err
+	}
+	if sql != rule.Filter.Sql {
+		rule.Filter.Sql = sql
+		if uErr := app.dbClient.WithCtx(ctx).UpdateRuleEngine(rule); uErr != nil && app.lc != nil {
+			app.lc.Warnf("回写规则 %s 的租户过滤条件失败: %v", rule.Id, uErr)
+		}
+	}
 	ekuiper := app.ekuiper()
 	exist, err := ekuiper.RuleExist(ctx, rule.Id)
 	if err != nil {
@@ -265,11 +284,11 @@ func (app *ruleEngineApp) RuleEngineStart(ctx context.Context, id string) error 
 	}
 	// eKuiper 侧规则可能被清理（如 eKuiper 重启/数据卷重建），此处按库中配置重建
 	if !exist {
-		if err = ekuiper.CreateRule(ctx, actions, rule.Id, rule.Filter.Sql); err != nil {
+		if err = ekuiper.CreateRule(ctx, actions, rule.Id, sql); err != nil {
 			return err
 		}
 	} else {
-		if err = ekuiper.UpdateRule(ctx, actions, rule.Id, rule.Filter.Sql); err != nil {
+		if err = ekuiper.UpdateRule(ctx, actions, rule.Id, sql); err != nil {
 			return err
 		}
 	}
@@ -301,7 +320,7 @@ func (app *ruleEngineApp) RuleEngineStop(ctx context.Context, id string) error {
 /** ***************************** 内部 ***************************** **/
 
 // checkParam 校验名称与绑定资源，返回资源实体
-func (app *ruleEngineApp) checkParam(name, dataResourceId, resourceType string) (models.DataResource, error) {
+func (app *ruleEngineApp) checkParam(ctx context.Context, name, dataResourceId, resourceType string) (models.DataResource, error) {
 	if len([]rune(dataResourceId)) > 64 {
 		return models.DataResource{}, errort.NewCommonErr(errort.DefaultReqParamsError, errort.NewMessageErr("数据资源ID非法", nil))
 	}
@@ -313,8 +332,8 @@ func (app *ruleEngineApp) checkParam(name, dataResourceId, resourceType string) 
 		return models.DataResource{}, errort.NewCommonErr(errort.DefaultReqParamsError,
 			errort.NewMessageErr("请选择数据资源", nil))
 	}
-	// 平台作用域：系统路径，不按租户过滤
-	resource, err := app.dbClient.WithCtx(tenant.Platform(context.Background())).DataResourceById(dataResourceId)
+	// 租户作用域：只能绑定当前租户的数据资源
+	resource, err := app.dbClient.WithCtx(ctx).DataResourceById(dataResourceId)
 	if err != nil {
 		return models.DataResource{}, errort.NewCommonErr(errort.InvalidSource,
 			errort.NewMessageErr("数据资源 {{.p1}} 不存在或已被删除", map[string]interface{}{"p1": dataResourceId}))
@@ -328,7 +347,7 @@ func (app *ruleEngineApp) checkParam(name, dataResourceId, resourceType string) 
 }
 
 // toResponses 转出参，并批量补齐绑定的数据资源
-func (app *ruleEngineApp) toResponses(list []models.RuleEngine) ([]dtos.RuleEngineSearchQueryResponse, error) {
+func (app *ruleEngineApp) toResponses(ctx context.Context, list []models.RuleEngine) ([]dtos.RuleEngineSearchQueryResponse, error) {
 	if len(list) == 0 {
 		return []dtos.RuleEngineSearchQueryResponse{}, nil
 	}
@@ -338,8 +357,8 @@ func (app *ruleEngineApp) toResponses(list []models.RuleEngine) ([]dtos.RuleEngi
 			ids = append(ids, list[i].DataResourceId)
 		}
 	}
-	// 平台作用域：系统路径，不按租户过滤
-	resources, err := app.dbClient.WithCtx(tenant.Platform(context.Background())).DataResourceByIds(ids)
+	// 按当前租户作用域补资源信息，避免解析到其他租户的资源
+	resources, err := app.dbClient.WithCtx(ctx).DataResourceByIds(ids)
 	if err != nil {
 		return nil, err
 	}

@@ -21,13 +21,10 @@ type Configuration struct {
 	Username     string
 	Password     string
 	BatchSize    int
-	Dsn          string
 	// 添加sqlite数据库存储地址
 	DataSource string
 	// 添加tqlite集群地址
 	Cluster []string
-	// RetentionDays 数据保留天数：>0 按天数、0 用默认值(30)、<0 永久保留；用于 ducklake 的定期清理
+	// RetentionDays 数据保留天数：>0 按天数、0 用默认值(30)、<0 永久保留
 	RetentionDays int
-	// OverrideDataPath 仅 ducklake 用：把 catalog 里记录的数据目录强制改成 Dsn
-	OverrideDataPath bool
 }

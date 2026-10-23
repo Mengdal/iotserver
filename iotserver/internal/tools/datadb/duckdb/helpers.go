@@ -1,11 +1,11 @@
 // Package duckdb 实现基于 DuckDB 单文件列存的数据层。
 //
-// 与 ducklake（DuckDB + Parquet 湖仓）的区别：
-//   - 数据写在 DuckDB 原生表里，一个事务不再产生一个 Parquet 文件，
+// 设计要点：
+//   - 数据写在 DuckDB 原生表里，一个事务不产生 Parquet 文件，
 //     因此不需要分区、合并小文件、过期快照这一整套文件生命周期管理；
 //   - 依靠 DuckDB 自身的 row group zone map 做区间裁剪：写入按时间递增追加，
 //     ts_ms 的 zone map 天然狭窄，时间范围查询能直接跳过大量 row group；
-//   - 单写者约束与 ducklake 相同：同一个 .db 文件同一时刻只允许一个进程打开。
+//   - 单写者约束：同一个 .db 文件同一时刻只允许一个进程打开。
 //
 // 配置约定（configuration.toml 的 [Databases.Data.Primary]）：
 //

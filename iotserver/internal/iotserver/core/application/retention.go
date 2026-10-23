@@ -35,7 +35,7 @@ const retentionRunTimeout = 30 * time.Minute
 //	租户 retention_days = 0  → 用默认保留天数（30 天）
 //	租户 retention_days < 0  → 永久保留，跳过
 //
-// 数据层未实现 DataPurger 能力时（如 ducklake）直接返回，保留其自带的全局维护。
+// 数据层未实现 DataPurger 能力时直接返回，保留其自带的维护逻辑。
 func RunRetention(dic *di.Container, lc logger.LoggingClient) {
 	// 平台作用域：保留策略是系统级后台任务，要覆盖所有租户
 	ctx, cancel := context.WithTimeout(tenant.Platform(context.Background()), retentionRunTimeout)

@@ -84,7 +84,6 @@ export const StructForm = forwardRef<StructFormRef, StructFormProps>(({ onAdd },
       open={isModalOpen}
       width={500}
       closable={false}
-      maskClosable={false}
       destroyOnClose={false}
       headerStyle={{ height: 51 }}
       extra={<CloseOutlined onClick={handleClose} />}

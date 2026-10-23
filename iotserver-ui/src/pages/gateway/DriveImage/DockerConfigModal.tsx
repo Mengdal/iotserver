@@ -53,7 +53,6 @@ export const DockerConfigModal = forwardRef<DockerConfigModalRef, DockerConfigMo
         open={isModalOpen}
         width={600}
         closable={false}
-        maskClosable={false}
         headerStyle={{ height: 51 }}
         destroyOnClose
         extra={<CloseOutlined onClick={() => { setIsModalOpen(false) }} />}

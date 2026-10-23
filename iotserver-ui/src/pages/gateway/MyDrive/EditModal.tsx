@@ -70,7 +70,6 @@ export const EditModal = forwardRef<EditModalRef, EditModalProps>(({ onSuccess }
       open={isModalOpen}
       width={550}
       closable={false}
-      maskClosable={false}
       headerStyle={{ height: 51 }}
       destroyOnClose
       extra={<CloseOutlined onClick={handleClose} />}

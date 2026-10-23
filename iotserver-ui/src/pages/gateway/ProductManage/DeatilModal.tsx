@@ -117,7 +117,6 @@ export const DetailModal = forwardRef<DetailModalRef, DetailModalProps>(({ produ
       open={isModalOpen}
       width={550}
       closable={false}
-      maskClosable={false}
       destroyOnClose={false}
       headerStyle={{ height: 51 }}
       onClose={handleClose}

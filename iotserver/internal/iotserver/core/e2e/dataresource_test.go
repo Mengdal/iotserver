@@ -33,7 +33,7 @@ func TestDataResourceFlow(t *testing.T) {
 	if err := json.Unmarshal(w.Body.Bytes(), &typeResp); err != nil {
 		t.Fatalf("decode typeresource: %v", err)
 	}
-	if !typeResp.Success || len(typeResp.Result) != 5 {
+	if !typeResp.Success || len(typeResp.Result) != 4 {
 		t.Fatalf("类型列表异常: success=%v len=%d", typeResp.Success, len(typeResp.Result))
 	}
 

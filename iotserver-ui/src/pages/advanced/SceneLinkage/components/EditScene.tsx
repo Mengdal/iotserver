@@ -423,7 +423,6 @@ export const EditScene = forwardRef<EditSceneRef, EditSceneProps>(
         open={isModalOpen}
         width={1000}
         closable={false}
-        maskClosable={false}
         headerStyle={{ height: 51 }}
         destroyOnClose
         extra={<CloseOutlined onClick={handleClose} />}

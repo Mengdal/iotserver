@@ -9,10 +9,10 @@ export { getDeviceProperty, getHistoryProperty, getDeviceEvent, getDeviceService
 export { getDockerConfigs, addDockerConfigs, editDockerConfigs, deleteDockerConfigs } from './docker-configs'
 export { addDevices, getDevice, deleteDevices, bindDriver, unBindDriver, downloadTemplate } from './devices'
 export { getDeviceLibraries, addDeviceLibraries, editDeviceLibraries, deleteDeviceLibraries, getDriverMarket } from './device-libraries'
-export { iotPlatform, addProduct, productSync, allProductSync, getProductInfo, deleteProduct, getProductList } from './product'
-export { addDevice, editDevices, deleteDevice, deviceSync, deviceSyncSingle, getDeviceDetail, getDeviceStatusTemplate } from './device'
+export { iotPlatform, addProduct, getProductInfo, deleteProduct, getProductList } from './product'
+export { addDevice, editDevices, deleteDevice, getDeviceDetail, getDeviceStatusTemplate } from './device'
 
-export { useGetCloudInstance, useGetDeviceServers, useGetDeviceStatusTemplate, useGetIotPlatform, useGetProductList } from './hooks'
+export { useGetDeviceServers, useGetDeviceStatusTemplate, useGetIotPlatform, useGetProductList } from './hooks'
 
 export * from './home'
 export * from './alarmList'

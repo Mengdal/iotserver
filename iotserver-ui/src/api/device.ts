@@ -62,27 +62,6 @@ export function deleteDevice (id: string) {
   })
 }
 
-export function deviceSync (data: {
-  cloud_instance_id: string
-  driver_instance_id: string
-}) {
-  return httpRequest<any, CommonResponse<any>>({
-    url: '/api/v1/device-sync',
-    method: 'post',
-    data,
-  })
-}
-
-export function deviceSyncSingle (data: {
-  device_id: string
-}) {
-  return httpRequest<any, CommonResponse<any>>({
-    url: `/api/v1/device-sync/${data.device_id}`,
-    method: 'post',
-    data,
-  })
-}
-
 export function uploadValidated (data: FormData) {
   return http({
     url: '/api/v1/device/upload-validated',

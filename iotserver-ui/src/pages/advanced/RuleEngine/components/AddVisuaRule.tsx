@@ -47,7 +47,6 @@ export const AddVisuaRule = forwardRef<AddVisuaRuleRef, AddVisuaRuleProps>(({ on
       open={isModalOpen}
       width={550}
       closable={false}
-      maskClosable={false}
       headerStyle={{ height: 51 }}
       destroyOnClose
       extra={<CloseOutlined onClick={handleClose} />}

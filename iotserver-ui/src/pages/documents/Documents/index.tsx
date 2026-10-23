@@ -69,7 +69,7 @@ const FEATURES: Feature[] = [
   {
     icon: <HddOutlined />,
     title: t('数据存储'),
-    description: t('元数据使用 SQLite / MySQL，时序数据默认 DuckDB / DuckLake，也支持多种数据层。'),
+    description: t('元数据使用 SQLite，时序数据使用 DuckDB 单文件列存。'),
   },
   {
     icon: <SettingOutlined />,

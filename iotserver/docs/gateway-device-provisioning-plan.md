@@ -193,7 +193,7 @@ MQTT 只保证 QoS1 的至少一次投递，**不保证 `devices` 一定先于 `
 | `resolveDevice` → `resolveOrProvision`（含惰性注册） | `gatewayingest/service.go:365` |
 | 注册编排（策略 / 配额 / 产品映射 / upsert / 回执） | 新包 `application/gatewayprovision`（独立于 `deviceapp`：这里是网关驱动的批量内部流程，不走 HTTP 请求语义） |
 | `GatewayItf` 加清单处理与待确认设备相关方法 | `core/interface/gateway.go:10` |
-| `UpsertGatewayDevice` / `MarkGatewayDevicesAbsent` / 待确认设备 CRUD | `infrastructure/sqlite/gateway_repo.go`（+ mysql 侧同步） |
+| `UpsertGatewayDevice` / `MarkGatewayDevicesAbsent` / 待确认设备 CRUD | `infrastructure/sqlite/gateway_repo.go` |
 | `Gateway` 加 `ProvisionPolicy`；`Device` 加 `ProvisionState` + 唯一索引；`GatewayIngestLog` 加 `Kind` | `models/gateway.go`、`models/device.go` |
 | 清单报文、回执、策略、待确认设备 DTO | `dtos/gateway.go` |
 | 策略设置 / 待确认列表 / 确认接口 | `controller/http/gateway/gateway.go` + `core/route/gateway.go`（`v1Auth` 组，参照现有 `ctl.Perm(...)` 权限写法） |

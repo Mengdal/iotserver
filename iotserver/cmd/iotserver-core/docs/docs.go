@@ -1605,63 +1605,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/device-sync": {
-            "post": {
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "设备管理"
-                ],
-                "summary": "同步设备信息",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "name": "cloud_instance_id",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "name": "driver_instance_id",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/httphelper.CommonResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/device-sync/:deviceId": {
-            "post": {
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "设备管理"
-                ],
-                "summary": "同步单个设备信息",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "name": "device_id",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/httphelper.CommonResponse"
-                        }
-                    }
-                }
-            }
-        },
         "/api/v1/device/:deviceId": {
             "get": {
                 "produces": [
@@ -2682,76 +2625,6 @@ const docTemplate = `{
                         "required": true,
                         "schema": {
                             "$ref": "#/definitions/dtos.ProductAddRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/httphelper.CommonResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/product-sync": {
-            "post": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "产品管理"
-                ],
-                "summary": "云端产品同步",
-                "parameters": [
-                    {
-                        "description": "参数",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/dtos.ProductSyncRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/httphelper.CommonResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/product-sync/:productId": {
-            "post": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "产品管理"
-                ],
-                "summary": "云端单个产品同步",
-                "parameters": [
-                    {
-                        "description": "参数",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/dtos.ProductSyncByIdRequest"
                         }
                     }
                 ],
@@ -4416,22 +4289,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "status": {
-                    "type": "string"
-                }
-            }
-        },
-        "dtos.ProductSyncByIdRequest": {
-            "type": "object",
-            "properties": {
-                "product_id": {
-                    "type": "string"
-                }
-            }
-        },
-        "dtos.ProductSyncRequest": {
-            "type": "object",
-            "properties": {
-                "cloud_instance_id": {
                     "type": "string"
                 }
             }

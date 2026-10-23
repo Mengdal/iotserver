@@ -26,22 +26,6 @@ export function addProduct<T> (data: AddProductParams) {
   })
 }
 
-export function allProductSync<T> (data: { cloud_instance_id: string }) {
-  return httpRequest<any, CommonResponse<TableReponseType<T>>, { cloud_instance_id: string }>({
-    url: '/api/v1/product-sync',
-    method: 'post',
-    data,
-  })
-}
-
-export function productSync<T> (data: { product_id: string }) {
-  return httpRequest<any, CommonResponse<TableReponseType<T>>, { product_id: string }>({
-    url: `/api/v1/product-sync/${data.product_id}`,
-    method: 'post',
-    data,
-  })
-}
-
 export function getProductInfo<T> (productId: string) {
   return httpRequest<any, CommonResponse<T>, { productId: string }>({
     url: `/api/v1/product/${productId}`,

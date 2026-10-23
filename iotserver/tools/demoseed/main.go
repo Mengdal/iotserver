@@ -4,7 +4,7 @@
 //  1. 只走正式 HTTP 接口创建资源（租户/组织/网关/产品/设备/告警规则），不直连业务库；
 //  2. 内置方案（品类/物模型/告警阈值）直接复用 internal/pkg/seed 的 LoadSolutions()，
 //     与启动迁移写入 category_template(sol_<key>) / solution 的数据同源；
-//  3. 历史数据按 devseed 的方式直写 DuckLake（带历史时间戳）；
+//  3. 历史数据按 devseed 的方式直写 DuckDB（带历史时间戳）；
 //  4. 幂等：先查后建，创建失败（如重名/409）时打印警告并复用已有对象。
 //
 // 用法（在 iotserver 目录下）：
@@ -31,7 +31,7 @@ import (
 	"iotserver/internal/pkg/constants"
 	"iotserver/internal/pkg/logger"
 	"iotserver/internal/pkg/seed"
-	"iotserver/internal/tools/datadb/ducklake"
+	"iotserver/internal/tools/datadb/duckdb"
 )
 
 var (
@@ -43,10 +43,8 @@ var (
 	doReset  = flag.Bool("reset", false, "先清理本工具创建的演示数据（失败仅告警并继续）")
 	user     = flag.String("user", "admin", "平台管理员账号")
 	pass     = flag.String("pass", "admin123", "平台管理员密码")
-	skipHist = flag.Bool("skip-history", false, "不写历史数据（后端在跑、DuckLake 被占用时用）")
-	lakeCat  = flag.String("lake-catalog", "manifest/docker/db-data/ducklake/catalog.db", "ducklake catalog 路径")
-	lakeData = flag.String("lake-data", "manifest/docker/db-data/ducklake/data", "ducklake Parquet 目录")
-	lakeOver = flag.Bool("override-data-path", false, "ducklake attach 时强制使用 -lake-data（catalog 由容器路径创建时需要）")
+	skipHist = flag.Bool("skip-history", false, "不写历史数据（后端在跑、DuckDB 文件被占用时用）")
+	dbPath   = flag.String("db", "manifest/docker/db-data/duckdb/core-data.duckdb", "DuckDB 数据库文件路径")
 )
 
 /** *********************** 资源模型 *********************** **/
@@ -237,13 +235,9 @@ func main() {
 
 	var lake dataClient
 	if !*skipHist {
-		cli, err := ducklake.NewClient(dtos.Configuration{
-			DataSource:       *lakeCat,
-			Dsn:              *lakeData,
-			OverrideDataPath: *lakeOver,
-		}, lc)
+		cli, err := duckdb.NewClient(dtos.Configuration{DataSource: *dbPath}, lc)
 		if err != nil {
-			fmt.Printf("⚠️  打开 DuckLake 失败：%v\n   已跳过历史数据写入（可显式加 -skip-history）\n", err)
+			fmt.Printf("⚠️  打开 DuckDB 失败：%v\n   已跳过历史数据写入（可显式加 -skip-history）\n", err)
 		} else {
 			lake = cli
 			defer lake.CloseSession()
@@ -621,7 +615,7 @@ type dataClient interface {
 	CloseSession()
 }
 
-// writeHistory 为每台设备的每个数值属性生成随机游走序列，直写 DuckLake
+// writeHistory 为每台设备的每个数值属性生成随机游走序列，直写 DuckDB
 func writeHistory(lake dataClient, devs []devRef, rng *rand.Rand, sum *summary) {
 	if len(devs) == 0 {
 		return
@@ -778,7 +772,7 @@ func cleanup(c *client, tpls []*tmpl, codes []string) {
 		c.delete("/api/v1/tenant/"+id, "租户 "+code)
 	}
 	c.tenant = ""
-	fmt.Println("🧹 清理结束（DuckLake 里已写入的历史数据没有删除接口，会保留）")
+	fmt.Println("🧹 清理结束（DuckDB 里已写入的历史数据没有删除接口，会保留）")
 }
 
 /** *********************** 小工具 *********************** **/
@@ -792,7 +786,7 @@ func printSummary(s *summary) {
 	fmt.Printf("告警规则        ：%d\n", s.Rules)
 	fmt.Printf("历史数据点      ：%d\n", s.Points)
 	fmt.Printf("复用的已有对象  ：%d\n", s.Reused)
-	fmt.Println("提示：历史数据写入 DuckLake；查询示例：GET /api/v1/device/<deviceId>/thing-model/history-property?code=<code>&page=1&pageSize=20")
+	fmt.Println("提示：历史数据写入 DuckDB；查询示例：GET /api/v1/device/<deviceId>/thing-model/history-property?code=<code>&page=1&pageSize=20")
 }
 
 func tenantSuffix(i int) string {

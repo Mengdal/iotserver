@@ -12,7 +12,10 @@ services:
     networks:
       - iotserver
   ekuiper:
-    image: lfedge/ekuiper:2.4.2-slim
+    # 内置 Kafka / InfluxDB sink 插件；修改插件后需重新 build
+    build:
+      context: ./ekuiper
+    image: ${EKUIPER_IMAGE:-iotserver-ekuiper:2.4.2}
     ports:
       - "127.0.0.1:9081:9081"
     container_name: ekuiper
@@ -26,6 +29,9 @@ services:
       MQTT_SOURCE__DEFAULT__SERVER: "tcp://mqtt-broker:58090"
       KUIPER__BASIC__CONSOLELOG: "true"
       KUIPER__BASIC__IGNORECASE: "false"
+      # eKuiper 2.4 默认禁止规则访问私网；HTTP 数据资源通常指向内网/本机服务，需显式放开。
+      # 如部署环境只允许推送公网地址，可改回 "false"。
+      KUIPER__BASIC__ENABLEPRIVATENET: "true"
     networks:
       - iotserver
   ekuiper-manager:

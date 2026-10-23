@@ -21,7 +21,6 @@ const (
 type MetadataType string
 
 const (
-	MySQL  MetadataType = "mysql"
 	SQLite MetadataType = "sqlite"
 )
 
@@ -29,9 +28,7 @@ type DataType string
 
 const (
 	LevelDB  DataType = "leveldb"
-	TDengine DataType = "tdengine"
 	Tstorage DataType = "tstorage"
-	DuckLake DataType = "ducklake"
-	// DuckDB 单文件列存（本地原生表，没有湖仓的 Parquet 文件层）
+	// DuckDB 单文件列存（本地原生表）
 	DuckDB DataType = "duckdb"
 )

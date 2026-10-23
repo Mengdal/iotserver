@@ -49,7 +49,6 @@ export const AddMqttModal = forwardRef<AddMqttModalRef, AddMqttModalProps>(({ on
       open={isModalOpen}
       width={550}
       closable={false}
-      maskClosable={false}
       headerStyle={{ height: 51 }}
       destroyOnClose
       extra={<CloseOutlined onClick={handleClose} />}

@@ -40,10 +40,10 @@ import (
 //
 // 为什么不做成"一个组件一个请求"：
 //   - 画布上十几个组件会打出十几个 HTTP 请求，浏览器连接数被占满、首屏抖动；
-//   - 数据层多为单连接（DuckLake / tstorage），集中限流比让前端各自为战更可控。
+//   - DuckDB 为单连接，集中限流比让前端各自为战更可控。
 //
 // 取数统一走持久化层的 SearchDeviceThingModelHistoryPropertyData，
-// 所以四种数据层（ducklake / tstorage / leveldb / tdengine）都自动支持。
+// 所以数据层（duckdb）自动支持。
 const (
 	// 一次请求最多多少个组件
 	vizDataMaxItems = 60
@@ -51,7 +51,7 @@ const (
 	vizDataMaxSeries = 120
 	// 一次请求最多多少个指标（指标是聚合值，P0 清单本身只有十几个）
 	vizDataMaxMetrics = 30
-	// 单条序列默认 / 最大返回点数（上限与数据层的 maxPageSize 对齐：ducklake 为 1000）
+	// 单条序列默认 / 最大返回点数（上限与数据层的 maxPageSize 对齐：1000）
 	vizDataDefaultPoints = 500
 	vizDataMaxPoints     = 1000
 	// 查询并发（数据层多为单连接，别开太大）
@@ -60,7 +60,7 @@ const (
 	vizDataTimeout = 20 * time.Second
 	// latest 模式的回看窗口。
 	//
-	// ⚠️ 数据层在「不传时间范围 + Last」时只回溯最近 30 分钟（见 ducklake/helpers.go 的 timeWindow、
+	// ⚠️ 数据层在「不传时间范围 + Last」时只回溯最近 30 分钟（见 duckdb/helpers.go 的 timeWindow、
 	// tstorage/client.go 的半小时窗口），设备半小时没上报就会查空。所以这里显式给一个回看窗口。
 	vizDataLatestLookback = 30 * 24 * time.Hour
 )

@@ -1,12 +1,11 @@
 import dayjs from 'dayjs'
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
-import { Table, Card, Form, Input, Select, Button, Space, message, Typography, Popconfirm, Badge } from 'antd'
+import { Table, Card, Form, Input, Select, Button, Space, message, Typography, Popconfirm } from 'antd'
 import { PlusOutlined, ReloadOutlined, CheckCircleFilled, MinusCircleFilled } from '@ant-design/icons'
-import { getProductList, allProductSync, deleteProduct, useGetIotPlatform, useGetCloudInstance } from '@/api'
+import { getProductList, deleteProduct, useGetIotPlatform } from '@/api'
 import { useTableRequest } from '@/hooks'
 import { AddModal, AddModalRef } from './AddModal'
-import { RunStatusMap } from '@/utils/statusMap'
 import { confirmPlatformViewAdd } from '@/utils/platformViewGuard'
 import { ProductType } from '@/api/product'
 import { t, tt } from '@/i18n'
@@ -35,8 +34,6 @@ const ProductManage: React.FC<ProductManageProps> = () => {
   const location = useLocation()
 
   const addModalRef = useRef<AddModalRef>(null)
-  const [submitting, setSubmitting] = useState(false)
-  const [cloudInstanceId, setCloudInstanceId] = useState('')
 
   // 从方案中心跳转过来时自动打开创建产品抽屉并预选方案品类；
   // 打开后立刻清掉 state，避免刷新或后退时重复弹出。
@@ -54,7 +51,6 @@ const ProductManage: React.FC<ProductManageProps> = () => {
     navigate(location.pathname, { replace: true, state: null })
   }, [])
 
-  const key = 'updatable'
   const [messageApi, contextHolder] = useMessage()
 
   const { loading, form, dataSource, pagination, reload, search, reset } = useTableRequest<ProductType>({
@@ -62,11 +58,6 @@ const ProductManage: React.FC<ProductManageProps> = () => {
   })
 
   const { data: iotPlatformOptions } = useGetIotPlatform()
-  const { data: cloudInstanceOptions } = useGetCloudInstance()
-
-  useEffect(() => {
-    setCloudInstanceId(cloudInstanceOptions[0]?.id)
-  }, [cloudInstanceOptions])
 
   return (
     <>
@@ -76,9 +67,9 @@ const ProductManage: React.FC<ProductManageProps> = () => {
         <Form layout="inline" form={form}>
           <Form.Item key="platform" name="platform" initialValue={''}>
             <Select
-              placeholder={t('请选择云平台')}
+              placeholder={t('平台')}
               style={{ minWidth: 180 }}
-              options={[{ label: t('云平台 (全部)'), value: '' }, ...iotPlatformOptions.map(i => ({ label: tt(i), value: i }))]}
+              options={[{ label: t('全部'), value: '' }, ...iotPlatformOptions.map(i => ({ label: tt(i), value: i }))]}
             />
           </Form.Item>
           <Form.Item key="name" name="name">
@@ -102,51 +93,7 @@ const ProductManage: React.FC<ProductManageProps> = () => {
             }}
           ><PlusOutlined />{t('创建产品')}</Button>
           <div className="flex-center">
-            <Space.Compact block>
-              <Select
-                style={{ minWidth: 180 }}
-                options={cloudInstanceOptions.map(item => ({
-                  value: item.id,
-                  label: (
-                    <>
-                      <span className="mr10">{item.name}</span>
-                    [ <Badge status={RunStatusMap[item.run_status].status} text={RunStatusMap[item.run_status].text} /> ]
-                    </>
-                  ),
-                }))}
-                value={cloudInstanceId}
-                placeholder={t('请选择云实例')}
-                dropdownMatchSelectWidth={false}
-                onChange={value => {
-                  setCloudInstanceId(value)
-                }}
-              />
-              <Button
-                type="default"
-                loading={submitting}
-                disabled={submitting}
-                onClick={() => {
-                  if (cloudInstanceId) {
-                    setSubmitting(true)
-                    messageApi.open({ key, type: 'loading', content: t('产品数据同步中, 请等待 ..') })
-                    allProductSync({ cloud_instance_id: cloudInstanceId })
-                      .then(resp => {
-                        if (resp.success) {
-                          messageApi.open({ key, type: 'success', content: t('产品数据同步成功'), duration: 3 })
-                          reload()
-                        } else {
-                          messageApi.open({ key, type: 'error', content: resp.errorMsg, duration: 3 })
-                        }
-                      }).finally(() => {
-                        setSubmitting(false)
-                      })
-                  } else {
-                    messageApi.open({ type: 'error', content: t('请选择要同步的云实例') })
-                  }
-                }}
-              >{t('数据同步')}</Button>
-            </Space.Compact>
-            <Button className="ml10"
+            <Button
               onClick={() => {
                 reload()
               }}

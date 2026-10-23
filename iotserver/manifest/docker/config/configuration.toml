@@ -36,26 +36,14 @@ Timeout = 120
 [Databases.Metadata.Primary]
 Type = 'sqlite'
 DataSource = 'iotserver/db-data/core-data/core.db?_timeout=5000'
-#Type = 'mysql'
-#Dsn = 'root:123456@tcp(127.0.0.1:3306)/iotserver?charset=utf8mb4&parseTime=True&loc=Local'
 
 
 [Databases.Data]
 [Databases.Data.Primary]
-# 默认数据层：DuckLake（DuckDB 内嵌列式存储，SQLite catalog + Parquet 数据文件）。
+# 数据层：DuckDB 单文件列存。
 # 路径相对容器工作目录 /var/bin/，即宿主机 manifest/docker/db-data/（compose 已挂载，重建容器不丢数据）。
-# 首次启动需要联网安装 ducklake 扩展（装到 catalog 同目录的 extensions/，之后离线也可用）。
-Type = 'ducklake'
-DataSource = 'iotserver/db-data/ducklake/catalog.db'   # 元数据（SQLite catalog）
-Dsn = 'iotserver/db-data/ducklake/data'                # 数据文件（Parquet）目录
-
-# 其它可选数据层：
-#Type = 'tstorage'
-#DataSource = 'iotserver/db-data/tstorage-data/'
-#Type = 'leveldb'
-#DataSource = 'iotserver/db-data/leveldb-core-data/'
-#Type = 'tdengine'
-#Dsn = 'root:taosdata@ws(127.0.0.1:6041)/iotserver'
+Type = 'duckdb'
+DataSource = 'iotserver/db-data/duckdb/core-data.duckdb'
 
 # 调试端点 /debug/pprof：默认关闭（暴露协程栈/堆内存）。开启后需 x-token + system:debug:pprof 权限。
 [Pprof]

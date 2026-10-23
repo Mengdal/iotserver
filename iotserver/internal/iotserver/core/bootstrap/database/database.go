@@ -11,11 +11,9 @@ import (
 	"iotserver/internal/dtos"
 	"iotserver/internal/iotserver/core/config"
 	"iotserver/internal/iotserver/core/container"
-	"iotserver/internal/iotserver/core/infrastructure/mysql"
 	"iotserver/internal/iotserver/core/infrastructure/sqlite"
 	"iotserver/internal/pkg/constants"
 	"iotserver/internal/tools/datadb/duckdb"
-	"iotserver/internal/tools/datadb/ducklake"
 
 	"iotserver/internal/pkg/di"
 	"iotserver/internal/pkg/logger"
@@ -48,10 +46,6 @@ func (d Database) newDBClient(
 
 	databaseInfo := d.database.GetDatabaseInfo()["Primary"]
 	switch databaseInfo.Type {
-	case string(constants.MySQL):
-		return mysql.NewClient(dtos.Configuration{
-			Dsn: databaseInfo.Dsn,
-		}, lc)
 	case string(constants.SQLite):
 		return sqlite.NewClient(dtos.Configuration{
 			Username:   databaseInfo.Username,
@@ -59,7 +53,7 @@ func (d Database) newDBClient(
 			DataSource: databaseInfo.DataSource,
 		}, lc)
 	default:
-		panic(errors.New("database configuration error"))
+		panic(errors.New("database configuration error: 仅支持 sqlite"))
 	}
 }
 
@@ -69,23 +63,14 @@ func (d Database) newDataDBClient(
 
 	switch dataDbInfo.Type {
 	case string(constants.DuckDB):
-		// 单文件列存（默认）：DataSource = DuckDB 数据库文件路径
+		// 单文件列存：DataSource = DuckDB 数据库文件路径
 		// 保留天数默认值；按租户的保留策略由应用层（retention）执行
 		return duckdb.NewClient(dtos.Configuration{
 			DataSource:    dataDbInfo.DataSource,
 			RetentionDays: defaultDataRetentionDays,
 		}, lc)
-	case string(constants.DuckLake):
-		// 湖仓形态：DataSource = catalog（元数据）路径；Dsn = Parquet 数据目录
-		// 保留天数默认值；按租户的保留策略由应用层（retention）执行
-		return ducklake.NewClient(dtos.Configuration{
-			DataSource:       dataDbInfo.DataSource,
-			Dsn:              dataDbInfo.Dsn,
-			RetentionDays:    defaultDataRetentionDays,
-			OverrideDataPath: dataDbInfo.OverrideDataPath,
-		}, lc)
 	default:
-		panic(errors.New("database configuration error: 仅支持 duckdb / ducklake"))
+		panic(errors.New("database configuration error: 仅支持 duckdb"))
 	}
 }
 

@@ -23,7 +23,7 @@ import (
 
 type fakeDataDB struct{}
 
-func (fakeDataDB) GetDataDBType() constants.DataType { return constants.TDengine }
+func (fakeDataDB) GetDataDBType() constants.DataType { return constants.DuckDB }
 func (fakeDataDB) CloseSession()                     {}
 
 func (fakeDataDB) Insert(ctx context.Context, table string, data map[string]interface{}) error {

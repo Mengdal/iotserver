@@ -21,15 +21,6 @@ import (
 	"iotserver/internal/pkg/utils"
 )
 
-type DeviceSyncRequest struct {
-	CloudInstanceId string `json:"cloud_instance_id"`
-	DriveInstanceId string `json:"driver_instance_id"`
-}
-
-type DeviceSyncByIdRequest struct {
-	DeviceId string `json:"device_id"`
-}
-
 type DeviceStatusRequest struct {
 	DeviceId string `json:"device_id"`
 }

@@ -812,6 +812,42 @@ func GetEnMessages() []*i18n.Message {
 			Other: "English text widget exceeds {{.p1}} characters",
 		},
 		{
+			ID:    "设备不存在或不属于当前租户",
+			Other: "The device does not exist or does not belong to the current tenant",
+		},
+		{
+			ID:    "产品不存在或不属于当前租户",
+			Other: "The product does not exist or does not belong to the current tenant",
+		},
+		{
+			ID:    "规则 SQL 不能为空",
+			Other: "Rule SQL cannot be empty",
+		},
+		{
+			ID:    "租户标识非法",
+			Other: "Invalid tenant identifier",
+		},
+		{
+			ID:    "规则 SQL 必须从 mqtt_stream 取数",
+			Other: "Rule SQL must read from mqtt_stream",
+		},
+		{
+			ID:    "规则 SQL 的 WHERE 条件为空",
+			Other: "Rule SQL WHERE condition cannot be empty",
+		},
+		{
+			ID:    "规则 SQL 不支持多条语句",
+			Other: "Rule SQL does not support multiple statements",
+		},
+		{
+			ID:    "规则 SQL 不支持注释",
+			Other: "Rule SQL does not support comments",
+		},
+		{
+			ID:    "规则 SQL 不支持多数据源",
+			Other: "Rule SQL does not support multiple data sources",
+		},
+		{
 			ID:    "方案 {{.p1}} 不存在",
 			Other: "Solution {{.p1}} does not exist",
 		},
@@ -1061,10 +1097,6 @@ func GetEnMessages() []*i18n.Message {
 		},
 
 		// 后端接口返回的细节文案（errort.NewMessageErr，ID 就是中文原文）
-		{
-			ID:    "TDengine 返回错误: {{.p1}}",
-			Other: "TDengine returned an error: {{.p1}}",
-		},
 		{
 			ID:    "URL 必须以 http:// 或 https:// 开头",
 			Other: "URL must start with http:// or https://",

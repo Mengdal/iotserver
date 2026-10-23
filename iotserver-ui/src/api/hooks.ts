@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { CloudInstance, cloudInstance } from './cloud-instance'
 import { DeviceServers, getDeviceServers } from './device-servers'
 import { getDeviceStatusTemplate } from './device'
 import { getProductList, iotPlatform, ProductType } from './product'
@@ -25,20 +24,6 @@ export const useGetIotPlatform = () => {
     iotPlatform().then(({ success, result }) => {
       if (success) {
         setData(result)
-      }
-    })
-  }, [])
-
-  return { data }
-}
-
-export const useGetCloudInstance = () => {
-  const [data, setData] = useState<CloudInstance[]>([])
-
-  useEffect(() => {
-    cloudInstance().then(({ success, result }) => {
-      if (success) {
-        setData(result.list)
       }
     })
   }, [])
