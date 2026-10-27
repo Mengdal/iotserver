@@ -254,7 +254,7 @@ export const AddModal = forwardRef<AddModalRef, AddModalProps>(({ onFinish }, re
           </Radio.Group>
         </Form.Item>
         <Form.Item
-          label={t('工厂')}
+          label={t('厂商名称')}
           name="factory"
         >
           <Input placeholder={t('请输入')}></Input>

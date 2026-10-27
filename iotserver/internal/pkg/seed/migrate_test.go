@@ -237,3 +237,50 @@ func TestMigrateSystemBoardPlatformOnly(t *testing.T) {
 		}
 	}
 }
+
+func TestMigrateAlertNotifyWays(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open(filepath.Join(t.TempDir(), "notify.db")), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("open sqlite: %v", err)
+	}
+	if err := db.AutoMigrate(&models.AlertRule{}); err != nil {
+		t.Fatalf("migrate: %v", err)
+	}
+	rule := models.AlertRule{Id: "r1", Name: "rule"}
+	rule.Notify = models.Notify{
+		{Name: "企业微信机器人", Option: models.MapStringString{"webhook": "old"}},
+		{Name: "sms", Option: models.MapStringString{"phoneNumber": "+966500000000"}},
+		{Name: "whatsapp", Option: models.MapStringString{"phoneNumber": "+966500000000"}},
+		{Name: "twilio_email", Option: models.MapStringString{"email": "ops@example.com"}},
+	}
+	if err := db.Create(&rule).Error; err != nil {
+		t.Fatalf("create rule: %v", err)
+	}
+
+	if err := MigrateAlertNotifyWays(db); err != nil {
+		t.Fatalf("migrate notify ways: %v", err)
+	}
+
+	var got models.AlertRule
+	if err := db.First(&got, "id = ?", "r1").Error; err != nil {
+		t.Fatalf("query rule: %v", err)
+	}
+	if len(got.Notify) != 3 {
+		t.Fatalf("expected 3 remaining channels, got %d: %+v", len(got.Notify), got.Notify)
+	}
+	foundTwilioEmail := false
+	for _, item := range got.Notify {
+		if item.Name == "twilio_email" {
+			t.Fatalf("twilio_email should be normalized to email")
+		}
+		if item.Name == "email" {
+			foundTwilioEmail = item.Option["provider"] == "twilio"
+		}
+		if item.Name != "sms" && item.Name != "whatsapp" && item.Name != "email" {
+			t.Fatalf("unexpected channel kept: %s", item.Name)
+		}
+	}
+	if !foundTwilioEmail {
+		t.Fatal("twilio_email should become email with provider=twilio")
+	}
+}

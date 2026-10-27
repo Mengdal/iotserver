@@ -87,6 +87,8 @@ func (c *Client) MigrateSystemTables() error {
 		// ===== 网关接入（第三方工业网关 MQTT 上行）=====
 		&models.Gateway{},
 		&models.GatewayIngestLog{},
+		// 租户 ↔ things 项目绑定（平台级元数据，带 tenant_id）
+		&models.TenantThingsBinding{},
 		// 参考系统（/edge 协议）接入设备的设备级测点（无物模型时的读取侧来源）
 		&models.DeviceTag{},
 		// ===== 行业方案 =====
@@ -484,6 +486,10 @@ func (c *Client) seedSystemData() error {
 		if err := seed.MigrateBuiltinBoardNames(tx); err != nil {
 			return err
 		}
+		// 下线的通知渠道（企业微信/钉钉/飞书/语音）从存量告警规则里清掉
+		if err := seed.MigrateAlertNotifyWays(tx); err != nil {
+			return err
+		}
 		if err := seed.UpgradeBuiltinBoardTexts(tx); err != nil {
 			return err
 		}
@@ -581,10 +587,59 @@ func (c *Client) seedSolutions() error {
 	if _, err = c.BatchUpsertSolution(templates); err != nil {
 		return fmt.Errorf("写入内置方案失败: %w", err)
 	}
+	// 删除已经从模板目录移除的内置方案，避免升级后旧模板继续出现在方案中心
+	if err = c.pruneRemovedBuiltInSolutions(templates); err != nil {
+		return fmt.Errorf("清理已下线内置方案失败: %w", err)
+	}
 	// 清理旧命名遗留（machine_template → solution、品类 key 前缀 mt_ → sol_）
 	c.cleanupLegacySolutionData()
 	if c.loggingClient != nil {
 		c.loggingClient.Infof("内置方案已就绪: %d 个", len(templates))
+	}
+	return nil
+}
+
+// pruneRemovedBuiltInSolutions 删除当前模板目录中已不存在的内置方案
+// （只动 tenant_id=” 且 built_in=1 的平台内置行，不影响租户复制出来的方案）。
+func (c *Client) pruneRemovedBuiltInSolutions(templates []models.Solution) error {
+	current := make(map[string]bool, len(templates))
+	for _, t := range templates {
+		current[t.Key] = true
+	}
+	pool := c.Pool.WithContext(tenant.Platform(context.Background()))
+	var builtins []models.Solution
+	if err := pool.Table(models.TableSolution).
+		Select("key").Where("tenant_id = '' AND built_in = 1").Find(&builtins).Error; err != nil {
+		return err
+	}
+	removed := make([]string, 0)
+	for _, s := range builtins {
+		if !current[s.Key] {
+			removed = append(removed, s.Key)
+		}
+	}
+	for _, key := range removed {
+		categoryKey := seed.CategoryTemplateKeyPrefix + key
+		if err := pool.Table(models.TableSolution).
+			Where("`key` = ? AND tenant_id = '' AND built_in = 1", key).
+			Delete(&models.Solution{}).Error; err != nil {
+			return err
+		}
+		if pool.Migrator().HasTable("category_template") {
+			if err := pool.Table("category_template").Where("category_key = ?", categoryKey).
+				Delete(&models.CategoryTemplate{}).Error; err != nil {
+				return err
+			}
+		}
+		if pool.Migrator().HasTable("thing_model_template") {
+			if err := pool.Table("thing_model_template").Where("category_key = ?", categoryKey).
+				Delete(&models.ThingModelTemplate{}).Error; err != nil {
+				return err
+			}
+		}
+	}
+	if len(removed) > 0 && c.loggingClient != nil {
+		c.loggingClient.Infof("已清理下线内置方案: %s", strings.Join(removed, ", "))
 	}
 	return nil
 }
@@ -631,6 +686,8 @@ func (c *Client) ensureUniqueIndexes() error {
 		{models.TableScene, "uk_scene_name", []string{"name"}, "name"},
 		// 网关 SN 作为 MQTT clientId/username，必须全局唯一（上行报文靠它定位网关与租户）
 		{models.TableGateway, "uk_gateway_sn", []string{"sn"}, "sn"},
+		// 一个租户只能绑定一个 things 项目
+		{models.TableTenantThingsBinding, "uk_tenant_things_binding_tenant", []string{"tenant_id"}, "tenant_id"},
 		// 断点续传幂等：同一网关同一 seq 只落一条
 		{models.TableGatewayIngestLog, "uk_gateway_ingest_seq", []string{"gateway_id", "seq"}, "gateway_id, seq"},
 	}

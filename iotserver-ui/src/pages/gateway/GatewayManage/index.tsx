@@ -39,6 +39,8 @@ import {
   edgeGatewayRestart,
   edgeGatewayControl,
   getEdgeGatewayDevices,
+  renameThingsGateway,
+  reconcileTenantThings,
   EdgeDeviceGroup,
   Gateway,
   GatewayMqttInfo,
@@ -146,8 +148,12 @@ const copyText = async (text: string): Promise<boolean> => {
 interface GatewayFormValues {
   name: string
   sn?: string
+  source?: 'local' | 'things'
   vendor?: string
   model?: string
+  secret?: string
+  licenseType?: string
+  license?: string
   remark?: string
 }
 
@@ -170,6 +176,13 @@ const GatewayManagePage: React.FC = () => {
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<Gateway | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [reconciling, setReconciling] = useState(false)
+
+  // things 网关重命名
+  const [thingsRenameOpen, setThingsRenameOpen] = useState(false)
+  const [thingsRenameTarget, setThingsRenameTarget] = useState<Gateway | null>(null)
+  const [thingsRenaming, setThingsRenaming] = useState(false)
+  const [thingsRenameForm] = Form.useForm<{ name: string }>()
 
   // 新增成功后的一次性接入信息
   const [mqttOpen, setMqttOpen] = useState(false)
@@ -244,7 +257,7 @@ const GatewayManagePage: React.FC = () => {
   const handleCopy = async (text: string, label: string) => {
     const ok = await copyText(text || '')
     if (ok) {
-      messageApi.open({ type: 'success', content: t('{{label}}已复制', { label: label }) })
+      messageApi.open({ type: 'success', content: t('{{label}}已复制', { label }) })
     } else {
       messageApi.open({ type: 'error', content: t('复制失败，请手动选中复制') })
     }
@@ -256,6 +269,7 @@ const GatewayManagePage: React.FC = () => {
     if (!await confirmPlatformViewAdd()) return
     setEditing(null)
     editForm.resetFields()
+    editForm.setFieldsValue({ source: 'local' })
     setModalOpen(true)
   }
 
@@ -265,6 +279,7 @@ const GatewayManagePage: React.FC = () => {
     editForm.setFieldsValue({
       sn: record.sn,
       name: record.name,
+      source: record.source === 'things' ? 'things' : 'local',
       vendor: record.vendor,
       model: record.model,
       remark: record.remark,
@@ -274,6 +289,7 @@ const GatewayManagePage: React.FC = () => {
 
   const handleSubmit = async () => {
     const values = await editForm.validateFields()
+    const source = values.source || 'local'
     const payload: Record<string, any> = {
       name: (values.name || '').trim(),
       vendor: values.vendor || '',
@@ -293,7 +309,17 @@ const GatewayManagePage: React.FC = () => {
           messageApi.open({ type: 'error', content: resp.errorMsg })
         }
       } else {
-        const resp = await addGateway({ ...payload, sn: (values.sn || '').trim() })
+        const createPayload: Record<string, any> = {
+          ...payload,
+          sn: (values.sn || '').trim(),
+          source,
+        }
+        if (source === 'things') {
+          createPayload.secret = values.secret || ''
+          createPayload.licenseType = values.licenseType || ''
+          createPayload.license = values.license || ''
+        }
+        const resp = await addGateway(createPayload)
         if (resp.success) {
           messageApi.open({ type: 'success', content: t('新增成功') })
           setModalOpen(false)
@@ -311,6 +337,51 @@ const GatewayManagePage: React.FC = () => {
       }
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  const handleReconcile = async () => {
+    setReconciling(true)
+    try {
+      const resp = await reconcileTenantThings()
+      if (resp.success) {
+        messageApi.open({
+          type: 'success',
+          content: t('已从 things 刷新：{{gateways}} 台网关，缺失 {{missing}} 台', {
+            gateways: resp.result.gateways,
+            missing: resp.result.missing,
+          }),
+        })
+        loadData()
+      } else {
+        messageApi.open({ type: 'error', content: resp.errorMsg })
+      }
+    } finally {
+      setReconciling(false)
+    }
+  }
+
+  const openThingsRename = (record: Gateway) => {
+    setThingsRenameTarget(record)
+    thingsRenameForm.setFieldsValue({ name: record.name })
+    setThingsRenameOpen(true)
+  }
+
+  const handleThingsRename = async () => {
+    if (!thingsRenameTarget) return
+    const values = await thingsRenameForm.validateFields()
+    setThingsRenaming(true)
+    try {
+      const resp = await renameThingsGateway(thingsRenameTarget.id, (values.name || '').trim())
+      if (resp.success) {
+        messageApi.open({ type: 'success', content: t('修改成功') })
+        setThingsRenameOpen(false)
+        loadData()
+      } else {
+        messageApi.open({ type: 'error', content: resp.errorMsg })
+      }
+    } finally {
+      setThingsRenaming(false)
     }
   }
 
@@ -459,6 +530,23 @@ const GatewayManagePage: React.FC = () => {
       render: (_, record) => record.deptName || record.deptId || '-',
     },
     {
+      title: t('来源'),
+      key: 'source',
+      width: 120,
+      render: (_, record) => (
+        <Space direction="vertical" size={0}>
+          <Tag color={record.source === 'things' ? 'geekblue' : 'default'}>
+            {record.source === 'things' ? t('things 网关') : t('平台直连')}
+          </Tag>
+          {record.thingsSyncStatus && record.thingsSyncStatus !== 'local' && (
+            <Tag color={record.thingsSyncStatus === 'missing' || record.thingsSyncStatus === 'conflict' ? 'error' : 'success'}>
+              {record.thingsSyncStatus}
+            </Tag>
+          )}
+        </Space>
+      ),
+    },
+    {
       title: t('状态'),
       dataIndex: 'status',
       width: 100,
@@ -483,11 +571,14 @@ const GatewayManagePage: React.FC = () => {
     {
       title: t('操作'),
       key: 'action',
-      width: 340,
+      width: 420,
       fixed: 'right',
       render: (_, record) => (
         <Space size={4} wrap={false} style={{ whiteSpace: 'nowrap' }}>
           {canEdit && <Button type="link" size="small" onClick={() => openEdit(record)}>{t('编辑')}</Button>}
+          {canEdit && record.source === 'things' && (
+            <Button type="link" size="small" onClick={() => openThingsRename(record)}>{t('重命名')}</Button>
+          )}
           {canConfig && isEdgeGateway(record) && (
             <Button type="link" size="small" disabled={record.status !== 1} onClick={() => openControl(record)}>
               {t('设备控制')}
@@ -552,6 +643,11 @@ const GatewayManagePage: React.FC = () => {
         <Col>
           <Space>
             {canAdd && <Button type="primary" icon={<PlusOutlined />} onClick={openAdd}>{t('新增网关')}</Button>}
+            {canEdit && (
+              <Button icon={<ReloadOutlined />} loading={reconciling} onClick={handleReconcile}>
+                {t('从 things 刷新')}
+              </Button>
+            )}
           </Space>
         </Col>
       </Row>
@@ -563,7 +659,7 @@ const GatewayManagePage: React.FC = () => {
         loading={loading}
         columns={columns}
         dataSource={dataSource}
-        scroll={{ x: 1500 }}
+        scroll={{ x: 1650 }}
         pagination={{
           size: 'small',
           showQuickJumper: true,
@@ -592,6 +688,19 @@ const GatewayManagePage: React.FC = () => {
         onCancel={() => setModalOpen(false)}
       >
         <Form form={editForm} layout="vertical">
+          <Row gutter={12}>
+            <Col span={12}>
+              <Form.Item label={t('网关来源')} name="source" rules={[{ required: true }]}>
+                <Select
+                  disabled={!!editing}
+                  options={[
+                    { value: 'local', label: t('平台直连') },
+                    { value: 'things', label: t('things 网关') },
+                  ]}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
           <Row gutter={12}>
             <Col span={12}>
               <Form.Item
@@ -625,8 +734,70 @@ const GatewayManagePage: React.FC = () => {
               </Form.Item>
             </Col>
           </Row>
+          <Form.Item noStyle shouldUpdate={(prev, cur) => prev.source !== cur.source}>
+            {({ getFieldValue }) => getFieldValue('source') === 'things' && (
+              <>
+                <Alert
+                  type="info"
+                  showIcon
+                  style={{ marginBottom: 12 }}
+                  message={t('things 网关由 things 平台管理')}
+                  description={editing
+                    ? t('认证信息不在这里修改；需要变更请到 things 控制台。名称可通过「重命名」操作同步。')
+                    : t('Secret / License 由公司提供，平台会原样提交给 things，不计算、不校验。')}
+                />
+                {!editing && (
+                  <>
+                    <Row gutter={12}>
+                      <Col span={12}>
+                        <Form.Item label="Secret" name="secret" rules={[{ required: true, message: t('请输入 Secret') }]}>
+                          <Input.Password autoComplete="new-password" placeholder={t('公司提供的网关密钥')} />
+                        </Form.Item>
+                      </Col>
+                      <Col span={12}>
+                        <Form.Item label={t('License 类型')} name="licenseType">
+                          <Select
+                            allowClear
+                            placeholder={t('不填则由 things 使用默认值')}
+                            options={[
+                              { value: 'trial', label: 'trial' },
+                              { value: 'permanent', label: 'permanent' },
+                            ]}
+                          />
+                        </Form.Item>
+                      </Col>
+                    </Row>
+                    <Form.Item label="License" name="license">
+                      <Input.Password autoComplete="new-password" placeholder={t('永久授权时由公司提供')} />
+                    </Form.Item>
+                  </>
+                )}
+              </>
+            )}
+          </Form.Item>
           <Form.Item label={t('备注')} name="remark">
             <Input.TextArea rows={2} placeholder={t('请输入备注')} />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        open={thingsRenameOpen}
+        title={t('在 things 中重命名网关')}
+        width={480}
+        okText={t('确定')}
+        cancelText={t('取消')}
+        confirmLoading={thingsRenaming}
+        onOk={handleThingsRename}
+        onCancel={() => setThingsRenameOpen(false)}
+      >
+        <Form form={thingsRenameForm} layout="vertical">
+          <Form.Item
+            label={t('网关名称')}
+            name="name"
+            rules={[{ required: true, message: t('请输入网关名称') }]}
+          >
+            <Input placeholder={t('请输入网关名称')} />
           </Form.Item>
         </Form>
       </Modal>

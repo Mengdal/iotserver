@@ -31,9 +31,8 @@ import (
 	"iotserver/internal/pkg/logger"
 	"iotserver/internal/pkg/tenant"
 	"iotserver/internal/pkg/utils"
-	dingding "iotserver/internal/tools/notify/dingding"
-	feishu "iotserver/internal/tools/notify/feishu"
-	yiqiweixin "iotserver/internal/tools/notify/qiyeweixin"
+	"iotserver/internal/tools/notify/email"
+	"iotserver/internal/tools/notify/twilio"
 
 	"gorm.io/gorm"
 	"iotserver/internal/tools/notify/webapi"
@@ -251,14 +250,12 @@ func checkNotifyParam(notify []dtos.Notify) error {
 		if !utils.InStringSlice(string(d.Name), constants.GetAlertWays()) {
 			return errort.NewCommonEdgeX(errort.DefaultReqParamsError, "notify name not in alertways", nil)
 		}
-		if d.StartEffectTime == "" {
-			return errort.NewCommonEdgeX(errort.DefaultReqParamsError, "startEffectTime is required", nil)
-
+		start := strings.TrimSpace(d.StartEffectTime)
+		end := strings.TrimSpace(d.EndEffectTime)
+		if (start == "") != (end == "") {
+			return errort.NewCommonEdgeX(errort.DefaultReqParamsError, "startEffectTime and endEffectTime must both be set or both be empty", nil)
 		}
-		if d.EndEffectTime == "" {
-			return errort.NewCommonEdgeX(errort.DefaultReqParamsError, "endEffectTime is required", nil)
-		}
-		if !checkEffectTimeParam(d.StartEffectTime, d.EndEffectTime) {
+		if start != "" && !checkEffectTimeParam(start, end) {
 			return errort.NewCommonEdgeX(errort.EffectTimeParamsError, "The format of the effective time is"+
 				" incorrect. The end time should be greater than the start time.", nil)
 		}
@@ -837,52 +834,93 @@ func (p alertApp) AddAlert(ctx context.Context, req map[string]interface{}) erro
 		return err
 	}
 
+	var (
+		emailCfg   email.Config
+		twilioCfg  twilio.Config
+		needSMTP   bool
+		needTwilio bool
+	)
 	for _, notify := range alertRule.Notify {
 		switch notify.Name {
+		case constants.Email:
+			if emailProvider(notify) == "twilio" {
+				needTwilio = true
+			} else {
+				needSMTP = true
+			}
+		case constants.TwilioEmail, constants.SMS, constants.WhatsApp:
+			needTwilio = true
+		}
+	}
+	if needSMTP {
+		emailCfg = p.loadEmailConfig(ctx)
+	}
+	if needTwilio {
+		twilioCfg = p.loadTwilioConfig(ctx)
+	}
+	for _, notify := range alertRule.Notify {
+		if !checkEffectTime(notify.StartEffectTime, notify.EndEffectTime) {
+			continue
+		}
+		lang := notifyLang(notify)
+		content := buildAlertContent(alertRule, device, product, lang)
+		switch notify.Name {
+		case constants.Email, constants.TwilioEmail:
+			recipients := firstNonEmpty(notify.Option["email"], notify.Option["recipient"])
+			if strings.TrimSpace(recipients) == "" {
+				p.lc.Warnf("alert %s: email recipient is empty", alertRule.Id)
+				continue
+			}
+			useTwilio := notify.Name == constants.TwilioEmail || emailProvider(notify) == "twilio"
+			if useTwilio {
+				go func(cfg twilio.Config, to, subject, body string) {
+					ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+					defer cancel()
+					if err := twilio.New(cfg).SendEmail(ctx, to, subject, body); err != nil {
+						p.lc.Errorf("twilio email alert send error: %v", err)
+					}
+				}(twilioCfg, recipients, content.Subject, content.Body)
+			} else {
+				go func(cfg email.Config, to, subject, body string) {
+					if err := email.Send(cfg, to, subject, body); err != nil {
+						p.lc.Errorf("email alert send error: %v", err)
+					}
+				}(emailCfg, recipients, content.Subject, content.Body)
+			}
 		case constants.SMS:
-			if !checkEffectTime(notify.StartEffectTime, notify.EndEffectTime) {
+			phone := firstNonEmpty(notify.Option["phoneNumber"], notify.Option["phone"])
+			if strings.TrimSpace(phone) == "" {
+				p.lc.Warnf("alert %s: sms phone number is empty", alertRule.Id)
 				continue
 			}
-			var phoneNumber string
-			if v, ok := notify.Option["phoneNumber"]; ok {
-				phoneNumber = v
-			}
-			if phoneNumber == "" {
-				p.lc.Debug("phoneNumber is null")
+			go func(cfg twilio.Config, to, body string) {
+				ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+				defer cancel()
+				if err := twilio.New(cfg).SendSMS(ctx, to, body); err != nil {
+					p.lc.Errorf("sms alert send error: %v", err)
+				}
+			}(twilioCfg, phone, content.Body)
+		case constants.WhatsApp:
+			phone := firstNonEmpty(notify.Option["phoneNumber"], notify.Option["phone"])
+			if strings.TrimSpace(phone) == "" {
+				p.lc.Warnf("alert %s: whatsapp phone number is empty", alertRule.Id)
 				continue
 			}
-			//templateId templateParamSet 内容请用户自行补充。
-			var templateId string
-			var templateParamSet []string
-
-			smsApp := resourceContainer.SmsServiceAppFrom(p.dic.Get)
-			go smsApp.Send(templateId, templateParamSet, []string{phoneNumber})
-		case constants.PHONE:
-		case constants.QYweixin:
-			if !checkEffectTime(notify.StartEffectTime, notify.EndEffectTime) {
-				continue
+			variables := map[string]string{
+				"1": content.DeviceName,
+				"2": content.RuleName,
+				"3": content.Level,
+				"4": content.Time,
+				"5": content.Condition,
 			}
-			weixinAlertClient := yiqiweixin.NewWeiXinClient(p.lc, p.dic)
-			go weixinAlertClient.Send(notify.Option["webhook"], alertRule.SubRule[0], device, product, alertRule.Name, notifyLang(notify))
-		case constants.DingDing:
-			if !checkEffectTime(notify.StartEffectTime, notify.EndEffectTime) {
-				continue
-			}
-			weixinAlertClient := dingding.NewDingDingClient(p.lc)
-			//发送内容请用户自行完善
-			go weixinAlertClient.Send(notify.Option["webhook"], alertRule.SubRule[0], device, product, alertRule.Name, notifyLang(notify))
-		case constants.FeiShu:
-			if !checkEffectTime(notify.StartEffectTime, notify.EndEffectTime) {
-				continue
-			}
-			feishuAlertClient := feishu.NewFeishuClient(p.lc, p.dic)
-			//发送内容请用户自行完善
-			text := ""
-			go feishuAlertClient.Send(notify.Option["webhook"], text)
+			go func(cfg twilio.Config, to, body string, vars map[string]string) {
+				ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+				defer cancel()
+				if err := twilio.New(cfg).SendWhatsApp(ctx, to, body, "", vars); err != nil {
+					p.lc.Errorf("whatsapp alert send error: %v", err)
+				}
+			}(twilioCfg, phone, content.Body, variables)
 		case constants.WEBAPI:
-			if !checkEffectTime(notify.StartEffectTime, notify.EndEffectTime) {
-				continue
-			}
 			webApiClient := webapi.NewWebApiClient(p.lc, p.dic)
 			headermap := make([]map[string]string, 0)
 			if header, ok := notify.Option["header"]; ok {
@@ -898,6 +936,161 @@ func (p alertApp) AddAlert(ctx context.Context, req map[string]interface{}) erro
 	return nil
 }
 
+// emailProvider 邮件发送渠道：smtp（默认）或 twilio。
+func emailProvider(notify models.SubNotify) string {
+	if notify.Option == nil {
+		return "smtp"
+	}
+	switch strings.ToLower(strings.TrimSpace(notify.Option["provider"])) {
+	case "twilio", "twilio_email":
+		return "twilio"
+	default:
+		return "smtp"
+	}
+}
+
+// alertContent 告警通知正文的渲染结果。
+type alertContent struct {
+	Subject    string
+	Body       string
+	DeviceName string
+	RuleName   string
+	Level      string
+	Time       string
+	Condition  string
+}
+
+const alertSubjectTemplate = `设备告警：{{.p1}} - {{.p2}}`
+
+// alertTextTemplate 短信 / 邮件 / WhatsApp 共用的纯文本正文。
+// 中文原文即词条 ID；英文译文在 internal/pkg/i18n/locales/en.go。
+const alertTextTemplate = `设备告警通知
+设备：{{.p1}}
+产品：{{.p2}}
+规则：{{.p3}}
+级别：{{.p4}}
+触发方式：{{.p5}}
+触发条件：{{.p6}}
+时间：{{.p7}}`
+
+func buildAlertContent(rule models.AlertRule, device models.Device, product models.Product, lang string) alertContent {
+	now := time.Now().Format("2006-01-02 15:04:05")
+	level := i18n.Trans(lang, string(rule.AlertLevel), nil)
+	condition := alertCondition(rule, product)
+	trigger := ""
+	if len(rule.SubRule) > 0 {
+		trigger = i18n.Trans(lang, string(rule.SubRule[0].Trigger), nil)
+	}
+	body := i18n.Trans(lang, alertTextTemplate, map[string]interface{}{
+		"p1": device.Name,
+		"p2": product.Name,
+		"p3": rule.Name,
+		"p4": level,
+		"p5": trigger,
+		"p6": condition,
+		"p7": now,
+	})
+	subject := i18n.Trans(lang, alertSubjectTemplate, map[string]interface{}{
+		"p1": device.Name,
+		"p2": rule.Name,
+	})
+	return alertContent{
+		Subject:    subject,
+		Body:       body,
+		DeviceName: device.Name,
+		RuleName:   rule.Name,
+		Level:      level,
+		Time:       now,
+		Condition:  condition,
+	}
+}
+
+// alertCondition 把规则条件转成便于人阅读的一行文案。
+func alertCondition(rule models.AlertRule, product models.Product) string {
+	if len(rule.SubRule) == 0 {
+		return ""
+	}
+	sub := rule.SubRule[0]
+	option := sub.Option
+	switch sub.Trigger {
+	case constants.DeviceDataTrigger:
+		code := option["code"]
+		name := code
+		for _, property := range product.Properties {
+			if property.Code == code && property.Name != "" {
+				name = property.Name + "[" + code + "]"
+				break
+			}
+		}
+		parts := []string{name}
+		if condition := strings.TrimSpace(option["decide_condition"]); condition != "" {
+			parts = append(parts, condition)
+		}
+		if cycle := strings.TrimSpace(option["value_cycle"]); cycle != "" {
+			parts = append(parts, cycle)
+		}
+		return strings.Join(parts, " ")
+	case constants.DeviceEventTrigger:
+		return option["code"]
+	case constants.DeviceStatusTrigger:
+		return option["status"]
+	default:
+		return ""
+	}
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			return value
+		}
+	}
+	return ""
+}
+
+// loadEmailConfig 读取平台级 SMTP 配置。配置缺失时返回零值，发送端会记录错误而不会阻塞告警入库。
+func (p alertApp) loadEmailConfig(ctx context.Context) email.Config {
+	port := 587
+	if raw := p.sysConfig(ctx, "notify.smtp.port"); raw != "" {
+		if v, err := strconv.Atoi(raw); err == nil && v > 0 && v <= 65535 {
+			port = v
+		}
+	}
+	tlsEnabled := true
+	if raw := p.sysConfig(ctx, "notify.smtp.tls"); raw != "" {
+		tlsEnabled = !strings.EqualFold(raw, "false")
+	}
+	return email.Config{
+		Host:     p.sysConfig(ctx, "notify.smtp.host"),
+		Port:     port,
+		Username: p.sysConfig(ctx, "notify.smtp.username"),
+		Password: p.sysConfig(ctx, "notify.smtp.password"),
+		From:     p.sysConfig(ctx, "notify.smtp.from"),
+		TLS:      tlsEnabled,
+	}
+}
+
+// loadTwilioConfig 读取平台级 Twilio 配置。
+func (p alertApp) loadTwilioConfig(ctx context.Context) twilio.Config {
+	return twilio.Config{
+		AccountSID:         p.sysConfig(ctx, "notify.twilio.accountSid"),
+		AuthToken:          p.sysConfig(ctx, "notify.twilio.authToken"),
+		EmailFrom:          p.sysConfig(ctx, "notify.twilio.emailFrom"),
+		SMSFrom:            p.sysConfig(ctx, "notify.twilio.smsFrom"),
+		WhatsAppFrom:       p.sysConfig(ctx, "notify.twilio.whatsappFrom"),
+		WhatsAppContentSID: p.sysConfig(ctx, "notify.whatsapp.contentSid"),
+		DefaultCountryCode: p.sysConfig(ctx, "notify.phone.defaultCountryCode"),
+	}
+}
+
+func (p alertApp) sysConfig(ctx context.Context, key string) string {
+	cfg, err := p.dbClient.WithCtx(tenant.Platform(ctx)).SysConfigByKey(key)
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(cfg.ConfigValue)
+}
+
 // notifyLang 通知语言：按通知配置里的 lang 走（前端「通知语言」可选择），没配就用默认语言。
 func notifyLang(notify models.SubNotify) string {
 	if notify.Option != nil {
@@ -909,6 +1102,10 @@ func notifyLang(notify models.SubNotify) string {
 }
 
 func checkEffectTime(startTime, endTime string) bool {
+	if strings.TrimSpace(startTime) == "" || strings.TrimSpace(endTime) == "" {
+		// 未配置生效时间段 = 全天生效
+		return true
+	}
 	timeTemplate := "2006-01-02 15:04:05"
 	startstamp, _ := time.ParseInLocation(timeTemplate, fmt.Sprintf("%d-%02d-%02d", time.Now().Year(), time.Now().Month(), time.Now().Day())+" "+startTime, time.Local)
 	endstamp, _ := time.ParseInLocation(timeTemplate, fmt.Sprintf("%d-%02d-%02d", time.Now().Year(), time.Now().Month(), time.Now().Day())+" "+endTime, time.Local)

@@ -528,11 +528,20 @@ const SolutionCenterPage: React.FC = () => {
     setBannerSlot(document.getElementById('page-banner-extra'))
   }, [])
 
-  /** 分类页签：行业去重排序 + 末尾「自定义」 */
+  /** 分类页签：行业去重排序 + 末尾「自定义」；冷链仓储是当前重点行业，固定排最前 */
   const industryTabs = useMemo(() => {
     const set = new Set<string>()
     solutions.forEach(item => set.add(item.industry || t('未分类')))
-    const list = Array.from(set).sort((a, b) => a.localeCompare(b, 'zh-Hans-CN'))
+    const priority = ['冷链仓储']
+    const list = Array.from(set).sort((a, b) => {
+      const ai = priority.indexOf(a)
+      const bi = priority.indexOf(b)
+      if (ai >= 0 || bi >= 0) {
+        if (ai >= 0 && bi >= 0) return ai - bi
+        return ai >= 0 ? -1 : 1
+      }
+      return a.localeCompare(b, 'zh-Hans-CN')
+    })
     return [...list, CUSTOM_TAB]
   }, [solutions])
 
@@ -558,7 +567,17 @@ const SolutionCenterPage: React.FC = () => {
       ? solutions.filter(item => (item.name || '').toLowerCase().includes(text)
         || (item.industry || '').toLowerCase().includes(text))
       : tabSolutions
-    return [...base].sort((a, b) => (a.name || a.key).localeCompare(b.name || b.key, 'zh-Hans-CN'))
+    // 冷链重点方案排在前面：冷库仓储 → 冷冻库
+    const priority = ['cold_storage_warehouse', 'freezer_room']
+    return [...base].sort((a, b) => {
+      const ai = priority.indexOf(a.key)
+      const bi = priority.indexOf(b.key)
+      if (ai >= 0 || bi >= 0) {
+        if (ai >= 0 && bi >= 0) return ai - bi
+        return ai >= 0 ? -1 : 1
+      }
+      return (a.name || a.key).localeCompare(b.name || b.key, 'zh-Hans-CN')
+    })
   }, [solutions, tabSolutions, searchText])
 
   /**

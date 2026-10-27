@@ -17,6 +17,22 @@ const (
 	GatewayProtocolEdge   = "edge"
 )
 
+// 网关来源。local 是平台自有 MQTT 网关；things 是由 things 平台管理的 /edge 网关。
+const (
+	GatewaySourceLocal  = "local"
+	GatewaySourceThings = "things"
+)
+
+// 本地镜像与 things 的同步状态。
+const (
+	GatewayThingsSyncLocal    = "local"
+	GatewayThingsSyncSynced   = "synced"
+	GatewayThingsSyncPending  = "pending"
+	GatewayThingsSyncMissing  = "missing"
+	GatewayThingsSyncConflict = "conflict"
+	GatewayThingsSyncError    = "error"
+)
+
 // 子设备自动注册开关
 const (
 	GatewayAutoProvisionOff = 0 // 只记录清单，不注册设备
@@ -39,6 +55,18 @@ type Gateway struct {
 	// Pk 外部协议的产品标识。参考系统的网关身份是 /edge/{kind}/{pk}/{sn}/...，
 	// 即 pk 与 sn 两段共同定位（实测两者取值可相同）；自有协议不使用该字段。
 	Pk string `gorm:"column:pk;type:string;size:128;index;comment:外部协议产品标识(pk)"`
+	// Source 网关来源：local 平台自有 / things 由 things 管理
+	Source string `gorm:"column:source;type:string;size:32;default:'local';index;comment:来源 local/things"`
+	// ThingsGatewayId things edge_gateway.id（仅 source=things）
+	ThingsGatewayId int64 `gorm:"column:things_gateway_id;index;comment:things 网关ID"`
+	// ThingsProjectId things edge_gateway.project_id（仅 source=things）
+	ThingsProjectId int64 `gorm:"column:things_project_id;index;comment:things 项目ID"`
+	// ThingsSyncStatus 本地镜像与 things 的同步状态，见 GatewayThingsSync*
+	ThingsSyncStatus string `gorm:"column:things_sync_status;type:string;size:32;default:'local';index;comment:things 同步状态"`
+	// ThingsLastSyncAt 最后一次与 things 对账成功的时间（毫秒）
+	ThingsLastSyncAt int64 `gorm:"column:things_last_sync_at;comment:最后同步时间"`
+	// ThingsLastError 最近一次同步错误（脱敏后的可读信息）
+	ThingsLastError string `gorm:"column:things_last_error;type:string;size:1000;comment:最后同步错误"`
 	// Protocol 接入协议，取值见 GatewayProtocolNative / GatewayProtocolEdge
 	Protocol string `gorm:"column:protocol;type:string;size:32;default:'gatewaymqtt';comment:接入协议"`
 	// AutoProvision 子设备是否随清单自动注册，取值见 GatewayAutoProvisionOn/Off

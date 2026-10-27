@@ -18,6 +18,19 @@ const { Text } = Typography
 const { useForm } = Form
 const { useMessage } = message
 
+const notifyWayLabel = (item: { name: string; option?: { provider?: string } }) => {
+  switch (item.name) {
+    case 'email':
+    case 'twilio_email':
+      return item.name === 'twilio_email' || item.option?.provider === 'twilio'
+        ? t('邮件（Twilio）')
+        : t('邮件（SMTP）')
+    case 'sms': return t('短信')
+    case 'whatsapp': return t('WhatsApp')
+    default: return item.name
+  }
+}
+
 const RuleDetail = () => {
   const [messageApi, contextHolder] = useMessage()
   const params = useParams<{ id: string }>()
@@ -252,18 +265,12 @@ const RuleDetail = () => {
             {(ruleInfo?.notify || []).map((item, index) => (
               <div key={index + 1} className="ruleInfo-content__item">
                 <div className="ruleInfo-content__title">{t('通知')} {index + 2}</div>
-                {item.name === 'sms'
-                  ? <><span className="ml20">{item.name} {t('短信')}</span>
-                    <Divider type="vertical" className="ml20" />
-                    <span className="ml15">
-                      {t('手机号：')}{item.option.phoneNumber}
-                    </span></>
-                  : <><span className="ml20">{item.name}</span>
-                    <Divider type="vertical" className="ml20" />
-                    <span className="ml15">
-                      {t('通知地址：')}{item.option.webhook}
-                    </span></>
-                }
+                <span className="ml20">{notifyWayLabel(item)}</span>
+                <Divider type="vertical" className="ml20" />
+                <span className="ml15">
+                  {t('通知对象：')}
+                  {item.option?.email || item.option?.phoneNumber || item.option?.webhook || '-'}
+                </span>
                 <Divider type="vertical" className="ml20" />
                 <span className="ml15">{t('生效时间：')}{item.start_effect_time} - {item.end_effect_time}</span>
               </div>

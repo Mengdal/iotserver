@@ -85,7 +85,7 @@ func applySolution(t *testing.T, env *testEnv, key string, body []byte) (map[str
 	return result, resp
 }
 
-// ① 模板列表返回 15 个内置模板（7 个行业 × 2 个产品 + 1 个网关模板）
+// ① 模板列表返回 17 个内置模板（原有 15 个 + 2 个冷链仓储方案）
 func TestSolutionSearchReturnsBuiltInTemplates(t *testing.T) {
 	env := setupTestEnv(t)
 	w := doRequest(env.engine, http.MethodGet, "/api/v1/solutions", env.token, nil)
@@ -97,8 +97,8 @@ func TestSolutionSearchReturnsBuiltInTemplates(t *testing.T) {
 	if !ok {
 		t.Fatalf("unexpected result type %T", resp.Result)
 	}
-	if len(list) != 15 {
-		t.Fatalf("内置模板应为 15 个（7 个行业 × 2 个产品 + 1 个网关模板），实际 %d", len(list))
+	if len(list) != 17 {
+		t.Fatalf("内置模板应为 17 个，实际 %d", len(list))
 	}
 	keys := map[string]bool{}
 	for _, item := range list {
@@ -125,7 +125,7 @@ func TestSolutionSearchReturnsBuiltInTemplates(t *testing.T) {
 	w = doRequest(env.engine, http.MethodGet, "/api/v1/solutions?summary=true", env.token, nil)
 	resp = parseResponse(t, w)
 	summaryList, ok := resp.Result.([]interface{})
-	if !ok || len(summaryList) != 15 {
+	if !ok || len(summaryList) != 17 {
 		t.Fatalf("摘要列表异常: %T len=%d", resp.Result, len(summaryList))
 	}
 	for _, item := range summaryList {
@@ -300,7 +300,7 @@ func TestSolutionApplyTwiceReturnsBusinessError(t *testing.T) {
 	}
 }
 
-// ⑤ 15 个内置模板都能一键应用：告警规则数与预设条数一致
+// ⑤ 17 个内置模板都能一键应用：告警规则数与预设条数一致
 //
 // 该用例同时守住「预设阈值必须能通过平台告警校验」这条契约——
 // 例如布尔属性在模板里写 0/1，而校验只认 true/false，需要应用层归一化。
@@ -313,8 +313,8 @@ func TestSolutionApplyAllBuiltInTemplates(t *testing.T) {
 		t.Fatalf("solutions failed: %v", resp.ErrorMsg)
 	}
 	list := resp.Result.([]interface{})
-	if len(list) != 15 {
-		t.Fatalf("内置模板应为 15 个（7 个行业 × 2 个产品 + 1 个网关模板），实际 %d", len(list))
+	if len(list) != 17 {
+		t.Fatalf("内置模板应为 17 个，实际 %d", len(list))
 	}
 
 	for _, item := range list {
@@ -344,8 +344,8 @@ func TestSolutionApplyAllBuiltInTemplates(t *testing.T) {
 	if !resp.Success {
 		t.Fatalf("products list failed: %v", resp.ErrorMsg)
 	}
-	if total := int(resp.Result.(map[string]interface{})["total"].(float64)); total != 15 {
-		t.Fatalf("15 个模板应生成 15 个产品，实际 %d", total)
+	if total := int(resp.Result.(map[string]interface{})["total"].(float64)); total != 17 {
+		t.Fatalf("17 个模板应生成 17 个产品，实际 %d", total)
 	}
 }
 
@@ -866,8 +866,8 @@ func TestSolutionSearchDedupPrefersTenantCopy(t *testing.T) {
 			t.Fatalf("方案 key %s 在租户 A 列表中重复出现 %d 次", k, n)
 		}
 	}
-	if len(listA) != 16 {
-		t.Fatalf("租户 A 应看到 15 个内置方案(其中一个被副本替换) + 1 个自建方案，实际 %d", len(listA))
+	if len(listA) != 18 {
+		t.Fatalf("租户 A 应看到 17 个内置方案(其中一个被副本替换) + 1 个自建方案，实际 %d", len(listA))
 	}
 	var entryA map[string]interface{}
 	for _, tpl := range listA {

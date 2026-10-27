@@ -47,6 +47,15 @@ const (
 	AppMenuHasTenantChildren uint32 = 21714
 	// AppTenantDisabled 租户已停用：登录与请求中间件都会拦截
 	AppTenantDisabled uint32 = 21715
+	// things 集成
+	AppThingsDisabled        uint32 = 21716 // things 未启用
+	AppThingsNotConfigured   uint32 = 21717 // things 配置不完整
+	AppThingsUnavailable     uint32 = 21718 // things 不可达
+	AppThingsAuthFailed      uint32 = 21719 // things 账号/token 失效
+	AppThingsBindingMissing  uint32 = 21720 // 租户未绑定项目
+	AppThingsSecretRejected  uint32 = 21721 // things 拒绝网关 secret
+	AppThingsLicenseRejected uint32 = 21722 // things 拒绝 license
+	AppThingsProjectNotFound uint32 = 21723 // things 项目不存在
 
 	DeviceLibraryMustDeleteDeviceService uint32 = 20201
 	DeviceLibraryUpgradeIng              uint32 = 20204

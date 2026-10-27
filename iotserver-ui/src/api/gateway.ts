@@ -34,6 +34,8 @@ export interface Gateway {
   model: string
   /** 接入协议：gatewaymqtt（平台自有）/ edge（参考系统） */
   protocol?: string
+  /** 来源：local 平台自有 / things 由 things 管理 */
+  source?: 'local' | 'things' | string
   firmwareVersion: string
   /** 采集/上报配置（JSON 字符串） */
   config: string
@@ -53,6 +55,12 @@ export interface Gateway {
   modified?: number
   /** 接入信息：仅新增网关时返回 */
   mqtt?: GatewayMqttInfo
+  /** things 绑定与同步状态 */
+  thingsGatewayId?: number
+  thingsProjectId?: number
+  thingsSyncStatus?: string
+  thingsLastSyncAt?: number
+  thingsLastError?: string
 }
 
 /** 可下发的网关命令 */
@@ -90,6 +98,15 @@ export function updateGateway<T = void> (data: Record<string, any>) {
     url: '/api/v1/gateway',
     method: 'put',
     data,
+  })
+}
+
+/** 在 things 中重命名网关并同步本地名称 */
+export function renameThingsGateway<T = void> (id: string, name: string) {
+  return httpRequest<any, CommonResponse<T>>({
+    url: '/api/v1/gateway/things-rename',
+    method: 'post',
+    data: { id, name },
   })
 }
 

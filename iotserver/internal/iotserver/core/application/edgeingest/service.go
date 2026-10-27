@@ -178,6 +178,10 @@ func (s *Service) syncSubscriptions() error {
 
 	desired := make(map[string]struct{}, len(gateways)*4)
 	for _, g := range gateways {
+		// things 中已删除的网关只保留本地镜像/历史数据，不再订阅新数据。
+		if g.ThingsSyncStatus == models.GatewayThingsSyncMissing {
+			continue
+		}
 		for _, topic := range edgeprotocol.TopicsForGateway(g.Pk, g.Sn) {
 			desired[topic] = struct{}{}
 		}

@@ -5,8 +5,7 @@
         "title": "iotserver 物联网平台 API",
         "termsOfService": "http://swagger.io/terms/",
         "contact": {
-            "name": "API Support",
-            "email": ""
+            "name": "API Support"
         },
         "version": "1.0"
     },
@@ -828,204 +827,67 @@
                 "responses": {}
             }
         },
-        "/api/v1/cloud-instance": {
-            "get": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "我的云服务实例"
-                ],
-                "summary": "云服务实例列表",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "name": "cloudServiceId",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "name": "id",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "name": "ids",
-                        "in": "query"
-                    },
-                    {
-                        "type": "boolean",
-                        "name": "isAll",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "name": "likeId",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "name": "name",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "name": "nameLike",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "name": "orderBy",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "name": "page",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "name": "pageSize",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/dtos.CloudInstanceSearchQueryRequest"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/cloud-instance/:cloudInstanceId/authorization": {
-            "post": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "我的云服务实例"
-                ],
-                "summary": "云服务实例授权",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "参数",
-                        "name": "cloudInstanceId",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "参数",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/dtos.CloudInstanceAuthorizationRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/httphelper.CommonResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/cloud-service": {
-            "get": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "云服务"
-                ],
-                "summary": "云服务列表",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "name": "id",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "name": "ids",
-                        "in": "query"
-                    },
-                    {
-                        "type": "boolean",
-                        "name": "isAll",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "name": "likeId",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "name": "name",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "name": "nameLike",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "name": "orderBy",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "name": "page",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "name": "pageSize",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/httphelper.CommonResponse"
-                        }
-                    }
-                }
-            }
-        },
         "/api/v1/dataresource": {
             "get": {
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
-                    "资源管理"
+                    "高级能力-资源管理"
                 ],
-                "summary": "资源管理查询",
+                "summary": "资源实例列表",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "name": "id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "name": "ids",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "name": "isAll",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "name": "likeId",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "name": "name",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "name": "nameLike",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "name": "orderBy",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "name": "pageSize",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "name": "type",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -1040,21 +902,9 @@
                     "application/json"
                 ],
                 "tags": [
-                    "资源管理"
+                    "高级能力-资源管理"
                 ],
-                "summary": "修改资源管理",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "name": "name",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "name": "type",
-                        "in": "query"
-                    }
-                ],
+                "summary": "修改资源实例",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -1069,21 +919,9 @@
                     "application/json"
                 ],
                 "tags": [
-                    "资源管理"
+                    "高级能力-资源管理"
                 ],
-                "summary": "添加资源管理",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "name": "name",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "name": "type",
-                        "in": "query"
-                    }
-                ],
+                "summary": "新增资源实例",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -1094,27 +932,87 @@
                 }
             }
         },
-        "/api/v1/dataresource/:resourceId": {
+        "/api/v1/dataresource/{resourceId}": {
+            "delete": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "高级能力-资源管理"
+                ],
+                "summary": "删除资源实例",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphelper.CommonResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/dataresource/{resourceId}/health": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "高级能力-资源管理"
+                ],
+                "summary": "验证资源实例连通性",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dtos.DataResourceVerifyResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/dept": {
             "get": {
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
-                    "资源管理"
+                    "系统管理-部门"
                 ],
-                "summary": "添加资源管理",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "name": "name",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "name": "type",
-                        "in": "query"
+                "summary": "部门列表",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphelper.CommonResponse"
+                        }
                     }
+                }
+            },
+            "put": {
+                "produces": [
+                    "application/json"
                 ],
+                "tags": [
+                    "系统管理-部门"
+                ],
+                "summary": "编辑部门",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphelper.CommonResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "系统管理-部门"
+                ],
+                "summary": "新增部门",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -1129,9 +1027,47 @@
                     "application/json"
                 ],
                 "tags": [
-                    "资源管理"
+                    "系统管理-部门"
                 ],
-                "summary": "删除资源管理",
+                "summary": "删除部门",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphelper.CommonResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/dept-tree": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "系统管理-部门"
+                ],
+                "summary": "部门树",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphelper.CommonResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/dept/{id}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "系统管理-部门"
+                ],
+                "summary": "部门详情",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -1160,6 +1096,11 @@
                     {
                         "type": "string",
                         "name": "device_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "name": "device_sn",
                         "in": "query"
                     },
                     {
@@ -1364,8 +1305,12 @@
                     },
                     {
                         "type": "string",
-                        "description": "Alias        *string `json:\"alias\"`",
                         "name": "description",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "name": "docker_config_id",
                         "in": "query"
                     },
                     {
@@ -1396,7 +1341,6 @@
                     },
                     {
                         "type": "string",
-                        "description": "Manufacturer *string `json:\"manufacturer\"`",
                         "name": "protocol",
                         "in": "query"
                     }
@@ -1598,63 +1542,6 @@
                 }
             }
         },
-        "/api/v1/device-sync": {
-            "post": {
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "设备管理"
-                ],
-                "summary": "同步设备信息",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "name": "cloud_instance_id",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "name": "driver_instance_id",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/httphelper.CommonResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/device-sync/:deviceId": {
-            "post": {
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "设备管理"
-                ],
-                "summary": "同步单个设备信息",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "name": "device_id",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/httphelper.CommonResponse"
-                        }
-                    }
-                }
-            }
-        },
         "/api/v1/device/:deviceId": {
             "get": {
                 "produces": [
@@ -1746,6 +1633,18 @@
                 "summary": "查看设备事件数据",
                 "parameters": [
                     {
+                        "type": "integer",
+                        "description": "AggInterval 聚合时间（秒）：0 或缺省表示不聚合，按原始数据返回",
+                        "name": "aggInterval",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "AggMethod 聚合方法：avg/max/min/sum/count/first/last；为空时默认 avg",
+                        "name": "aggMethod",
+                        "in": "query"
+                    },
+                    {
                         "type": "string",
                         "name": "code",
                         "in": "query"
@@ -1815,7 +1714,6 @@
                         "items": {
                             "type": "integer"
                         },
-                        "description": "Page     int     `json:\"page\"`\nPageSize int     `json:\"pageSize\"`",
                         "name": "range",
                         "in": "query"
                     }
@@ -1847,6 +1745,18 @@
                 "summary": "查看设备属性数据",
                 "parameters": [
                     {
+                        "type": "integer",
+                        "description": "AggInterval 聚合时间（秒）：0 或缺省表示不聚合，按原始数据返回",
+                        "name": "aggInterval",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "AggMethod 聚合方法：avg/max/min/sum/count/first/last；为空时默认 avg",
+                        "name": "aggMethod",
+                        "in": "query"
+                    },
+                    {
                         "type": "string",
                         "name": "code",
                         "in": "query"
@@ -1916,7 +1826,6 @@
                         "items": {
                             "type": "integer"
                         },
-                        "description": "Page     int     `json:\"page\"`\nPageSize int     `json:\"pageSize\"`",
                         "name": "range",
                         "in": "query"
                     }
@@ -2017,7 +1926,6 @@
                         "items": {
                             "type": "integer"
                         },
-                        "description": "Page     int     `json:\"page\"`\nPageSize int     `json:\"pageSize\"`",
                         "name": "range",
                         "in": "query"
                     }
@@ -2511,6 +2419,214 @@
                 }
             }
         },
+        "/api/v1/ekuiper/scene": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "高级能力-场景联动"
+                ],
+                "summary": "eKuiper 场景触发回调（由 eKuiper 规则动作回调，免鉴权）",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphelper.CommonResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/gateway": {
+            "put": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "设备接入-网关"
+                ],
+                "summary": "修改网关",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphelper.CommonResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "设备接入-网关"
+                ],
+                "summary": "新增网关（返回一次性 MQTT 接入信息）",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphelper.CommonResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/gateway/command": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "设备接入-网关"
+                ],
+                "summary": "下发网关命令（restart/ota/sync）",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphelper.CommonResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/gateway/config": {
+            "put": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "设备接入-网关"
+                ],
+                "summary": "下发网关配置",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphelper.CommonResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/gateway/edge/control": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "设备接入-网关"
+                ],
+                "summary": "写参考系统网关下设备属性",
+                "responses": {}
+            }
+        },
+        "/api/v1/gateway/edge/devices": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "设备接入-网关"
+                ],
+                "summary": "拉取参考系统网关设备/测点树",
+                "responses": {}
+            }
+        },
+        "/api/v1/gateway/edge/restart": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "设备接入-网关"
+                ],
+                "summary": "重启参考系统网关",
+                "responses": {}
+            }
+        },
+        "/api/v1/gateway/things-reconcile": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "设备接入-网关"
+                ],
+                "summary": "对当前租户执行 things 网关对账",
+                "responses": {}
+            }
+        },
+        "/api/v1/gateway/things-rename": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "设备接入-网关"
+                ],
+                "summary": "在 things 中重命名网关",
+                "responses": {}
+            }
+        },
+        "/api/v1/gateway/{id}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "设备接入-网关"
+                ],
+                "summary": "网关详情",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphelper.CommonResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "设备接入-网关"
+                ],
+                "summary": "删除网关",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphelper.CommonResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/gateways": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "设备接入-网关"
+                ],
+                "summary": "网关列表",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphelper.CommonResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/homepage": {
             "get": {
                 "security": [
@@ -2559,20 +2675,20 @@
                 }
             }
         },
-        "/api/v1/local/config/dns": {
+        "/api/v1/menu": {
             "get": {
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
-                    "配网助手"
+                    "系统管理-菜单"
                 ],
-                "summary": "获取dns",
+                "summary": "菜单列表",
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dtos.ConfigDnsResponse"
+                            "$ref": "#/definitions/httphelper.CommonResponse"
                         }
                     }
                 }
@@ -2582,44 +2698,67 @@
                     "application/json"
                 ],
                 "tags": [
-                    "配网助手"
+                    "系统管理-菜单"
                 ],
-                "summary": "修改dns",
-                "parameters": [
-                    {
-                        "description": "参数",
-                        "name": "req",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/dtos.ConfigDnsUpdateRequest"
-                        }
-                    }
-                ],
+                "summary": "编辑菜单",
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dtos.ConfigDnsResponse"
+                            "$ref": "#/definitions/httphelper.CommonResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "系统管理-菜单"
+                ],
+                "summary": "新增菜单",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphelper.CommonResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "系统管理-菜单"
+                ],
+                "summary": "删除菜单",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphelper.CommonResponse"
                         }
                     }
                 }
             }
         },
-        "/api/v1/local/config/network": {
+        "/api/v1/menu/pref": {
             "get": {
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
-                    "配网助手"
+                    "系统管理-菜单"
                 ],
-                "summary": "获取网卡列表",
+                "summary": "当前租户的菜单展示层覆盖（隐藏/改名/图标/排序）",
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dtos.ConfigNetWorkResponse"
+                            "$ref": "#/definitions/httphelper.CommonResponse"
                         }
                     }
                 }
@@ -2629,25 +2768,107 @@
                     "application/json"
                 ],
                 "tags": [
-                    "配网助手"
+                    "系统管理-菜单"
                 ],
-                "summary": "修改网卡",
-                "parameters": [
-                    {
-                        "description": "参数",
-                        "name": "req",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/dtos.ConfigNetworkUpdateRequest"
-                        }
-                    }
-                ],
+                "summary": "保存菜单展示层覆盖（隐藏/改名/排序，不覆盖 path/perms/component）",
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dtos.ConfigNetWorkResponse"
+                            "$ref": "#/definitions/httphelper.CommonResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/menu/tenant-reset": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "系统管理-菜单"
+                ],
+                "summary": "平台重置某租户的菜单定制（清空自建菜单与覆盖记录）",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphelper.CommonResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/menu/tree": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "系统管理-菜单"
+                ],
+                "summary": "菜单树",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphelper.CommonResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/menu/{id}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "系统管理-菜单"
+                ],
+                "summary": "菜单详情",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphelper.CommonResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/menurole": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "系统管理-角色"
+                ],
+                "summary": "查询角色菜单",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphelper.CommonResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "系统管理-角色"
+                ],
+                "summary": "角色绑定菜单",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphelper.CommonResponse"
                         }
                     }
                 }
@@ -2675,76 +2896,6 @@
                         "required": true,
                         "schema": {
                             "$ref": "#/definitions/dtos.ProductAddRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/httphelper.CommonResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/product-sync": {
-            "post": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "产品管理"
-                ],
-                "summary": "云端产品同步",
-                "parameters": [
-                    {
-                        "description": "参数",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/dtos.ProductSyncRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/httphelper.CommonResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/product-sync/:productId": {
-            "post": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "产品管理"
-                ],
-                "summary": "云端单个产品同步",
-                "parameters": [
-                    {
-                        "description": "参数",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/dtos.ProductSyncByIdRequest"
                         }
                     }
                 ],
@@ -2911,15 +3062,142 @@
                 }
             }
         },
+        "/api/v1/pwd/reset": {
+            "put": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "系统管理-用户"
+                ],
+                "summary": "重置密码",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphelper.CommonResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/role": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "系统管理-角色"
+                ],
+                "summary": "角色列表",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphelper.CommonResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "系统管理-角色"
+                ],
+                "summary": "编辑角色",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphelper.CommonResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "系统管理-角色"
+                ],
+                "summary": "新增角色",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphelper.CommonResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "系统管理-角色"
+                ],
+                "summary": "删除角色",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphelper.CommonResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/role/all": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "系统管理-角色"
+                ],
+                "summary": "全部角色",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphelper.CommonResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/role/{id}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "系统管理-角色"
+                ],
+                "summary": "角色详情",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphelper.CommonResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/rule-engine": {
             "get": {
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
-                    "规则引擎"
+                    "高级能力-规则引擎"
                 ],
-                "summary": "规则引擎列表",
+                "summary": "规则列表",
                 "parameters": [
                     {
                         "type": "string",
@@ -2976,13 +3254,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "type": "array",
-                                "items": {
-                                    "$ref": "#/definitions/dtos.RuleEngineSearchQueryResponse"
-                                }
-                            }
+                            "$ref": "#/definitions/httphelper.CommonResponse"
                         }
                     }
                 }
@@ -2992,33 +3264,9 @@
                     "application/json"
                 ],
                 "tags": [
-                    "规则引擎"
+                    "高级能力-规则引擎"
                 ],
-                "summary": "编辑规则引擎",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "name": "data_resource_id",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "描述",
-                        "name": "description",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "name": "id",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "名字",
-                        "name": "name",
-                        "in": "query"
-                    }
-                ],
+                "summary": "编辑规则",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -3033,28 +3281,9 @@
                     "application/json"
                 ],
                 "tags": [
-                    "规则引擎"
+                    "高级能力-规则引擎"
                 ],
-                "summary": "添加规则引擎",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "name": "data_resource_id",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "描述",
-                        "name": "description",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "名字",
-                        "name": "name",
-                        "in": "query"
-                    }
-                ],
+                "summary": "添加规则",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -3065,52 +3294,34 @@
                 }
             }
         },
-        "/api/v1/rule-engine/:ruleEngineId": {
+        "/api/v1/rule-engine/{ruleEngineId}": {
             "get": {
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
-                    "规则引擎"
+                    "高级能力-规则引擎"
                 ],
-                "summary": "规则引擎详情",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "ruleEngineId",
-                        "name": "ruleEngineId",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
+                "summary": "规则详情",
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/httphelper.CommonResponse"
+                            "$ref": "#/definitions/dtos.RuleEngineSearchQueryResponse"
                         }
                     }
                 }
             }
         },
-        "/api/v1/rule-engine/:ruleEngineId/delete": {
+        "/api/v1/rule-engine/{ruleEngineId}/delete": {
             "delete": {
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
-                    "规则引擎"
+                    "高级能力-规则引擎"
                 ],
-                "summary": "规则引擎删除",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "ruleEngineId",
-                        "name": "ruleEngineId",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
+                "summary": "删除规则",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -3121,24 +3332,15 @@
                 }
             }
         },
-        "/api/v1/rule-engine/:ruleEngineId/start": {
+        "/api/v1/rule-engine/{ruleEngineId}/start": {
             "post": {
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
-                    "规则引擎"
+                    "高级能力-规则引擎"
                 ],
-                "summary": "规则引擎启动",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "ruleEngineId",
-                        "name": "ruleEngineId",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
+                "summary": "启动规则",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -3149,24 +3351,15 @@
                 }
             }
         },
-        "/api/v1/rule-engine/:ruleEngineId/status": {
+        "/api/v1/rule-engine/{ruleEngineId}/status": {
             "get": {
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
-                    "规则引擎"
+                    "高级能力-规则引擎"
                 ],
-                "summary": "规则引擎状态",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "ruleEngineId",
-                        "name": "ruleEngineId",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
+                "summary": "规则运行状态（eKuiper 指标）",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -3177,24 +3370,15 @@
                 }
             }
         },
-        "/api/v1/rule-engine/:ruleEngineId/stop": {
+        "/api/v1/rule-engine/{ruleEngineId}/stop": {
             "post": {
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
-                    "规则引擎"
+                    "高级能力-规则引擎"
                 ],
-                "summary": "规则引擎停止",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "ruleEngineId",
-                        "name": "ruleEngineId",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
+                "summary": "停止规则",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -3205,15 +3389,15 @@
                 }
             }
         },
-        "/api/v1/system/backup": {
+        "/api/v1/scene": {
             "get": {
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
-                    "网关管理"
+                    "高级能力-场景联动"
                 ],
-                "summary": "网关备份下载",
+                "summary": "场景列表",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -3222,6 +3406,726 @@
                         }
                     }
                 }
+            },
+            "put": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "高级能力-场景联动"
+                ],
+                "summary": "编辑场景（触发条件与执行动作）",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphelper.CommonResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "高级能力-场景联动"
+                ],
+                "summary": "新建场景",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphelper.CommonResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/scene/{sceneId}": {
+            "delete": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "高级能力-场景联动"
+                ],
+                "summary": "删除场景",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphelper.CommonResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/scene/{sceneId}/log": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "高级能力-场景联动"
+                ],
+                "summary": "场景联动日志",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphelper.CommonResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/scene/{sceneId}/start": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "高级能力-场景联动"
+                ],
+                "summary": "启动场景",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphelper.CommonResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/scene/{sceneId}/stop": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "高级能力-场景联动"
+                ],
+                "summary": "停止场景",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphelper.CommonResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/site-info": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "站点信息"
+                ],
+                "summary": "站点品牌配置（免鉴权，登录页使用）",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphelper.CommonResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/solution/{key}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "设备接入-方案"
+                ],
+                "summary": "方案详情（含物模型/告警/看板预设）",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphelper.CommonResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/solution/{key}/apply": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "设备接入-方案"
+                ],
+                "summary": "一键应用方案（生成产品 + 发布 + 告警规则）",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "模板 key",
+                        "name": "key",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "参数",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dtos.SolutionApplyRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dtos.SolutionApplyResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/solution/{key}/thing-model/item": {
+            "put": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "设备接入-方案"
+                ],
+                "summary": "编辑方案物模型条目（按旧 identifier 定位）",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "模板 key",
+                        "name": "key",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "参数",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dtos.SolutionThingModelItemRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dtos.SolutionResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "设备接入-方案"
+                ],
+                "summary": "新增方案物模型条目（属性/事件/服务）",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "模板 key",
+                        "name": "key",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "参数",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dtos.SolutionThingModelItemRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dtos.SolutionResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "设备接入-方案"
+                ],
+                "summary": "删除方案物模型条目",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "模板 key",
+                        "name": "key",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "类型 property|event|action",
+                        "name": "type",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "条目标识符",
+                        "name": "identifier",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dtos.SolutionResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/solutions": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "设备接入-方案"
+                ],
+                "summary": "方案列表（内置 + 本租户自定义）",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "name": "industry",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Summary 只返回列表展示需要的元数据，不带物模型/告警/看板等大字段。\n方案中心列表用摘要加载，选中某个方案后再调详情接口取完整内容。",
+                        "name": "summary",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/dtos.SolutionResponse"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/sys-audit-log": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "系统管理-审查日志"
+                ],
+                "summary": "审查日志列表",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphelper.CommonResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "系统管理-审查日志"
+                ],
+                "summary": "删除审查日志",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphelper.CommonResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/sys-audit-log/clear": {
+            "delete": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "系统管理-审查日志"
+                ],
+                "summary": "清空审查日志",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphelper.CommonResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/sys-user": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "系统管理-用户"
+                ],
+                "summary": "用户列表",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphelper.CommonResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "系统管理-用户"
+                ],
+                "summary": "编辑用户",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphelper.CommonResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "系统管理-用户"
+                ],
+                "summary": "新增用户",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphelper.CommonResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "系统管理-用户"
+                ],
+                "summary": "删除用户",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphelper.CommonResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/sys-user/status/{id}": {
+            "put": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "系统管理-用户"
+                ],
+                "summary": "启用/停用用户",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphelper.CommonResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/sys-user/{id}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "系统管理-用户"
+                ],
+                "summary": "用户详情",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphelper.CommonResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/system-setup": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "系统管理-系统配置"
+                ],
+                "summary": "配置列表",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphelper.CommonResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "系统管理-系统配置"
+                ],
+                "summary": "编辑配置",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphelper.CommonResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "系统管理-系统配置"
+                ],
+                "summary": "新增配置",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphelper.CommonResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "系统管理-系统配置"
+                ],
+                "summary": "删除配置",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphelper.CommonResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/system-setup/save": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "系统管理-系统配置"
+                ],
+                "summary": "批量保存配置",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphelper.CommonResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/system-setup/{id}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "系统管理-系统配置"
+                ],
+                "summary": "配置详情",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphelper.CommonResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/tenant": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "平台管理-租户"
+                ],
+                "summary": "租户列表",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphelper.CommonResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "平台管理-租户"
+                ],
+                "summary": "修改租户",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphelper.CommonResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "平台管理-租户"
+                ],
+                "summary": "新增租户",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphelper.CommonResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/tenant/{id}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "平台管理-租户"
+                ],
+                "summary": "租户详情",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphelper.CommonResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "平台管理-租户"
+                ],
+                "summary": "删除租户",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphelper.CommonResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/tenant/{id}/things-project": {
+            "put": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "平台管理-租户"
+                ],
+                "summary": "修改 things 项目名称",
+                "responses": {}
+            },
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "平台管理-租户"
+                ],
+                "summary": "绑定/创建 things 项目",
+                "responses": {}
             }
         },
         "/api/v1/thingmodel": {
@@ -3622,32 +4526,59 @@
                 "responses": {}
             }
         },
+        "/api/v1/things/projects": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "系统管理-things"
+                ],
+                "summary": "things 项目列表",
+                "responses": {}
+            }
+        },
+        "/api/v1/things/reconcile": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "系统管理-things"
+                ],
+                "summary": "全量对账",
+                "responses": {}
+            }
+        },
+        "/api/v1/things/test": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "系统管理-things"
+                ],
+                "summary": "测试 things 连接",
+                "responses": {}
+            }
+        },
         "/api/v1/typeresource": {
             "get": {
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
-                    "资源管理"
+                    "高级能力-资源管理"
                 ],
-                "summary": "实例类型",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "name": "name",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "name": "type",
-                        "in": "query"
-                    }
-                ],
+                "summary": "资源类型列表（页面页签数据源）",
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/httphelper.CommonResponse"
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
                         }
                     }
                 }
@@ -3677,6 +4608,278 @@
                         "in": "query"
                     }
                 ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphelper.CommonResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/user/getinfo": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "系统管理-个人中心"
+                ],
+                "summary": "查询当前用户菜单",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphelper.CommonResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/user/lang": {
+            "put": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "系统管理-个人中心"
+                ],
+                "summary": "切换当前用户语言",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphelper.CommonResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/user/profile": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "系统管理-个人中心"
+                ],
+                "summary": "查询当前用户信息",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphelper.CommonResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "系统管理-个人中心"
+                ],
+                "summary": "修改当前用户信息",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphelper.CommonResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/viz/boards": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "可视化-看板管理"
+                ],
+                "summary": "查询看板列表",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphelper.CommonResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "可视化-看板管理"
+                ],
+                "summary": "新建看板",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphelper.CommonResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/viz/boards/{boardId}": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "可视化-看板管理"
+                ],
+                "summary": "查询单个看板",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphelper.CommonResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "可视化-看板管理"
+                ],
+                "summary": "更新看板",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphelper.CommonResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "可视化-看板管理"
+                ],
+                "summary": "删除看板",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphelper.CommonResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/viz/boards/{boardId}/active": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "可视化-看板管理"
+                ],
+                "summary": "设置默认/首页看板",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphelper.CommonResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/viz/device-query": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "可视化-看板取数"
+                ],
+                "summary": "按设备与属性批量查询数据（画布一次请求取全部组件）",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httphelper.CommonResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/viz/metrics": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "可视化-看板取数"
+                ],
+                "summary": "查询可绑定的平台/租户统计指标清单",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -3767,142 +4970,14 @@
                     "description": "品类名称",
                     "type": "string"
                 },
+                "category_name_en": {
+                    "type": "string"
+                },
                 "id": {
                     "type": "string"
                 },
                 "scene": {
                     "description": "所属场景",
-                    "type": "string"
-                }
-            }
-        },
-        "dtos.CloudInstanceAuthorizationRequest": {
-            "type": "object",
-            "properties": {
-                "instance_authorization_config": {
-                    "$ref": "#/definitions/dtos.InstanceAuthorizationConfig"
-                },
-                "instance_log_config": {
-                    "$ref": "#/definitions/dtos.InstanceLogConfig"
-                }
-            }
-        },
-        "dtos.CloudInstanceSearchQueryRequest": {
-            "type": "object",
-            "properties": {
-                "cloudServiceId": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "ids": {
-                    "type": "string"
-                },
-                "isAll": {
-                    "type": "boolean"
-                },
-                "likeId": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "nameLike": {
-                    "type": "string"
-                },
-                "orderBy": {
-                    "type": "string"
-                },
-                "page": {
-                    "type": "integer"
-                },
-                "pageSize": {
-                    "type": "integer"
-                }
-            }
-        },
-        "dtos.ConfigDnsResponse": {
-            "type": "object",
-            "properties": {
-                "dns": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "openSwitch": {
-                    "type": "boolean"
-                }
-            }
-        },
-        "dtos.ConfigDnsUpdateRequest": {
-            "type": "object",
-            "required": [
-                "dns"
-            ],
-            "properties": {
-                "dns": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "openSwitch": {
-                    "type": "boolean"
-                }
-            }
-        },
-        "dtos.ConfigNetWork": {
-            "type": "object",
-            "properties": {
-                "gwIp": {
-                    "type": "string"
-                },
-                "localIp": {
-                    "type": "string"
-                },
-                "ncId": {
-                    "type": "string"
-                },
-                "netlink": {
-                    "type": "boolean"
-                },
-                "smIp": {
-                    "type": "string"
-                }
-            }
-        },
-        "dtos.ConfigNetWorkResponse": {
-            "type": "object",
-            "properties": {
-                "list": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/dtos.ConfigNetWork"
-                    }
-                }
-            }
-        },
-        "dtos.ConfigNetworkUpdateRequest": {
-            "type": "object",
-            "required": [
-                "gwIp",
-                "localIp",
-                "ncId",
-                "smIp"
-            ],
-            "properties": {
-                "gwIp": {
-                    "type": "string"
-                },
-                "localIp": {
-                    "type": "string"
-                },
-                "ncId": {
-                    "type": "string"
-                },
-                "smIp": {
                     "type": "string"
                 }
             }
@@ -3918,6 +4993,17 @@
                     "additionalProperties": true
                 },
                 "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "dtos.DataResourceVerifyResponse": {
+            "type": "object",
+            "properties": {
+                "health": {
+                    "type": "boolean"
+                },
+                "message": {
                     "type": "string"
                 }
             }
@@ -4181,23 +5267,6 @@
                 }
             }
         },
-        "dtos.Filter": {
-            "type": "object",
-            "properties": {
-                "condition": {
-                    "type": "string"
-                },
-                "message_source": {
-                    "type": "string"
-                },
-                "select_name": {
-                    "type": "string"
-                },
-                "sql": {
-                    "type": "string"
-                }
-            }
-        },
         "dtos.InitPasswordRequest": {
             "type": "object",
             "required": [
@@ -4206,46 +5275,6 @@
             "properties": {
                 "newPassword": {
                     "type": "string"
-                }
-            }
-        },
-        "dtos.InstanceAuthorizationConfig": {
-            "type": "object",
-            "properties": {
-                "ak": {
-                    "type": "string"
-                },
-                "endpoint": {
-                    "type": "string"
-                },
-                "instance_id": {
-                    "type": "string"
-                },
-                "mqtt_host": {
-                    "type": "string"
-                },
-                "mqtt_port": {
-                    "type": "string"
-                },
-                "regions": {
-                    "type": "string"
-                },
-                "sk": {
-                    "type": "string"
-                }
-            }
-        },
-        "dtos.InstanceLogConfig": {
-            "type": "object",
-            "properties": {
-                "log_filter": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "log_switch": {
-                    "type": "boolean"
                 }
             }
         },
@@ -4413,22 +5442,6 @@
                 }
             }
         },
-        "dtos.ProductSyncByIdRequest": {
-            "type": "object",
-            "properties": {
-                "product_id": {
-                    "type": "string"
-                }
-            }
-        },
-        "dtos.ProductSyncRequest": {
-            "type": "object",
-            "properties": {
-                "cloud_instance_id": {
-                    "type": "string"
-                }
-            }
-        },
         "dtos.RuleEngineSearchQueryResponse": {
             "type": "object",
             "properties": {
@@ -4436,13 +5449,24 @@
                     "type": "integer"
                 },
                 "dataResource": {
+                    "description": "DataResource 列表「转发方式」列直接读 dataResource.type，必须是对象（不能为 null）",
                     "$ref": "#/definitions/dtos.DataResourceInfo"
+                },
+                "data_resource_id": {
+                    "description": "DataResourceId 供编辑表单回填资源下拉（旧 swagger 未含，属兼容性补充）",
+                    "type": "string"
                 },
                 "description": {
                     "type": "string"
                 },
+                "filter": {
+                    "$ref": "#/definitions/models.RuleEngineFilter"
+                },
                 "id": {
                     "type": "string"
+                },
+                "modified": {
+                    "type": "integer"
                 },
                 "name": {
                     "type": "string"
@@ -4451,6 +5475,115 @@
                     "type": "string"
                 },
                 "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "dtos.SolutionApplyRequest": {
+            "type": "object",
+            "properties": {
+                "createAlarmRules": {
+                    "description": "CreateAlarmRules 是否按模板预设创建告警规则（默认 true）",
+                    "type": "boolean"
+                },
+                "deptId": {
+                    "description": "DeptId 可选：把生成的设备挂到某个组织节点",
+                    "type": "string"
+                },
+                "deviceCount": {
+                    "description": "DeviceCount \u003e0 时同时创建对应数量的设备（名称 = 产品名-序号）",
+                    "type": "integer"
+                },
+                "productName": {
+                    "description": "ProductName 生成的产品名称（为空则用模板名称）",
+                    "type": "string"
+                }
+            }
+        },
+        "dtos.SolutionApplyResponse": {
+            "type": "object",
+            "properties": {
+                "alarmRuleIds": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "deviceIds": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "productId": {
+                    "type": "string"
+                },
+                "productName": {
+                    "type": "string"
+                },
+                "skipped": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "dtos.SolutionResponse": {
+            "type": "object",
+            "properties": {
+                "alarmRulesJson": {
+                    "type": "string"
+                },
+                "builtIn": {
+                    "type": "boolean"
+                },
+                "dashboardJson": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "descriptionEn": {
+                    "type": "string"
+                },
+                "icon": {
+                    "type": "string"
+                },
+                "industry": {
+                    "type": "string"
+                },
+                "key": {
+                    "type": "string"
+                },
+                "metricsJson": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "nameEn": {
+                    "type": "string"
+                },
+                "thingModelJson": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "integer"
+                }
+            }
+        },
+        "dtos.SolutionThingModelItemRequest": {
+            "type": "object",
+            "properties": {
+                "identifier": {
+                    "type": "string"
+                },
+                "item": {
+                    "type": "object",
+                    "additionalProperties": true
+                },
+                "type": {
                     "type": "string"
                 }
             }
@@ -4664,6 +5797,9 @@
                     "description": "品类名称",
                     "type": "string"
                 },
+                "category_name_en": {
+                    "type": "string"
+                },
                 "events": {},
                 "id": {
                     "type": "string"
@@ -4742,6 +5878,26 @@
                 },
                 "total": {
                     "type": "integer"
+                }
+            }
+        },
+        "models.RuleEngineFilter": {
+            "type": "object",
+            "properties": {
+                "condition": {
+                    "type": "string"
+                },
+                "message_source": {
+                    "type": "string"
+                },
+                "product_id": {
+                    "type": "string"
+                },
+                "select_name": {
+                    "type": "string"
+                },
+                "sql": {
+                    "type": "string"
                 }
             }
         }

@@ -151,7 +151,7 @@ export const BrandProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const loginTitle = t('登录')
     // index.html 里的初始标题是中文的「登录」，英文环境下也要认出「还没设置过标题」
     if (!document.title || document.title === '登录' || document.title === loginTitle) {
-      document.title = t('登录 - {{name}}', { name: name })
+      document.title = t('登录 - {{name}}', { name })
     }
   }, [site.name])
 

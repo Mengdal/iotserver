@@ -11,6 +11,8 @@ type GatewayItf interface {
 	GatewayAdd(ctx context.Context, req dtos.GatewayAddRequest) (dtos.GatewayResponse, error)
 	GatewayUpdate(ctx context.Context, req dtos.GatewayUpdateRequest) error
 	GatewayDelete(ctx context.Context, id string) error
+	// GatewayRenameThings 在 things 中重命名网关，并同步本地名称
+	GatewayRenameThings(ctx context.Context, req dtos.GatewayThingsRenameRequest) error
 	GatewayById(ctx context.Context, id string) (dtos.GatewayResponse, error)
 	GatewaySearch(ctx context.Context, req dtos.GatewaySearchQueryRequest) ([]dtos.GatewayResponse, uint32, error)
 	// GatewayPushConfig 下发采集/上报配置（版本 +1 并通过 MQTT 下行通知网关）

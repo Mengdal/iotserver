@@ -103,6 +103,23 @@ func (ctl *controller) GatewayDelete(c *gin.Context) {
 }
 
 // @Tags    设备接入-网关
+// @Summary 在 things 中重命名网关
+// @Produce json
+// @Router  /api/v1/gateway/things-rename [post]
+func (ctl *controller) GatewayRenameThings(c *gin.Context) {
+	var req dtos.GatewayThingsRenameRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		httphelper.RenderFail(c, errort.NewCommonErr(errort.DefaultReqParamsError, err), c.Writer, ctl.lc)
+		return
+	}
+	if err := ctl.getGatewayApp().GatewayRenameThings(c, req); err != nil {
+		httphelper.RenderFail(c, err, c.Writer, ctl.lc)
+		return
+	}
+	httphelper.ResultSuccess(nil, c.Writer, ctl.lc)
+}
+
+// @Tags    设备接入-网关
 // @Summary 下发网关配置
 // @Produce json
 // @Success 200 {object} httphelper.CommonResponse

@@ -33,8 +33,6 @@ require (
 	github.com/swaggo/gin-swagger v1.5.3
 	github.com/swaggo/swag v1.8.7
 	github.com/syndtr/goleveldb v1.0.0
-	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.0.617
-	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/sms v1.0.617
 	github.com/tencentyun/cos-go-sdk-v5 v0.7.39
 	github.com/xuri/excelize/v2 v2.5.0
 	go.uber.org/atomic v1.9.0

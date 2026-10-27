@@ -1,6 +1,7 @@
 package sqlite
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -10,6 +11,7 @@ import (
 	"iotserver/internal/dtos"
 	"iotserver/internal/models"
 	"iotserver/internal/pkg/errort"
+	"iotserver/internal/pkg/tenant"
 	"iotserver/internal/pkg/utils"
 )
 
@@ -23,14 +25,28 @@ func addGateway(c *Client, g models.Gateway) (models.Gateway, error) {
 	if g.Sn == "" {
 		return g, errort.NewCommonErr(errort.DefaultReqParamsError, fmt.Errorf("gateway sn is required"))
 	}
-	if g.Secret == "" {
+	// things 网关的 secret 由 things 管理，本地镜像不生成、不保存。
+	if g.Secret == "" && g.Source != models.GatewaySourceThings {
 		g.Secret = utils.GenerateDeviceSecret(16)
+	}
+	if g.Source == "" {
+		g.Source = models.GatewaySourceLocal
+	}
+	if g.ThingsSyncStatus == "" {
+		if g.Source == models.GatewaySourceThings {
+			g.ThingsSyncStatus = models.GatewayThingsSyncSynced
+		} else {
+			g.ThingsSyncStatus = models.GatewayThingsSyncLocal
+		}
 	}
 	if g.Status == 0 && g.LastOnlineAt == 0 {
 		g.Status = models.GatewayStatusNever
 	}
+	// SN 是 /edge 主题和 MQTT clientId 的全局业务键，必须跨租户唯一。
+	// 这里显式切到平台作用域，避免 GORM 租户插件把查重限制在当前租户内。
+	platformPool := c.Pool.Session(&gorm.Session{NewDB: true}).WithContext(tenant.Platform(context.Background()))
 	var count int64
-	if err := c.Pool.Table(models.TableGateway).Where("sn = ?", g.Sn).Count(&count).Error; err != nil {
+	if err := platformPool.Table(models.TableGateway).Where("sn = ?", g.Sn).Count(&count).Error; err != nil {
 		return g, errort.NewCommonEdgeX(errort.DefaultSystemError, "gateway query failed", err)
 	}
 	if count > 0 {
@@ -83,6 +99,9 @@ func gatewaySearch(c *Client, offset, limit int, req dtos.GatewaySearchQueryRequ
 	}
 	if req.DeptId != "" {
 		query = query.Where("dept_id = ?", req.DeptId)
+	}
+	if req.Source != "" {
+		query = query.Where("source = ?", req.Source)
 	}
 	// status 只认 0/1/2；其它值表示「不过滤」——契约见 dtos.GatewaySearchQueryRequest.Status
 	// 的注释（"nil（不传）或其它值都表示不过滤"）。
@@ -180,7 +199,13 @@ func gatewayIngestLogExists(c *Client, gatewayId string, seq int64) (bool, error
 
 func addGatewayIngestLog(c *Client, log models.GatewayIngestLog) error {
 	if len(log.Id) == 0 {
-		log.Id = utils.RandomNum()
+		// 高频写入不能用 8 位随机数：同一网关的并发上报很容易撞主键。
+		// (gateway_id, seq) 本身已是幂等键，直接用它拼主键，既稳定又避免随机碰撞。
+		if log.GatewayId != "" && log.Seq != 0 {
+			log.Id = fmt.Sprintf("%s-%d", log.GatewayId, log.Seq)
+		} else {
+			log.Id = utils.GenerateSaltKey()
+		}
 	}
 	if log.ReceivedAt == 0 {
 		log.ReceivedAt = time.Now().UnixMilli()

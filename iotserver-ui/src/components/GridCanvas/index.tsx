@@ -41,6 +41,11 @@ export interface GridCanvasProps {
   /** 组件最少行数，默认 2（与后端 normalize 的 h >= 2 一致） */
   minH?: number
   /**
+   * 在内容底部额外保留一行空白，作为“拖到画布空白处”的落点。
+   * 顶层画布开启；容器子网格不开启，避免容器自己越拖越高。
+   */
+  extraRow?: boolean
+  /**
    * 是否接收外部/跨网格拖入的组件（只读态强制 false）。
    * 传函数可用于拦掉非法落位（例如不允许把容器拖进容器）。
    */
@@ -59,6 +64,7 @@ const DEFAULT_MARGIN = 12
 const DEFAULT_MIN_H = 2
 const DEFAULT_DRAG_HANDLE = '.ant-card-head'
 const DEFAULT_DRAG_CANCEL = '.ant-btn,.ant-dropdown-trigger,.ant-select,.ant-segmented'
+const DEFAULT_ACCEPT_WIDGETS = () => true
 
 /**
  * 窄屏断点：只在只读展示态用。
@@ -123,6 +129,7 @@ const GridCanvas: React.FC<GridCanvasProps> = ({
   dragHandle = DEFAULT_DRAG_HANDLE,
   dragCancel = DEFAULT_DRAG_CANCEL,
   minH = DEFAULT_MIN_H,
+  extraRow = false,
   acceptWidgets,
   className,
   renderItem,
@@ -145,27 +152,36 @@ const GridCanvas: React.FC<GridCanvasProps> = ({
   // 且相邻组件的空隙、水平空隙都等于 gap，已有看板的高度观感不变。
   const gap = Number.isFinite(margin) && margin > 0 ? margin : DEFAULT_MARGIN
   const halfGap = gap / 2
+  const contentRows = useMemo(
+    () => items.reduce((max, item) => Math.max(max, item.y + item.h), 0),
+    [items],
+  )
 
   const options = useMemo<GridStackOptions>(() => {
     const next: GridStackOptions = {
       column: baseCols,
       cellHeight: baseRowHeight + gap,
       margin: halfGap,
-      minRow: 1,
-      // 统一自动上浮（= react-grid-layout 的 compactType: 'vertical'）
-      mode: 'top',
+      // 顶层留一行空白，保证可以把组件拖到所有内容的下方；
+      // 容器子网格不加，否则容器会被这行空白撑高。
+      minRow: Math.max(1, contentRows + (extraRow && !readOnly ? 4 : 0)),
+      // 画布按保存的 x/y 原样展示；编辑时也是自由落位，不做自动上浮/重排。
+      // 否则拖动后 gridstack 会把组件重新压实回原来的空位，看起来像“拖动没生效”。
+      mode: 'float',
       animate: true,
       staticGrid: !!readOnly,
       disableDrag: !!readOnly,
       disableResize: !!readOnly,
-      acceptWidgets: readOnly ? false : (acceptWidgets === undefined ? true : acceptWidgets),
+      // 顶层画布默认接受组件库拖入。不能传 true：gridstack 对 true 会要求
+      // 拖拽元素本身带 .grid-stack-item，而组件库项没有这个 class，会被拒绝。
+      acceptWidgets: readOnly ? false : (acceptWidgets === undefined ? DEFAULT_ACCEPT_WIDGETS : acceptWidgets),
       draggable: { handle: dragHandle, cancel: dragCancel, appendTo: 'body', scroll: true },
       resizable: { handles: 'se', autoHide: true },
     }
     // 窄屏断点只在**只读展示态**启用：编辑态派生列数会让拖拽结果按窄屏坐标写回库里
     if (responsive && readOnly) next.columnOpts = buildResponsive(baseCols)
     return next
-  }, [baseCols, baseRowHeight, gap, halfGap, readOnly, responsive, acceptWidgets, dragHandle, dragCancel])
+  }, [baseCols, baseRowHeight, gap, halfGap, contentRows, extraRow, readOnly, responsive, acceptWidgets, dragHandle, dragCancel])
 
   /** 读全量位置回报给调用方（只在拖动 / 缩放**结束**时调） */
   const syncLayout = useCallback(() => {

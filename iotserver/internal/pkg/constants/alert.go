@@ -60,16 +60,20 @@ const (
 type AlertWay string
 
 const (
-	SMS      AlertWay = "sms"
-	PHONE    AlertWay = "语音告警"
-	QYweixin AlertWay = "企业微信机器人"
-	DingDing AlertWay = "钉钉机器人"
-	FeiShu   AlertWay = "飞书机器人"
-	WEBAPI   AlertWay = "API接口"
+	// Email 邮件通知（SMTP，保留原有行为）
+	Email AlertWay = "email"
+	// TwilioEmail 邮件通知（Twilio Email API）
+	TwilioEmail AlertWay = "twilio_email"
+	// SMS 短信通知（Twilio）
+	SMS AlertWay = "sms"
+	// WhatsApp WhatsApp 通知（Twilio）
+	WhatsApp AlertWay = "whatsapp"
+	// WEBAPI 自定义 HTTP 回调
+	WEBAPI AlertWay = "API接口"
 )
 
 func GetAlertWays() []string {
-	return []string{string(SMS), string(PHONE), string(QYweixin), string(DingDing), string(FeiShu), string(WEBAPI)}
+	return []string{string(Email), string(TwilioEmail), string(SMS), string(WhatsApp), string(WEBAPI)}
 }
 
 const (

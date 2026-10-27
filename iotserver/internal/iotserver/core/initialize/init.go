@@ -47,6 +47,7 @@ import (
 	"iotserver/internal/iotserver/core/application/tenantapp"
 	"iotserver/internal/iotserver/core/application/thingmodelapp"
 	"iotserver/internal/iotserver/core/application/thingmodeltemplate"
+	"iotserver/internal/iotserver/core/application/thingsapp"
 	"iotserver/internal/iotserver/core/application/unittemplate"
 	"iotserver/internal/iotserver/core/application/userapp"
 	"iotserver/internal/iotserver/core/config"
@@ -66,7 +67,6 @@ import (
 	"iotserver/internal/tools/ekuiperclient"
 	"iotserver/internal/tools/gatewaymqtt"
 	"iotserver/internal/tools/hpcloudclient"
-	"iotserver/internal/tools/notify/sms"
 	tenantplugin "iotserver/internal/tools/sqldb/tenant"
 	"iotserver/internal/tools/streamclient"
 	"strings"
@@ -271,14 +271,6 @@ func (b *Bootstrap) initClient(ctx context.Context, wg *sync.WaitGroup, dic *di.
 		},
 	})
 
-	smsServiceApp := sms.NewSmsClient(lc, "",
-		"", "")
-	dic.Update(di.ServiceConstructorMap{
-		container.SmsServiceAppName: func(get di.Get) interface{} {
-			return smsServiceApp
-		},
-	})
-
 	limitMethodApp := application.NewLimitMethodConf(*configuration)
 	dic.Update(di.ServiceConstructorMap{
 		pkgContainer.LimitMethodConfName: func(get di.Get) interface{} {
@@ -329,6 +321,16 @@ func (b *Bootstrap) initClient(ctx context.Context, wg *sync.WaitGroup, dic *di.
 			return resourceItf
 		},
 	})
+
+	// things 平台集成：必须在租户/网关应用之前注册，供它们同步项目/网关。
+	thingsItf := thingsapp.New(dic)
+	dic.Update(di.ServiceConstructorMap{
+		container.ThingsItfName: func(get di.Get) interface{} {
+			return thingsItf
+		},
+	})
+	// 后台定期对账：things 未启用时自身会跳过。
+	thingsItf.Start(ctx)
 
 	// 平台管理 - 租户
 	tenantItf := tenantapp.New(dic)

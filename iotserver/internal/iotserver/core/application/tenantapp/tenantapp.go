@@ -24,6 +24,7 @@ type tenantApp struct {
 	dic      *di.Container
 	dbClient interfaces.DBClient
 	lc       logger.LoggingClient
+	things   interfaces.ThingsItf
 }
 
 // New 构造租户应用
@@ -32,6 +33,7 @@ func New(dic *di.Container) interfaces.TenantItf {
 		dic:      dic,
 		dbClient: container.DBClientFrom(dic.Get),
 		lc:       pkgcontainer.LoggingClientFrom(dic.Get),
+		things:   container.ThingsItfFrom(dic.Get),
 	}
 }
 
@@ -55,6 +57,14 @@ func toTenantResponse(t models.Tenant) dtos.TenantResponse {
 	}
 }
 
+func applyTenantBinding(res *dtos.TenantResponse, b models.TenantThingsBinding) {
+	res.ThingsProjectId = b.ThingsProjectId
+	res.ThingsProjectName = b.ThingsProjectName
+	res.ThingsBindStatus = b.Status
+	res.ThingsLastError = b.LastError
+	res.ThingsLastSyncAt = b.LastSyncAt
+}
+
 // TenantAdd 新建租户
 func (app *tenantApp) TenantAdd(ctx context.Context, req dtos.TenantAddRequest) (dtos.TenantResponse, error) {
 	var res dtos.TenantResponse
@@ -63,6 +73,24 @@ func (app *tenantApp) TenantAdd(ctx context.Context, req dtos.TenantAddRequest) 
 		return res, errort.NewCommonErr(errort.DefaultReqParamsError,
 			errort.NewMessageErr("租户编码只允许小写字母/数字/下划线，长度 2~32", nil))
 	}
+
+	enabled, err := app.thingsEnabled(ctx)
+	if err != nil {
+		return res, err
+	}
+	var project dtos.ThingsProject
+	if enabled {
+		name := strings.TrimSpace(req.ThingsProjectName)
+		if name == "" {
+			return res, errort.NewCommonErr(errort.DefaultReqParamsError,
+				errort.NewMessageErr("things 项目名称不能为空", nil))
+		}
+		project, err = app.things.CreateProject(ctx, name, req.Remark)
+		if err != nil {
+			return res, err
+		}
+	}
+
 	tc, err := app.dbClient.WithCtx(ctx).AddTenant(models.Tenant{
 		Code:          code,
 		Name:          strings.TrimSpace(req.Name),
@@ -77,10 +105,16 @@ func (app *tenantApp) TenantAdd(ctx context.Context, req dtos.TenantAddRequest) 
 		Remark:        req.Remark,
 	})
 	if err != nil {
+		if enabled {
+			if dErr := app.things.DeleteProject(ctx, project.Id); dErr != nil && app.lc != nil {
+				app.lc.Warnf("租户创建失败后回滚 things 项目 %d 失败: %v", project.Id, dErr)
+			}
+		}
 		return res, err
 	}
+
 	// 为新租户准备组织树根节点（公司），便于租户直接往下建工厂/车间/产线
-	if _, dErr := app.dbClient.
+	rootDept, dErr := app.dbClient.
 		WithCtx(tenant.With(ctx, tenant.Context{TenantID: tc.Id})).
 		AddSysDept(models.Dept{
 			ParentId:  "0",
@@ -89,10 +123,35 @@ func (app *tenantApp) TenantAdd(ctx context.Context, req dtos.TenantAddRequest) 
 			DeptType:  models.DeptTypeCompany,
 			Sort:      1,
 			Status:    1,
-		}); dErr != nil && app.lc != nil {
+		})
+	if dErr != nil && app.lc != nil {
 		app.lc.Warnf("为租户 %s 创建根组织节点失败: %v", tc.Code, dErr)
 	}
-	return toTenantResponse(tc), nil
+
+	if enabled {
+		if err = app.things.BindTenantProject(ctx, tc.Id, project.Id, project.Name); err != nil {
+			// 本地事务不可回滚外部资源，这里做补偿：删除刚建的租户/根组织，再删除 things 项目。
+			_ = app.dbClient.WithCtx(ctx).DeleteTenant(tc.Id)
+			if rootDept.Id != "" {
+				_ = app.dbClient.WithCtx(ctx).DeleteSysDeptByIds([]string{rootDept.Id})
+			}
+			if dErr2 := app.things.DeleteProject(ctx, project.Id); dErr2 != nil && app.lc != nil {
+				app.lc.Warnf("租户绑定失败后回滚 things 项目 %d 失败: %v", project.Id, dErr2)
+			}
+			return res, err
+		}
+	}
+
+	res = toTenantResponse(tc)
+	if enabled {
+		applyTenantBinding(&res, models.TenantThingsBinding{
+			TenantField:       models.TenantField{TenantId: tc.Id},
+			ThingsProjectId:   project.Id,
+			ThingsProjectName: project.Name,
+			Status:            models.TenantThingsStatusBound,
+		})
+	}
+	return res, nil
 }
 
 // TenantUpdate 修改租户
@@ -169,8 +228,22 @@ func (app *tenantApp) TenantDelete(ctx context.Context, id string) error {
 	if users+devices+gateways+products+customBoards > 0 {
 		return errort.NewCommonErr(errort.AppTenantNotEmpty, errort.NewMessageErr("该租户下仍有 {{.p1}} 个用户、{{.p2}} 台设备、{{.p3}} 台网关、{{.p4}} 个产品、{{.p5}} 个自定义看板，请先清理", map[string]interface{}{"p1": users, "p2": devices, "p3": gateways, "p4": products, "p5": customBoards}))
 	}
+	binding, bound, err := app.getTenantBinding(ctx, id)
+	if err != nil {
+		return err
+	}
+	if bound {
+		if err = app.things.DeleteProject(ctx, binding.ThingsProjectId); err != nil {
+			return err
+		}
+	}
 	if err = app.dbClient.WithCtx(ctx).DeleteTenant(id); err != nil {
 		return err
+	}
+	if bound {
+		if err = app.things.UnbindTenant(ctx, id); err != nil && app.lc != nil {
+			app.lc.Warnf("删除租户 %s 后清理 things 绑定失败: %v", id, err)
+		}
 	}
 	// 看板随租户一起清理；失败不回滚删除（与菜单定制数据一致）
 	if err = db.VizBoardsReplace(nil); err != nil && app.lc != nil {
@@ -181,6 +254,91 @@ func (app *tenantApp) TenantDelete(ctx context.Context, id string) error {
 		app.lc.Warnf("删除租户 %s 后清理菜单定制数据失败: %v", id, err)
 	}
 	return nil
+}
+
+// TenantBindThingsProject 绑定已有项目，或为存量租户创建新项目后绑定。
+func (app *tenantApp) TenantBindThingsProject(ctx context.Context, id string, req dtos.TenantThingsBindRequest) error {
+	if _, err := app.dbClient.WithCtx(ctx).TenantById(id); err != nil {
+		return err
+	}
+	enabled, err := app.thingsEnabled(ctx)
+	if err != nil {
+		return err
+	}
+	if !enabled {
+		return errort.NewCommonErr(errort.AppThingsDisabled, errort.NewMessageErr("things 集成未启用", nil))
+	}
+
+	var project dtos.ThingsProject
+	if req.ProjectId > 0 {
+		list, err := app.things.ListProjects(ctx, "")
+		if err != nil {
+			return err
+		}
+		found := false
+		for _, p := range list {
+			if p.Id == req.ProjectId {
+				project = p
+				found = true
+				break
+			}
+		}
+		if !found {
+			return errort.NewCommonErr(errort.AppThingsProjectNotFound,
+				errort.NewMessageErr("things 项目不存在", nil))
+		}
+	} else {
+		project, err = app.things.CreateProject(ctx, req.Name, req.Description)
+		if err != nil {
+			return err
+		}
+	}
+
+	if old, found, err := app.getTenantBinding(ctx, id); err != nil {
+		return err
+	} else if found && old.ThingsProjectId != project.Id {
+		return errort.NewCommonErr(errort.DefaultReqParamsError,
+			errort.NewMessageErr("当前租户已绑定其他 things 项目，请先解绑", nil))
+	}
+	return app.things.BindTenantProject(ctx, id, project.Id, project.Name)
+}
+
+// TenantRenameThingsProject 修改绑定项目名称。
+func (app *tenantApp) TenantRenameThingsProject(ctx context.Context, id string, name string) error {
+	b, found, err := app.getTenantBinding(ctx, id)
+	if err != nil {
+		return err
+	}
+	if !found {
+		return errort.NewCommonErr(errort.AppThingsBindingMissing,
+			errort.NewMessageErr("当前租户尚未绑定 things 项目", nil))
+	}
+	if err = app.things.RenameProject(ctx, b.ThingsProjectId, name); err != nil {
+		return err
+	}
+	return app.things.BindTenantProject(ctx, id, b.ThingsProjectId, strings.TrimSpace(name))
+}
+
+func (app *tenantApp) thingsEnabled(ctx context.Context) (bool, error) {
+	if app.things == nil {
+		return false, nil
+	}
+	return app.things.Enabled(ctx)
+}
+
+func (app *tenantApp) getTenantBinding(ctx context.Context, tenantID string) (models.TenantThingsBinding, bool, error) {
+	if app.things == nil {
+		return models.TenantThingsBinding{}, false, nil
+	}
+	return app.things.GetTenantBinding(ctx, tenantID)
+}
+
+func (app *tenantApp) getTenantBindings(ctx context.Context, tenantIDs []string) map[string]models.TenantThingsBinding {
+	if app.things == nil {
+		return map[string]models.TenantThingsBinding{}
+	}
+	bindings, _ := app.dbClient.WithCtx(tenant.Platform(ctx)).TenantThingsBindingsByTenantIDs(tenantIDs)
+	return bindings
 }
 
 // isBuiltinVizBoard 是否为系统内置看板。
@@ -202,7 +360,11 @@ func (app *tenantApp) TenantById(ctx context.Context, id string) (dtos.TenantRes
 	if err != nil {
 		return dtos.TenantResponse{}, err
 	}
-	return toTenantResponse(tenant), nil
+	res := toTenantResponse(tenant)
+	if b, found, bErr := app.getTenantBinding(ctx, id); bErr == nil && found {
+		applyTenantBinding(&res, b)
+	}
+	return res, nil
 }
 
 // TenantSearch 租户列表
@@ -213,8 +375,16 @@ func (app *tenantApp) TenantSearch(ctx context.Context, req dtos.TenantSearchQue
 		return nil, 0, err
 	}
 	out := make([]dtos.TenantResponse, len(list))
+	ids := make([]string, 0, len(list))
+	for _, t := range list {
+		ids = append(ids, t.Id)
+	}
+	bindings := app.getTenantBindings(ctx, ids)
 	for i, t := range list {
 		out[i] = toTenantResponse(t)
+		if b, ok := bindings[t.Id]; ok {
+			applyTenantBinding(&out[i], b)
+		}
 	}
 	return out, total, nil
 }

@@ -3,11 +3,13 @@ package userapp
 import (
 	"context"
 	"sort"
+	"strings"
 	"time"
 
 	"iotserver/internal/dtos"
 	"iotserver/internal/models"
 	"iotserver/internal/pkg/tenant"
+	"iotserver/internal/tools/things"
 )
 
 func nowMilli() int64 {
@@ -137,10 +139,15 @@ func toAuditLogResponse(l models.AuditLog) dtos.SysAuditLogResponse {
 }
 
 func toConfigResponse(c models.SystemConfig) dtos.SysConfigResponse {
+	value := c.ConfigValue
+	// 密码类配置不回显原文；前端保存时回传掩码，后端会保留原值。
+	if strings.EqualFold(c.Type, "password") && value != "" {
+		value = things.MaskedValue
+	}
 	return dtos.SysConfigResponse{
 		Id:          c.Id,
 		ConfigKey:   c.ConfigKey,
-		ConfigValue: c.ConfigValue,
+		ConfigValue: value,
 		Name:        c.Name,
 		GroupName:   c.GroupName,
 		Type:        c.Type,

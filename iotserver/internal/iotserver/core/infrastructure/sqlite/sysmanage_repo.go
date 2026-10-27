@@ -880,24 +880,26 @@ func addSysConfig(c *Client, cfg models.SystemConfig) (models.SystemConfig, erro
 
 func sysConfigById(c *Client, id string) (models.SystemConfig, error) {
 	var cfg models.SystemConfig
-	err := c.Pool.Table(cfg.TableName()).Where("id = ?", id).First(&cfg).Error
+	// 配置读取允许“不存在”（调用方会回退默认值）；用 Find 而不是 First，
+	// 避免 GORM 把正常的 record not found 打成 error 日志。
+	err := c.Pool.Table(cfg.TableName()).Where("id = ?", id).Limit(1).Find(&cfg).Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return cfg, errort.NewCommonEdgeX(errort.DefaultResourcesNotFound, fmt.Sprintf("config %s not found", id), err)
-		}
 		return cfg, errort.NewCommonEdgeX(errort.DefaultSystemError, "config query failed", err)
+	}
+	if cfg.Id == "" {
+		return cfg, errort.NewCommonEdgeX(errort.DefaultResourcesNotFound, fmt.Sprintf("config %s not found", id), gorm.ErrRecordNotFound)
 	}
 	return cfg, nil
 }
 
 func sysConfigByKey(c *Client, key string) (models.SystemConfig, error) {
 	var cfg models.SystemConfig
-	err := c.Pool.Table(cfg.TableName()).Where("config_key = ?", key).First(&cfg).Error
+	err := c.Pool.Table(cfg.TableName()).Where("config_key = ?", key).Limit(1).Find(&cfg).Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return cfg, errort.NewCommonEdgeX(errort.DefaultResourcesNotFound, fmt.Sprintf("config %s not found", key), err)
-		}
 		return cfg, errort.NewCommonEdgeX(errort.DefaultSystemError, "config query failed", err)
+	}
+	if cfg.Id == "" {
+		return cfg, errort.NewCommonEdgeX(errort.DefaultResourcesNotFound, fmt.Sprintf("config %s not found", key), gorm.ErrRecordNotFound)
 	}
 	return cfg, nil
 }

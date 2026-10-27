@@ -12,6 +12,8 @@ type GatewaySearchQueryRequest struct {
 	// 注意：不能用 int 的零值表示"不过滤"，否则"未选择状态"会被当成"只看离线"，
 	// 导致 status=2（从未上线）的网关在列表里永远看不到。
 	Status *int `schema:"status,omitempty" form:"status"`
+	// Source 来源过滤：local / things；空表示全部
+	Source string `schema:"source,omitempty" form:"source"`
 }
 
 // GatewayAddRequest 新增网关
@@ -23,10 +25,16 @@ type GatewayAddRequest struct {
 	Pk string `json:"pk"`
 	// Protocol 接入协议：gatewaymqtt（平台自有）/ edge（参考系统）
 	Protocol string `json:"protocol"`
-	DeptId   string `json:"deptId"`
-	Vendor   string `json:"vendor"`
-	Model    string `json:"model"`
-	Remark   string `json:"remark"`
+	// Source 来源：local / things。为空时按 local 处理（兼容旧前端）。
+	Source string `json:"source"`
+	DeptId string `json:"deptId"`
+	Vendor string `json:"vendor"`
+	Model  string `json:"model"`
+	Remark string `json:"remark"`
+	// 以下字段仅 source=things 时使用，原样透传给 things，不在本地校验/计算。
+	Secret      string `json:"secret"`
+	LicenseType string `json:"licenseType"`
+	License     string `json:"license"`
 }
 
 // GatewayUpdateRequest 修改网关（SN 不可改：它同时是 MQTT clientId）
@@ -73,7 +81,9 @@ type GatewayResponse struct {
 	Pk   string `json:"pk"`
 	// Protocol 接入协议：gatewaymqtt（平台自有）/ edge（参考系统）
 	Protocol string `json:"protocol"`
-	DeptId   string `json:"deptId"`
+	// Source 来源：local / things
+	Source string `json:"source"`
+	DeptId string `json:"deptId"`
 	// DeptName 组织节点名称（列表展示「所属」用）
 	DeptName        string `json:"deptName"`
 	Vendor          string `json:"vendor"`
@@ -91,4 +101,10 @@ type GatewayResponse struct {
 	Modified        int64  `json:"modified"`
 	// Mqtt 接入信息：仅新增网关/重置密钥时返回，避免密钥被反复读取
 	Mqtt *GatewayMqttInfo `json:"mqtt,omitempty"`
+	// things 绑定与同步状态（source=things 时有值）
+	ThingsGatewayId  int64  `json:"thingsGatewayId"`
+	ThingsProjectId  int64  `json:"thingsProjectId"`
+	ThingsSyncStatus string `json:"thingsSyncStatus"`
+	ThingsLastSyncAt int64  `json:"thingsLastSyncAt"`
+	ThingsLastError  string `json:"thingsLastError"`
 }

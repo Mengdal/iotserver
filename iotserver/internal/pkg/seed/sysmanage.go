@@ -420,6 +420,31 @@ func DefaultConfigs() []ConfigItem {
 		{"platform.loginBackground", "登录页背景图", "", "brand", "image", 5},
 		{"security.sessionTimeout", "会话超时时间(分钟)", "180", "security", "number", 6},
 		{"security.passwordMinLength", "密码最小长度", "6", "security", "number", 7},
+
+		// 邮件：SMTP 与 Twilio Email 两套通道并存
+		{"notify.smtp.host", "SMTP 服务器", "", "notify", "string", 10},
+		{"notify.smtp.port", "SMTP 端口", "587", "notify", "number", 11},
+		{"notify.smtp.username", "SMTP 用户名", "", "notify", "string", 12},
+		{"notify.smtp.password", "SMTP 密码", "", "notify", "password", 13},
+		{"notify.smtp.from", "发件人地址", "", "notify", "string", 14},
+		{"notify.smtp.tls", "SMTP 启用 TLS", "true", "notify", "bool", 15},
+		// 短信 / WhatsApp / Twilio Email 共用一套 Twilio 账号
+		{"notify.twilio.accountSid", "Twilio Account SID", "", "notify", "string", 20},
+		{"notify.twilio.authToken", "Twilio Auth Token", "", "notify", "password", 21},
+		{"notify.twilio.emailFrom", "Twilio 邮件发件人", "", "notify", "string", 22},
+		{"notify.twilio.smsFrom", "Twilio 短信发送号码", "", "notify", "string", 23},
+		{"notify.twilio.whatsappFrom", "Twilio WhatsApp 发送号码", "", "notify", "string", 24},
+		{"notify.whatsapp.contentSid", "WhatsApp 模板 Content SID", "", "notify", "string", 25},
+		{"notify.phone.defaultCountryCode", "默认国家码", "966", "notify", "string", 26},
+
+		// things 平台集成：租户↔项目、网关生命周期由 things 管理
+		{"things.enabled", "启用 things 集成", "false", "things", "bool", 30},
+		{"things.baseUrl", "things API 地址", "https://things.iotddc.com/api", "things", "string", 31},
+		{"things.username", "things 服务账号", "", "things", "string", 32},
+		{"things.password", "things 服务账号密码", "", "things", "password", 33},
+		{"things.timeoutSeconds", "HTTP 超时(秒)", "10", "things", "number", 34},
+		{"things.reconcileIntervalSeconds", "网关对账间隔(秒)", "300", "things", "number", 35},
+		{"things.tokenRefreshMinutes", "token 提前刷新(分钟)", "90", "things", "number", 36},
 	}
 }
 

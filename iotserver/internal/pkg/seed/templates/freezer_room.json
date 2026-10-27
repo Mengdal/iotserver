@@ -1,0 +1,567 @@
+{
+  "key": "freezer_room",
+  "name": "冷冻库监控",
+  "nameEn": "Freezer Room Monitoring",
+  "industry": "冷链仓储",
+  "version": 1,
+  "icon": "database",
+  "description": "-18℃ 冷冻库温度、化霜、库门、断电与 4G 网关离线监控",
+  "descriptionEn": "Temperature, defrost, door, power and 4G gateway monitoring for -18°C freezer rooms",
+  "thingModelJson": {
+    "properties": [
+      {
+        "name": "冷冻库温度",
+        "identifier": "freezer_temp",
+        "dataType": "FLOAT",
+        "description": "冷冻库内实时温度",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "10",
+          "min": "-60",
+          "step": "0.1",
+          "unit": "℃",
+          "unitName": "℃"
+        },
+        "dataSpecsList": null,
+        "nameEn": "Freezer room temperature",
+        "descriptionEn": "Freezer room temperature"
+      },
+      {
+        "name": "设定温度",
+        "identifier": "set_temp",
+        "dataType": "FLOAT",
+        "description": "目标冷冻温度",
+        "required": false,
+        "rwFlag": "RW",
+        "dataSpecs": {
+          "max": "10",
+          "min": "-60",
+          "step": "0.1",
+          "unit": "℃",
+          "unitName": "℃"
+        },
+        "dataSpecsList": null,
+        "nameEn": "Target temperature",
+        "descriptionEn": "Target temperature"
+      },
+      {
+        "name": "化霜状态",
+        "identifier": "defrost_status",
+        "dataType": "BOOL",
+        "description": "蒸发器化霜状态",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": null,
+        "dataSpecsList": [
+          {
+            "name": "停止 / Stopped",
+            "value": 0
+          },
+          {
+            "name": "运行 / Running",
+            "value": 1
+          }
+        ],
+        "nameEn": "Defrost status",
+        "descriptionEn": "Defrost status"
+      },
+      {
+        "name": "库门状态",
+        "identifier": "door_status",
+        "dataType": "BOOL",
+        "description": "冷冻库门开关状态",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": null,
+        "dataSpecsList": [
+          {
+            "name": "停止 / Stopped",
+            "value": 0
+          },
+          {
+            "name": "运行 / Running",
+            "value": 1
+          }
+        ],
+        "nameEn": "Freezer door status",
+        "descriptionEn": "Freezer door status"
+      },
+      {
+        "name": "开门时长",
+        "identifier": "door_open_duration",
+        "dataType": "INT",
+        "description": "本次开门已持续秒数",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "86400",
+          "min": "0",
+          "step": "1",
+          "unit": "s",
+          "unitName": "s"
+        },
+        "dataSpecsList": null,
+        "nameEn": "Door open duration",
+        "descriptionEn": "Door open duration"
+      },
+      {
+        "name": "压缩机状态",
+        "identifier": "compressor_status",
+        "dataType": "BOOL",
+        "description": "制冷压缩机运行状态",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": null,
+        "dataSpecsList": [
+          {
+            "name": "停止 / Stopped",
+            "value": 0
+          },
+          {
+            "name": "运行 / Running",
+            "value": 1
+          }
+        ],
+        "nameEn": "Compressor status",
+        "descriptionEn": "Compressor status"
+      },
+      {
+        "name": "供电状态",
+        "identifier": "power_status",
+        "dataType": "BOOL",
+        "description": "市电供电状态，0 表示断电",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": null,
+        "dataSpecsList": [
+          {
+            "name": "停止 / Stopped",
+            "value": 0
+          },
+          {
+            "name": "运行 / Running",
+            "value": 1
+          }
+        ],
+        "nameEn": "Mains power status",
+        "descriptionEn": "Mains power status"
+      },
+      {
+        "name": "传感器状态",
+        "identifier": "sensor_status",
+        "dataType": "BOOL",
+        "description": "温度传感器在线状态",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": null,
+        "dataSpecsList": [
+          {
+            "name": "停止 / Stopped",
+            "value": 0
+          },
+          {
+            "name": "运行 / Running",
+            "value": 1
+          }
+        ],
+        "nameEn": "Sensor status",
+        "descriptionEn": "Sensor status"
+      },
+      {
+        "name": "网关在线",
+        "identifier": "gateway_online",
+        "dataType": "BOOL",
+        "description": "4G 网关在线状态",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": null,
+        "dataSpecsList": [
+          {
+            "name": "停止 / Stopped",
+            "value": 0
+          },
+          {
+            "name": "运行 / Running",
+            "value": 1
+          }
+        ],
+        "nameEn": "Gateway online",
+        "descriptionEn": "Gateway online"
+      },
+      {
+        "name": "备用电池",
+        "identifier": "battery_level",
+        "dataType": "FLOAT",
+        "description": "网关备用电池电量",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "100",
+          "min": "0",
+          "step": "0.1",
+          "unit": "%",
+          "unitName": "%"
+        },
+        "dataSpecsList": null,
+        "nameEn": "Backup battery level",
+        "descriptionEn": "Backup battery level"
+      }
+    ],
+    "events": [
+      {
+        "eventName": "高温报警",
+        "eventType": "ALERT",
+        "identifier": "high_temp",
+        "description": "冷冻库温度高于上限",
+        "required": false,
+        "outputData": [
+          {
+            "name": "当前温度",
+            "identifier": "value",
+            "dataType": "FLOAT",
+            "description": "Current temperature",
+            "required": false,
+            "rwFlag": "R",
+            "dataSpecs": {
+              "max": "10",
+              "min": "-60",
+              "step": "0.1",
+              "unit": "℃",
+              "unitName": "℃"
+            },
+            "dataSpecsList": null,
+            "nameEn": "Current temperature",
+            "descriptionEn": "Current temperature"
+          },
+          {
+            "name": "设定温度",
+            "identifier": "target",
+            "dataType": "FLOAT",
+            "description": "Target temperature",
+            "required": false,
+            "rwFlag": "R",
+            "dataSpecs": {
+              "max": "10",
+              "min": "-60",
+              "step": "0.1",
+              "unit": "℃",
+              "unitName": "℃"
+            },
+            "dataSpecsList": null,
+            "nameEn": "Target temperature",
+            "descriptionEn": "Target temperature"
+          }
+        ],
+        "eventNameEn": "High temperature alarm",
+        "descriptionEn": "High temperature alarm"
+      },
+      {
+        "eventName": "低温报警",
+        "eventType": "ALERT",
+        "identifier": "low_temp",
+        "description": "冷冻库温度低于下限",
+        "required": false,
+        "outputData": [
+          {
+            "name": "当前温度",
+            "identifier": "value",
+            "dataType": "FLOAT",
+            "description": "Current temperature",
+            "required": false,
+            "rwFlag": "R",
+            "dataSpecs": {
+              "max": "10",
+              "min": "-60",
+              "step": "0.1",
+              "unit": "℃",
+              "unitName": "℃"
+            },
+            "dataSpecsList": null,
+            "nameEn": "Current temperature",
+            "descriptionEn": "Current temperature"
+          }
+        ],
+        "eventNameEn": "Low temperature alarm",
+        "descriptionEn": "Low temperature alarm"
+      },
+      {
+        "eventName": "开门超时",
+        "eventType": "ALERT",
+        "identifier": "door_timeout",
+        "description": "冷冻库门长时间未关闭",
+        "required": false,
+        "outputData": [
+          {
+            "name": "开门时长",
+            "identifier": "value",
+            "dataType": "INT",
+            "description": "Door open duration",
+            "required": false,
+            "rwFlag": "R",
+            "dataSpecs": {
+              "max": "86400",
+              "min": "0",
+              "step": "1",
+              "unit": "s",
+              "unitName": "s"
+            },
+            "dataSpecsList": null,
+            "nameEn": "Door open duration",
+            "descriptionEn": "Door open duration"
+          }
+        ],
+        "eventNameEn": "Door open timeout",
+        "descriptionEn": "Door open timeout"
+      },
+      {
+        "eventName": "断电报警",
+        "eventType": "ALERT",
+        "identifier": "power_failure",
+        "description": "市电断电，网关切换备用电池",
+        "required": false,
+        "outputData": [
+          {
+            "name": "供电状态",
+            "identifier": "value",
+            "dataType": "BOOL",
+            "description": "Power status",
+            "required": false,
+            "rwFlag": "R",
+            "dataSpecs": null,
+            "dataSpecsList": [
+              {
+                "name": "停止 / Stopped",
+                "value": 0
+              },
+              {
+                "name": "运行 / Running",
+                "value": 1
+              }
+            ],
+            "nameEn": "Power status",
+            "descriptionEn": "Power status"
+          }
+        ],
+        "eventNameEn": "Power failure",
+        "descriptionEn": "Power failure"
+      },
+      {
+        "eventName": "传感器故障",
+        "eventType": "ALERT",
+        "identifier": "sensor_fault",
+        "description": "温度传感器断线或故障",
+        "required": false,
+        "outputData": [
+          {
+            "name": "传感器状态",
+            "identifier": "value",
+            "dataType": "BOOL",
+            "description": "Sensor status",
+            "required": false,
+            "rwFlag": "R",
+            "dataSpecs": null,
+            "dataSpecsList": [
+              {
+                "name": "停止 / Stopped",
+                "value": 0
+              },
+              {
+                "name": "运行 / Running",
+                "value": 1
+              }
+            ],
+            "nameEn": "Sensor status",
+            "descriptionEn": "Sensor status"
+          }
+        ],
+        "eventNameEn": "Sensor fault",
+        "descriptionEn": "Sensor fault"
+      }
+    ],
+    "services": [
+      {
+        "serviceName": "设定温度",
+        "identifier": "set_temp",
+        "description": "下发冷冻库目标温度",
+        "required": false,
+        "callType": "ASYNC",
+        "inputParams": [
+          {
+            "name": "目标温度",
+            "identifier": "target",
+            "dataType": "FLOAT",
+            "description": "Target temperature",
+            "required": false,
+            "rwFlag": "RW",
+            "dataSpecs": {
+              "max": "10",
+              "min": "-60",
+              "step": "0.1",
+              "unit": "℃",
+              "unitName": "℃"
+            },
+            "dataSpecsList": null,
+            "nameEn": "Target temperature",
+            "descriptionEn": "Target temperature"
+          }
+        ],
+        "outParams": [],
+        "serviceNameEn": "Set target temperature",
+        "descriptionEn": "Set target temperature"
+      },
+      {
+        "serviceName": "强制化霜",
+        "identifier": "force_defrost",
+        "description": "手动触发一次化霜",
+        "required": false,
+        "callType": "ASYNC",
+        "inputParams": [],
+        "outParams": [],
+        "serviceNameEn": "Force defrost",
+        "descriptionEn": "Force defrost"
+      },
+      {
+        "serviceName": "补传数据",
+        "identifier": "sync_data",
+        "description": "触发网关补传本地缓存数据",
+        "required": false,
+        "callType": "ASYNC",
+        "inputParams": [],
+        "outParams": [],
+        "serviceNameEn": "Sync buffered data",
+        "descriptionEn": "Sync buffered data"
+      }
+    ]
+  },
+  "alarmRules": [
+    {
+      "name": "冷冻库高温",
+      "propertyCode": "freezer_temp",
+      "operator": ">",
+      "value": "-15",
+      "alertLevel": 1,
+      "alertType": 1,
+      "silenceTime": 300,
+      "description": "冷冻库温度高于 -15℃",
+      "descriptionEn": "Freezer temperature above -15°C"
+    },
+    {
+      "name": "冷冻库低温",
+      "propertyCode": "freezer_temp",
+      "operator": "<",
+      "value": "-25",
+      "alertLevel": 2,
+      "alertType": 1,
+      "silenceTime": 300,
+      "description": "冷冻库温度低于 -25℃",
+      "descriptionEn": "Freezer temperature below -25°C"
+    },
+    {
+      "name": "开门超时",
+      "propertyCode": "door_open_duration",
+      "operator": ">",
+      "value": "300",
+      "alertLevel": 2,
+      "alertType": 1,
+      "silenceTime": 300,
+      "description": "冷冻库门开启超过 300 秒",
+      "descriptionEn": "Freezer door open over 300 seconds"
+    },
+    {
+      "name": "传感器故障",
+      "propertyCode": "sensor_status",
+      "operator": "=",
+      "value": "0",
+      "alertLevel": 1,
+      "alertType": 1,
+      "silenceTime": 300,
+      "description": "温度传感器离线或故障",
+      "descriptionEn": "Temperature sensor offline"
+    },
+    {
+      "name": "断电报警",
+      "propertyCode": "power_status",
+      "operator": "=",
+      "value": "0",
+      "alertLevel": 1,
+      "alertType": 1,
+      "silenceTime": 300,
+      "description": "市电断电，网关转备用电池",
+      "descriptionEn": "Mains power lost, gateway on battery"
+    },
+    {
+      "name": "网关离线",
+      "propertyCode": "gateway_online",
+      "operator": "=",
+      "value": "0",
+      "alertLevel": 2,
+      "alertType": 1,
+      "silenceTime": 300,
+      "description": "4G 网关离线",
+      "descriptionEn": "4G gateway offline"
+    }
+  ],
+  "dashboard": {
+    "name": "冷冻库监控看板",
+    "nameEn": "Freezer Room Dashboard",
+    "widgets": [
+      {
+        "title": "冷冻库温度趋势",
+        "type": "line",
+        "propertyCode": "freezer_temp",
+        "timeRange": "6h",
+        "aggInterval": 300,
+        "aggMethod": "avg",
+        "titleEn": "Freezer temperature trend"
+      },
+      {
+        "title": "当前温度",
+        "type": "kpi",
+        "propertyCode": "freezer_temp",
+        "unit": "℃",
+        "decimals": 1,
+        "titleEn": "Current temperature"
+      },
+      {
+        "title": "温度仪表",
+        "type": "gauge",
+        "propertyCode": "freezer_temp",
+        "unit": "℃",
+        "min": -40,
+        "max": 0,
+        "titleEn": "Temperature gauge"
+      },
+      {
+        "title": "开门时长",
+        "type": "kpi",
+        "propertyCode": "door_open_duration",
+        "unit": "s",
+        "decimals": 0,
+        "titleEn": "Door open duration"
+      },
+      {
+        "title": "备用电池",
+        "type": "kpi",
+        "propertyCode": "battery_level",
+        "unit": "%",
+        "decimals": 1,
+        "titleEn": "Battery level"
+      },
+      {
+        "title": "冷冻库说明",
+        "titleEn": "Freezer overview",
+        "type": "text",
+        "text": "适用于 -18℃ 冷冻库。温度上限、下限、开门时长、传感器与网关离线均可触发告警。",
+        "textEn": "Designed for -18°C freezer rooms. Alarms cover high/low temperature, door timeout, sensor fault and gateway offline."
+      }
+    ]
+  },
+  "metrics": {
+    "running": "compressor_status",
+    "output": null,
+    "good": null,
+    "reject": null,
+    "cycleTime": null
+  }
+}

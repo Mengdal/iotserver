@@ -44,6 +44,15 @@ type DBClient interface {
 	// 菜单定制表由菜单任务引入，表不存在时静默跳过，不报错。
 	CleanupTenantMenuRecords(tenantId string) error
 
+	// ===== 租户 ↔ things 项目绑定 =====
+	AddOrUpdateTenantThingsBinding(b models.TenantThingsBinding) (models.TenantThingsBinding, error)
+	TenantThingsBindingByTenant(tenantId string) (models.TenantThingsBinding, error)
+	TenantThingsBindingByProject(projectId int64) (models.TenantThingsBinding, error)
+	TenantThingsBindingsByTenantIDs(tenantIds []string) (map[string]models.TenantThingsBinding, error)
+	TenantThingsBindings() ([]models.TenantThingsBinding, error)
+	UpdateTenantThingsBindingStatus(tenantId, status, lastError string, lastSyncAt int64) error
+	DeleteTenantThingsBinding(tenantId string) error
+
 	// ===== 网关（第三方工业网关接入）=====
 	AddGateway(g models.Gateway) (models.Gateway, error)
 	GatewayById(id string) (models.Gateway, error)
@@ -59,6 +68,11 @@ type DBClient interface {
 	GatewayIngestLogExists(gatewayId string, seq int64) (bool, error)
 	AddGatewayIngestLog(log models.GatewayIngestLog) error
 	GatewayDeviceCount(gatewayId string) (int64, error)
+	GatewayByThingsID(thingsGatewayId int64) (models.Gateway, error)
+	// UpdateGatewayThingsSync 用 things 展示字段刷新本地镜像，不覆盖数据面状态
+	UpdateGatewayThingsSync(g models.Gateway) error
+	// UpdateGatewayThingsStatus 只更新同步状态/错误，不改网关展示字段
+	UpdateGatewayThingsStatus(id, status, lastError string, lastSyncAt int64) error
 
 	// ===== 网关接入：设备定位 =====
 	DeviceByGatewayAndKey(gatewayId, deviceKey string) (models.Device, error)

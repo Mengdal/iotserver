@@ -13,6 +13,7 @@ import (
 	"iotserver/internal/pkg/seed"
 	"iotserver/internal/pkg/tenant"
 	"iotserver/internal/pkg/utils"
+	"iotserver/internal/tools/things"
 )
 
 /******************************* 用户管理 *******************************/
@@ -955,6 +956,13 @@ func (uapp *userApp) SysConfigById(ctx context.Context, id string) (dtos.SysConf
 }
 
 func (uapp *userApp) SysConfigAdd(ctx context.Context, req dtos.SysConfigAddRequest) error {
+	if req.ConfigKey == "things.password" && req.ConfigValue != "" {
+		encrypted, err := things.EncryptPassword(req.ConfigValue)
+		if err != nil {
+			return err
+		}
+		req.ConfigValue = encrypted
+	}
 	cfg := models.SystemConfig{
 		Id:          utils.GenUUID(),
 		ConfigKey:   req.ConfigKey,
@@ -985,7 +993,18 @@ func (uapp *userApp) SysConfigUpdate(ctx context.Context, req dtos.SysConfigUpda
 		return errort.NewCommonEdgeX(errort.DefaultNameRepeat, fmt.Sprintf("config key %s exists", req.ConfigKey), nil)
 	}
 	cfg.ConfigKey = req.ConfigKey
-	cfg.ConfigValue = req.ConfigValue
+	if (strings.EqualFold(req.Type, "password") || req.ConfigKey == "things.password") &&
+		(req.ConfigValue == "" || things.IsMasked(req.ConfigValue)) {
+		// 保持原密码不变
+	} else if req.ConfigKey == "things.password" && req.ConfigValue != "" {
+		encrypted, eErr := things.EncryptPassword(req.ConfigValue)
+		if eErr != nil {
+			return eErr
+		}
+		cfg.ConfigValue = encrypted
+	} else {
+		cfg.ConfigValue = req.ConfigValue
+	}
 	cfg.Name = req.Name
 	cfg.GroupName = req.GroupName
 	cfg.Type = req.Type
@@ -1018,7 +1037,27 @@ func (uapp *userApp) SysSetupSave(ctx context.Context, req dtos.SysSetupRequest)
 	if len(req.Items) == 0 {
 		return errort.NewCommonErr(errort.DefaultReqParamsError, fmt.Errorf("items is empty"))
 	}
-	return uapp.dbClient.WithCtx(ctx).SaveSysConfigValues(req.Items)
+	items := make([]dtos.SysSetupItem, 0, len(req.Items))
+	for _, item := range req.Items {
+		cfg, err := uapp.dbClient.WithCtx(ctx).SysConfigByKey(item.ConfigKey)
+		if err == nil && strings.EqualFold(cfg.Type, "password") &&
+			(item.ConfigValue == "" || things.IsMasked(item.ConfigValue)) {
+			// 前端回显的是掩码：不覆盖原密码
+			continue
+		}
+		if item.ConfigKey == "things.password" && item.ConfigValue != "" {
+			encrypted, eErr := things.EncryptPassword(item.ConfigValue)
+			if eErr != nil {
+				return eErr
+			}
+			item.ConfigValue = encrypted
+		}
+		items = append(items, item)
+	}
+	if len(items) == 0 {
+		return nil
+	}
+	return uapp.dbClient.WithCtx(ctx).SaveSysConfigValues(items)
 }
 
 /******************************* 公共 *******************************/
@@ -1090,7 +1129,6 @@ func (uapp *userApp) SiteInfo(ctx context.Context) (dtos.SiteInfoResponse, error
 	}
 	pairs := map[string]*string{
 		"platform.name":            &res.Name,
-		"platform.description":     &res.Description,
 		"platform.copyright":       &res.Copyright,
 		"platform.logo":            &res.Logo,
 		"platform.favicon":         &res.Favicon,

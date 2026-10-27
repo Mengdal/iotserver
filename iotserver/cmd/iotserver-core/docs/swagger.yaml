@@ -53,97 +53,13 @@ definitions:
       category_name:
         description: 品类名称
         type: string
+      category_name_en:
+        type: string
       id:
         type: string
       scene:
         description: 所属场景
         type: string
-    type: object
-  dtos.CloudInstanceAuthorizationRequest:
-    properties:
-      instance_authorization_config:
-        $ref: '#/definitions/dtos.InstanceAuthorizationConfig'
-      instance_log_config:
-        $ref: '#/definitions/dtos.InstanceLogConfig'
-    type: object
-  dtos.CloudInstanceSearchQueryRequest:
-    properties:
-      cloudServiceId:
-        type: string
-      id:
-        type: string
-      ids:
-        type: string
-      isAll:
-        type: boolean
-      likeId:
-        type: string
-      name:
-        type: string
-      nameLike:
-        type: string
-      orderBy:
-        type: string
-      page:
-        type: integer
-      pageSize:
-        type: integer
-    type: object
-  dtos.ConfigDnsResponse:
-    properties:
-      dns:
-        items:
-          type: string
-        type: array
-      openSwitch:
-        type: boolean
-    type: object
-  dtos.ConfigDnsUpdateRequest:
-    properties:
-      dns:
-        items:
-          type: string
-        type: array
-      openSwitch:
-        type: boolean
-    required:
-    - dns
-    type: object
-  dtos.ConfigNetWork:
-    properties:
-      gwIp:
-        type: string
-      localIp:
-        type: string
-      ncId:
-        type: string
-      netlink:
-        type: boolean
-      smIp:
-        type: string
-    type: object
-  dtos.ConfigNetWorkResponse:
-    properties:
-      list:
-        items:
-          $ref: '#/definitions/dtos.ConfigNetWork'
-        type: array
-    type: object
-  dtos.ConfigNetworkUpdateRequest:
-    properties:
-      gwIp:
-        type: string
-      localIp:
-        type: string
-      ncId:
-        type: string
-      smIp:
-        type: string
-    required:
-    - gwIp
-    - localIp
-    - ncId
-    - smIp
     type: object
   dtos.DataResourceInfo:
     properties:
@@ -153,6 +69,13 @@ definitions:
         additionalProperties: true
         type: object
       type:
+        type: string
+    type: object
+  dtos.DataResourceVerifyResponse:
+    properties:
+      health:
+        type: boolean
+      message:
         type: string
     type: object
   dtos.DeviceAuthInfoResponse:
@@ -328,49 +251,12 @@ definitions:
     required:
     - id
     type: object
-  dtos.Filter:
-    properties:
-      condition:
-        type: string
-      message_source:
-        type: string
-      select_name:
-        type: string
-      sql:
-        type: string
-    type: object
   dtos.InitPasswordRequest:
     properties:
       newPassword:
         type: string
     required:
     - newPassword
-    type: object
-  dtos.InstanceAuthorizationConfig:
-    properties:
-      ak:
-        type: string
-      endpoint:
-        type: string
-      instance_id:
-        type: string
-      mqtt_host:
-        type: string
-      mqtt_port:
-        type: string
-      regions:
-        type: string
-      sk:
-        type: string
-    type: object
-  dtos.InstanceLogConfig:
-    properties:
-      log_filter:
-        items:
-          type: string
-        type: array
-      log_switch:
-        type: boolean
     type: object
   dtos.LoginRequest:
     properties:
@@ -485,31 +371,102 @@ definitions:
       status:
         type: string
     type: object
-  dtos.ProductSyncByIdRequest:
-    properties:
-      product_id:
-        type: string
-    type: object
-  dtos.ProductSyncRequest:
-    properties:
-      cloud_instance_id:
-        type: string
-    type: object
   dtos.RuleEngineSearchQueryResponse:
     properties:
       created:
         type: integer
+      data_resource_id:
+        description: DataResourceId 供编辑表单回填资源下拉（旧 swagger 未含，属兼容性补充）
+        type: string
       dataResource:
         $ref: '#/definitions/dtos.DataResourceInfo'
+        description: DataResource 列表「转发方式」列直接读 dataResource.type，必须是对象（不能为 null）
       description:
         type: string
+      filter:
+        $ref: '#/definitions/models.RuleEngineFilter'
       id:
         type: string
+      modified:
+        type: integer
       name:
         type: string
       resource_type:
         type: string
       status:
+        type: string
+    type: object
+  dtos.SolutionApplyRequest:
+    properties:
+      createAlarmRules:
+        description: CreateAlarmRules 是否按模板预设创建告警规则（默认 true）
+        type: boolean
+      deptId:
+        description: DeptId 可选：把生成的设备挂到某个组织节点
+        type: string
+      deviceCount:
+        description: DeviceCount >0 时同时创建对应数量的设备（名称 = 产品名-序号）
+        type: integer
+      productName:
+        description: ProductName 生成的产品名称（为空则用模板名称）
+        type: string
+    type: object
+  dtos.SolutionApplyResponse:
+    properties:
+      alarmRuleIds:
+        items:
+          type: string
+        type: array
+      deviceIds:
+        items:
+          type: string
+        type: array
+      productId:
+        type: string
+      productName:
+        type: string
+      skipped:
+        items:
+          type: string
+        type: array
+    type: object
+  dtos.SolutionResponse:
+    properties:
+      alarmRulesJson:
+        type: string
+      builtIn:
+        type: boolean
+      dashboardJson:
+        type: string
+      description:
+        type: string
+      descriptionEn:
+        type: string
+      icon:
+        type: string
+      industry:
+        type: string
+      key:
+        type: string
+      metricsJson:
+        type: string
+      name:
+        type: string
+      nameEn:
+        type: string
+      thingModelJson:
+        type: string
+      version:
+        type: integer
+    type: object
+  dtos.SolutionThingModelItemRequest:
+    properties:
+      identifier:
+        type: string
+      item:
+        additionalProperties: true
+        type: object
+      type:
         type: string
     type: object
   dtos.SubRule:
@@ -651,6 +608,8 @@ definitions:
       category_name:
         description: 品类名称
         type: string
+      category_name_en:
+        type: string
       events: {}
       id:
         type: string
@@ -706,9 +665,21 @@ definitions:
       total:
         type: integer
     type: object
+  models.RuleEngineFilter:
+    properties:
+      condition:
+        type: string
+      message_source:
+        type: string
+      product_id:
+        type: string
+      select_name:
+        type: string
+      sql:
+        type: string
+    type: object
 info:
   contact:
-    email: ""
     name: API Support
   description: Swagger API for Golang Project iotserver.
   termsOfService: http://swagger.io/terms/
@@ -1222,121 +1193,39 @@ paths:
       summary: 同步标准产品品类
       tags:
       - 标准产品品类
-  /api/v1/cloud-instance:
-    get:
-      parameters:
-      - in: query
-        name: cloudServiceId
-        type: string
-      - in: query
-        name: id
-        type: string
-      - in: query
-        name: ids
-        type: string
-      - in: query
-        name: isAll
-        type: boolean
-      - in: query
-        name: likeId
-        type: string
-      - in: query
-        name: name
-        type: string
-      - in: query
-        name: nameLike
-        type: string
-      - in: query
-        name: orderBy
-        type: string
-      - in: query
-        name: page
-        type: integer
-      - in: query
-        name: pageSize
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/dtos.CloudInstanceSearchQueryRequest'
-      security:
-      - ApiKeyAuth: []
-      summary: 云服务实例列表
-      tags:
-      - 我的云服务实例
-  /api/v1/cloud-instance/:cloudInstanceId/authorization:
-    post:
-      parameters:
-      - description: 参数
-        in: path
-        name: cloudInstanceId
-        required: true
-        type: string
-      - description: 参数
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/dtos.CloudInstanceAuthorizationRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/httphelper.CommonResponse'
-      security:
-      - ApiKeyAuth: []
-      summary: 云服务实例授权
-      tags:
-      - 我的云服务实例
-  /api/v1/cloud-service:
-    get:
-      parameters:
-      - in: query
-        name: id
-        type: string
-      - in: query
-        name: ids
-        type: string
-      - in: query
-        name: isAll
-        type: boolean
-      - in: query
-        name: likeId
-        type: string
-      - in: query
-        name: name
-        type: string
-      - in: query
-        name: nameLike
-        type: string
-      - in: query
-        name: orderBy
-        type: string
-      - in: query
-        name: page
-        type: integer
-      - in: query
-        name: pageSize
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/httphelper.CommonResponse'
-      security:
-      - ApiKeyAuth: []
-      summary: 云服务列表
-      tags:
-      - 云服务
   /api/v1/dataresource:
     get:
+      parameters:
+      - in: query
+        name: id
+        type: string
+      - in: query
+        name: ids
+        type: string
+      - in: query
+        name: isAll
+        type: boolean
+      - in: query
+        name: likeId
+        type: string
+      - in: query
+        name: name
+        type: string
+      - in: query
+        name: nameLike
+        type: string
+      - in: query
+        name: orderBy
+        type: string
+      - in: query
+        name: page
+        type: integer
+      - in: query
+        name: pageSize
+        type: integer
+      - in: query
+        name: type
+        type: string
       produces:
       - application/json
       responses:
@@ -1344,17 +1233,10 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/httphelper.CommonResponse'
-      summary: 资源管理查询
+      summary: 资源实例列表
       tags:
-      - 资源管理
+      - 高级能力-资源管理
     post:
-      parameters:
-      - in: query
-        name: name
-        type: string
-      - in: query
-        name: type
-        type: string
       produces:
       - application/json
       responses:
@@ -1362,17 +1244,10 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/httphelper.CommonResponse'
-      summary: 添加资源管理
+      summary: 新增资源实例
       tags:
-      - 资源管理
+      - 高级能力-资源管理
     put:
-      parameters:
-      - in: query
-        name: name
-        type: string
-      - in: query
-        name: type
-        type: string
       produces:
       - application/json
       responses:
@@ -1380,10 +1255,10 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/httphelper.CommonResponse'
-      summary: 修改资源管理
+      summary: 修改资源实例
       tags:
-      - 资源管理
-  /api/v1/dataresource/:resourceId:
+      - 高级能力-资源管理
+  /api/v1/dataresource/{resourceId}:
     delete:
       produces:
       - application/json
@@ -1392,17 +1267,23 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/httphelper.CommonResponse'
-      summary: 删除资源管理
+      summary: 删除资源实例
       tags:
-      - 资源管理
-    get:
-      parameters:
-      - in: query
-        name: name
-        type: string
-      - in: query
-        name: type
-        type: string
+      - 高级能力-资源管理
+  /api/v1/dataresource/{resourceId}/health:
+    post:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dtos.DataResourceVerifyResponse'
+      summary: 验证资源实例连通性
+      tags:
+      - 高级能力-资源管理
+  /api/v1/dept:
+    delete:
       produces:
       - application/json
       responses:
@@ -1410,9 +1291,66 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/httphelper.CommonResponse'
-      summary: 添加资源管理
+      summary: 删除部门
       tags:
-      - 资源管理
+      - 系统管理-部门
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      summary: 部门列表
+      tags:
+      - 系统管理-部门
+    post:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      summary: 新增部门
+      tags:
+      - 系统管理-部门
+    put:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      summary: 编辑部门
+      tags:
+      - 系统管理-部门
+  /api/v1/dept-tree:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      summary: 部门树
+      tags:
+      - 系统管理-部门
+  /api/v1/dept/{id}:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      summary: 部门详情
+      tags:
+      - 系统管理-部门
   /api/v1/device:
     post:
       parameters:
@@ -1421,6 +1359,9 @@ paths:
         type: string
       - in: query
         name: device_id
+        type: string
+      - in: query
+        name: device_sn
         type: string
       - in: query
         name: driver_instance_id
@@ -1564,9 +1505,11 @@ paths:
         name: deviceLibraryId
         required: true
         type: string
-      - description: Alias        *string `json:"alias"`
-        in: query
+      - in: query
         name: description
+        type: string
+      - in: query
+        name: docker_config_id
         type: string
       - in: query
         name: icon
@@ -1584,8 +1527,7 @@ paths:
       - in: query
         name: name
         type: string
-      - description: Manufacturer *string `json:"manufacturer"`
-        in: query
+      - in: query
         name: protocol
         type: string
       produces:
@@ -1699,41 +1641,6 @@ paths:
       summary: 查询驱动实例
       tags:
       - 驱动实例管理
-  /api/v1/device-sync:
-    post:
-      parameters:
-      - in: query
-        name: cloud_instance_id
-        type: string
-      - in: query
-        name: driver_instance_id
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/httphelper.CommonResponse'
-      summary: 同步设备信息
-      tags:
-      - 设备管理
-  /api/v1/device-sync/:deviceId:
-    post:
-      parameters:
-      - in: query
-        name: device_id
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/httphelper.CommonResponse'
-      summary: 同步单个设备信息
-      tags:
-      - 设备管理
   /api/v1/device/:deviceId:
     delete:
       parameters:
@@ -1789,6 +1696,14 @@ paths:
   /api/v1/device/:deviceId/thing-model/event:
     get:
       parameters:
+      - description: AggInterval 聚合时间（秒）：0 或缺省表示不聚合，按原始数据返回
+        in: query
+        name: aggInterval
+        type: integer
+      - description: AggMethod 聚合方法：avg/max/min/sum/count/first/last；为空时默认 avg
+        in: query
+        name: aggMethod
+        type: string
       - in: query
         name: code
         type: string
@@ -1828,10 +1743,7 @@ paths:
       - in: query
         name: pageSize
         type: integer
-      - description: |-
-          Page     int     `json:"page"`
-          PageSize int     `json:"pageSize"`
-        in: query
+      - in: query
         items:
           type: integer
         name: range
@@ -1853,6 +1765,14 @@ paths:
   /api/v1/device/:deviceId/thing-model/property:
     get:
       parameters:
+      - description: AggInterval 聚合时间（秒）：0 或缺省表示不聚合，按原始数据返回
+        in: query
+        name: aggInterval
+        type: integer
+      - description: AggMethod 聚合方法：avg/max/min/sum/count/first/last；为空时默认 avg
+        in: query
+        name: aggMethod
+        type: string
       - in: query
         name: code
         type: string
@@ -1892,10 +1812,7 @@ paths:
       - in: query
         name: pageSize
         type: integer
-      - description: |-
-          Page     int     `json:"page"`
-          PageSize int     `json:"pageSize"`
-        in: query
+      - in: query
         items:
           type: integer
         name: range
@@ -1956,10 +1873,7 @@ paths:
       - in: query
         name: pageSize
         type: integer
-      - description: |-
-          Page     int     `json:"page"`
-          PageSize int     `json:"pageSize"`
-        in: query
+      - in: query
         items:
           type: integer
         name: range
@@ -2272,6 +2186,140 @@ paths:
       summary: 修改仓库信息
       tags:
       - 镜像仓库管理
+  /api/v1/ekuiper/scene:
+    post:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      summary: eKuiper 场景触发回调（由 eKuiper 规则动作回调，免鉴权）
+      tags:
+      - 高级能力-场景联动
+  /api/v1/gateway:
+    post:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      summary: 新增网关（返回一次性 MQTT 接入信息）
+      tags:
+      - 设备接入-网关
+    put:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      summary: 修改网关
+      tags:
+      - 设备接入-网关
+  /api/v1/gateway/{id}:
+    delete:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      summary: 删除网关
+      tags:
+      - 设备接入-网关
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      summary: 网关详情
+      tags:
+      - 设备接入-网关
+  /api/v1/gateway/command:
+    post:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      summary: 下发网关命令（restart/ota/sync）
+      tags:
+      - 设备接入-网关
+  /api/v1/gateway/config:
+    put:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      summary: 下发网关配置
+      tags:
+      - 设备接入-网关
+  /api/v1/gateway/edge/control:
+    post:
+      produces:
+      - application/json
+      responses: {}
+      summary: 写参考系统网关下设备属性
+      tags:
+      - 设备接入-网关
+  /api/v1/gateway/edge/devices:
+    get:
+      produces:
+      - application/json
+      responses: {}
+      summary: 拉取参考系统网关设备/测点树
+      tags:
+      - 设备接入-网关
+  /api/v1/gateway/edge/restart:
+    post:
+      produces:
+      - application/json
+      responses: {}
+      summary: 重启参考系统网关
+      tags:
+      - 设备接入-网关
+  /api/v1/gateway/things-reconcile:
+    post:
+      produces:
+      - application/json
+      responses: {}
+      summary: 对当前租户执行 things 网关对账
+      tags:
+      - 设备接入-网关
+  /api/v1/gateway/things-rename:
+    post:
+      produces:
+      - application/json
+      responses: {}
+      summary: 在 things 中重命名网关
+      tags:
+      - 设备接入-网关
+  /api/v1/gateways:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      summary: 网关列表
+      tags:
+      - 设备接入-网关
   /api/v1/homepage:
     get:
       produces:
@@ -2300,7 +2348,18 @@ paths:
       summary: 云平台列表
       tags:
       - 产品管理
-  /api/v1/local/config/dns:
+  /api/v1/menu:
+    delete:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      summary: 删除菜单
+      tags:
+      - 系统管理-菜单
     get:
       produces:
       - application/json
@@ -2308,29 +2367,33 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/dtos.ConfigDnsResponse'
-      summary: 获取dns
+            $ref: '#/definitions/httphelper.CommonResponse'
+      summary: 菜单列表
       tags:
-      - 配网助手
-    put:
-      parameters:
-      - description: 参数
-        in: body
-        name: req
-        required: true
-        schema:
-          $ref: '#/definitions/dtos.ConfigDnsUpdateRequest'
+      - 系统管理-菜单
+    post:
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/dtos.ConfigDnsResponse'
-      summary: 修改dns
+            $ref: '#/definitions/httphelper.CommonResponse'
+      summary: 新增菜单
       tags:
-      - 配网助手
-  /api/v1/local/config/network:
+      - 系统管理-菜单
+    put:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      summary: 编辑菜单
+      tags:
+      - 系统管理-菜单
+  /api/v1/menu/{id}:
     get:
       produces:
       - application/json
@@ -2338,28 +2401,80 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/dtos.ConfigNetWorkResponse'
-      summary: 获取网卡列表
+            $ref: '#/definitions/httphelper.CommonResponse'
+      summary: 菜单详情
       tags:
-      - 配网助手
-    put:
-      parameters:
-      - description: 参数
-        in: body
-        name: req
-        required: true
-        schema:
-          $ref: '#/definitions/dtos.ConfigNetworkUpdateRequest'
+      - 系统管理-菜单
+  /api/v1/menu/pref:
+    get:
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/dtos.ConfigNetWorkResponse'
-      summary: 修改网卡
+            $ref: '#/definitions/httphelper.CommonResponse'
+      summary: 当前租户的菜单展示层覆盖（隐藏/改名/图标/排序）
       tags:
-      - 配网助手
+      - 系统管理-菜单
+    put:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      summary: 保存菜单展示层覆盖（隐藏/改名/排序，不覆盖 path/perms/component）
+      tags:
+      - 系统管理-菜单
+  /api/v1/menu/tenant-reset:
+    post:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      summary: 平台重置某租户的菜单定制（清空自建菜单与覆盖记录）
+      tags:
+      - 系统管理-菜单
+  /api/v1/menu/tree:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      summary: 菜单树
+      tags:
+      - 系统管理-菜单
+  /api/v1/menurole:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      summary: 查询角色菜单
+      tags:
+      - 系统管理-角色
+    post:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      summary: 角色绑定菜单
+      tags:
+      - 系统管理-角色
   /api/v1/product:
     post:
       parameters:
@@ -2379,48 +2494,6 @@ paths:
       security:
       - ApiKeyAuth: []
       summary: 添加产品
-      tags:
-      - 产品管理
-  /api/v1/product-sync:
-    post:
-      parameters:
-      - description: 参数
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/dtos.ProductSyncRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/httphelper.CommonResponse'
-      security:
-      - ApiKeyAuth: []
-      summary: 云端产品同步
-      tags:
-      - 产品管理
-  /api/v1/product-sync/:productId:
-    post:
-      parameters:
-      - description: 参数
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/dtos.ProductSyncByIdRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/httphelper.CommonResponse'
-      security:
-      - ApiKeyAuth: []
-      summary: 云端单个产品同步
       tags:
       - 产品管理
   /api/v1/product/:productId:
@@ -2515,6 +2588,87 @@ paths:
       summary: 查询产品列表
       tags:
       - 产品管理
+  /api/v1/pwd/reset:
+    put:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      summary: 重置密码
+      tags:
+      - 系统管理-用户
+  /api/v1/role:
+    delete:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      summary: 删除角色
+      tags:
+      - 系统管理-角色
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      summary: 角色列表
+      tags:
+      - 系统管理-角色
+    post:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      summary: 新增角色
+      tags:
+      - 系统管理-角色
+    put:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      summary: 编辑角色
+      tags:
+      - 系统管理-角色
+  /api/v1/role/{id}:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      summary: 角色详情
+      tags:
+      - 系统管理-角色
+  /api/v1/role/all:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      summary: 全部角色
+      tags:
+      - 系统管理-角色
   /api/v1/rule-engine:
     get:
       parameters:
@@ -2554,87 +2708,238 @@ paths:
         "200":
           description: OK
           schema:
-            items:
-              items:
-                $ref: '#/definitions/dtos.RuleEngineSearchQueryResponse'
-              type: array
-            type: array
-      summary: 规则引擎列表
+            $ref: '#/definitions/httphelper.CommonResponse'
+      summary: 规则列表
       tags:
-      - 规则引擎
+      - 高级能力-规则引擎
+    post:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      summary: 添加规则
+      tags:
+      - 高级能力-规则引擎
+    put:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      summary: 编辑规则
+      tags:
+      - 高级能力-规则引擎
+  /api/v1/rule-engine/{ruleEngineId}:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dtos.RuleEngineSearchQueryResponse'
+      summary: 规则详情
+      tags:
+      - 高级能力-规则引擎
+  /api/v1/rule-engine/{ruleEngineId}/delete:
+    delete:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      summary: 删除规则
+      tags:
+      - 高级能力-规则引擎
+  /api/v1/rule-engine/{ruleEngineId}/start:
+    post:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      summary: 启动规则
+      tags:
+      - 高级能力-规则引擎
+  /api/v1/rule-engine/{ruleEngineId}/status:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      summary: 规则运行状态（eKuiper 指标）
+      tags:
+      - 高级能力-规则引擎
+  /api/v1/rule-engine/{ruleEngineId}/stop:
+    post:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      summary: 停止规则
+      tags:
+      - 高级能力-规则引擎
+  /api/v1/scene:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      summary: 场景列表
+      tags:
+      - 高级能力-场景联动
+    post:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      summary: 新建场景
+      tags:
+      - 高级能力-场景联动
+    put:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      summary: 编辑场景（触发条件与执行动作）
+      tags:
+      - 高级能力-场景联动
+  /api/v1/scene/{sceneId}:
+    delete:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      summary: 删除场景
+      tags:
+      - 高级能力-场景联动
+  /api/v1/scene/{sceneId}/log:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      summary: 场景联动日志
+      tags:
+      - 高级能力-场景联动
+  /api/v1/scene/{sceneId}/start:
+    post:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      summary: 启动场景
+      tags:
+      - 高级能力-场景联动
+  /api/v1/scene/{sceneId}/stop:
+    post:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      summary: 停止场景
+      tags:
+      - 高级能力-场景联动
+  /api/v1/site-info:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      summary: 站点品牌配置（免鉴权，登录页使用）
+      tags:
+      - 站点信息
+  /api/v1/solution/{key}:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      summary: 方案详情（含物模型/告警/看板预设）
+      tags:
+      - 设备接入-方案
+  /api/v1/solution/{key}/apply:
     post:
       parameters:
-      - in: query
-        name: data_resource_id
-        type: string
-      - description: 描述
-        in: query
-        name: description
-        type: string
-      - description: 名字
-        in: query
-        name: name
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/httphelper.CommonResponse'
-      summary: 添加规则引擎
-      tags:
-      - 规则引擎
-    put:
-      parameters:
-      - in: query
-        name: data_resource_id
-        type: string
-      - description: 描述
-        in: query
-        name: description
-        type: string
-      - in: query
-        name: id
-        type: string
-      - description: 名字
-        in: query
-        name: name
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/httphelper.CommonResponse'
-      summary: 编辑规则引擎
-      tags:
-      - 规则引擎
-  /api/v1/rule-engine/:ruleEngineId:
-    get:
-      parameters:
-      - description: ruleEngineId
+      - description: 模板 key
         in: path
-        name: ruleEngineId
+        name: key
         required: true
         type: string
+      - description: 参数
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.SolutionApplyRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/httphelper.CommonResponse'
-      summary: 规则引擎详情
+            $ref: '#/definitions/dtos.SolutionApplyResponse'
+      summary: 一键应用方案（生成产品 + 发布 + 告警规则）
       tags:
-      - 规则引擎
-  /api/v1/rule-engine/:ruleEngineId/delete:
+      - 设备接入-方案
+  /api/v1/solution/{key}/thing-model/item:
     delete:
       parameters:
-      - description: ruleEngineId
+      - description: 模板 key
         in: path
-        name: ruleEngineId
+        name: key
+        required: true
+        type: string
+      - description: 类型 property|event|action
+        in: query
+        name: type
+        required: true
+        type: string
+      - description: 条目标识符
+        in: query
+        name: identifier
         required: true
         type: string
       produces:
@@ -2643,36 +2948,86 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/httphelper.CommonResponse'
-      summary: 规则引擎删除
+            $ref: '#/definitions/dtos.SolutionResponse'
+      summary: 删除方案物模型条目
       tags:
-      - 规则引擎
-  /api/v1/rule-engine/:ruleEngineId/start:
+      - 设备接入-方案
     post:
+      consumes:
+      - application/json
       parameters:
-      - description: ruleEngineId
+      - description: 模板 key
         in: path
-        name: ruleEngineId
+        name: key
         required: true
         type: string
+      - description: 参数
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.SolutionThingModelItemRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/httphelper.CommonResponse'
-      summary: 规则引擎启动
+            $ref: '#/definitions/dtos.SolutionResponse'
+      summary: 新增方案物模型条目（属性/事件/服务）
       tags:
-      - 规则引擎
-  /api/v1/rule-engine/:ruleEngineId/status:
+      - 设备接入-方案
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: 模板 key
+        in: path
+        name: key
+        required: true
+        type: string
+      - description: 参数
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.SolutionThingModelItemRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dtos.SolutionResponse'
+      summary: 编辑方案物模型条目（按旧 identifier 定位）
+      tags:
+      - 设备接入-方案
+  /api/v1/solutions:
     get:
       parameters:
-      - description: ruleEngineId
-        in: path
-        name: ruleEngineId
-        required: true
+      - in: query
+        name: industry
         type: string
+      - description: |-
+          Summary 只返回列表展示需要的元数据，不带物模型/告警/看板等大字段。
+          方案中心列表用摘要加载，选中某个方案后再调详情接口取完整内容。
+        in: query
+        name: summary
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dtos.SolutionResponse'
+            type: array
+      summary: 方案列表（内置 + 本租户自定义）
+      tags:
+      - 设备接入-方案
+  /api/v1/sys-audit-log:
+    delete:
       produces:
       - application/json
       responses:
@@ -2680,28 +3035,9 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/httphelper.CommonResponse'
-      summary: 规则引擎状态
+      summary: 删除审查日志
       tags:
-      - 规则引擎
-  /api/v1/rule-engine/:ruleEngineId/stop:
-    post:
-      parameters:
-      - description: ruleEngineId
-        in: path
-        name: ruleEngineId
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/httphelper.CommonResponse'
-      summary: 规则引擎停止
-      tags:
-      - 规则引擎
-  /api/v1/system/backup:
+      - 系统管理-审查日志
     get:
       produces:
       - application/json
@@ -2710,9 +3046,231 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/httphelper.CommonResponse'
-      summary: 网关备份下载
+      summary: 审查日志列表
       tags:
-      - 网关管理
+      - 系统管理-审查日志
+  /api/v1/sys-audit-log/clear:
+    delete:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      summary: 清空审查日志
+      tags:
+      - 系统管理-审查日志
+  /api/v1/sys-user:
+    delete:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      summary: 删除用户
+      tags:
+      - 系统管理-用户
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      summary: 用户列表
+      tags:
+      - 系统管理-用户
+    post:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      summary: 新增用户
+      tags:
+      - 系统管理-用户
+    put:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      summary: 编辑用户
+      tags:
+      - 系统管理-用户
+  /api/v1/sys-user/{id}:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      summary: 用户详情
+      tags:
+      - 系统管理-用户
+  /api/v1/sys-user/status/{id}:
+    put:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      summary: 启用/停用用户
+      tags:
+      - 系统管理-用户
+  /api/v1/system-setup:
+    delete:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      summary: 删除配置
+      tags:
+      - 系统管理-系统配置
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      summary: 配置列表
+      tags:
+      - 系统管理-系统配置
+    post:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      summary: 新增配置
+      tags:
+      - 系统管理-系统配置
+    put:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      summary: 编辑配置
+      tags:
+      - 系统管理-系统配置
+  /api/v1/system-setup/{id}:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      summary: 配置详情
+      tags:
+      - 系统管理-系统配置
+  /api/v1/system-setup/save:
+    post:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      summary: 批量保存配置
+      tags:
+      - 系统管理-系统配置
+  /api/v1/tenant:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      summary: 租户列表
+      tags:
+      - 平台管理-租户
+    post:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      summary: 新增租户
+      tags:
+      - 平台管理-租户
+    put:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      summary: 修改租户
+      tags:
+      - 平台管理-租户
+  /api/v1/tenant/{id}:
+    delete:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      summary: 删除租户
+      tags:
+      - 平台管理-租户
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      summary: 租户详情
+      tags:
+      - 平台管理-租户
+  /api/v1/tenant/{id}/things-project:
+    post:
+      produces:
+      - application/json
+      responses: {}
+      summary: 绑定/创建 things 项目
+      tags:
+      - 平台管理-租户
+    put:
+      produces:
+      - application/json
+      responses: {}
+      summary: 修改 things 项目名称
+      tags:
+      - 平台管理-租户
   /api/v1/thingmodel:
     delete:
       parameters:
@@ -2950,25 +3508,44 @@ paths:
       summary: 物模型单位同步
       tags:
       - 物模型
+  /api/v1/things/projects:
+    get:
+      produces:
+      - application/json
+      responses: {}
+      summary: things 项目列表
+      tags:
+      - 系统管理-things
+  /api/v1/things/reconcile:
+    post:
+      produces:
+      - application/json
+      responses: {}
+      summary: 全量对账
+      tags:
+      - 系统管理-things
+  /api/v1/things/test:
+    post:
+      produces:
+      - application/json
+      responses: {}
+      summary: 测试 things 连接
+      tags:
+      - 系统管理-things
   /api/v1/typeresource:
     get:
-      parameters:
-      - in: query
-        name: name
-        type: string
-      - in: query
-        name: type
-        type: string
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/httphelper.CommonResponse'
-      summary: 实例类型
+            items:
+              type: string
+            type: array
+      summary: 资源类型列表（页面页签数据源）
       tags:
-      - 资源管理
+      - 高级能力-资源管理
   /api/v1/unbind-driver:
     put:
       parameters:
@@ -2990,6 +3567,170 @@ paths:
       summary: 设备批量与驱动解绑
       tags:
       - 设备管理
+  /api/v1/user/getinfo:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      summary: 查询当前用户菜单
+      tags:
+      - 系统管理-个人中心
+  /api/v1/user/lang:
+    put:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      summary: 切换当前用户语言
+      tags:
+      - 系统管理-个人中心
+  /api/v1/user/profile:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      summary: 查询当前用户信息
+      tags:
+      - 系统管理-个人中心
+    put:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      summary: 修改当前用户信息
+      tags:
+      - 系统管理-个人中心
+  /api/v1/viz/boards:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: 查询看板列表
+      tags:
+      - 可视化-看板管理
+    post:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: 新建看板
+      tags:
+      - 可视化-看板管理
+  /api/v1/viz/boards/{boardId}:
+    delete:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: 删除看板
+      tags:
+      - 可视化-看板管理
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: 查询单个看板
+      tags:
+      - 可视化-看板管理
+    put:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: 更新看板
+      tags:
+      - 可视化-看板管理
+  /api/v1/viz/boards/{boardId}/active:
+    post:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: 设置默认/首页看板
+      tags:
+      - 可视化-看板管理
+  /api/v1/viz/device-query:
+    post:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: 按设备与属性批量查询数据（画布一次请求取全部组件）
+      tags:
+      - 可视化-看板取数
+  /api/v1/viz/metrics:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httphelper.CommonResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: 查询可绑定的平台/租户统计指标清单
+      tags:
+      - 可视化-看板取数
 securityDefinitions:
   ApiKeyAuth:
     in: header

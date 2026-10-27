@@ -24,6 +24,12 @@ export interface Tenant {
   /** 时序数据保留天数：>0 按天数，0 = 默认 30 天，<0 = 永久 */
   retentionDays: number
   remark: string
+  /** things 项目绑定（未启用/未绑定时为空） */
+  thingsProjectId?: number
+  thingsProjectName?: string
+  thingsBindStatus?: string
+  thingsLastError?: string
+  thingsLastSyncAt?: number
   created?: number
   modified?: number
 }

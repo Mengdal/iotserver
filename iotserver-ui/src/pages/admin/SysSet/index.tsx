@@ -12,11 +12,12 @@ import {
   Row,
   Space,
   Spin,
+  Switch,
   Typography,
   message,
 } from 'antd'
 import { ReloadOutlined } from '@ant-design/icons'
-import { getSysConfigs, saveSysConfigs, SysConfig } from '@/api'
+import { getSysConfigs, saveSysConfigs, testThingsConnection, SysConfig } from '@/api'
 import { isPlatformAdmin, useAuth } from '@/utils/auth'
 import { useBrand } from '@/components/Brand'
 import ImageUploader from '@/components/ImageUploader'
@@ -70,6 +71,7 @@ const SysSetPage: React.FC = () => {
 
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [testingThings, setTestingThings] = useState(false)
   const [items, setItems] = useState<SysConfig[]>([])
 
   const canEdit = useAuth('system:config:edit')
@@ -115,15 +117,52 @@ const SysSetPage: React.FC = () => {
     return map
   }, [items])
 
-  // 品牌区之外的配置（当前只有安全配置）
-  const otherGroups = useMemo(() => {
+  // 品牌区之外的配置按 groupName 分组：安全配置 / 通知配置
+  const configGroups = useMemo(() => {
     const brandKeys = new Set([
       ...TEXT_FIELDS.map(f => f.key),
       ...IMAGE_FIELDS.map(f => f.key),
       BG_FIELD.key,
     ])
-    return items.filter(item => !brandKeys.has(item.configKey))
+    const groups = new Map<string, SysConfig[]>()
+    items.forEach(item => {
+      if (brandKeys.has(item.configKey)) {
+        return
+      }
+      const group = item.groupName || 'other'
+      if (!groups.has(group)) {
+        groups.set(group, [])
+      }
+      groups.get(group)!.push(item)
+    })
+    const labels: Record<string, string> = {
+      security: t('安全配置'),
+      notify: t('通知配置'),
+      things: t('Things 平台'),
+    }
+    return Array.from(groups.entries()).map(([key, list]) => ({
+      key,
+      label: labels[key] || key,
+      items: [...list].sort((a, b) => a.sort - b.sort),
+    }))
   }, [items])
+
+  const handleTestThings = async () => {
+    setTestingThings(true)
+    try {
+      const resp = await testThingsConnection()
+      if (resp.success) {
+        messageApi.open({
+          type: 'success',
+          content: t('连接成功，共 {{count}} 个 things 项目', { count: resp.result.projectCount }),
+        })
+      } else {
+        messageApi.open({ type: 'error', content: resp.errorMsg })
+      }
+    } finally {
+      setTestingThings(false)
+    }
+  }
 
   const handleSave = async () => {
     try {
@@ -245,22 +284,40 @@ const SysSetPage: React.FC = () => {
             </Col>
           </Row>
 
-          {otherGroups.length > 0 && (
-            <>
-              <Divider orientation="left" plain>{t('安全配置')}</Divider>
+          {configGroups.map(group => (
+            <div key={group.key}>
+              <Divider orientation="left" plain>
+                <Space>
+                  <span>{group.label}</span>
+                  {group.key === 'things' && (
+                    <Button size="small" loading={testingThings} onClick={handleTestThings}>
+                      {t('测试连接')}
+                    </Button>
+                  )}
+                </Space>
+              </Divider>
               <Row gutter={16}>
-                {otherGroups.map(item => (
+                {group.items.map(item => (
                   <Col span={12} key={item.id}>
-                    <Form.Item label={tt(item.name)} name={item.configKey} extra={tt(item.remark) || undefined}>
+                    <Form.Item
+                      label={tt(item.name)}
+                      name={item.configKey}
+                      extra={tt(item.remark) || undefined}
+                      valuePropName={item.type === 'bool' ? 'checked' : 'value'}
+                    >
                       {item.type === 'number'
                         ? <InputNumber style={{ width: '100%' }} />
-                        : <Input />}
+                        : item.type === 'bool'
+                          ? <Switch />
+                          : item.type === 'password'
+                            ? <Input.Password autoComplete="new-password" />
+                            : <Input />}
                     </Form.Item>
                   </Col>
                 ))}
               </Row>
-            </>
-          )}
+            </div>
+          ))}
 
           <Form.Item style={{ marginTop: 8 }}>
             <Space>

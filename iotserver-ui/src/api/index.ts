@@ -28,3 +28,5 @@ export * from './tenant'
 export * from './gateway'
 export * from './solution'
 export * from './viz'
+
+export * from './things'

@@ -8,6 +8,7 @@ import (
 	"gorm.io/gorm"
 
 	"iotserver/internal/models"
+	"iotserver/internal/pkg/constants"
 )
 
 // ThingsPlatform 参考系统（iotddc / things）写入产品 / 设备 platform 字段的取值。
@@ -441,6 +442,72 @@ func EnsureTenantBuiltinBoards(tx *gorm.DB) error {
 			board.IsDefault = 1
 		}
 		if err := tx.Table("viz_board").Create(&board).Error; err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// MigrateAlertNotifyWays 清理已下线的通知渠道。
+//
+// 企业微信 / 钉钉 / 飞书 / 语音告警已移除；告警规则 JSON 里如果还保留这些
+// 配置，编辑弹窗会凭空多出一条无法渲染的通知。启动时直接删掉，只保留
+// 邮件、短信、WhatsApp 与 Webhook。
+func MigrateAlertNotifyWays(tx *gorm.DB) error {
+	if !tx.Migrator().HasTable("alert_rule") {
+		return nil
+	}
+	allowed := map[string]bool{
+		string(constants.Email):       true,
+		string(constants.TwilioEmail): true,
+		string(constants.SMS):         true,
+		string(constants.WhatsApp):    true,
+		string(constants.WEBAPI):      true,
+	}
+	var rows []struct {
+		Id     string
+		Notify string
+	}
+	if err := tx.Table("alert_rule").Select("id, notify").Find(&rows).Error; err != nil {
+		return err
+	}
+	for _, row := range rows {
+		if strings.TrimSpace(row.Notify) == "" {
+			continue
+		}
+		var list models.Notify
+		if err := json.Unmarshal([]byte(row.Notify), &list); err != nil {
+			continue
+		}
+		kept := make(models.Notify, 0, len(list))
+		changed := false
+		for _, item := range list {
+			if item.Name == constants.TwilioEmail {
+				item.Name = constants.Email
+				if item.Option == nil {
+					item.Option = models.MapStringString{}
+				}
+				item.Option["provider"] = "twilio"
+				changed = true
+			} else if item.Name == constants.Email && item.Option != nil && item.Option["provider"] == "" {
+				item.Option["provider"] = "smtp"
+				changed = true
+			}
+			if allowed[string(item.Name)] {
+				kept = append(kept, item)
+			} else {
+				changed = true
+			}
+		}
+		if !changed && len(kept) == len(list) {
+			continue
+		}
+		payload, err := json.Marshal(kept)
+		if err != nil {
+			return err
+		}
+		if err := tx.Table("alert_rule").Where("id = ?", row.Id).
+			Update("notify", string(payload)).Error; err != nil {
 			return err
 		}
 	}

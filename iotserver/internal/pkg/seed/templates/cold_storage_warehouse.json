@@ -1,0 +1,726 @@
+{
+  "key": "cold_storage_warehouse",
+  "name": "冷藏库环境监控",
+  "nameEn": "Chiller Room Monitoring",
+  "industry": "冷链仓储",
+  "version": 1,
+  "icon": "database",
+  "description": "冷藏库（0～8℃）温湿度、库门、化霜、供电与 4G 网关状态监控，支持断网缓存补传",
+  "descriptionEn": "Temperature/humidity, door, defrost, power and 4G gateway monitoring for chilled storage rooms (0–8°C), with offline buffering and backfill",
+  "thingModelJson": {
+    "properties": [
+      {
+        "name": "库温",
+        "identifier": "room_temp",
+        "dataType": "FLOAT",
+        "description": "冷藏库内实时温度（0～8℃）",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "30",
+          "min": "-20",
+          "step": "0.1",
+          "unit": "℃",
+          "unitName": "℃"
+        },
+        "dataSpecsList": null,
+        "nameEn": "Cold room temperature",
+        "descriptionEn": "Real-time temperature inside the chilled room (0–8°C)"
+      },
+      {
+        "name": "库内湿度",
+        "identifier": "room_humidity",
+        "dataType": "FLOAT",
+        "description": "冷库内相对湿度",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "100",
+          "min": "0",
+          "step": "0.1",
+          "unit": "%RH",
+          "unitName": "%RH"
+        },
+        "dataSpecsList": null,
+        "nameEn": "Cold room humidity",
+        "descriptionEn": "Cold room humidity"
+      },
+      {
+        "name": "设定温度",
+        "identifier": "set_temp",
+        "dataType": "FLOAT",
+        "description": "目标库温，支持远程下发",
+        "required": false,
+        "rwFlag": "RW",
+        "dataSpecs": {
+          "max": "30",
+          "min": "-20",
+          "step": "0.1",
+          "unit": "℃",
+          "unitName": "℃"
+        },
+        "dataSpecsList": null,
+        "nameEn": "Target temperature",
+        "descriptionEn": "Target temperature"
+      },
+      {
+        "name": "设定湿度",
+        "identifier": "set_humidity",
+        "dataType": "FLOAT",
+        "description": "目标湿度，支持远程下发",
+        "required": false,
+        "rwFlag": "RW",
+        "dataSpecs": {
+          "max": "100",
+          "min": "0",
+          "step": "0.1",
+          "unit": "%RH",
+          "unitName": "%RH"
+        },
+        "dataSpecsList": null,
+        "nameEn": "Target humidity",
+        "descriptionEn": "Target humidity"
+      },
+      {
+        "name": "库门状态",
+        "identifier": "door_status",
+        "dataType": "BOOL",
+        "description": "冷库门开关状态",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": null,
+        "dataSpecsList": [
+          {
+            "name": "停止 / Stopped",
+            "value": 0
+          },
+          {
+            "name": "运行 / Running",
+            "value": 1
+          }
+        ],
+        "nameEn": "Cold room door status",
+        "descriptionEn": "Cold room door status"
+      },
+      {
+        "name": "开门时长",
+        "identifier": "door_open_duration",
+        "dataType": "INT",
+        "description": "本次开门已持续秒数",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "86400",
+          "min": "0",
+          "step": "1",
+          "unit": "s",
+          "unitName": "s"
+        },
+        "dataSpecsList": null,
+        "nameEn": "Door open duration",
+        "descriptionEn": "Door open duration"
+      },
+      {
+        "name": "化霜状态",
+        "identifier": "defrost_status",
+        "dataType": "BOOL",
+        "description": "蒸发器化霜状态",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": null,
+        "dataSpecsList": [
+          {
+            "name": "停止 / Stopped",
+            "value": 0
+          },
+          {
+            "name": "运行 / Running",
+            "value": 1
+          }
+        ],
+        "nameEn": "Defrost status",
+        "descriptionEn": "Defrost status"
+      },
+      {
+        "name": "压缩机状态",
+        "identifier": "compressor_status",
+        "dataType": "BOOL",
+        "description": "制冷压缩机运行状态",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": null,
+        "dataSpecsList": [
+          {
+            "name": "停止 / Stopped",
+            "value": 0
+          },
+          {
+            "name": "运行 / Running",
+            "value": 1
+          }
+        ],
+        "nameEn": "Compressor status",
+        "descriptionEn": "Compressor status"
+      },
+      {
+        "name": "供电状态",
+        "identifier": "power_status",
+        "dataType": "BOOL",
+        "description": "市电供电状态，0 表示断电",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": null,
+        "dataSpecsList": [
+          {
+            "name": "停止 / Stopped",
+            "value": 0
+          },
+          {
+            "name": "运行 / Running",
+            "value": 1
+          }
+        ],
+        "nameEn": "Mains power status",
+        "descriptionEn": "Mains power status"
+      },
+      {
+        "name": "传感器状态",
+        "identifier": "sensor_status",
+        "dataType": "BOOL",
+        "description": "温湿度传感器在线状态",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": null,
+        "dataSpecsList": [
+          {
+            "name": "停止 / Stopped",
+            "value": 0
+          },
+          {
+            "name": "运行 / Running",
+            "value": 1
+          }
+        ],
+        "nameEn": "Sensor status",
+        "descriptionEn": "Sensor status"
+      },
+      {
+        "name": "网关在线",
+        "identifier": "gateway_online",
+        "dataType": "BOOL",
+        "description": "4G 网关在线状态",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": null,
+        "dataSpecsList": [
+          {
+            "name": "停止 / Stopped",
+            "value": 0
+          },
+          {
+            "name": "运行 / Running",
+            "value": 1
+          }
+        ],
+        "nameEn": "Gateway online",
+        "descriptionEn": "Gateway online"
+      },
+      {
+        "name": "4G 信号",
+        "identifier": "signal_strength",
+        "dataType": "INT",
+        "description": "4G CSQ 信号强度",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "31",
+          "min": "0",
+          "step": "1",
+          "unit": "",
+          "unitName": ""
+        },
+        "dataSpecsList": null,
+        "nameEn": "4G signal strength",
+        "descriptionEn": "4G signal strength"
+      },
+      {
+        "name": "备用电池",
+        "identifier": "battery_level",
+        "dataType": "FLOAT",
+        "description": "网关备用电池电量",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "100",
+          "min": "0",
+          "step": "0.1",
+          "unit": "%",
+          "unitName": "%"
+        },
+        "dataSpecsList": null,
+        "nameEn": "Backup battery level",
+        "descriptionEn": "Backup battery level"
+      },
+      {
+        "name": "日累计能耗",
+        "identifier": "energy_consumption",
+        "dataType": "FLOAT",
+        "description": "冷库当日累计能耗",
+        "required": false,
+        "rwFlag": "R",
+        "dataSpecs": {
+          "max": "10000",
+          "min": "0",
+          "step": "0.1",
+          "unit": "kW·h",
+          "unitName": "kW·h"
+        },
+        "dataSpecsList": null,
+        "nameEn": "Daily energy consumption",
+        "descriptionEn": "Daily energy consumption"
+      }
+    ],
+    "events": [
+      {
+        "eventName": "高温报警",
+        "eventType": "ALERT",
+        "identifier": "high_temp",
+        "description": "库温超过上限",
+        "required": false,
+        "outputData": [
+          {
+            "name": "当前库温",
+            "identifier": "value",
+            "dataType": "FLOAT",
+            "description": "Current temperature",
+            "required": false,
+            "rwFlag": "R",
+            "dataSpecs": {
+              "max": "30",
+              "min": "-20",
+              "step": "0.1",
+              "unit": "℃",
+              "unitName": "℃"
+            },
+            "dataSpecsList": null,
+            "nameEn": "Current temperature",
+            "descriptionEn": "Current temperature"
+          },
+          {
+            "name": "设定温度",
+            "identifier": "target",
+            "dataType": "FLOAT",
+            "description": "Target temperature",
+            "required": false,
+            "rwFlag": "R",
+            "dataSpecs": {
+              "max": "30",
+              "min": "-20",
+              "step": "0.1",
+              "unit": "℃",
+              "unitName": "℃"
+            },
+            "dataSpecsList": null,
+            "nameEn": "Target temperature",
+            "descriptionEn": "Target temperature"
+          }
+        ],
+        "eventNameEn": "High temperature alarm",
+        "descriptionEn": "High temperature alarm"
+      },
+      {
+        "eventName": "低温报警",
+        "eventType": "ALERT",
+        "identifier": "low_temp",
+        "description": "库温低于下限",
+        "required": false,
+        "outputData": [
+          {
+            "name": "当前库温",
+            "identifier": "value",
+            "dataType": "FLOAT",
+            "description": "Current temperature",
+            "required": false,
+            "rwFlag": "R",
+            "dataSpecs": {
+              "max": "30",
+              "min": "-20",
+              "step": "0.1",
+              "unit": "℃",
+              "unitName": "℃"
+            },
+            "dataSpecsList": null,
+            "nameEn": "Current temperature",
+            "descriptionEn": "Current temperature"
+          },
+          {
+            "name": "设定温度",
+            "identifier": "target",
+            "dataType": "FLOAT",
+            "description": "Target temperature",
+            "required": false,
+            "rwFlag": "R",
+            "dataSpecs": {
+              "max": "30",
+              "min": "-20",
+              "step": "0.1",
+              "unit": "℃",
+              "unitName": "℃"
+            },
+            "dataSpecsList": null,
+            "nameEn": "Target temperature",
+            "descriptionEn": "Target temperature"
+          }
+        ],
+        "eventNameEn": "Low temperature alarm",
+        "descriptionEn": "Low temperature alarm"
+      },
+      {
+        "eventName": "湿度超限",
+        "eventType": "ALERT",
+        "identifier": "humidity_alarm",
+        "description": "库内湿度超出范围",
+        "required": false,
+        "outputData": [
+          {
+            "name": "当前湿度",
+            "identifier": "value",
+            "dataType": "FLOAT",
+            "description": "Current humidity",
+            "required": false,
+            "rwFlag": "R",
+            "dataSpecs": {
+              "max": "30",
+              "min": "-20",
+              "step": "0.1",
+              "unit": "%RH",
+              "unitName": "%RH"
+            },
+            "dataSpecsList": null,
+            "nameEn": "Current humidity",
+            "descriptionEn": "Current humidity"
+          }
+        ],
+        "eventNameEn": "Humidity out of range",
+        "descriptionEn": "Humidity out of range"
+      },
+      {
+        "eventName": "传感器故障",
+        "eventType": "ALERT",
+        "identifier": "sensor_fault",
+        "description": "温湿度传感器断线或故障",
+        "required": false,
+        "outputData": [
+          {
+            "name": "传感器状态",
+            "identifier": "value",
+            "dataType": "BOOL",
+            "description": "Sensor status",
+            "required": false,
+            "rwFlag": "R",
+            "dataSpecs": null,
+            "dataSpecsList": [
+              {
+                "name": "停止 / Stopped",
+                "value": 0
+              },
+              {
+                "name": "运行 / Running",
+                "value": 1
+              }
+            ],
+            "nameEn": "Sensor status",
+            "descriptionEn": "Sensor status"
+          }
+        ],
+        "eventNameEn": "Sensor fault",
+        "descriptionEn": "Sensor fault"
+      },
+      {
+        "eventName": "断电报警",
+        "eventType": "ALERT",
+        "identifier": "power_failure",
+        "description": "市电断电，网关切换备用电池",
+        "required": false,
+        "outputData": [
+          {
+            "name": "供电状态",
+            "identifier": "value",
+            "dataType": "BOOL",
+            "description": "Power status",
+            "required": false,
+            "rwFlag": "R",
+            "dataSpecs": null,
+            "dataSpecsList": [
+              {
+                "name": "停止 / Stopped",
+                "value": 0
+              },
+              {
+                "name": "运行 / Running",
+                "value": 1
+              }
+            ],
+            "nameEn": "Power status",
+            "descriptionEn": "Power status"
+          }
+        ],
+        "eventNameEn": "Power failure",
+        "descriptionEn": "Power failure"
+      }
+    ],
+    "services": [
+      {
+        "serviceName": "设定温度",
+        "identifier": "set_temp",
+        "description": "下发冷库目标温度",
+        "required": false,
+        "callType": "ASYNC",
+        "inputParams": [
+          {
+            "name": "目标温度",
+            "identifier": "target",
+            "dataType": "FLOAT",
+            "description": "Target temperature",
+            "required": false,
+            "rwFlag": "RW",
+            "dataSpecs": {
+              "max": "50",
+              "min": "-40",
+              "step": "0.1",
+              "unit": "℃",
+              "unitName": "℃"
+            },
+            "dataSpecsList": null,
+            "nameEn": "Target temperature",
+            "descriptionEn": "Target temperature"
+          }
+        ],
+        "outParams": [],
+        "serviceNameEn": "Set target temperature",
+        "descriptionEn": "Set target temperature"
+      },
+      {
+        "serviceName": "设定湿度",
+        "identifier": "set_humidity",
+        "description": "下发冷库目标湿度",
+        "required": false,
+        "callType": "ASYNC",
+        "inputParams": [
+          {
+            "name": "目标湿度",
+            "identifier": "target",
+            "dataType": "FLOAT",
+            "description": "Target humidity",
+            "required": false,
+            "rwFlag": "RW",
+            "dataSpecs": {
+              "max": "100",
+              "min": "0",
+              "step": "0.1",
+              "unit": "%RH",
+              "unitName": "%RH"
+            },
+            "dataSpecsList": null,
+            "nameEn": "Target humidity",
+            "descriptionEn": "Target humidity"
+          }
+        ],
+        "outParams": [],
+        "serviceNameEn": "Set target humidity",
+        "descriptionEn": "Set target humidity"
+      },
+      {
+        "serviceName": "强制化霜",
+        "identifier": "force_defrost",
+        "description": "手动触发一次化霜",
+        "required": false,
+        "callType": "ASYNC",
+        "inputParams": [],
+        "outParams": [],
+        "serviceNameEn": "Force defrost",
+        "descriptionEn": "Force defrost"
+      },
+      {
+        "serviceName": "补传数据",
+        "identifier": "sync_data",
+        "description": "触发网关补传本地缓存数据",
+        "required": false,
+        "callType": "ASYNC",
+        "inputParams": [],
+        "outParams": [],
+        "serviceNameEn": "Sync buffered data",
+        "descriptionEn": "Sync buffered data"
+      }
+    ]
+  },
+  "alarmRules": [
+    {
+      "name": "库温高报警",
+      "propertyCode": "room_temp",
+      "operator": ">",
+      "value": "8",
+      "alertLevel": 1,
+      "alertType": 1,
+      "silenceTime": 300,
+      "description": "库温超过 8℃",
+      "descriptionEn": "Cold room temperature above 8°C"
+    },
+    {
+      "name": "库温低报警",
+      "propertyCode": "room_temp",
+      "operator": "<",
+      "value": "-5",
+      "alertLevel": 1,
+      "alertType": 1,
+      "silenceTime": 300,
+      "description": "库温低于 -5℃",
+      "descriptionEn": "Chilled room temperature below -5°C"
+    },
+    {
+      "name": "湿度过高",
+      "propertyCode": "room_humidity",
+      "operator": ">",
+      "value": "85",
+      "alertLevel": 2,
+      "alertType": 1,
+      "silenceTime": 300,
+      "description": "库内湿度超过 85%RH",
+      "descriptionEn": "Cold room humidity above 85%RH"
+    },
+    {
+      "name": "湿度过低",
+      "propertyCode": "room_humidity",
+      "operator": "<",
+      "value": "40",
+      "alertLevel": 2,
+      "alertType": 1,
+      "silenceTime": 300,
+      "description": "库内湿度低于 40%RH",
+      "descriptionEn": "Cold room humidity below 40%RH"
+    },
+    {
+      "name": "开门超时",
+      "propertyCode": "door_open_duration",
+      "operator": ">",
+      "value": "300",
+      "alertLevel": 2,
+      "alertType": 1,
+      "silenceTime": 300,
+      "description": "库门开启超过 300 秒",
+      "descriptionEn": "Cold room door open over 300 seconds"
+    },
+    {
+      "name": "传感器故障",
+      "propertyCode": "sensor_status",
+      "operator": "=",
+      "value": "0",
+      "alertLevel": 1,
+      "alertType": 1,
+      "silenceTime": 300,
+      "description": "温湿度传感器离线或故障",
+      "descriptionEn": "Temperature/humidity sensor offline"
+    },
+    {
+      "name": "断电报警",
+      "propertyCode": "power_status",
+      "operator": "=",
+      "value": "0",
+      "alertLevel": 1,
+      "alertType": 1,
+      "silenceTime": 300,
+      "description": "市电断电，网关转备用电池",
+      "descriptionEn": "Mains power lost, gateway on battery"
+    },
+    {
+      "name": "网关离线",
+      "propertyCode": "gateway_online",
+      "operator": "=",
+      "value": "0",
+      "alertLevel": 2,
+      "alertType": 1,
+      "silenceTime": 300,
+      "description": "4G 网关离线",
+      "descriptionEn": "4G gateway offline"
+    }
+  ],
+  "dashboard": {
+    "name": "冷藏库环境看板",
+    "nameEn": "Chiller Room Dashboard",
+    "widgets": [
+      {
+        "title": "库温趋势",
+        "type": "line",
+        "propertyCode": "room_temp",
+        "timeRange": "6h",
+        "aggInterval": 300,
+        "aggMethod": "avg",
+        "titleEn": "Cold room temperature trend"
+      },
+      {
+        "title": "湿度趋势",
+        "type": "line",
+        "propertyCode": "room_humidity",
+        "timeRange": "6h",
+        "aggInterval": 300,
+        "aggMethod": "avg",
+        "titleEn": "Cold room humidity trend"
+      },
+      {
+        "title": "当前库温",
+        "type": "kpi",
+        "propertyCode": "room_temp",
+        "unit": "℃",
+        "decimals": 1,
+        "titleEn": "Current temperature"
+      },
+      {
+        "title": "当前湿度",
+        "type": "kpi",
+        "propertyCode": "room_humidity",
+        "unit": "%RH",
+        "decimals": 1,
+        "titleEn": "Current humidity"
+      },
+      {
+        "title": "库温仪表",
+        "type": "gauge",
+        "propertyCode": "room_temp",
+        "unit": "℃",
+        "min": -20,
+        "max": 30,
+        "titleEn": "Temperature gauge"
+      },
+      {
+        "title": "日累计能耗",
+        "type": "kpi",
+        "propertyCode": "energy_consumption",
+        "unit": "kW·h",
+        "decimals": 1,
+        "titleEn": "Daily energy"
+      },
+      {
+        "title": "网关信号",
+        "type": "kpi",
+        "propertyCode": "signal_strength",
+        "unit": "",
+        "decimals": 0,
+        "titleEn": "Gateway signal"
+      },
+      {
+        "title": "冷链监控说明",
+        "titleEn": "Cold chain overview",
+        "type": "text",
+        "text": "实时监控冷藏库温湿度、库门、化霜、供电与 4G 网关状态；断网期间数据由网关本地缓存，恢复后自动补传。",
+        "textEn": "Monitor chiller room temperature, humidity, door, defrost, power and 4G gateway status. Data is buffered locally during outages and backfilled automatically."
+      }
+    ]
+  },
+  "metrics": {
+    "running": "compressor_status",
+    "output": null,
+    "good": null,
+    "reject": null,
+    "cycleTime": null
+  }
+}

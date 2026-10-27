@@ -70,6 +70,14 @@ func RegisterGateway(engine *gin.Engine, dic *di.Container) {
 		platform.POST("tenant", ctl.Perm(middleware.PermPlatformTenantAdd), ctl.TenantAdd)
 		platform.PUT("tenant", ctl.Perm(middleware.PermPlatformTenantEdit), ctl.TenantUpdate)
 		platform.DELETE("tenant/:id", ctl.Perm(middleware.PermPlatformTenantRemove), ctl.TenantDelete)
+		// 存量租户绑定已有 things 项目，或为存量租户创建项目
+		platform.POST("tenant/:id/things-project", ctl.Perm(middleware.PermPlatformTenantEdit), ctl.TenantBindThingsProject)
+		platform.PUT("tenant/:id/things-project", ctl.Perm(middleware.PermPlatformTenantEdit), ctl.TenantRenameThingsProject)
+
+		// things 平台测试连接 / 项目列表 / 全量对账
+		platform.POST("things/test", ctl.Perm(middleware.PermConfigEdit), ctl.ThingsTestConnection)
+		platform.GET("things/projects", ctl.Perm(middleware.PermPlatformTenantEdit), ctl.ThingsProjects)
+		platform.POST("things/reconcile", ctl.Perm(middleware.PermConfigEdit), ctl.ThingsReconcile)
 
 		// 系统配置是全局唯一一份（sys_config 没有 tenant_id），写接口只允许平台管理员：
 		// 租户管理员天然拥有 system:config:* 权限码，若只校验权限码即可改写全平台配置。
@@ -89,6 +97,8 @@ func RegisterGateway(engine *gin.Engine, dic *di.Container) {
 		v1Auth.POST("gateway", ctl.Perm(middleware.PermGatewayAdd), ctl.GatewayAdd)
 		v1Auth.PUT("gateway", ctl.Perm(middleware.PermGatewayEdit), ctl.GatewayUpdate)
 		v1Auth.DELETE("gateway/:id", ctl.Perm(middleware.PermGatewayRemove), ctl.GatewayDelete)
+		v1Auth.POST("gateway/things-rename", ctl.Perm(middleware.PermGatewayEdit), ctl.GatewayRenameThings)
+		v1Auth.POST("gateway/things-reconcile", ctl.Perm(middleware.PermGatewayEdit), ctl.GatewayThingsReconcile)
 		v1Auth.PUT("gateway/config", ctl.Perm(middleware.PermGatewayConfig), ctl.GatewayPushConfig)
 		v1Auth.POST("gateway/command", ctl.Perm(middleware.PermGatewayCommand), ctl.GatewayCommand)
 		// 参考系统（/edge）网关控制：重启 / 写属性 / 设备树

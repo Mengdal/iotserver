@@ -97,3 +97,37 @@ func (ctl *controller) TenantDelete(c *gin.Context) {
 	}
 	httphelper.ResultSuccess(nil, c.Writer, lc)
 }
+
+// @Tags    平台管理-租户
+// @Summary 绑定/创建 things 项目
+// @Produce json
+// @Router  /api/v1/tenant/{id}/things-project [post]
+func (ctl *controller) TenantBindThingsProject(c *gin.Context) {
+	var req dtos.TenantThingsBindRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		httphelper.RenderFail(c, errort.NewCommonErr(errort.DefaultReqParamsError, err), c.Writer, ctl.lc)
+		return
+	}
+	if err := ctl.getTenantApp().TenantBindThingsProject(c, c.Param("id"), req); err != nil {
+		httphelper.RenderFail(c, err, c.Writer, ctl.lc)
+		return
+	}
+	httphelper.ResultSuccess(nil, c.Writer, ctl.lc)
+}
+
+// @Tags    平台管理-租户
+// @Summary 修改 things 项目名称
+// @Produce json
+// @Router  /api/v1/tenant/{id}/things-project [put]
+func (ctl *controller) TenantRenameThingsProject(c *gin.Context) {
+	var req dtos.TenantThingsRenameRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		httphelper.RenderFail(c, errort.NewCommonErr(errort.DefaultReqParamsError, err), c.Writer, ctl.lc)
+		return
+	}
+	if err := ctl.getTenantApp().TenantRenameThingsProject(c, c.Param("id"), req.Name); err != nil {
+		httphelper.RenderFail(c, err, c.Writer, ctl.lc)
+		return
+	}
+	httphelper.ResultSuccess(nil, c.Writer, ctl.lc)
+}

@@ -47,9 +47,8 @@ func gatewayByPkSn(c *Client, pk, sn string) (models.Gateway, error) {
 // 幂等键就是这一对列：网关重连后重发全量清单、或清单与数据报文乱序到达，
 // 都不会产生重复设备。调用方需使用该网关所属租户的作用域。
 //
-// 注意主键用 uuid 而不是 utils.RandomNum()：后者是 math/rand + 时间种子 + 8 位数字
-// （1e8 空间，见 internal/pkg/utils/uuid.go:17），一个网关一包就可能报几百台设备，
-// 用它当主键会有实际碰撞风险。
+// 注意主键用 uuid 而不是 utils.RandomNum()：后者只有 8 位数字（1e8 空间），
+// 一个网关一包就可能报几百台设备，用它当主键会有实际碰撞风险。
 func upsertGatewayDevice(c *Client, d models.Device) (models.Device, bool, error) {
 	d.GatewayId = strings.TrimSpace(d.GatewayId)
 	d.DeviceKey = strings.TrimSpace(d.DeviceKey)

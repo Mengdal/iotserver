@@ -21,8 +21,11 @@ type TenantAddRequest struct {
 	MaxGateways  int    `json:"maxGateways"`
 	MaxUsers     int    `json:"maxUsers"`
 	// RetentionDays 时序数据保留天数：>0 按该天数、=0 用默认值（30 天）、<0 永久保留
-	RetentionDays int    `json:"retentionDays"`
-	Remark        string `json:"remark"`
+	RetentionDays int `json:"retentionDays"`
+	// ThingsProjectName things 项目名称。things 启用时必填；things 未启用时忽略。
+	// things 要求 4~30 字符且同一服务账号下唯一。
+	ThingsProjectName string `json:"thingsProjectName"`
+	Remark            string `json:"remark"`
 }
 
 // TenantUpdateRequest 修改租户
@@ -58,6 +61,12 @@ type TenantResponse struct {
 	// RetentionDays 时序数据保留天数：>0 按该天数、=0 用默认值（30 天）、<0 永久保留
 	RetentionDays int    `json:"retentionDays"`
 	Remark        string `json:"remark"`
-	Created       int64  `json:"created"`
-	Modified      int64  `json:"modified"`
+	// things 绑定信息（things 未启用或未绑定时为空）
+	ThingsProjectId   int64  `json:"thingsProjectId"`
+	ThingsProjectName string `json:"thingsProjectName"`
+	ThingsBindStatus  string `json:"thingsBindStatus"`
+	ThingsLastError   string `json:"thingsLastError"`
+	ThingsLastSyncAt  int64  `json:"thingsLastSyncAt"`
+	Created           int64  `json:"created"`
+	Modified          int64  `json:"modified"`
 }

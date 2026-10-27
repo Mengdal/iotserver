@@ -57,6 +57,8 @@ const PALETTE_SELECTOR = '.board-editor__palette-item--draggable'
 const DRAG_HANDLE = '.ant-card-head, .board-editor__container-head'
 
 const newWidgetId = () => `w${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`
+type AddPaletteWidget = (manifest: VizWidgetManifest, force?: boolean) => void
+type CleanupFn = () => void
 
 /** 模板项 → 新组件（落位/点击添加共用）：默认标题与配置都来自组件注册表 */
 const buildWidgetFromManifest = (
@@ -112,6 +114,22 @@ const BoardEdit: React.FC = () => {
   const [settingsId, setSettingsId] = useState('')
   // 拖拽刚落下的那一下 click 要吞掉，否则会"拖入一个 + 点击再加一个"
   const dragJustEndedRef = useRef(false)
+  // 组件库拖拽状态：是否真正 drop、拖的是哪个模板
+  const droppedRef = useRef(false)
+  const draggedManifestRef = useRef<VizWidgetManifest | null>(null)
+  const widgetsRef = useRef<VizWidget[]>([])
+  widgetsRef.current = widgets
+  const addPaletteWidgetRef = useRef<AddPaletteWidget>(() => undefined)
+  const cleanupPhantomGridNodesRef = useRef<CleanupFn>(() => undefined)
+  const pointerRef = useRef({ x: 0, y: 0 })
+
+  useEffect(() => {
+    const onMove = (event: MouseEvent) => {
+      pointerRef.current = { x: event.clientX, y: event.clientY }
+    }
+    document.addEventListener('mousemove', onMove, true)
+    return () => document.removeEventListener('mousemove', onMove, true)
+  }, [])
 
   const palette = useMemo(() => paletteManifests(), [])
   const childrenByParent = useMemo(() => groupByParent(widgets, parentOf), [widgets, parentOf])
@@ -161,16 +179,18 @@ const BoardEdit: React.FC = () => {
   }
 
   /** 面板项点击 = 落到画布底部（拖入不可用时的保底路径） */
-  const addPaletteWidget = (manifest: VizWidgetManifest) => {
-    if (dragJustEndedRef.current) return
+  const addPaletteWidget = (manifest: VizWidgetManifest, force = false) => {
+    if (!force && dragJustEndedRef.current) return
     const layout = nextLayout(manifest.defaultSize.w, manifest.defaultSize.h)
     const widget = buildWidgetFromManifest(manifest, newWidgetId(), layout)
+    widgetsRef.current = widgetsRef.current.concat([widget])
     setWidgets(prev => prev.concat([widget]))
     setParentOf(prev => ({ ...prev, [widget.id]: '' }))
     markDirty()
     // 数据类组件直接打开配置抽屉，省得用户再找
     if (manifest.data && manifest.Settings) setSettingsId(widget.id)
   }
+  addPaletteWidgetRef.current = addPaletteWidget
 
   /* ---------- 网格事件 ---------- */
 
@@ -195,9 +215,23 @@ const BoardEdit: React.FC = () => {
     )
     // setupDragIn 结束时会在源元素上派发 dragstop；用它标记"这一次是拖拽，不是点击"
     const nodes = Array.from(document.querySelectorAll<HTMLElement>(PALETTE_SELECTOR))
-    const onDragStart = () => { dragJustEndedRef.current = true }
+    const onDragStart = (event: Event) => {
+      dragJustEndedRef.current = true
+      droppedRef.current = false
+      const type = (event.currentTarget as HTMLElement)?.getAttribute('data-manifest-type') || ''
+      draggedManifestRef.current = palette.find(item => item.type === type) || null
+    }
     const onDragStop = () => {
-      window.setTimeout(() => { dragJustEndedRef.current = false }, 300)
+      window.setTimeout(() => {
+        dragJustEndedRef.current = false
+        // 拖到容器外/画布下方时 gridstack 可能没有真正 drop：保底落到画布底部
+        if (!droppedRef.current && draggedManifestRef.current) {
+          addPaletteWidgetRef.current(draggedManifestRef.current, true)
+        }
+        // 清掉拖拽经过容器时残留的幽灵节点，并把容器高度收回到实际内容
+        window.setTimeout(() => cleanupPhantomGridNodesRef.current(), 120)
+        draggedManifestRef.current = null
+      }, 120)
     }
     nodes.forEach((node) => {
       node.addEventListener('dragstart', onDragStart)
@@ -227,12 +261,46 @@ const BoardEdit: React.FC = () => {
       setWidgets(prev => prev.map(w => (w.id === movedId ? { ...w, layout } : w)))
       setParentOf(prev => ({ ...prev, [movedId]: containerId }))
       markDirty()
+      droppedRef.current = true
       return
     }
     const raw = node.props ? node.props.template : undefined
     const template = typeof raw === 'string' ? raw : ''
     const manifest = palette.find(m => m.type === template)
     if (!manifest) return
+
+    // 拖拽经过容器时 gridstack 可能把「落在容器下方画布」误判成容器 drop。
+    // 指针其实不在容器矩形内时，移除误加的节点，按底部追加处理。
+    if (containerId) {
+      const containerItem = document.querySelector<HTMLElement>(`.grid-stack-item[gs-id="${containerId}"]`)
+      const parentGrid = containerItem?.closest<HTMLElement>('.grid-stack')
+      const grid = (parentGrid as any)?.gridstack
+      const layout = widgetById.get(containerId)?.layout
+      const point = pointerRef.current
+      let inside = false
+      if (parentGrid && grid && layout) {
+        const gridRect = parentGrid.getBoundingClientRect()
+        const cellW = gridRect.width / grid.getColumn()
+        const cellH = grid.getCellHeight(true)
+        const left = gridRect.left + layout.x * cellW
+        const right = gridRect.left + (layout.x + layout.w) * cellW
+        const top = gridRect.top + layout.y * cellH
+        const bottom = gridRect.top + (layout.y + layout.h) * cellH
+        inside = point.x >= left && point.x <= right && point.y >= top && point.y <= bottom
+      }
+      if (!inside) {
+        if (node.el && node.grid) {
+          try {
+            node.grid.removeWidget(node.el, true)
+          } catch {
+            // ignore
+          }
+        }
+        addPaletteWidgetRef.current(manifest, true)
+        droppedRef.current = true
+        return
+      }
+    }
     const widgetId = newWidgetId()
     node.id = widgetId
     if (node.el) node.el.setAttribute('gs-id', widgetId)
@@ -242,9 +310,11 @@ const BoardEdit: React.FC = () => {
       w: node.w || manifest.defaultSize.w,
       h: node.h || manifest.defaultSize.h,
     })
+    widgetsRef.current = widgetsRef.current.concat([widget])
     setWidgets(prev => prev.concat([widget]))
     setParentOf(prev => ({ ...prev, [widgetId]: containerId }))
     markDirty()
+    droppedRef.current = true
     if (manifest.data && manifest.Settings) setSettingsId(widgetId)
   }
 
@@ -279,6 +349,33 @@ const BoardEdit: React.FC = () => {
     }
     setDirty(true)
   }
+
+  /** 清理 gridstack 外部拖拽经过容器时留下的临时节点，避免容器被撑高。 */
+  const cleanupPhantomGridNodes = () => {
+    const ids = new Set(widgetsRef.current.map(w => w.id))
+    document.querySelectorAll<HTMLElement>('.grid-canvas').forEach(el => {
+      const grid = (el as any).gridstack
+      if (!grid?.engine) return
+      grid.engine.nodes.slice().forEach((node: any) => {
+        const nodeId = node.id !== undefined && node.id !== null ? String(node.id) : ''
+        if (!nodeId || ids.has(nodeId)) return
+        if (node.el) {
+          try {
+            grid.removeWidget(node.el, true)
+          } catch {
+            // node 已被 gridstack 清理
+          }
+        }
+      })
+      const isTop = el.classList.contains('board-editor__grid')
+      const maxRow = grid.engine.nodes.reduce((max: number, node: any) => Math.max(max, node.y + node.h), 0)
+      const minRow = Math.max(1, maxRow + (isTop ? 4 : 0))
+      if (grid.opts.minRow !== minRow) {
+        grid.updateOptions({ minRow })
+      }
+    })
+  }
+  cleanupPhantomGridNodesRef.current = cleanupPhantomGridNodes
 
   const updateWidget = (widgetId: string, patch: Partial<VizWidget>) => {
     setWidgets(prev => prev.map(w => (w.id === widgetId ? { ...w, ...patch } : w)))
@@ -610,6 +707,7 @@ const BoardEdit: React.FC = () => {
                   <div
                     key={manifest.type}
                     className="board-editor__palette-item board-editor__palette-item--draggable"
+                    data-manifest-type={manifest.type}
                     onClick={() => addPaletteWidget(manifest)}
                   >
                     {manifest.icon}
@@ -628,6 +726,7 @@ const BoardEdit: React.FC = () => {
             rowHeight={ROW_HEIGHT}
             margin={12}
             readOnly={readOnly}
+            extraRow
             className="board-editor__grid"
             dragHandle={DRAG_HANDLE}
             onReady={handleGridReady}

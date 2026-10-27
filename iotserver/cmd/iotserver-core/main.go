@@ -15,6 +15,9 @@ import (
 	"context"
 	"iotserver/internal/iotserver/core"
 
+	// 注册 swag 生成的文档；不导入时 /swagger/doc.json 会返回 500。
+	_ "iotserver/cmd/iotserver-core/docs"
+
 	"github.com/gin-gonic/gin"
 )
 

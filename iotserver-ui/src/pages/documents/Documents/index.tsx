@@ -49,7 +49,7 @@ const FEATURES: Feature[] = [
   {
     icon: <AlertOutlined />,
     title: t('告警中心'),
-    description: t('按设备数据、事件或状态配置告警规则，通知支持企业微信、钉钉、飞书与 Webhook。'),
+    description: t('按设备数据、事件或状态配置告警规则，通知支持邮件、短信、WhatsApp 与 Webhook。'),
   },
   {
     icon: <ThunderboltOutlined />,

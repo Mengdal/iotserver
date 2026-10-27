@@ -48,12 +48,20 @@ export const EditRuleModal = forwardRef<EditRuleModalRef, EditRuleModalProps>(({
 
   const optionsNotify = [
     { label: t('告警中心'), value: 'alarm', disabled: true },
-    // { label: 'sms短信', value: 'sms' },
-    { label: t('企业微信机器人'), value: '企业微信机器人' },
-    { label: t('钉钉机器人'), value: '钉钉机器人' },
-    { label: t('飞书机器人'), value: '飞书机器人' },
+    { label: t('邮件'), value: 'email' },
+    { label: t('短信'), value: 'sms' },
+    { label: t('WhatsApp'), value: 'whatsapp' },
     { label: t('API接口'), value: 'API接口' },
   ]
+
+  const notifyTypeLabel = (type: string) => {
+    switch (type) {
+      case 'email': return t('邮件')
+      case 'sms': return t('短信')
+      case 'whatsapp': return t('WhatsApp')
+      default: return t('API接口')
+    }
+  }
 
   // 获取产品接口
   const productTypeApi = useRequest(getProductList, {
@@ -202,15 +210,20 @@ export const EditRuleModal = forwardRef<EditRuleModalRef, EditRuleModalProps>(({
       // notify:
     }
     // init.silence_time = String(init.silence_time)
-    init.notify = (ruleInfo.notify || []).map((item) => ({
-      ...item,
-      end_effect_time: dayjs(time2Timestamp(item.end_effect_time)),
-      start_effect_time: dayjs(time2Timestamp(item.start_effect_time)),
-      option: {
-        ...item.option,
-        phoneNumber: item.option.phoneNumber && item.option?.phoneNumber.slice(3),
-      },
-    }))
+    const supportedNotify = ['email', 'twilio_email', 'sms', 'whatsapp', 'API接口']
+    init.notify = (ruleInfo.notify || []).filter(item => supportedNotify.includes(item.name)).map((item) => {
+      const isTwilioEmail = item.name === 'twilio_email'
+      return {
+        ...item,
+        name: 'email',
+        end_effect_time: item.end_effect_time ? dayjs(time2Timestamp(item.end_effect_time)) : undefined,
+        start_effect_time: item.start_effect_time ? dayjs(time2Timestamp(item.start_effect_time)) : undefined,
+        option: {
+          ...item.option,
+          provider: isTwilioEmail ? 'twilio' : (item.option?.provider || 'smtp'),
+        },
+      }
+    })
     init.trigger = init.sub_rule?.[0].trigger || '设备数据触发'
     if (init.sub_rule?.[0].option.decide_condition) {
       init.decide_condition_1 = init.sub_rule[0].option.decide_condition.split(' ')[0]
@@ -286,13 +299,14 @@ export const EditRuleModal = forwardRef<EditRuleModalRef, EditRuleModalProps>(({
                     decide_condition_1: undefined,
                     decide_condition_2: undefined,
                     trigger: undefined,
-                    notify: (values.notify || []).map((item: { end_effect_time: { format: (arg0: string) => any }; start_effect_time: { format: (arg0: string) => any }; option: { phoneNumber: any } }) => ({
+                    notify: (values.notify || []).map((item: { end_effect_time?: { format: (arg0: string) => any }; start_effect_time?: { format: (arg0: string) => any }; name: string; option: { phoneNumber?: string; provider?: string } }) => ({
                       ...item,
-                      end_effect_time: item.end_effect_time.format(dateFormat),
-                      start_effect_time: item.start_effect_time.format(dateFormat),
+                      end_effect_time: item.end_effect_time ? item.end_effect_time.format(dateFormat) : '',
+                      start_effect_time: item.start_effect_time ? item.start_effect_time.format(dateFormat) : '',
                       option: {
                         ...item.option,
-                        phoneNumber: item.option.phoneNumber && `+86${item.option.phoneNumber}`,
+                        provider: item.name === 'email' ? (item.option.provider || 'smtp') : item.option.provider,
+                        phoneNumber: item.option.phoneNumber?.trim(),
                       },
                     })),
                   }
@@ -611,6 +625,7 @@ export const EditRuleModal = forwardRef<EditRuleModalRef, EditRuleModalProps>(({
                       const addType = checkList[checkList.length - 1]
                       actions.add({
                         name: addType,
+                        option: addType === 'email' ? { provider: 'smtp' } : undefined,
                       })
                     } else {
                       // 减少
@@ -623,257 +638,67 @@ export const EditRuleModal = forwardRef<EditRuleModalRef, EditRuleModalProps>(({
                 />
               </Form.Item>
               {fields.map(({ key, name, ...field }) => {
-                if (checkedNotify[name + 1] === 'sms') {
-                  return (<Card key={key}>
-                    <div style={{ color: '#666', fontSize: '14px' }} className="mb10">
-                      {t('sms短信')}
-                    </div>
+                const notifyType = checkedNotify[name + 1]
+                if (!notifyType) return null
+                const isPhoneChannel = notifyType === 'sms' || notifyType === 'whatsapp'
+                return (<Card key={key} className="mt10">
+                  <div style={{ color: '#666', fontSize: '14px' }} className="mb10">
+                    {notifyTypeLabel(notifyType)}
+                  </div>
+                  {notifyType === 'email' && (
                     <Form.Item
                       {...field}
-                      label={t('手机号')}
+                      label={t('发送渠道')}
+                      name={[name, 'option', 'provider']}
+                      rules={[{ required: true, message: t('不能为空') }]}
+                    >
+                      <Select
+                        options={[
+                          { value: 'smtp', label: 'SMTP' },
+                          { value: 'twilio', label: t('Twilio Email') },
+                        ]}
+                      />
+                    </Form.Item>
+                  )}
+                  {notifyType === 'email' && (
+                    <Form.Item
+                      {...field}
+                      label={t('收件邮箱')}
+                      name={[name, 'option', 'email']}
+                      rules={[
+                        { required: true, message: t('不能为空') },
+                        {
+                          validator: (_: any, value: string) => {
+                            if (!value) return Promise.resolve()
+                            const invalid = value.split(/[,;]/)
+                              .map(v => v.trim())
+                              .filter(v => v && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v))
+                            return invalid.length
+                              ? Promise.reject(new Error(t('邮箱格式不正确')))
+                              : Promise.resolve()
+                          },
+                        },
+                      ]}
+                      extra={t('多个邮箱用逗号分隔')}
+                    >
+                      <Input placeholder="ops@example.com" />
+                    </Form.Item>
+                  )}
+                  {isPhoneChannel && (
+                    <Form.Item
+                      {...field}
+                      label={notifyType === 'sms' ? t('手机号') : t('WhatsApp 号码')}
                       name={[name, 'option', 'phoneNumber']}
-                      rules={[{ required: true, message: t('不能为空') }]}
+                      rules={[
+                        { required: true, message: t('不能为空') },
+                        { pattern: /^\+?[0-9][0-9\s-]{6,19}$/, message: t('请输入含国家码的号码，如 +9665XXXXXXXX') },
+                      ]}
+                      extra={t('含国家码，如 +9665XXXXXXXX')}
                     >
-                      <Input addonBefore="+86" placeholder={t('请输入手机号')} />
+                      <Input placeholder="+9665XXXXXXXX" />
                     </Form.Item>
-                    <Form.Item
-                      {...field}
-                      label={
-                        <div>
-                          <span>{t('生效时间')}</span>&nbsp;
-                          <Tooltip
-                            placement="rightTop"
-                            title={t('该告警规则仅在生效时间段内发送邮件通知。')}
-                          >
-                            <QuestionCircleTwoTone />
-                          </Tooltip>
-                        </div>
-                      }
-                      name={[name, 'start_effect_time']}
-                      rules={[{ required: true, message: t('不能为空') }]}
-                      style={{ float: 'left' }}
-                    >
-                      <TimePicker
-                        placeholder={t('请输入开始时间')}
-                        // defaultOpenValue={dayjs('00:00:00', 'HH:mm:ss')}
-                        format={dateFormat}
-                      />
-                    </Form.Item>
-                    <Form.Item
-                      style={{ float: 'left', marginTop: '28px' }}
-                    >
-                      <span className="ml20 mr20 mt20">-</span>
-                    </Form.Item>
-                    <Form.Item
-                      {...field}
-                      label=""
-                      name={[name, 'end_effect_time']}
-                      rules={[{ required: true, message: t('不能为空') }]}
-                    >
-                      <TimePicker
-                        placeholder={t('请输入结束时间')}
-                        // defaultOpenValue={dayjs('00:00:00', 'HH:mm:ss')}
-                        format={dateFormat}
-                        style={{ marginTop: '28px' }}
-                      />
-                    </Form.Item>
-                  </Card>)
-                }
-                if (checkedNotify[name + 1] === '企业微信机器人') {
-                  return (<Card key={key} className="mt10">
-                    <div style={{ color: '#666', fontSize: '14px' }} className="mb10">
-                      {t('企业微信机器人')}
-                    </div>
-                    <Form.Item
-                      {...field}
-                      label={t('通知语言')}
-                      name={[name, 'option', 'lang']}
-                    >
-                      <Select
-                        allowClear
-                        placeholder={t('跟随默认')}
-                        options={LOCALES.map(item => ({ value: item.value, label: item.label }))}
-                      />
-                    </Form.Item>
-                    <Form.Item
-                      {...field}
-                      label={t('通知地址')}
-                      name={[name, 'option', 'webhook']}
-                      rules={[{ required: true, message: t('不能为空') }]}
-                    >
-                      <Input addonBefore="webhook" placeholder={t('请输入')} />
-                    </Form.Item>
-                    <Form.Item
-                      {...field}
-                      label={
-                        <div>
-                          <span>{t('生效时间')}</span>&nbsp;
-                          <Tooltip
-                            placement="rightTop"
-                            title={t('该告警规则仅在生效时间段内发送邮件通知。')}
-                          >
-                            <QuestionCircleTwoTone />
-                          </Tooltip>
-                        </div>
-                      }
-                      name={[name, 'start_effect_time']}
-                      rules={[{ required: true, message: t('不能为空') }]}
-                      style={{ float: 'left' }}
-                    >
-                      <TimePicker
-                        placeholder={t('请输入开始时间')}
-                        // defaultOpenValue={dayjs('00:00:00', 'HH:mm:ss')}
-                        format={dateFormat}
-                      />
-                    </Form.Item>
-                    <Form.Item
-                      style={{ float: 'left', marginTop: '28px' }}
-                    >
-                      <span className="ml20 mr20 mt20">-</span>
-                    </Form.Item>
-                    <Form.Item
-                      {...field}
-                      label=""
-                      name={[name, 'end_effect_time']}
-                      rules={[{ required: true, message: t('不能为空') }]}
-                    >
-                      <TimePicker
-                        placeholder={t('请输入结束时间')}
-                        // defaultOpenValue={dayjs('00:00:00', 'HH:mm:ss')}
-                        format={dateFormat}
-                        style={{ marginTop: '28px' }}
-                      />
-                    </Form.Item>
-                  </Card>)
-                }
-                if (checkedNotify[name + 1] === '钉钉机器人') {
-                  return (<Card key={key} className="mt10">
-                    <div style={{ color: '#666', fontSize: '14px' }} className="mb10">
-                      {t('钉钉机器人')}
-                    </div>
-                    <Form.Item
-                      {...field}
-                      label={t('通知语言')}
-                      name={[name, 'option', 'lang']}
-                    >
-                      <Select
-                        allowClear
-                        placeholder={t('跟随默认')}
-                        options={LOCALES.map(item => ({ value: item.value, label: item.label }))}
-                      />
-                    </Form.Item>
-                    <Form.Item
-                      {...field}
-                      label={t('通知地址')}
-                      name={[name, 'option', 'webhook']}
-                      rules={[{ required: true, message: t('不能为空') }]}
-                    >
-                      <Input addonBefore="webhook" placeholder={t('请输入')} />
-                    </Form.Item>
-                    <Form.Item
-                      {...field}
-                      label={
-                        <div>
-                          <span>{t('生效时间')}</span>&nbsp;
-                          <Tooltip
-                            placement="rightTop"
-                            title={t('该告警规则仅在生效时间段内发送邮件通知。')}
-                          >
-                            <QuestionCircleTwoTone />
-                          </Tooltip>
-                        </div>
-                      }
-                      name={[name, 'start_effect_time']}
-                      rules={[{ required: true, message: t('不能为空') }]}
-                      style={{ float: 'left' }}
-                    >
-                      <TimePicker
-                        placeholder={t('请输入开始时间')}
-                        // defaultOpenValue={dayjs('00:00:00', 'HH:mm:ss')}
-                        format={dateFormat}
-                      />
-                    </Form.Item>
-                    <Form.Item
-                      style={{ float: 'left', marginTop: '28px' }}
-                    >
-                      <span className="ml20 mr20 mt20">-</span>
-                    </Form.Item>
-                    <Form.Item
-                      {...field}
-                      label=""
-                      name={[name, 'end_effect_time']}
-                      rules={[{ required: true, message: t('不能为空') }]}
-                    >
-                      <TimePicker
-                        placeholder={t('请输入结束时间')}
-                        // defaultOpenValue={dayjs('00:00:00', 'HH:mm:ss')}
-                        format={dateFormat}
-                        style={{ marginTop: '28px' }}
-                      />
-                    </Form.Item>
-                  </Card>)
-                }
-                if (checkedNotify[name + 1] === '飞书机器人') {
-                  return (<Card key={key} className="mt10">
-                    <div style={{ color: '#666', fontSize: '14px' }} className="mb10">
-                      {t('飞书机器人')}
-                    </div>
-                    <Form.Item
-                      label={t('通知地址')}
-                      {...field}
-                      name={[name, 'option', 'webhook']}
-                      rules={[{ required: true, message: t('不能为空') }]}
-                    >
-                      <Input addonBefore="webhook" placeholder={t('请输入')} />
-                    </Form.Item>
-                    <Form.Item
-                      {...field}
-                      label={
-                        <div>
-                          <span>{t('生效时间')}</span>&nbsp;
-                          <Tooltip
-                            placement="rightTop"
-                            title={t('该告警规则仅在生效时间段内发送邮件通知。')}
-                          >
-                            <QuestionCircleTwoTone />
-                          </Tooltip>
-                        </div>
-                      }
-                      name={[name, 'start_effect_time']}
-                      rules={[{ required: true, message: t('不能为空') }]}
-                      style={{ float: 'left' }}
-                    >
-                      <TimePicker
-                        placeholder={t('请输入开始时间')}
-                        // defaultOpenValue={dayjs('00:00:00', 'HH:mm:ss')}
-                        format={dateFormat}
-                      />
-                    </Form.Item>
-                    <Form.Item
-                      style={{ float: 'left', marginTop: '28px' }}
-                    >
-                      <span className="ml20 mr20 mt20">-</span>
-                    </Form.Item>
-                    <Form.Item
-                      {...field}
-                      label=""
-                      name={[name, 'end_effect_time']}
-                      rules={[{ required: true, message: t('不能为空') }]}
-                    >
-                      <TimePicker
-                        placeholder={t('请输入结束时间')}
-                        // defaultOpenValue={dayjs('00:00:00', 'HH:mm:ss')}
-                        format={dateFormat}
-                        style={{ marginTop: '28px' }}
-                      />
-                    </Form.Item>
-                  </Card>)
-                }
-                if (checkedNotify[name + 1] === 'API接口') {
-                  return (<Card key={key} className="mt10">
-                    <div style={{ color: '#666', fontSize: '14px' }} className="mb10">
-                      {t('API接口')}
-                    </div>
+                  )}
+                  {notifyType === 'API接口' && (
                     <Form.Item
                       label={t('通知地址')}
                       {...field}
@@ -882,50 +707,60 @@ export const EditRuleModal = forwardRef<EditRuleModalRef, EditRuleModalProps>(({
                     >
                       <Input addonBefore="post" placeholder={t('请输入')} />
                     </Form.Item>
+                  )}
+                  {notifyType !== 'API接口' && (
                     <Form.Item
                       {...field}
-                      label={
-                        <div>
-                          <span>{t('生效时间')}</span>&nbsp;
-                          <Tooltip
-                            placement="rightTop"
-                            title={t('该告警规则仅在生效时间段内发送邮件通知。')}
-                          >
-                            <QuestionCircleTwoTone />
-                          </Tooltip>
-                        </div>
-                      }
-                      name={[name, 'start_effect_time']}
-                      rules={[{ required: true, message: t('不能为空') }]}
-                      style={{ float: 'left' }}
+                      label={t('通知语言')}
+                      name={[name, 'option', 'lang']}
                     >
-                      <TimePicker
-                        placeholder={t('请输入开始时间')}
-                        // defaultOpenValue={dayjs('00:00:00', 'HH:mm:ss')}
-                        format={dateFormat}
+                      <Select
+                        allowClear
+                        placeholder={t('跟随默认')}
+                        options={LOCALES.map(item => ({ value: item.value, label: item.label }))}
                       />
                     </Form.Item>
-                    <Form.Item
-                      style={{ float: 'left', marginTop: '28px' }}
-                    >
-                      <span className="ml20 mr20 mt20">-</span>
-                    </Form.Item>
-                    <Form.Item
-                      {...field}
-                      label=""
-                      name={[name, 'end_effect_time']}
-                      rules={[{ required: true, message: t('不能为空') }]}
-                    >
-                      <TimePicker
-                        placeholder={t('请输入结束时间')}
-                        // defaultOpenValue={dayjs('00:00:00', 'HH:mm:ss')}
-                        format={dateFormat}
-                        style={{ marginTop: '28px' }}
-                      />
-                    </Form.Item>
-                  </Card>)
-                }
-                return null
+                  )}
+                  <Form.Item
+                    {...field}
+                    label={
+                      <div>
+                        <span>{t('生效时间')}</span>&nbsp;
+                        <Tooltip
+                          placement="rightTop"
+                          title={t('留空表示全天生效；填写后仅在生效时间段内发送通知。')}
+                        >
+                          <QuestionCircleTwoTone />
+                        </Tooltip>
+                      </div>
+                    }
+                    name={[name, 'start_effect_time']}
+                    style={{ float: 'left' }}
+                  >
+                    <TimePicker
+                      placeholder={t('留空表示全天')}
+                      format={dateFormat}
+                      allowClear
+                    />
+                  </Form.Item>
+                  <Form.Item
+                    style={{ float: 'left', marginTop: '28px' }}
+                  >
+                    <span className="ml20 mr20 mt20">-</span>
+                  </Form.Item>
+                  <Form.Item
+                    {...field}
+                    label=""
+                    name={[name, 'end_effect_time']}
+                  >
+                    <TimePicker
+                      placeholder={t('留空表示全天')}
+                      format={dateFormat}
+                      style={{ marginTop: '28px' }}
+                      allowClear
+                    />
+                  </Form.Item>
+                </Card>)
               })}
             </>)
           }}

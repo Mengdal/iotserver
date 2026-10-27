@@ -14,6 +14,7 @@ import {
   Row,
   Select,
   Space,
+  Spin,
   Switch,
   Table,
   Tag,
@@ -28,7 +29,11 @@ import {
   addTenant,
   updateTenant,
   deleteTenant,
+  getThingsProjects,
+  bindTenantThingsProject,
+  renameTenantThingsProject,
   Tenant,
+  ThingsProject,
 } from '@/api'
 import { useAuth } from '@/utils/auth'
 import { t } from '@/i18n'
@@ -50,6 +55,7 @@ interface TenantFormValues {
   maxUsers?: number
   retentionDays?: number
   status?: number
+  thingsProjectName?: string
   remark?: string
 }
 
@@ -76,6 +82,16 @@ const TenantPage: React.FC = () => {
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<Tenant | null>(null)
   const [submitting, setSubmitting] = useState(false)
+
+  // things 项目绑定/改名
+  const [thingsOpen, setThingsOpen] = useState(false)
+  const [thingsTarget, setThingsTarget] = useState<Tenant | null>(null)
+  const [thingsAction, setThingsAction] = useState<'bind' | 'rename'>('bind')
+  const [thingsMode, setThingsMode] = useState<'existing' | 'create'>('existing')
+  const [thingsProjects, setThingsProjects] = useState<ThingsProject[]>([])
+  const [thingsLoading, setThingsLoading] = useState(false)
+  const [thingsSubmitting, setThingsSubmitting] = useState(false)
+  const [thingsForm] = Form.useForm()
 
   const canList = useAuth('platform:tenant:list')
   const canAdd = useAuth('platform:tenant:add')
@@ -142,6 +158,7 @@ const TenantPage: React.FC = () => {
       maxUsers: record.maxUsers || 0,
       retentionDays: record.retentionDays ?? 0,
       status: record.status,
+      thingsProjectName: record.thingsProjectName,
       remark: record.remark,
     })
     setModalOpen(true)
@@ -161,6 +178,7 @@ const TenantPage: React.FC = () => {
       maxUsers: values.maxUsers || 0,
       // 0 = 默认 30 天，-1 = 永久
       retentionDays: values.retentionDays ?? 0,
+      thingsProjectName: (values.thingsProjectName || '').trim(),
       remark: values.remark || '',
     }
     setSubmitting(true)
@@ -191,6 +209,60 @@ const TenantPage: React.FC = () => {
       loadData()
     } else {
       messageApi.open({ type: 'error', content: resp.errorMsg })
+    }
+  }
+
+  const openThingsBind = async (record: Tenant) => {
+    setThingsTarget(record)
+    setThingsAction('bind')
+    setThingsMode('existing')
+    thingsForm.resetFields()
+    setThingsOpen(true)
+    setThingsLoading(true)
+    try {
+      const resp = await getThingsProjects()
+      if (resp.success) {
+        setThingsProjects(resp.result || [])
+      } else {
+        messageApi.open({ type: 'error', content: resp.errorMsg })
+      }
+    } finally {
+      setThingsLoading(false)
+    }
+  }
+
+  const openThingsRename = (record: Tenant) => {
+    setThingsTarget(record)
+    setThingsAction('rename')
+    thingsForm.setFieldsValue({ name: record.thingsProjectName })
+    setThingsOpen(true)
+  }
+
+  const handleThingsSubmit = async () => {
+    if (!thingsTarget) return
+    const values = await thingsForm.validateFields()
+    setThingsSubmitting(true)
+    try {
+      let resp
+      if (thingsAction === 'rename') {
+        resp = await renameTenantThingsProject(thingsTarget.id, (values.name || '').trim())
+      } else if (thingsMode === 'existing') {
+        resp = await bindTenantThingsProject(thingsTarget.id, { projectId: Number(values.projectId) })
+      } else {
+        resp = await bindTenantThingsProject(thingsTarget.id, {
+          name: (values.name || '').trim(),
+          description: values.description || '',
+        })
+      }
+      if (resp.success) {
+        messageApi.open({ type: 'success', content: t('操作成功') })
+        setThingsOpen(false)
+        loadData()
+      } else {
+        messageApi.open({ type: 'error', content: resp.errorMsg })
+      }
+    } finally {
+      setThingsSubmitting(false)
     }
   }
 
@@ -251,6 +323,26 @@ const TenantPage: React.FC = () => {
       render: (value: number) => retentionText(value),
     },
     {
+      title: t('things 项目'),
+      key: 'things',
+      width: 210,
+      render: (_, record) => {
+        if (!record.thingsProjectName && !record.thingsProjectId) {
+          return <Tag>{t('未绑定')}</Tag>
+        }
+        const color = record.thingsBindStatus === 'error' || record.thingsBindStatus === 'orphaned'
+          ? 'error'
+          : record.thingsBindStatus === 'bound' ? 'success' : 'default'
+        return (
+          <Space direction="vertical" size={0}>
+            <span>{record.thingsProjectName || `#${record.thingsProjectId}`}</span>
+            <Tag color={color}>{record.thingsBindStatus || '-'}</Tag>
+            {record.thingsLastError && <Tag color="error">{record.thingsLastError}</Tag>}
+          </Space>
+        )
+      },
+    },
+    {
       title: t('状态'),
       dataIndex: 'status',
       width: 120,
@@ -273,11 +365,17 @@ const TenantPage: React.FC = () => {
     {
       title: t('操作'),
       key: 'action',
-      width: 140,
+      width: 240,
       fixed: 'right',
       render: (_, record) => (
         <Space size={4} wrap={false} style={{ whiteSpace: 'nowrap' }}>
           {canEdit && <Button type="link" size="small" onClick={() => openEdit(record)}>{t('编辑')}</Button>}
+          {canEdit && !record.thingsProjectId && (
+            <Button type="link" size="small" onClick={() => openThingsBind(record)}>{t('绑定项目')}</Button>
+          )}
+          {canEdit && !!record.thingsProjectId && (
+            <Button type="link" size="small" onClick={() => openThingsRename(record)}>{t('项目改名')}</Button>
+          )}
           {canRemove && (
             <Popconfirm
               title={t('确认删除该租户？删除后该租户下的业务数据不会级联清除。')}
@@ -342,7 +440,7 @@ const TenantPage: React.FC = () => {
         loading={loading}
         columns={columns}
         dataSource={dataSource}
-        scroll={{ x: 1400 }}
+        scroll={{ x: 1650 }}
         pagination={{
           size: 'small',
           showQuickJumper: true,
@@ -402,6 +500,17 @@ const TenantPage: React.FC = () => {
               >
                 {/* 编码由后端创建后固定，编辑时只读展示 */}
                 <Input placeholder={t('如 customer_01')} disabled={!!editing} />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={12}>
+            <Col span={24}>
+              <Form.Item
+                label={t('things 项目名称')}
+                name="thingsProjectName"
+                tooltip={t('things 启用时必填，4~30 个字符且不能与已有项目重名；未启用时忽略')}
+              >
+                <Input placeholder={t('如 Tenant A')} disabled={!!editing} />
               </Form.Item>
             </Col>
           </Row>
@@ -474,6 +583,69 @@ const TenantPage: React.FC = () => {
             <Input.TextArea rows={2} placeholder={t('请输入备注')} />
           </Form.Item>
         </Form>
+      </Modal>
+
+      <Modal
+        open={thingsOpen}
+        title={thingsAction === 'rename' ? t('重命名 things 项目') : t('绑定 things 项目')}
+        width={520}
+        okText={t('确定')}
+        cancelText={t('取消')}
+        confirmLoading={thingsSubmitting}
+        onOk={handleThingsSubmit}
+        onCancel={() => setThingsOpen(false)}
+      >
+        <Spin spinning={thingsLoading}>
+          {thingsAction === 'bind' && (
+            <Radio.Group
+              value={thingsMode}
+              onChange={e => setThingsMode(e.target.value)}
+              style={{ marginBottom: 16 }}
+            >
+              <Radio.Button value="existing">{t('绑定已有项目')}</Radio.Button>
+              <Radio.Button value="create">{t('创建新项目')}</Radio.Button>
+            </Radio.Group>
+          )}
+          <Form form={thingsForm} layout="vertical">
+            {thingsAction === 'rename' && (
+              <Form.Item
+                label={t('项目名称')}
+                name="name"
+                rules={[{ required: true, message: t('请输入项目名称') }]}
+              >
+                <Input placeholder={t('4~30 个字符')} />
+              </Form.Item>
+            )}
+            {thingsAction !== 'rename' && thingsMode === 'existing' && (
+              <Form.Item
+                label={t('things 项目')}
+                name="projectId"
+                rules={[{ required: true, message: t('请选择 things 项目') }]}
+              >
+                <Select
+                  showSearch
+                  optionFilterProp="label"
+                  placeholder={t('请选择 things 项目')}
+                  options={thingsProjects.map(p => ({ value: p.id, label: `${p.name} (#${p.id})` }))}
+                />
+              </Form.Item>
+            )}
+            {thingsAction !== 'rename' && thingsMode === 'create' && (
+              <>
+                <Form.Item
+                  label={t('项目名称')}
+                  name="name"
+                  rules={[{ required: true, message: t('请输入项目名称') }]}
+                >
+                  <Input placeholder={t('4~30 个字符')} />
+                </Form.Item>
+                <Form.Item label={t('备注')} name="description">
+                  <Input.TextArea rows={2} placeholder={t('请输入备注')} />
+                </Form.Item>
+              </>
+            )}
+          </Form>
+        </Spin>
       </Modal>
     </Card>
   )

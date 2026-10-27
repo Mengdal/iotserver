@@ -1301,6 +1301,30 @@ func GetEnMessages() []*i18n.Message {
 			ID:    "# 设备触发告警 \n\n设备名称：{{.p1}} \n\n告警规则名称：{{.p2}} \n\n触发方式：{{.p3}} \n\n",
 			Other: "# Device alarm triggered \n\nDevice name: {{.p1}} \n\nAlarm rule: {{.p2}} \n\nTrigger: {{.p3}} \n\n",
 		},
+		{
+			ID:    "紧急",
+			Other: "Critical",
+		},
+		{
+			ID:    "重要",
+			Other: "Major",
+		},
+		{
+			ID:    "次要",
+			Other: "Minor",
+		},
+		{
+			ID:    "提示",
+			Other: "Info",
+		},
+		{
+			ID:    "设备告警：{{.p1}} - {{.p2}}",
+			Other: "Device alarm: {{.p1}} - {{.p2}}",
+		},
+		{
+			ID:    "设备告警通知\n设备：{{.p1}}\n产品：{{.p2}}\n规则：{{.p3}}\n级别：{{.p4}}\n触发方式：{{.p5}}\n触发条件：{{.p6}}\n时间：{{.p7}}",
+			Other: "Device alarm notification\nDevice: {{.p1}}\nProduct: {{.p2}}\nRule: {{.p3}}\nLevel: {{.p4}}\nTrigger: {{.p5}}\nCondition: {{.p6}}\nTime: {{.p7}}",
+		},
 
 		// 后端接口返回的细节文案（errort.NewMessageErr，ID 就是中文原文）
 		{
