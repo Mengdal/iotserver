@@ -199,10 +199,6 @@ func (c *Client) putForm(path string, form map[string]string, out any) error {
 	return c.formRequest(http.MethodPut, path, form, out)
 }
 
-func (c *Client) deleteForm(path string, form map[string]string) error {
-	return c.formRequest(http.MethodDelete, path, form, nil)
-}
-
 func (c *Client) formRequest(method, path string, form map[string]string, out any) error {
 	var body bytes.Buffer
 	writer := multipart.NewWriter(&body)

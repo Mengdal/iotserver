@@ -458,19 +458,6 @@ func (dm *DockerManager) ExistImageById(imageId string) bool {
 	return false
 }
 
-// 获取容器id
-func (dm *DockerManager) getContainerIdByName(containerName string) string {
-	if len(containerName) == 0 {
-		return ""
-	}
-	for _, v := range dm.ContainerMap {
-		if v.Name == "/"+containerName {
-			return v.Id
-		}
-	}
-	return ""
-}
-
 // 获取容器挂载设备的信息,返回挂载设备路径slice ["/dev/ttyUSB0","/dev/ttyUSB0"]
 func (dm *DockerManager) GetContainerMountDevices(containerId string) []string {
 	resDevices := make([]string, 0)

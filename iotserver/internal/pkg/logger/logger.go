@@ -337,14 +337,3 @@ func (lc edgeXLogger) Warnf(msg string, args ...interface{}) {
 func (lc edgeXLogger) Errorf(msg string, args ...interface{}) {
 	lc.log(ErrorLog, true, msg, args...)
 }
-
-// Build the log entry object
-func (lc edgeXLogger) buildLogEntry(logLevel string, msg string, args ...interface{}) LogEntry {
-	res := LogEntry{}
-	res.Level = logLevel
-	res.Message = msg
-	res.Args = args
-	res.OriginService = lc.owningServiceName
-
-	return res
-}

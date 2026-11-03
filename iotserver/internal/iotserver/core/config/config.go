@@ -134,7 +134,6 @@ type WritableInfo struct {
 	InsecureSecrets bootstrapConfig.InsecureSecrets
 	DebugProfile    bool
 	IsNewModel      bool
-	LimitMethods    []string
 }
 
 type TopicInfo struct {

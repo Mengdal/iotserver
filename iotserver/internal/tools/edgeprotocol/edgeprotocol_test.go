@@ -184,19 +184,6 @@ func TestScalarToString(t *testing.T) {
 	}
 }
 
-func TestDedupKey(t *testing.T) {
-	// 同一设备同一时刻 → 同键；不同设备或不同时刻 → 不同键
-	if DedupKey("THmeter", 1000) != DedupKey("THmeter", 1000) {
-		t.Error("同设备同时间应产生相同去重键")
-	}
-	if DedupKey("THmeter", 1000) == DedupKey("pump", 1000) {
-		t.Error("不同设备不应产生相同去重键")
-	}
-	if DedupKey("THmeter", 1000) == DedupKey("THmeter", 2000) {
-		t.Error("不同时间不应产生相同去重键")
-	}
-}
-
 func TestNumericOrString(t *testing.T) {
 	// 能解析成数值的必须转成数值：否则会落进时序库的 text 列，数值查询查不到
 	numeric := []struct {

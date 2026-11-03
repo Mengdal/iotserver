@@ -271,14 +271,3 @@ func NamedGroups() [][]NamedPerm {
 			{"AdvancedSceneStop", AdvancedSceneStop}},
 	}
 }
-
-// All 返回全部权限标识（顺序稳定）
-func All() []string {
-	out := make([]string, 0, 64)
-	for _, group := range NamedGroups() {
-		for _, item := range group {
-			out = append(out, item.Value)
-		}
-	}
-	return out
-}

@@ -5,7 +5,6 @@ import (
 	"errors"
 
 	"net"
-	"os"
 	"path/filepath"
 	"runtime"
 	"sync"
@@ -17,10 +16,6 @@ import (
 
 	"iotserver/internal/pkg/container"
 	"iotserver/internal/pkg/di"
-	"iotserver/internal/pkg/limit"
-	//"gitlab.com/tedge/edgex/internal/pkg/container"
-	//"gitlab.com/tedge/edgex/internal/pkg/di"
-	//"gitlab.com/tedge/edgex/internal/pkg/limit"
 )
 
 var basepath string
@@ -53,43 +48,6 @@ type RPCServer struct {
 	isRunning bool
 }
 
-var (
-	limitService   limit.LimitService
-	methodLimitMap sync.Map
-	serverRpcLog   = os.Getenv(SERVER_RPC_LOG_ENABLE)
-	serverTimeout  time.Duration
-)
-
-func methodLimit(method string, lmc limit.LimitMethodConf) bool {
-	_, exist := lmc.GetLimitMethods()[method]
-	return exist
-}
-
-func requestLimit(ctx context.Context, method string) error {
-	value, exist := methodLimitMap.Load(method)
-	if !exist {
-		value = limitService.Clone()
-	}
-	var srv = value.(limit.LimitService)
-	var cancel context.CancelFunc
-	ctx, cancel = context.WithTimeout(ctx, serverTimeout)
-	defer cancel()
-	if err := srv.ConsumeWithContext(ctx); err != nil {
-		return err
-	}
-	methodLimitMap.Store(method, value)
-	return nil
-}
-
-const (
-	// 默认每个rpc接口100ms放入5个请求
-	DefaultLimitTime = 100
-	DefaultBurst     = 5
-	// 默认服务端超时时间为5s
-	DefaultServiceTimeout = 5 * time.Second
-	SERVER_RPC_LOG_ENABLE = "SERVER_RPC_LOG_ENABLE"
-)
-
 func NewRPCServer(ctx context.Context, wg *sync.WaitGroup, dic *di.Container, register RegisterFunc) (*RPCServer, error) {
 	var rs RPCServer
 	lc := container.LoggingClientFrom(dic.Get)
@@ -105,27 +63,6 @@ func NewRPCServer(ctx context.Context, wg *sync.WaitGroup, dic *di.Container, re
 		return nil, err
 	}
 
-	var (
-	//limitTime int64 = DefaultLimitTime
-	//burst           = DefaultBurst
-	)
-	//if rpcConfig.LimitSetting.LimitTime > 0 {
-	//	limitTime = rpcConfig.LimitSetting.LimitTime
-	//}
-	//if rpcConfig.LimitSetting.Burst > 0 {
-	//	burst = rpcConfig.LimitSetting.Burst
-	//}
-	if rpcConfig.Timeout > 0 {
-		serverTimeout = time.Duration(rpcConfig.Timeout) * time.Millisecond
-	} else {
-		serverTimeout = DefaultServiceTimeout
-	}
-
-	limitService = limit.NewLimitService(limit.LimitOption{
-		//LimitMillisecond: limitTime,
-		//Burst:            burst,
-	})
-	lmc := container.LimitMethodConfFrom(dic.Get)
 	if rpcConfig.UseTLS {
 		creds, err := credentials.NewServerTLSFromFile(path(rpcConfig.CertFile), path(rpcConfig.KeyFile))
 		if err != nil {
@@ -135,13 +72,13 @@ func NewRPCServer(ctx context.Context, wg *sync.WaitGroup, dic *di.Container, re
 		rs.S = grpc.NewServer(
 			grpc.Creds(creds),
 			grpc.KeepaliveEnforcementPolicy(kaep),
-			withServerInterceptor(lc, lmc, dic),
+			withServerInterceptor(),
 		)
 
 	} else {
 		rs.S = grpc.NewServer(
 			grpc.KeepaliveEnforcementPolicy(kaep),
-			withServerInterceptor(lc, lmc, dic),
+			withServerInterceptor(),
 		)
 	}
 	wg.Add(1)

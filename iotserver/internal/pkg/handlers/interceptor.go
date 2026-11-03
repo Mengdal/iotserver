@@ -16,38 +16,15 @@ package handlers
 
 import (
 	"context"
+
 	"google.golang.org/grpc"
-	"iotserver/internal/pkg/di"
 	"iotserver/internal/pkg/errort"
-	"iotserver/internal/pkg/limit"
-	"iotserver/internal/pkg/logger"
 )
 
-func withServerInterceptor(lc logger.LoggingClient, lmc limit.LimitMethodConf, dic *di.Container) grpc.ServerOption {
+func withServerInterceptor() grpc.ServerOption {
 	return grpc.UnaryInterceptor(func(ctx context.Context, req interface{},
 		info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
-		//if methodLimit(info.FullMethod, lmc) {
-		//if err := requestLimit(ctx, info.FullMethod); err != nil {
-		//	lc.Error(err.Error())
-		//	return nil, errort.NewRPCStatusErr(err)
-		//}
-		//}
-		//start := time.Now()
 		reply, err := handler(ctx, req)
-		//var hl = dtos.HandleLog{
-		//	Req:      req,
-		//	Reply:    reply,
-		//	Method:   info.FullMethod,
-		//	Duration: time.Since(start).String(),
-		//}
-		//if err != nil {
-		//	hl.Error = err.Error()
-		//} else {
-		//	hl.Success = true
-		//}
-		//if serverRpcLog != "" {
-		//	lc.Debug(hl.ToString())
-		//}
 		return reply, errort.NewRPCStatusErr(err)
 	})
 }

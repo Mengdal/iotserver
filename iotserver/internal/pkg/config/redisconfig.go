@@ -85,9 +85,6 @@ type RedisConfig struct {
 	// if IdleTimeout is set.
 	IdleCheckFrequency time.Duration
 
-	// Enables read only queries on slave nodes.
-	readOnly bool
-
 	// TLS Config to use. When set TLS will be negotiated.
 	TLSConfig *tls.Config
 

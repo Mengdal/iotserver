@@ -20,8 +20,6 @@ type bounds struct {
 	names    map[string]uint
 }
 
-const aDay = 24 * 60 * 60
-
 // The bounds for each field.
 var (
 	seconds = bounds{0, 59, nil}

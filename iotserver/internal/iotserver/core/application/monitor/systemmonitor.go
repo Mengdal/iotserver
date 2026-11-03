@@ -16,10 +16,8 @@ package monitor
 
 import (
 	"context"
-	"fmt"
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/disk"
-	"github.com/shirou/gopsutil/v3/host"
 	"github.com/shirou/gopsutil/v3/load"
 	"github.com/shirou/gopsutil/v3/mem"
 	"github.com/shirou/gopsutil/v3/net"
@@ -75,8 +73,8 @@ func NewSystemMonitor(dic *di.Container, lc logger.LoggingClient) *systemMonitor
 const systemMetricsRetention = 7 * 24 * time.Hour
 
 func (m *systemMonitor) run() {
-	tick := time.Tick(time.Minute)              // 1 minute
-	tickClear := time.Tick(24 * time.Hour)      // 每24小时删除一次过期数据
+	tick := time.Tick(time.Minute)         // 1 minute
+	tickClear := time.Tick(24 * time.Hour) // 每24小时删除一次过期数据
 	go func() {
 		for {
 			select {
@@ -221,10 +219,4 @@ func getOpenfiles() int {
 		return openfiles
 	}
 	return 0
-}
-
-func getPlatform() {
-	// 查看平台信息
-	platform, family, version, _ := host.PlatformInformation()
-	fmt.Printf("platform = %v ,family = %v , version = %v \n", platform, family, version)
 }

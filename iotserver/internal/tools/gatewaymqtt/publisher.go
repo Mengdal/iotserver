@@ -42,13 +42,6 @@ func Publish(topic string, payload []byte) error {
 	return p.Publish(topic, payload)
 }
 
-// Ready 下行通道是否可用
-func Ready() bool {
-	mu.RLock()
-	defer mu.RUnlock()
-	return publisher != nil
-}
-
 // TopicUp / TopicDown 主题约定：网关按 SN 唯一标识
 const (
 	TopicPrefixUp   = "iot/up/"

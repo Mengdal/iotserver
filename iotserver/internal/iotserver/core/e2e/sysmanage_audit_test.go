@@ -70,17 +70,6 @@ func insertAuditLog(t *testing.T, env *testEnv, username string, created int64) 
 	return log.Id
 }
 
-// countAuditLogs 记录总数
-func countAuditLogs(t *testing.T, env *testEnv) int {
-	t.Helper()
-	_, total, err := env.client.WithCtx(tenant.Platform(context.Background())).
-		SysAuditLogSearch(0, 0, dtos.SysAuditLogSearchRequest{IsAll: true})
-	if err != nil {
-		t.Fatalf("统计审查日志失败: %v", err)
-	}
-	return int(total)
-}
-
 // auditLogExists 按用户名判断记录是否还在
 func auditLogExists(t *testing.T, env *testEnv, username string) bool {
 	t.Helper()

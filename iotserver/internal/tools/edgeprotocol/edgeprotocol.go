@@ -417,11 +417,3 @@ func AccessMode(objectType string) string {
 		return AccessModeRead
 	}
 }
-
-// DedupKey 数据报文的去重键。
-//
-// 实测报文**没有 seq 字段**（自有协议才有），因此兼容路径按
-// 「设备 + 采集时间」去重：整包一个时间、周期 60 秒，粒度足够。
-func DedupKey(deviceID string, tsMs int64) string {
-	return fmt.Sprintf("%s@%d", deviceID, tsMs)
-}

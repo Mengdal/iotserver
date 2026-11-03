@@ -273,13 +273,6 @@ func (b *Bootstrap) initClient(ctx context.Context, wg *sync.WaitGroup, dic *di.
 		},
 	})
 
-	limitMethodApp := application.NewLimitMethodConf(*configuration)
-	dic.Update(di.ServiceConstructorMap{
-		pkgContainer.LimitMethodConfName: func(get di.Get) interface{} {
-			return limitMethodApp
-		},
-	})
-
 	ekuiperApp := ekuiperclient.New(configuration.Clients["Ekuiper"].Address(), lc)
 	dic.Update(di.ServiceConstructorMap{
 		container.EkuiperAppName: func(get di.Get) interface{} {

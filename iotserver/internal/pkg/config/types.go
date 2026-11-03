@@ -16,7 +16,6 @@ package config
 import (
 	"fmt"
 	"strings"
-	"time"
 )
 
 // ServiceInfo contains configuration settings necessary for the basic operation of any EdgeX service.
@@ -130,7 +129,6 @@ type SecretStoreInfo struct {
 	Authentication          AuthenticationInfo
 	AdditionalRetryAttempts int
 	RetryWaitPeriod         string
-	retryWaitPeriodTime     time.Duration
 	// TokenFile provides a location to a token file.
 	TokenFile string
 }

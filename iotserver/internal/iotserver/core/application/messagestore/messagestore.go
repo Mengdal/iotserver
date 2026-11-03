@@ -15,7 +15,6 @@
 package messagestore
 
 import (
-	"context"
 	"iotserver/internal/pkg/container"
 	"iotserver/internal/pkg/di"
 	"iotserver/internal/pkg/logger"
@@ -32,9 +31,6 @@ type MessageStores interface {
 type (
 	MessageStore struct {
 		logger logger.LoggingClient
-		ctx    context.Context
-		mutex  sync.Mutex
-		wg     *sync.WaitGroup
 		ackMap sync.Map
 	}
 )

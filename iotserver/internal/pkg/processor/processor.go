@@ -80,12 +80,3 @@ func (cp *Processor) loadFromFile(config config.Configuration) error {
 
 	return nil
 }
-
-// logConfigInfo logs the processor info message with number over overrides that occurred.
-func (cp *Processor) logConfigInfo(message string, overrideCount int) {
-	if cp.Logger == nil {
-		fmt.Println(fmt.Sprintf("%s (%d envVars overrides applied)", message, overrideCount))
-		return
-	}
-	cp.Logger.Info(fmt.Sprintf("%s (%d envVars overrides applied)", message, overrideCount))
-}

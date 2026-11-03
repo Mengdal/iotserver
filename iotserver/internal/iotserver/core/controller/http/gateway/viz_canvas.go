@@ -263,11 +263,6 @@ func vizSeriesFromConfig(config map[string]interface{}) ([]vizSeriesRef, error) 
 	return list, nil
 }
 
-// isContainer 容器组件：不放自己的内容，只装子网格
-func (w vizWidget) isContainer() bool {
-	return w.widgetType() == vizWidgetContainer
-}
-
 type vizCanvas struct {
 	Cols      int `json:"cols"`
 	RowHeight int `json:"rowHeight"`
