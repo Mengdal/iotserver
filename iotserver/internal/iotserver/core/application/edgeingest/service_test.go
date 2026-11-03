@@ -741,3 +741,37 @@ func TestSyncDevices_EmptyListDoesNotMarkAbsent(t *testing.T) {
 		}
 	}
 }
+
+// 平台管理员在「平台视图」点同步时，请求上下文没有租户；
+// 设备必须落在网关所属租户下，否则接入链路按租户查不到它，
+// 每包都会插入失败（撞 gateway_id+device_key 唯一索引），设备永远离线。
+func TestSyncDevices_UsesGatewayTenantUnderPlatformView(t *testing.T) {
+	f := newEdgeFixture(t)
+	platformCtx := tenant.Platform(context.Background())
+
+	if _, err := f.svc.SyncDevices(platformCtx, f.gateway.Id, []edgeprotocol.Tag{
+		{DeviceCode: "THmeter", TagCode: "AirRoomTemp1"},
+	}); err != nil {
+		t.Fatalf("SyncDevices: %v", err)
+	}
+
+	devices, err := f.db.WithCtx(f.tenantCtx()).ListGatewayDevices(f.gateway.Id)
+	if err != nil {
+		t.Fatalf("list devices: %v", err)
+	}
+	dev, ok := devices["THmeter"]
+	if !ok {
+		t.Fatalf("按网关租户查不到同步出来的设备: %+v", devices)
+	}
+	if dev.TenantId != f.tenantID {
+		t.Errorf("设备 tenant_id = %q, want %q（应落在网关所属租户）", dev.TenantId, f.tenantID)
+	}
+
+	// 紧接着的数据上报必须能定位到这台设备（否则会重复插入并撞唯一索引）
+	if _, err := f.svc.resolveOrProvision(f.tenantCtx(), f.gateway, edgeprotocol.DeviceReport{
+		DeviceKey:  "THmeter",
+		Properties: map[string]string{"AirRoomTemp1": "21.5"},
+	}); err != nil {
+		t.Fatalf("数据报文定位设备失败: %v", err)
+	}
+}

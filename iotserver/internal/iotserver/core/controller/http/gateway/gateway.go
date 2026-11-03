@@ -295,7 +295,8 @@ func (ctl *controller) GatewayEdgeSync(c *gin.Context) {
 		httphelper.RenderFail(c, err, c.Writer, ctl.lc)
 		return
 	}
-	result, err := container.EdgeIngestFrom(ctl.dic.Get).SyncDevices(c.Request.Context(), g.Id, tags)
+	// 传 gin.Context：平台视图下请求上下文没有租户，服务内部会改用网关所属租户
+	result, err := container.EdgeIngestFrom(ctl.dic.Get).SyncDevices(c, g.Id, tags)
 	if err != nil {
 		httphelper.RenderFail(c, err, c.Writer, ctl.lc)
 		return

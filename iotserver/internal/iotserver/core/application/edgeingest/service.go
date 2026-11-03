@@ -284,6 +284,14 @@ func (s *Service) SyncDevices(ctx context.Context, gatewayID string, tags []edge
 	if err != nil {
 		return dtos.EdgeDeviceSyncResult{}, err
 	}
+	// 登记出来的设备必须落在**网关所属租户**下。
+	// 平台管理员在「平台视图」调用时请求上下文没有租户（Platform=true），
+	// 直接写会得到 tenant_id='' 的设备：之后接入链路按网关租户查不到它，
+	// 又会尝试插入，撞 (gateway_id, device_key) 唯一索引整包失败，
+	// 数据进不来、设备永远离线。
+	if g.TenantId != "" && tenant.FromContext(ctx).TenantID != g.TenantId {
+		ctx = tenant.With(ctx, tenant.Context{TenantID: g.TenantId})
+	}
 	return s.syncDevices(ctx, g, tags)
 }
 
