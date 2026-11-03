@@ -319,6 +319,87 @@ func ParseConnect(payload []byte) (*ConnectMessage, error) {
 	return &msg, nil
 }
 
+// tagTreeNode 设备/测点树节点（scadaGetTagsTree 回执）。
+type tagTreeNode struct {
+	Name        string        `json:"name"`
+	Id          string        `json:"id"`
+	Description string        `json:"description"`
+	DeviceCode  string        `json:"deviceCode"`
+	ObjectType  string        `json:"objectType"`
+	Children    []tagTreeNode `json:"children"`
+}
+
+// ParseTagTree 把「拉取设备/测点树」的回执解析成与接入报文一致的设备清单。
+//
+// 树的层级实测为：分组（I/O点、用户点、系统点）→ 通道 → 设备 → 测点。
+// 设备标识**取测点 id 的前缀**（形如 "THmeter.AirRoomTemp1"），
+// 不能沿用上层分组或通道的名字——网关只认真实设备名，用「I/O点」去写值会回执 status=false。
+// 分组节点自带 deviceCode 时（用户点 user、系统点 system）以它为准。
+func ParseTagTree(payload []byte) ([]Tag, error) {
+	var wrapper struct {
+		Data []tagTreeNode `json:"data"`
+	}
+	if err := json.Unmarshal(payload, &wrapper); err != nil {
+		// 兼容直接返回节点数组的实现
+		var list []tagTreeNode
+		if err2 := json.Unmarshal(payload, &list); err2 != nil {
+			return nil, fmt.Errorf("设备树解析失败: %w", err)
+		}
+		wrapper.Data = list
+	}
+
+	tags := make([]Tag, 0, len(wrapper.Data))
+	var walk func(n tagTreeNode, deviceCode, deviceDesc string)
+	walk = func(n tagTreeNode, deviceCode, deviceDesc string) {
+		dev, desc := deviceCode, deviceDesc
+		if code := strings.TrimSpace(n.DeviceCode); code != "" {
+			// 分组节点直接声明了设备标识
+			dev, desc = code, n.Description
+		} else if n.Name != "" && childIdPrefix(n) == n.Name {
+			// 设备节点：子测点 id 都以「设备名.」开头
+			dev, desc = n.Name, n.Description
+		}
+
+		id := strings.TrimSpace(n.Id)
+		if i := strings.Index(id, "."); i > 0 {
+			prefix, code := id[:i], id[i+1:]
+			tagDesc := n.Description
+			if tagDesc == "" {
+				tagDesc = n.Name
+			}
+			tagDeviceDesc := ""
+			if prefix == dev {
+				tagDeviceDesc = desc
+			}
+			tags = append(tags, Tag{
+				DeviceCode:        prefix,
+				DeviceDescription: tagDeviceDesc,
+				TagCode:           code,
+				Description:       tagDesc,
+				ObjectType:        strings.TrimSpace(n.ObjectType),
+			})
+		}
+		for _, child := range n.Children {
+			walk(child, dev, desc)
+		}
+	}
+	for _, n := range wrapper.Data {
+		walk(n, "", "")
+	}
+	return tags, nil
+}
+
+// childIdPrefix 返回第一个「带点 id」的子节点的前缀，用于识别设备节点。
+func childIdPrefix(n tagTreeNode) string {
+	for _, child := range n.Children {
+		id := strings.TrimSpace(child.Id)
+		if i := strings.Index(id, "."); i > 0 {
+			return id[:i]
+		}
+	}
+	return ""
+}
+
 // AccessMode 由 objectType 推导读写权限，与参考实现一致：
 // 以 I 结尾（AI/DI）→ 只读；O（AO/DO）→ 只写；V（AV/DV）→ 读写；其他→只读。
 func AccessMode(objectType string) string {

@@ -168,6 +168,32 @@ export function getEdgeGatewayDevices<T = any> (id: string) {
   })
 }
 
+export interface EdgeDeviceSyncResult {
+  /** 网关返回的测点条目数 */
+  total: number
+  /** 新增 / 更新的设备数 */
+  created: number
+  updated: number
+  /** 新增测点数 */
+  tags: number
+  /** 清单里已不存在、被标记摘除的设备数 */
+  absent: number
+  /** 命中「不接入的设备」名单而跳过的条目数 */
+  excluded: number
+}
+
+/**
+ * 同步参考系统网关的设备：拉取设备树并注册进设备管理。
+ * 设备列表随即出现，计数与后端 dtos.EdgeDeviceSyncResult 对齐。
+ */
+export function syncEdgeGatewayDevices<T = EdgeDeviceSyncResult> (id: string) {
+  return httpRequest<any, CommonResponse<T>>({
+    url: '/api/v1/gateway/edge/sync',
+    method: 'post',
+    data: { id },
+  })
+}
+
 export interface EdgeDeviceTag {
   /** 属性标识（不含设备名前缀），如 tag0001 */
   identifier: string

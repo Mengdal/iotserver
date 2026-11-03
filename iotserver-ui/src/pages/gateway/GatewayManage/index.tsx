@@ -40,8 +40,8 @@ import {
   edgeGatewayRestart,
   edgeGatewayControl,
   getEdgeGatewayDevices,
+  syncEdgeGatewayDevices,
   renameThingsGateway,
-  reconcileTenantThings,
   EdgeDeviceGroup,
   Gateway,
   GatewayMqttInfo,
@@ -152,9 +152,6 @@ interface GatewayFormValues {
   source?: 'local' | 'things' | 'ioserver'
   vendor?: string
   model?: string
-  secret?: string
-  licenseType?: string
-  license?: string
   remark?: string
   /** 网关内不接入的设备标识（逗号分隔）；删除网关子设备时会自动追加 */
   excludeDeviceKeys?: string
@@ -180,7 +177,6 @@ const GatewayManagePage: React.FC = () => {
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<Gateway | null>(null)
   const [submitting, setSubmitting] = useState(false)
-  const [reconciling, setReconciling] = useState(false)
 
   // things 网关重命名
   const [thingsRenameOpen, setThingsRenameOpen] = useState(false)
@@ -202,9 +198,6 @@ const GatewayManagePage: React.FC = () => {
   const [controlLoading, setControlLoading] = useState(false)
   const [controlSubmitting, setControlSubmitting] = useState(false)
   const [controlResults, setControlResults] = useState<Array<{ ok: boolean, text: string }>>([])
-  // 同步设备结果
-  const [syncOpen, setSyncOpen] = useState(false)
-  const [syncDevices, setSyncDevices] = useState<EdgeDeviceGroup[]>([])
 
   // 下发命令
   const [commandOpen, setCommandOpen] = useState(false)
@@ -327,11 +320,6 @@ const GatewayManagePage: React.FC = () => {
           sn: (values.sn || '').trim(),
           source,
         }
-        if (source === 'things') {
-          createPayload.secret = values.secret || ''
-          createPayload.licenseType = values.licenseType || ''
-          createPayload.license = values.license || ''
-        }
         const resp = await addGateway(createPayload)
         if (resp.success) {
           messageApi.open({ type: 'success', content: t('新增成功') })
@@ -350,27 +338,6 @@ const GatewayManagePage: React.FC = () => {
       }
     } finally {
       setSubmitting(false)
-    }
-  }
-
-  const handleReconcile = async () => {
-    setReconciling(true)
-    try {
-      const resp = await reconcileTenantThings()
-      if (resp.success) {
-        messageApi.open({
-          type: 'success',
-          content: t('已从 things 刷新：{{gateways}} 台网关，缺失 {{missing}} 台', {
-            gateways: resp.result.gateways,
-            missing: resp.result.missing,
-          }),
-        })
-        loadData()
-      } else {
-        messageApi.open({ type: 'error', content: resp.errorMsg })
-      }
-    } finally {
-      setReconciling(false)
     }
   }
 
@@ -497,13 +464,20 @@ const GatewayManagePage: React.FC = () => {
           }
           return
         }
-        const resp = await getEdgeGatewayDevices(commandTarget.id)
+        // 参考系统网关：拉取设备树并注册进设备管理（设备列表随即可见）
+        const resp = await syncEdgeGatewayDevices(commandTarget.id)
         if (resp.success) {
-          const devices = parseEdgeDevices(resp.result)
-          setSyncDevices(devices)
-          setSyncOpen(true)
+          const r = resp.result
+          messageApi.open({
+            type: 'success',
+            content: t('已同步设备：新增 {{created}} 台、更新 {{updated}} 台、测点 {{tags}} 个', {
+              created: r?.created ?? 0,
+              updated: r?.updated ?? 0,
+              tags: r?.tags ?? 0,
+            }),
+          })
           setCommandOpen(false)
-          messageApi.open({ type: 'success', content: t('已同步 {{count}} 台设备', { count: devices.length }) })
+          loadData()
         } else {
           messageApi.open({ type: 'error', content: resp.errorMsg })
         }
@@ -673,12 +647,6 @@ const GatewayManagePage: React.FC = () => {
         <Col>
           <Space>
             {canAdd && <Button type="primary" icon={<PlusOutlined />} onClick={openAdd}>{t('新增网关')}</Button>}
-            {/* things 仍保留给存量接入；ioserver 网关的配置走行内「本地配置」 */}
-            {canEdit && (
-              <Button icon={<ReloadOutlined />} loading={reconciling} onClick={handleReconcile}>
-                {t('从 things 刷新')}
-              </Button>
-            )}
           </Space>
         </Col>
       </Row>
@@ -768,43 +736,15 @@ const GatewayManagePage: React.FC = () => {
           </Row>
           <Form.Item noStyle shouldUpdate={(prev, cur) => prev.source !== cur.source}>
             {({ getFieldValue }) => getFieldValue('source') === 'things' && (
-              <>
-                <Alert
-                  type="info"
-                  showIcon
-                  style={{ marginBottom: 12 }}
-                  message={t('things 网关由 things 平台管理')}
-                  description={editing
-                    ? t('认证信息不在这里修改；需要变更请到 things 控制台。名称可通过「重命名」操作同步。')
-                    : t('Secret / License 由公司提供，平台会原样提交给 things，不计算、不校验。')}
-                />
-                {!editing && (
-                  <>
-                    <Row gutter={12}>
-                      <Col span={12}>
-                        <Form.Item label="Secret" name="secret" rules={[{ required: true, message: t('请输入 Secret') }]}>
-                          <Input.Password autoComplete="new-password" placeholder={t('公司提供的网关密钥')} />
-                        </Form.Item>
-                      </Col>
-                      <Col span={12}>
-                        <Form.Item label={t('License 类型')} name="licenseType">
-                          <Select
-                            allowClear
-                            placeholder={t('不填则由 things 使用默认值')}
-                            options={[
-                              { value: 'trial', label: 'trial' },
-                              { value: 'permanent', label: 'permanent' },
-                            ]}
-                          />
-                        </Form.Item>
-                      </Col>
-                    </Row>
-                    <Form.Item label="License" name="license">
-                      <Input.Password autoComplete="new-password" placeholder={t('永久授权时由公司提供')} />
-                    </Form.Item>
-                  </>
-                )}
-              </>
+              <Alert
+                type="info"
+                showIcon
+                style={{ marginBottom: 12 }}
+                message={t('things 网关由 things 平台管理')}
+                description={editing
+                  ? t('认证信息不在这里修改；需要变更请到 things 控制台。名称可通过「重命名」操作同步。')
+                  : t('不需要填写 Secret / License：平台会自动生成密钥并提交给 things。')}
+              />
             )}
           </Form.Item>
           {editing && (
@@ -997,58 +937,6 @@ const GatewayManagePage: React.FC = () => {
             ))}
           </div>
         )}
-      </Modal>
-
-      {/* ===== 同步设备结果 ===== */}
-      <Modal
-        open={syncOpen}
-        title={t('已同步的设备')}
-        width={760}
-        footer={null}
-        onCancel={() => setSyncOpen(false)}
-      >
-        {syncDevices.length === 0
-          ? <Empty description={t('网关没有返回设备')} />
-          : (
-            <>
-              <div style={{ marginBottom: 12, color: '#667085', fontSize: 13 }}>
-                {t('共 {{devices}} 台设备，{{tags}} 个测点', {
-                  devices: syncDevices.length,
-                  tags: syncDevices.reduce((sum, group) => sum + group.tags.length, 0),
-                })}
-              </div>
-              <Table<EdgeDeviceGroup>
-                size="small"
-                rowKey="dn"
-                pagination={false}
-                scroll={{ y: 420 }}
-                dataSource={syncDevices}
-                columns={[
-                  {
-                    title: t('设备'),
-                    dataIndex: 'label',
-                    width: 200,
-                    ellipsis: true,
-                    render: (value: string, record) => value || record.dn,
-                  },
-                  { title: t('设备标识'), dataIndex: 'dn', width: 200, ellipsis: true },
-                  {
-                    title: t('测点'),
-                    dataIndex: 'tags',
-                    render: (tags: EdgeDeviceGroup['tags']) => (
-                      <Space size={[4, 4]} wrap>
-                        {tags.map(tag => (
-                          <Tag key={tag.identifier} style={{ marginInlineEnd: 0 }}>
-                            {tag.label} ({tag.identifier})
-                          </Tag>
-                        ))}
-                      </Space>
-                    ),
-                  },
-                ]}
-              />
-            </>
-          )}
       </Modal>
 
       {/* ===== 下发命令 ===== */}

@@ -88,6 +88,8 @@
   "不自动刷新": "No auto refresh",
   "不限": "Unlimited",
   "不接入的设备": "Excluded devices",
+  "不需要填写 Secret / License：平台会自动生成密钥并提交给 things。": "No Secret / License needed: the platform generates a key automatically and submits it to things.",
+  "已同步设备：新增 {{created}} 台、更新 {{updated}} 台、测点 {{tags}} 个": "Devices synced: {{created}} created, {{updated}} updated, {{tags}} points",
   "逗号分隔的设备标识。删除网关子设备时会自动加入这里；清空后该设备会在网关下次上报时重新注册。": "Comma-separated device identifiers. Deleting a gateway sub-device adds it here automatically; clearing it makes the device register again on the gateway's next report.",
   "业务含义由绑定决定：同一块看板可以既看设备遥测，也看网关上报量；建议按「现场运行 → 告警 → 上报」的顺序给客户演示。": "Meaning comes from the binding: one board can show device telemetry as well as gateway report volume; for customer demos, present them as site operations → alarms → reporting.",
   "两次密码输⼊不⼀致": "The two passwords do not match",

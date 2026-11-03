@@ -16,6 +16,7 @@ import (
 	"iotserver/internal/pkg/errort"
 	"iotserver/internal/pkg/logger"
 	"iotserver/internal/pkg/tenant"
+	"iotserver/internal/pkg/utils"
 	"iotserver/internal/tools/gatewaymqtt"
 )
 
@@ -184,10 +185,11 @@ func (app *gatewayApp) gatewayAddThings(ctx context.Context, req dtos.GatewayAdd
 		return dtos.GatewayResponse{}, errort.NewCommonErr(errort.DefaultReqParamsError,
 			errort.NewMessageErr("网关序列号不能为空", nil))
 	}
-	// 只做必填检查；secret/license 的格式与有效性完全交给 things 判定。
-	if req.Secret == "" {
-		return dtos.GatewayResponse{}, errort.NewCommonErr(errort.DefaultReqParamsError,
-			errort.NewMessageErr("网关密钥不能为空", nil))
+	// Secret / License 不再要求用户填写：未提供时由平台生成接入密钥提交给 things，
+	// 避免用户被一个自己并不需要的凭据挡住（License 不填则由 things 使用默认值）。
+	secret := strings.TrimSpace(req.Secret)
+	if secret == "" {
+		secret = utils.GenerateDeviceSecret(16)
 	}
 	if strings.TrimSpace(req.Name) == "" || strings.TrimSpace(req.Model) == "" {
 		return dtos.GatewayResponse{}, errort.NewCommonErr(errort.DefaultReqParamsError,
@@ -196,7 +198,7 @@ func (app *gatewayApp) gatewayAddThings(ctx context.Context, req dtos.GatewayAdd
 
 	tg, err := app.things.CreateGateway(ctx, binding.ThingsProjectId, dtos.ThingsGatewayCreateRequest{
 		Sn:          strings.TrimSpace(req.Sn),
-		Secret:      req.Secret,
+		Secret:      secret,
 		Name:        strings.TrimSpace(req.Name),
 		Model:       strings.TrimSpace(req.Model),
 		LicenseType: strings.TrimSpace(req.LicenseType),

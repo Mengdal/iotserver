@@ -664,3 +664,80 @@ func TestHandleProperty_BackfillDoesNotMarkGatewayOffline(t *testing.T) {
 			gw.LastReportAt, before, after)
 	}
 }
+
+// 「同步设备」：把网关设备树注册进设备管理，与接入报文走同一份逻辑。
+func TestSyncDevices_RegistersFromTagTree(t *testing.T) {
+	f := newEdgeFixture(t)
+	// 与网关真实回执同构：分组 → 通道 → 设备 → 测点；分组自己也可能带 deviceCode
+	tree := `{"data":[
+	  {"name":"I/O点","children":[
+	    {"name":"HAVC","children":[
+	      {"name":"THmeter","description":"温湿度仪","children":[
+	        {"name":"AirRoomTemp1","id":"THmeter.AirRoomTemp1","description":"空调房温度1"}
+	      ]}
+	    ]}
+	  ]},
+	  {"name":"用户点","deviceCode":"user","children":[{"name":"tag0001","id":"user.tag0001"}]}
+	]}`
+	tags, err := edgeprotocol.ParseTagTree([]byte(tree))
+	if err != nil {
+		t.Fatalf("ParseTagTree: %v", err)
+	}
+	res, err := f.svc.SyncDevices(f.tenantCtx(), f.gateway.Id, tags)
+	if err != nil {
+		t.Fatalf("SyncDevices: %v", err)
+	}
+	if res.Created != 1 || res.Tags != 1 {
+		t.Errorf("结果 = %+v, want created=1 tags=1（user 在排除名单里，应跳过）", res)
+	}
+
+	devices, err := f.db.WithCtx(f.tenantCtx()).ListGatewayDevices(f.gateway.Id)
+	if err != nil {
+		t.Fatalf("list devices: %v", err)
+	}
+	if _, ok := devices["THmeter"]; !ok {
+		t.Fatalf("缺少 THmeter: %+v", devices)
+	}
+	if _, ok := devices["user"]; ok {
+		t.Errorf("user 在排除名单里，不该注册: %+v", devices)
+	}
+	if _, ok := devices["I/O点"]; ok {
+		t.Errorf("通道名不能当设备标识: %+v", devices)
+	}
+
+	// 再同步一次：设备已存在，应记更新而不是新增
+	again, err := f.svc.SyncDevices(f.tenantCtx(), f.gateway.Id, tags)
+	if err != nil {
+		t.Fatalf("SyncDevices again: %v", err)
+	}
+	if again.Created != 0 || again.Updated != 1 {
+		t.Errorf("二次同步结果 = %+v, want created=0 updated=1", again)
+	}
+}
+
+// 空清单不能把已有设备全标记摘除：网关超时/返回空时按失败处理。
+func TestSyncDevices_EmptyListDoesNotMarkAbsent(t *testing.T) {
+	f := newEdgeFixture(t)
+	if err := f.svc.HandleMessage("/edge/connect/260112801/260112801", []byte(connectPayload)); err != nil {
+		t.Fatalf("HandleMessage: %v", err)
+	}
+	res, err := f.svc.SyncDevices(f.tenantCtx(), f.gateway.Id, nil)
+	if err != nil {
+		t.Fatalf("SyncDevices: %v", err)
+	}
+	if res.Absent != 0 {
+		t.Errorf("absent = %d, want 0（空清单不摘除）", res.Absent)
+	}
+	devices, err := f.db.WithCtx(f.tenantCtx()).ListGatewayDevices(f.gateway.Id)
+	if err != nil {
+		t.Fatalf("list devices: %v", err)
+	}
+	if len(devices) != 2 {
+		t.Fatalf("设备数 = %d, want 2: %+v", len(devices), devices)
+	}
+	for key, d := range devices {
+		if d.ProvisionState != models.DeviceStateActive {
+			t.Errorf("%s 的 ProvisionState = %q, want active", key, d.ProvisionState)
+		}
+	}
+}

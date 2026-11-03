@@ -51,6 +51,21 @@ type GatewayUpdateRequest struct {
 	ExcludeDeviceKeys *string `json:"excludeDeviceKeys"`
 }
 
+// EdgeDeviceSyncResult 「同步设备」结果：把网关设备树对齐进设备管理后的计数
+type EdgeDeviceSyncResult struct {
+	// Total 网关返回的测点条目数
+	Total int `json:"total"`
+	// Created / Updated 新增、更新的设备数
+	Created int `json:"created"`
+	Updated int `json:"updated"`
+	// Tags 新增的测点数
+	Tags int `json:"tags"`
+	// Absent 清单里已不存在、被标记摘除的设备数
+	Absent int `json:"absent"`
+	// Excluded 命中「不接入的设备」名单而跳过的条目数
+	Excluded int `json:"excluded"`
+}
+
 // GatewayConfigRequest 下发网关采集/上报配置
 type GatewayConfigRequest struct {
 	Id     string `json:"id" binding:"required"`

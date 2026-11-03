@@ -444,6 +444,10 @@ func (b *Bootstrap) initClient(ctx context.Context, wg *sync.WaitGroup, dic *di.
 		container.EdgeCtlName: func(get di.Get) interface{} {
 			return edgeCtl
 		},
+		// 供「同步设备」把网关设备树对齐进设备管理
+		container.EdgeIngestName: func(get di.Get) interface{} {
+			return edgeIngest
+		},
 	})
 	return true
 }

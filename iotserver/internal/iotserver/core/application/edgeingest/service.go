@@ -273,9 +273,33 @@ func (s *Service) handleConnect(ctx context.Context, g models.Gateway, payload [
 		s.warnf("参考系统接入：网关 %s 置在线失败: %v", g.Sn, err)
 	}
 
+	_, err = s.syncDevices(ctx, g, msg.Tags)
+	return err
+}
+
+// SyncDevices 手动「同步设备」：把网关当前的设备/测点树对齐进平台，完成设备注册。
+// 与接入报文走同一份逻辑，因此排除名单、自动注册开关的行为完全一致。
+func (s *Service) SyncDevices(ctx context.Context, gatewayID string, tags []edgeprotocol.Tag) (dtos.EdgeDeviceSyncResult, error) {
+	g, err := s.dbClient.WithCtx(ctx).GatewayById(gatewayID)
+	if err != nil {
+		return dtos.EdgeDeviceSyncResult{}, err
+	}
+	return s.syncDevices(ctx, g, tags)
+}
+
+// syncDevices 清单对齐的公共实现（接入报文与手动同步共用）。
+//
+// 清单被视为**权威全集**：清单里没有的设备标记为摘除。但**空清单不摘除**——
+// 手动同步时网关可能超时/返回空，把整份设备列表标成摘除代价太大。
+func (s *Service) syncDevices(ctx context.Context, g models.Gateway, list []edgeprotocol.Tag) (dtos.EdgeDeviceSyncResult, error) {
+	result := dtos.EdgeDeviceSyncResult{Total: len(list)}
 	if g.AutoProvision == models.GatewayAutoProvisionOff {
-		s.infof("参考系统接入：网关 %s 关闭了自动注册，跳过 %d 条设备清单", g.Sn, len(msg.Tags))
-		return nil
+		s.infof("参考系统接入：网关 %s 关闭了自动注册，跳过 %d 条设备清单", g.Sn, len(list))
+		return result, nil
+	}
+	if len(list) == 0 {
+		s.infof("参考系统接入：网关 %s 返回空设备清单，不做摘除", g.Sn)
+		return result, nil
 	}
 
 	excluded := excludeSet(g.ExcludeDeviceKeys)
@@ -285,9 +309,9 @@ func (s *Service) handleConnect(ctx context.Context, g models.Gateway, payload [
 		tags        []edgeprotocol.Tag
 	}
 	groups := map[string]*devGroup{}
-	order := make([]string, 0, len(msg.Tags))
+	order := make([]string, 0, len(list))
 	skipped := 0
-	for _, t := range msg.Tags {
+	for _, t := range list {
 		if _, skip := excluded[t.DeviceCode]; skip {
 			skipped++
 			continue
@@ -308,7 +332,7 @@ func (s *Service) handleConnect(ctx context.Context, g models.Gateway, payload [
 
 	existing, err := s.dbClient.WithCtx(ctx).ListGatewayDevices(g.Id)
 	if err != nil {
-		return err
+		return result, err
 	}
 
 	created, updated, tagsCreated := 0, 0, 0
@@ -366,12 +390,15 @@ func (s *Service) handleConnect(ctx context.Context, g models.Gateway, payload [
 		firstErr = err
 	}
 
+	result.Created = created
+	result.Updated = updated
+	result.Tags = tagsCreated
+	result.Absent = int(absent)
+	result.Excluded = skipped
+
 	s.infof("参考系统接入：网关 %s 清单 %d 条 → 新增设备 %d、更新 %d、新增测点 %d、摘除 %d、排除 %d",
-		g.Sn, len(msg.Tags), created, updated, tagsCreated, absent, skipped)
-	if firstErr != nil {
-		return firstErr
-	}
-	return nil
+		g.Sn, len(list), created, updated, tagsCreated, absent, skipped)
+	return result, firstErr
 }
 
 // handleProperty 处理数据报文（实时与历史补传同路，区别只在 topic）。

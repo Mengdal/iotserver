@@ -10,6 +10,7 @@ import (
 	"iotserver/internal/models"
 	"iotserver/internal/pkg/errort"
 	"iotserver/internal/pkg/httphelper"
+	"iotserver/internal/tools/edgeprotocol"
 )
 
 /******************************* 网关管理（第三方工业网关接入） *******************************/
@@ -267,4 +268,37 @@ func (ctl *controller) GatewayEdgeDevices(c *gin.Context) {
 		return
 	}
 	httphelper.ResultSuccess(tree, c.Writer, ctl.lc)
+}
+
+// @Tags    设备接入-网关
+// @Summary 同步参考系统网关的设备：拉取设备树并注册进设备管理
+// @Accept  json
+// @Produce json
+// @Router  /api/v1/gateway/edge/sync [post]
+func (ctl *controller) GatewayEdgeSync(c *gin.Context) {
+	var req gatewayEdgeRestartRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		httphelper.RenderFail(c, errort.NewCommonErr(errort.DefaultReqParamsError, err), c.Writer, ctl.lc)
+		return
+	}
+	g, ok := ctl.loadEdgeGateway(c, req.Id)
+	if !ok {
+		return
+	}
+	tree, err := container.EdgeCtlFrom(ctl.dic.Get).TagTree(c.Request.Context(), edgePk(g), g.Sn)
+	if err != nil {
+		httphelper.RenderFail(c, err, c.Writer, ctl.lc)
+		return
+	}
+	tags, err := edgeprotocol.ParseTagTree(tree)
+	if err != nil {
+		httphelper.RenderFail(c, err, c.Writer, ctl.lc)
+		return
+	}
+	result, err := container.EdgeIngestFrom(ctl.dic.Get).SyncDevices(c.Request.Context(), g.Id, tags)
+	if err != nil {
+		httphelper.RenderFail(c, err, c.Writer, ctl.lc)
+		return
+	}
+	httphelper.ResultSuccess(result, c.Writer, ctl.lc)
 }

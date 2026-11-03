@@ -105,6 +105,8 @@ func RegisterGateway(engine *gin.Engine, dic *di.Container) {
 		v1Auth.POST("gateway/edge/restart", ctl.Perm(middleware.PermGatewayCommand), ctl.GatewayEdgeRestart)
 		v1Auth.POST("gateway/edge/control", ctl.Perm(middleware.PermGatewayCommand), ctl.GatewayEdgeControl)
 		v1Auth.GET("gateway/edge/devices", ctl.Perm(middleware.PermGatewayList), ctl.GatewayEdgeDevices)
+		// 同步设备：拉取设备树并注册进设备管理（会新增设备，按编辑权限管控）
+		v1Auth.POST("gateway/edge/sync", ctl.Perm(middleware.PermGatewayEdit), ctl.GatewayEdgeSync)
 
 		// 设备级采集配置：点位按产品物模型生成，保存到平台；下发接口待接入。
 		v1Auth.GET("collect/config", ctl.Perm(middleware.PermCollectConfigList), ctl.CollectConfigGet)
