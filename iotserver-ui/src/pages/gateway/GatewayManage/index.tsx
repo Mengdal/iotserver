@@ -69,27 +69,27 @@ function parseEdgeDevices (raw: any): EdgeDeviceGroup[] {
     }
     return group
   }
-  const walk = (node: any, inheritedDevice?: string) => {
+  const walk = (node: any, inheritedLabel?: string) => {
     if (!node || typeof node !== 'object') return
     const name = String(node.name || '')
     const id = String(node.id || '')
-    let device = inheritedDevice
+    const nodeLabel = String(node.description || name || '')
     if (node.deviceCode) {
-      device = String(node.deviceCode)
-      ensure(device, name)
+      ensure(String(node.deviceCode), name)
     }
     if (id.includes('.')) {
+      // 测点 id 形如 `{设备名}.{测点标识}`。分组键**必须取 id 的前缀**（真实设备名），
+      // 不能沿用上层通道节点的名字（如「I/O点」「用户点」「系统点」）：
+      // 网关只认设备名（如 THmeter），拿通道名去写值会回 status=false，
+      // 界面显示「I/O点.xxx: 失败」。
       const [prefix, code] = id.split('.')
-      device = device || prefix
-      ensure(device)
-      const group = ensure(device)
+      const group = ensure(prefix, inheritedLabel)
       group.tags.push({ identifier: code, label: node.description || name || code })
     }
     if (Array.isArray(node.children)) {
-      const childDevice = node.deviceCode
-        ? String(node.deviceCode)
-        : (inheritedDevice || (id ? undefined : name) || device)
-      node.children.forEach((child: any) => walk(child, childDevice))
+      // 层级的展示名向下传递；测点节点所属的设备节点会覆盖通道节点的名字
+      const childLabel = nodeLabel || inheritedLabel
+      node.children.forEach((child: any) => walk(child, childLabel))
     }
   }
   const data = Array.isArray(raw?.data) ? raw.data : (Array.isArray(raw) ? raw : [])
