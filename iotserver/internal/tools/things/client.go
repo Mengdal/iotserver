@@ -23,7 +23,6 @@ const (
 	projectDeletePath = "/edge-user/project/delete"
 	gatewayListPath   = "/edge-mgmt/gateway/list"
 	gatewayCreatePath = "/edge-mgmt/gateway/create"
-	gatewayUpdatePath = "/edge-mgmt/gateway/modify"
 	gatewayDeletePath = "/edge-mgmt/gateway/delete"
 
 	// maxPageSize things 侧的 MAX_SIZE_OF_PAGE。
@@ -222,12 +221,6 @@ func (c *Client) CreateGateway(ctx context.Context, req CreateGatewayRequest) (G
 	form.Set("secret", req.Secret)
 	form.Set("name", strings.TrimSpace(req.Name))
 	form.Set("model", strings.TrimSpace(req.Model))
-	if strings.TrimSpace(req.LicenseType) != "" {
-		form.Set("licenseType", strings.TrimSpace(req.LicenseType))
-	}
-	if strings.TrimSpace(req.License) != "" {
-		form.Set("license", req.License)
-	}
 	raw, err := c.doForm(ctx, gatewayCreatePath, form)
 	if err != nil {
 		return Gateway{}, err
@@ -249,42 +242,6 @@ func (c *Client) CreateGateway(ctx context.Context, req CreateGatewayRequest) (G
 	}
 	if g.PK == "" {
 		g.PK = g.SN
-	}
-	return g, nil
-}
-
-// UpdateGateway 修改网关名称/授权。只发送非空字段，未传的字段由 things 保持不变。
-func (c *Client) UpdateGateway(ctx context.Context, req UpdateGatewayRequest) (Gateway, error) {
-	if req.ProjectID <= 0 || req.GatewayID <= 0 {
-		return Gateway{}, fmt.Errorf("project id and gateway id are required")
-	}
-	form := url.Values{}
-	form.Set("projectId", strconv.FormatInt(req.ProjectID, 10))
-	form.Set("gatewayId", strconv.FormatInt(req.GatewayID, 10))
-	if strings.TrimSpace(req.Name) != "" {
-		form.Set("name", strings.TrimSpace(req.Name))
-	}
-	if strings.TrimSpace(req.LicenseType) != "" {
-		form.Set("licenseType", strings.TrimSpace(req.LicenseType))
-	}
-	if strings.TrimSpace(req.License) != "" {
-		form.Set("license", req.License)
-	}
-	raw, err := c.doForm(ctx, gatewayUpdatePath, form)
-	if err != nil {
-		return Gateway{}, err
-	}
-	var g Gateway
-	if len(raw) > 0 && string(raw) != "null" {
-		if err := json.Unmarshal(raw, &g); err != nil {
-			return Gateway{}, fmt.Errorf("decode things gateway: %w", err)
-		}
-	}
-	if g.ID == 0 {
-		g.ID = req.GatewayID
-	}
-	if g.ProjectID == 0 {
-		g.ProjectID = req.ProjectID
 	}
 	return g, nil
 }

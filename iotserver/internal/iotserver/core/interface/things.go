@@ -34,13 +34,10 @@ type ThingsItf interface {
 	// UpdateBindingStatus 更新绑定状态/错误（用于失败重试与对账）。
 	UpdateBindingStatus(ctx context.Context, tenantID, status, lastError string) error
 
-	// CreateGateway 在 things 中创建网关。Secret/License 原样透传。
+	// CreateGateway 在 things 中创建网关（Secret 由平台生成后传入）。
 	CreateGateway(ctx context.Context, projectID int64, req dtos.ThingsGatewayCreateRequest) (dtos.ThingsGateway, error)
-	// RenameGateway 在 things 中修改网关名称。
-	RenameGateway(ctx context.Context, projectID, gatewayID int64, name string) error
-	// DeleteGateway 在 things 中删除网关（使用配置的服务账号密码）。
+	// DeleteGateway 删除 things 网关（使用配置的服务账号密码）。
 	DeleteGateway(ctx context.Context, projectID, gatewayID int64) error
-
 	// ReconcileTenant 对单个租户执行一次本地镜像对账。
 	ReconcileTenant(ctx context.Context, tenantID string) (dtos.ThingsReconcileResult, error)
 	// ReconcileAll 对所有已绑定租户执行对账。

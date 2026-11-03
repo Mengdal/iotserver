@@ -185,24 +185,18 @@ func (app *gatewayApp) gatewayAddThings(ctx context.Context, req dtos.GatewayAdd
 		return dtos.GatewayResponse{}, errort.NewCommonErr(errort.DefaultReqParamsError,
 			errort.NewMessageErr("网关序列号不能为空", nil))
 	}
-	// Secret / License 不再要求用户填写：未提供时由平台生成接入密钥提交给 things，
-	// 避免用户被一个自己并不需要的凭据挡住（License 不填则由 things 使用默认值）。
-	secret := strings.TrimSpace(req.Secret)
-	if secret == "" {
-		secret = utils.GenerateDeviceSecret(16)
-	}
+	// Secret 由平台生成、License 使用 things 默认值，不再要求用户填写。
+	secret := utils.GenerateDeviceSecret(16)
 	if strings.TrimSpace(req.Name) == "" || strings.TrimSpace(req.Model) == "" {
 		return dtos.GatewayResponse{}, errort.NewCommonErr(errort.DefaultReqParamsError,
 			errort.NewMessageErr("网关名称和型号不能为空", nil))
 	}
 
 	tg, err := app.things.CreateGateway(ctx, binding.ThingsProjectId, dtos.ThingsGatewayCreateRequest{
-		Sn:          strings.TrimSpace(req.Sn),
-		Secret:      secret,
-		Name:        strings.TrimSpace(req.Name),
-		Model:       strings.TrimSpace(req.Model),
-		LicenseType: strings.TrimSpace(req.LicenseType),
-		License:     req.License,
+		Sn:     strings.TrimSpace(req.Sn),
+		Secret: secret,
+		Name:   strings.TrimSpace(req.Name),
+		Model:  strings.TrimSpace(req.Model),
 	})
 	if err != nil {
 		return dtos.GatewayResponse{}, err
@@ -320,46 +314,6 @@ func (app *gatewayApp) GatewayDelete(ctx context.Context, id string) error {
 		}
 	}
 	return app.dbClient.WithCtx(ctx).DeleteGateway(id)
-}
-
-// GatewayRenameThings 在 things 中重命名网关，并同步本地镜像名称。
-func (app *gatewayApp) GatewayRenameThings(ctx context.Context, req dtos.GatewayThingsRenameRequest) error {
-	if app.things == nil {
-		return errort.NewCommonErr(errort.AppThingsDisabled,
-			errort.NewMessageErr("things 集成未启用", nil))
-	}
-	g, err := app.dbClient.WithCtx(ctx).GatewayById(req.Id)
-	if err != nil {
-		return err
-	}
-	if sourceOf(g) != models.GatewaySourceThings || g.ThingsGatewayId <= 0 {
-		return errort.NewCommonErr(errort.DefaultReqParamsError,
-			errort.NewMessageErr("该网关不是 things 网关", nil))
-	}
-	tenantID := g.TenantId
-	if tenantID == "" {
-		tenantID = tenant.FromContext(ctx).TenantID
-	}
-	binding, found, bErr := app.things.GetTenantBinding(ctx, tenantID)
-	if bErr != nil {
-		return bErr
-	}
-	if !found {
-		return errort.NewCommonErr(errort.AppThingsBindingMissing,
-			errort.NewMessageErr("当前租户尚未绑定 things 项目", nil))
-	}
-	if err = app.things.RenameGateway(ctx, binding.ThingsProjectId, g.ThingsGatewayId, req.Name); err != nil {
-		return err
-	}
-	return app.dbClient.WithCtx(ctx).UpdateGateway(models.Gateway{
-		Id:     g.Id,
-		Name:   strings.TrimSpace(req.Name),
-		Pk:     g.Pk,
-		DeptId: g.DeptId,
-		Vendor: g.Vendor,
-		Model:  g.Model,
-		Remark: g.Remark,
-	})
 }
 
 // GatewayById 网关详情

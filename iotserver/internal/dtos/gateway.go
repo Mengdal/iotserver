@@ -31,10 +31,6 @@ type GatewayAddRequest struct {
 	Vendor string `json:"vendor"`
 	Model  string `json:"model"`
 	Remark string `json:"remark"`
-	// 以下字段仅 source=things 时使用，原样透传给 things，不在本地校验/计算。
-	Secret      string `json:"secret"`
-	LicenseType string `json:"licenseType"`
-	License     string `json:"license"`
 }
 
 // GatewayUpdateRequest 修改网关（SN 不可改：它同时是 MQTT clientId）

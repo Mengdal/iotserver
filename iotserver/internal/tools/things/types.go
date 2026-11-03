@@ -85,22 +85,11 @@ type Gateway struct {
 //
 // Secret / License 由公司或用户提供，IoTServer 只负责透传。
 type CreateGatewayRequest struct {
-	ProjectID   int64
-	SN          string
-	Secret      string
-	Name        string
-	Model       string
-	LicenseType string
-	License     string
-}
-
-// UpdateGatewayRequest 对应 things gateway/modify 的可改字段。
-type UpdateGatewayRequest struct {
-	ProjectID   int64
-	GatewayID   int64
-	Name        string
-	LicenseType string
-	License     string
+	ProjectID int64
+	SN        string
+	Secret    string
+	Name      string
+	Model     string
 }
 
 func trimRightSlash(s string) string {

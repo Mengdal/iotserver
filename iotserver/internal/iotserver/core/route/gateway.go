@@ -97,8 +97,6 @@ func RegisterGateway(engine *gin.Engine, dic *di.Container) {
 		v1Auth.POST("gateway", ctl.Perm(middleware.PermGatewayAdd), ctl.GatewayAdd)
 		v1Auth.PUT("gateway", ctl.Perm(middleware.PermGatewayEdit), ctl.GatewayUpdate)
 		v1Auth.DELETE("gateway/:id", ctl.Perm(middleware.PermGatewayRemove), ctl.GatewayDelete)
-		v1Auth.POST("gateway/things-rename", ctl.Perm(middleware.PermGatewayEdit), ctl.GatewayRenameThings)
-		v1Auth.POST("gateway/things-reconcile", ctl.Perm(middleware.PermGatewayEdit), ctl.GatewayThingsReconcile)
 		v1Auth.PUT("gateway/config", ctl.Perm(middleware.PermGatewayConfig), ctl.GatewayPushConfig)
 		v1Auth.POST("gateway/command", ctl.Perm(middleware.PermGatewayCommand), ctl.GatewayCommand)
 		// 参考系统（/edge）网关控制：重启 / 写属性 / 设备树

@@ -22,39 +22,16 @@ func (s *service) CreateGateway(ctx context.Context, projectID int64, req dtos.T
 			fmt.Errorf("当前租户尚未绑定 things 项目"))
 	}
 	g, err := s.client.CreateGateway(ctx, things.CreateGatewayRequest{
-		ProjectID:   projectID,
-		SN:          strings.TrimSpace(req.Sn),
-		Secret:      req.Secret,
-		Name:        strings.TrimSpace(req.Name),
-		Model:       strings.TrimSpace(req.Model),
-		LicenseType: strings.TrimSpace(req.LicenseType),
-		License:     req.License,
+		ProjectID: projectID,
+		SN:        strings.TrimSpace(req.Sn),
+		Secret:    req.Secret,
+		Name:      strings.TrimSpace(req.Name),
+		Model:     strings.TrimSpace(req.Model),
 	})
 	if err != nil {
 		return dtos.ThingsGateway{}, s.wrapErr("创建 things 网关", err)
 	}
 	return toThingsGateway(g), nil
-}
-
-func (s *service) RenameGateway(ctx context.Context, projectID, gatewayID int64, name string) error {
-	if _, err := s.requireConfig(ctx); err != nil {
-		return err
-	}
-	if projectID <= 0 || gatewayID <= 0 {
-		return errort.NewCommonErr(errort.DefaultReqParamsError,
-			fmt.Errorf("things project/gateway id is required"))
-	}
-	if strings.TrimSpace(name) == "" {
-		return errort.NewCommonErr(errort.DefaultReqParamsError, fmt.Errorf("gateway name is required"))
-	}
-	if _, err := s.client.UpdateGateway(ctx, things.UpdateGatewayRequest{
-		ProjectID: projectID,
-		GatewayID: gatewayID,
-		Name:      name,
-	}); err != nil {
-		return s.wrapErr("修改 things 网关", err)
-	}
-	return nil
 }
 
 func (s *service) DeleteGateway(ctx context.Context, projectID, gatewayID int64) error {

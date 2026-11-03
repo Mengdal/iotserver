@@ -2292,22 +2292,6 @@ paths:
       summary: 重启参考系统网关
       tags:
       - 设备接入-网关
-  /api/v1/gateway/things-reconcile:
-    post:
-      produces:
-      - application/json
-      responses: {}
-      summary: 对当前租户执行 things 网关对账
-      tags:
-      - 设备接入-网关
-  /api/v1/gateway/things-rename:
-    post:
-      produces:
-      - application/json
-      responses: {}
-      summary: 在 things 中重命名网关
-      tags:
-      - 设备接入-网关
   /api/v1/gateways:
     get:
       produces:

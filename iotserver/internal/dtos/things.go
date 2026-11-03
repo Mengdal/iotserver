@@ -20,15 +20,13 @@ type ThingsGateway struct {
 	Model     string `json:"model"`
 }
 
-// ThingsGatewayCreateRequest 新增 things 网关时由前端/公司提供的认证参数。
-// IoTServer 只透传，不计算、不校验。
+// ThingsGatewayCreateRequest 新增 things 网关的参数。
+// Secret、License 由平台生成/使用 things 默认值，不再由前端提供。
 type ThingsGatewayCreateRequest struct {
-	Sn          string `json:"sn" binding:"required"`
-	Secret      string `json:"secret" binding:"required"`
-	Name        string `json:"name" binding:"required"`
-	Model       string `json:"model" binding:"required"`
-	LicenseType string `json:"licenseType"`
-	License     string `json:"license"`
+	Sn     string `json:"sn" binding:"required"`
+	Secret string `json:"secret" binding:"required"`
+	Name   string `json:"name" binding:"required"`
+	Model  string `json:"model" binding:"required"`
 }
 
 // ThingsConnectionStatus 测试连接结果。
@@ -50,12 +48,6 @@ type TenantThingsBindRequest struct {
 
 // TenantThingsRenameRequest 重命名租户绑定的 things 项目。
 type TenantThingsRenameRequest struct {
-	Name string `json:"name" binding:"required"`
-}
-
-// GatewayThingsRenameRequest 在 things 中重命名网关。
-type GatewayThingsRenameRequest struct {
-	Id   string `json:"id" binding:"required"`
 	Name string `json:"name" binding:"required"`
 }
 
