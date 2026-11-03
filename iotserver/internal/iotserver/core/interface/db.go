@@ -100,6 +100,8 @@ type DBClient interface {
 	UpsertGatewayDevice(d models.Device) (models.Device, bool, error)
 	// ListGatewayDevices 取网关下已注册设备，按 device_key 索引（全量清单比对用）
 	ListGatewayDevices(gatewayId string) (map[string]models.Device, error)
+	// UpdateDeviceTagTypes 回填测点数据类型（code → type），只改 type 列
+	UpdateDeviceTagTypes(deviceId string, types map[string]string) error
 	// MarkDevicesAbsent 把全量清单里已消失的设备标记为摘除（不删行）
 	MarkDevicesAbsent(ids []string) (int64, error)
 	// UpsertDeviceTags 写入/更新设备级测点定义（无物模型设备的读取侧来源）

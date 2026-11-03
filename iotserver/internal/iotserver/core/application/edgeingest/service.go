@@ -76,6 +76,10 @@ type Service struct {
 	onlineMu   sync.Mutex
 	onlineSeen map[string]time.Time
 
+	// typeMu / deviceTagTypes 已推断过类型的测点缓存（deviceID → code → type）
+	typeMu         sync.Mutex
+	deviceTagTypes map[string]map[string]string
+
 	// subMu / subscribed 当前已订阅的主题集合，用于增量对齐（退订消失的网关）
 	subMu      sync.Mutex
 	subscribed map[string]struct{}
@@ -521,7 +525,96 @@ func (s *Service) ingestReport(ctx context.Context, g models.Gateway, r edgeprot
 		return 0, err
 	}
 	s.markDeviceOnline(ctx, device.Id)
+	s.syncTagTypes(ctx, device.Id, r.Properties)
 	return len(properties), nil
+}
+
+// syncTagTypes 用数据报文里的值维护测点类型。
+//
+// 背景：设备清单与「同步设备」只带 name/description，没有数据类型，
+// 注册出来的测点 type 全是 unknown，读路径会把它们统一当 text——
+// 数值曲线、min/max/avg 都按文本处理。数据报文的值本身带类型，采样即可补上。
+//
+// 规则：
+//   - unknown → 按首个样本推断 int/float/bool/text；
+//   - int 收到带小数点的样本时**升为 float**：整数可能只是这一刻恰好是整数
+//     （实测测试台先发 111，真机随后发 30.0000）；
+//   - 其余不覆盖：text/bool/float 不降级，人工校准过的值也不动。
+//
+// 测点类型缓存在内存里，命中缓存不查库；写库失败只告警，下一包重试。
+func (s *Service) syncTagTypes(ctx context.Context, deviceID string, props map[string]string) {
+	if deviceID == "" || len(props) == 0 {
+		return
+	}
+
+	s.typeMu.Lock()
+	cached, seen := s.deviceTagTypes[deviceID]
+	var upgrades map[string]string
+	if seen {
+		for code, raw := range props {
+			if cached[code] == models.DeviceTagTypeInt &&
+				strings.ContainsAny(strings.TrimSpace(raw), ".eE") {
+				if upgrades == nil {
+					upgrades = make(map[string]string, 2)
+				}
+				upgrades[code] = models.DeviceTagTypeFloat
+			}
+		}
+	}
+	s.typeMu.Unlock()
+
+	if seen {
+		if len(upgrades) == 0 {
+			return
+		}
+		if err := s.dbClient.WithCtx(ctx).UpdateDeviceTagTypes(deviceID, upgrades); err != nil {
+			s.warnf("参考系统接入：升级测点类型失败 device=%s: %v", deviceID, err)
+			return
+		}
+		s.typeMu.Lock()
+		for code, tp := range upgrades {
+			cached[code] = tp
+		}
+		s.typeMu.Unlock()
+		return
+	}
+
+	tags, err := s.dbClient.WithCtx(ctx).ListDeviceTags(deviceID)
+	if err != nil {
+		s.warnf("参考系统接入：读取测点定义失败 device=%s: %v", deviceID, err)
+		return
+	}
+	cached = make(map[string]string, len(tags))
+	types := make(map[string]string, len(props))
+	for _, tag := range tags {
+		tp := tag.Type
+		if tp == "" {
+			tp = models.DeviceTagTypeUnknown
+		}
+		if raw, ok := props[tag.Code]; ok && tp == models.DeviceTagTypeUnknown {
+			tp = inferTagType(raw, edgeprotocol.NumericOrString(raw))
+			types[tag.Code] = tp
+		}
+		cached[tag.Code] = tp
+	}
+	if len(types) > 0 {
+		if err := s.dbClient.WithCtx(ctx).UpdateDeviceTagTypes(deviceID, types); err != nil {
+			s.warnf("参考系统接入：回填测点类型失败 device=%s: %v", deviceID, err)
+			return
+		}
+		s.debugf("参考系统接入：设备 %s 回填 %d 个测点类型", deviceID, len(types))
+	}
+
+	s.typeMu.Lock()
+	if s.deviceTagTypes == nil {
+		s.deviceTagTypes = make(map[string]map[string]string)
+	}
+	if len(s.deviceTagTypes) > 10000 {
+		// 防无界增长：丢掉缓存即可，下包会重新读一次测点表（已推断的类型不会再变）
+		s.deviceTagTypes = make(map[string]map[string]string)
+	}
+	s.deviceTagTypes[deviceID] = cached
+	s.typeMu.Unlock()
 }
 
 // resolveOrProvision 定位设备；未注册时**惰性注册**后返回。
@@ -643,13 +736,13 @@ func inferTagType(raw string, v interface{}) string {
 	switch v.(type) {
 	case float64:
 		if strings.ContainsAny(strings.TrimSpace(raw), ".eE") {
-			return "float"
+			return models.DeviceTagTypeFloat
 		}
-		return "int"
+		return models.DeviceTagTypeInt
 	case bool:
-		return "bool"
+		return models.DeviceTagTypeBool
 	default:
-		return "text"
+		return models.DeviceTagTypeText
 	}
 }
 

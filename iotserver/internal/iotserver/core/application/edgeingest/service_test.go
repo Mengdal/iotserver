@@ -775,3 +775,73 @@ func TestSyncDevices_UsesGatewayTenantUnderPlatformView(t *testing.T) {
 		t.Fatalf("数据报文定位设备失败: %v", err)
 	}
 }
+
+// 清单/同步注册出来的测点类型是 unknown；首包数据到达后应按值回填，
+// 读路径才不会把数值属性一律当 text。
+func TestHandleProperty_InfersTagTypes(t *testing.T) {
+	f := newEdgeFixture(t)
+	connect := `{"tags":[
+	  {"deviceCode":"THmeter","tagCode":"AirRoomTemp1","description":"空调房温度1"},
+	  {"deviceCode":"THmeter","tagCode":"Switch1","description":"开关1"},
+	  {"deviceCode":"THmeter","tagCode":"Cops","description":"服务商"}
+	]}`
+	if err := f.svc.HandleMessage("/edge/connect/260112801/260112801", []byte(connect)); err != nil {
+		t.Fatalf("connect: %v", err)
+	}
+
+	tagsOf := func() map[string]models.DeviceTag {
+		devices, err := f.db.WithCtx(f.tenantCtx()).ListGatewayDevices(f.gateway.Id)
+		if err != nil {
+			t.Fatalf("list devices: %v", err)
+		}
+		list, err := f.db.WithCtx(f.tenantCtx()).ListDeviceTags(devices["THmeter"].Id)
+		if err != nil {
+			t.Fatalf("list tags: %v", err)
+		}
+		out := map[string]models.DeviceTag{}
+		for _, tag := range list {
+			out[tag.Code] = tag
+		}
+		return out
+	}
+
+	// 注册后全是 unknown
+	for code, tag := range tagsOf() {
+		if tag.Type != models.DeviceTagTypeUnknown {
+			t.Fatalf("注册后 %s 的 type = %q, want unknown", code, tag.Type)
+		}
+	}
+
+	post := `[{"dn":"THmeter","properties":{"AirRoomTemp1":"30.0000","Switch1":"1","Cops":"CMCC"},"time":1792122130}]`
+	if err := f.svc.HandleMessage("/edge/property/260112801/260112801/post", []byte(post)); err != nil {
+		t.Fatalf("property: %v", err)
+	}
+
+	got := tagsOf()
+	want := map[string]string{
+		"AirRoomTemp1": models.DeviceTagTypeFloat,
+		"Switch1":      models.DeviceTagTypeInt,
+		"Cops":         models.DeviceTagTypeText,
+	}
+	for code, wantType := range want {
+		if got[code].Type != wantType {
+			t.Errorf("%s 的 type = %q, want %q", code, got[code].Type, wantType)
+		}
+	}
+
+	// 后续报文：int 遇到小数要升为 float（否则真机发 30.0000 时会被永远当成整数）
+	post2 := `[{"dn":"THmeter","properties":{"AirRoomTemp1":"31","Switch1":"0.5","Cops":"CUCC"},"time":1792122190}]`
+	if err := f.svc.HandleMessage("/edge/property/260112801/260112801/post", []byte(post2)); err != nil {
+		t.Fatalf("property 2: %v", err)
+	}
+	after := tagsOf()
+	if after["Switch1"].Type != models.DeviceTagTypeFloat {
+		t.Errorf("Switch1 收到小数后应升为 float, got %q", after["Switch1"].Type)
+	}
+	if after["AirRoomTemp1"].Type != models.DeviceTagTypeFloat {
+		t.Errorf("AirRoomTemp1 应保持 float, got %q", after["AirRoomTemp1"].Type)
+	}
+	if after["Cops"].Type != models.DeviceTagTypeText {
+		t.Errorf("Cops 应保持 text, got %q", after["Cops"].Type)
+	}
+}

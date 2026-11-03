@@ -185,7 +185,7 @@ func upsertDeviceTags(c *Client, deviceId string, tags []models.DeviceTag) (int,
 				t.Source = models.DeviceTagSourceAuto
 			}
 			if t.Type == "" {
-				t.Type = "unknown"
+				t.Type = models.DeviceTagTypeUnknown
 			}
 			if t.DiscoveredAt == 0 {
 				t.DiscoveredAt = now
@@ -208,7 +208,7 @@ func upsertDeviceTags(c *Client, deviceId string, tags []models.DeviceTag) (int,
 		if old.Unit == "" && t.Unit != "" {
 			updates["unit"] = t.Unit
 		}
-		if old.Type == "unknown" && t.Type != "" && t.Type != "unknown" {
+		if old.Type == models.DeviceTagTypeUnknown && t.Type != "" && t.Type != models.DeviceTagTypeUnknown {
 			updates["type"] = t.Type
 		}
 		if err := c.Pool.Table(models.TableDeviceTag).Where("id = ?", old.Id).Updates(updates).Error; err != nil {
@@ -216,6 +216,28 @@ func upsertDeviceTags(c *Client, deviceId string, tags []models.DeviceTag) (int,
 		}
 	}
 	return created, nil
+}
+
+// updateDeviceTagTypes 回填测点数据类型。
+//
+// 清单/同步注册出来的测点 type 是 unknown（源报文没有类型信息），
+// 首包数据到达时按值推断后写回，读路径才不会把它们一律当 text。
+// 只更新 type 列，不碰名称/单位/读写权限。
+func updateDeviceTagTypes(c *Client, deviceId string, types map[string]string) error {
+	if deviceId == "" || len(types) == 0 {
+		return nil
+	}
+	now := time.Now().UnixMilli()
+	return c.Pool.Transaction(func(tx *gorm.DB) error {
+		for code, tp := range types {
+			if err := tx.Table(models.TableDeviceTag).
+				Where("device_id = ? AND code = ?", deviceId, code).
+				Updates(map[string]interface{}{"type": tp, "modified": now}).Error; err != nil {
+				return errort.NewCommonEdgeX(errort.DefaultSystemError, "update device tag type failed", err)
+			}
+		}
+		return nil
+	})
 }
 
 // listDeviceTags 取设备级测点定义（读路径在无产品物模型时回落用）。
@@ -255,4 +277,8 @@ func (c *Client) UpsertDeviceTags(deviceId string, tags []models.DeviceTag) (int
 
 func (c *Client) ListDeviceTags(deviceId string) ([]models.DeviceTag, error) {
 	return listDeviceTags(c, deviceId)
+}
+
+func (c *Client) UpdateDeviceTagTypes(deviceId string, types map[string]string) error {
+	return updateDeviceTagTypes(c, deviceId, types)
 }

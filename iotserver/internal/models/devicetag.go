@@ -16,6 +16,16 @@ const (
 //
 // 因此本表承接「无物模型设备」的测点定义，读路径按
 // 「产品物模型 > 设备级测点（本表）」回落，调用方无需关心设备有没有物模型。
+// 自动发现的测点类型取值。type=unknown 表示尚未采到样本，
+// 读路径会回落成 text（见 persistence 的 tagDataType）。
+const (
+	DeviceTagTypeUnknown = "unknown"
+	DeviceTagTypeInt     = "int"
+	DeviceTagTypeFloat   = "float"
+	DeviceTagTypeBool    = "bool"
+	DeviceTagTypeText    = "text"
+)
+
 type DeviceTag struct {
 	Timestamps  `gorm:"embedded"`
 	TenantField `gorm:"embedded"`
