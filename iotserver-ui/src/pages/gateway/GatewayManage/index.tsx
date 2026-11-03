@@ -21,7 +21,6 @@ import {
   message,
 } from 'antd'
 import {
-  CopyOutlined,
   EyeInvisibleOutlined,
   EyeTwoTone,
   MinusCircleOutlined,
@@ -120,31 +119,6 @@ const COMMAND_LABEL: Record<GatewayCommandType, string> = {
 
 const formatTime = (value?: number) => (value ? dayjs(value).format('YYYY-MM-DD HH:mm:ss') : '-')
 
-/** 复制文本：优先 Clipboard API，非安全上下文回落到临时 textarea */
-const copyText = async (text: string): Promise<boolean> => {
-  try {
-    if (navigator.clipboard && window.isSecureContext) {
-      await navigator.clipboard.writeText(text)
-      return true
-    }
-  } catch (error) {
-    // 忽略，走下面的兜底方案
-  }
-  try {
-    const el = document.createElement('textarea')
-    el.value = text
-    el.style.position = 'fixed'
-    el.style.opacity = '0'
-    document.body.appendChild(el)
-    el.select()
-    const ok = document.execCommand('copy')
-    document.body.removeChild(el)
-    return ok
-  } catch (error) {
-    return false
-  }
-}
-
 interface GatewayFormValues {
   name: string
   sn?: string
@@ -242,15 +216,6 @@ const GatewayManagePage: React.FC = () => {
     searchForm.resetFields()
     setPagination({ ...pagination, current: 1 })
     loadData(1, pagination.pageSize)
-  }
-
-  const handleCopy = async (text: string, label: string) => {
-    const ok = await copyText(text || '')
-    if (ok) {
-      messageApi.open({ type: 'success', content: t('{{label}}已复制', { label }) })
-    } else {
-      messageApi.open({ type: 'error', content: t('复制失败，请手动选中复制') })
-    }
   }
 
   // ===== 新增 / 编辑 =====
@@ -744,29 +709,23 @@ const GatewayManagePage: React.FC = () => {
             ] as Array<{ label: string, value: string }>).map(item => (
               <Row key={item.label} gutter={8} align="middle" style={{ marginBottom: 8 }}>
                 <Col span={7}><Text type="secondary">{item.label}</Text></Col>
-                <Col span={14}><Text copyable={{ text: item.value || '' }}>{item.value || '-'}</Text></Col>
-                <Col span={3}>
-                  <Button size="small" icon={<CopyOutlined />} onClick={() => handleCopy(item.value, item.label)}>{t('复制')}</Button>
-                </Col>
+                <Col span={17}><Text copyable={{ text: item.value || '' }}>{item.value || '-'}</Text></Col>
               </Row>
             ))}
             <Row gutter={8} align="middle" style={{ marginBottom: 8 }}>
               <Col span={7}><Text type="secondary">{t('密码（password）')}</Text></Col>
               <Col span={14}>
-                <Text code>
+                <Text code copyable={{ text: mqttInfo.password || '' }}>
                   {passwordVisible ? (mqttInfo.password || '-') : '••••••••'}
                 </Text>
               </Col>
               <Col span={3}>
-                <Space size={4}>
-                  <Button
-                    size="small"
-                    type="text"
-                    icon={passwordVisible ? <EyeTwoTone /> : <EyeInvisibleOutlined />}
-                    onClick={() => setPasswordVisible(v => !v)}
-                  />
-                  <Button size="small" icon={<CopyOutlined />} onClick={() => handleCopy(mqttInfo.password, t('密码'))}>{t('复制')}</Button>
-                </Space>
+                <Button
+                  size="small"
+                  type="text"
+                  icon={passwordVisible ? <EyeTwoTone /> : <EyeInvisibleOutlined />}
+                  onClick={() => setPasswordVisible(v => !v)}
+                />
               </Col>
             </Row>
             {([
@@ -777,12 +736,9 @@ const GatewayManagePage: React.FC = () => {
                 <Col span={7}>
                   <Text type="secondary">{item.label}</Text>
                 </Col>
-                <Col span={14}>
+                <Col span={17}>
                   <Text code copyable={{ text: item.value || '' }}>{item.value || '-'}</Text>
                   <div><Text type="secondary" style={{ fontSize: 12 }}>{item.hint}</Text></div>
-                </Col>
-                <Col span={3}>
-                  <Button size="small" icon={<CopyOutlined />} onClick={() => handleCopy(item.value, item.label)}>{t('复制')}</Button>
                 </Col>
               </Row>
             ))}
