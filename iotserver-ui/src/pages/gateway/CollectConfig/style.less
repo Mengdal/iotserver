@@ -1,0 +1,94 @@
+.collect-layout {
+  align-items: stretch;
+
+  > .ant-col {
+    display: flex;
+  }
+
+  > .ant-col > .ant-card {
+    flex: 1;
+  }
+
+  .ant-card-body {
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+.collect-tree {
+  .ant-tree-node-content-wrapper {
+    border: 1px solid transparent;
+    border-radius: 6px;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+
+    // 与网关管理表格行 hover 一致
+    &:hover {
+      background: #fafafa;
+    }
+
+    // 与方案中心选中态一致
+    &.ant-tree-node-selected {
+      background: #f0f0f0;
+      border-color: #d9d9d9;
+    }
+  }
+
+  .ant-tree-title {
+    flex: 1;
+    min-width: 0;
+  }
+
+  // 节点右侧「更多」按钮：默认隐藏，悬浮/聚焦时出现
+  .collect-node-more {
+    opacity: 0;
+    transition: opacity 0.15s ease;
+  }
+
+  .ant-tree-node-content-wrapper:hover .collect-node-more,
+  .ant-tree-node-content-wrapper:focus-within .collect-node-more {
+    opacity: 1;
+  }
+}
+
+.collect-point-table {
+  .ant-table-tbody > tr.collect-row-error > td {
+    background: #fff8f5;
+  }
+
+  .ant-input-sm,
+  .ant-input-number-sm,
+  .ant-select-sm .ant-select-selector {
+    border-radius: 4px;
+  }
+
+  .ant-btn-text {
+    color: #8a949c;
+
+    &:hover {
+      color: #cf1322;
+    }
+  }
+}
+
+/* 左右分栏拖拽条 */
+.collect-resizer {
+  position: relative;
+  cursor: col-resize;
+  touch-action: none;
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 12px;
+    bottom: 12px;
+    left: 50%;
+    width: 1px;
+    background: transparent;
+    transform: translateX(-50%);
+    transition: background 0.15s ease;
+  }
+
+  &:hover::after {
+    background: #1677ff;
+  }
+}

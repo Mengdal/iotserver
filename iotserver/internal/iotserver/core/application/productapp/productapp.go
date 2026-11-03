@@ -26,6 +26,7 @@ import (
 	"iotserver/internal/pkg/di"
 	"iotserver/internal/pkg/errort"
 	"iotserver/internal/pkg/logger"
+	"iotserver/internal/pkg/tenant"
 	"iotserver/internal/pkg/utils"
 )
 
@@ -179,6 +180,10 @@ func (p *productApp) AddProduct(ctx context.Context, req dtos.ProductAddRequest)
 	if err != nil {
 		return "", err
 	}
+	// 元数据同步到 iotp（异步、失败隔离）：建库/建表 + 基础标签 + 物模型字段。
+	if syncer := resourceContainer.IotpSyncFrom(p.dic.Get); syncer != nil {
+		syncer.ProductCreated(insertProduct, tenant.FromContext(ctx).TenantID)
+	}
 	go func() {
 		p.CreateProductCallBack(insertProduct)
 	}()
@@ -258,8 +263,13 @@ func (p *productApp) OpenApiAddProduct(ctx context.Context, req dtos.OpenApiAddP
 	if err != nil {
 		return "", err
 	}
+	// 元数据同步到 iotp（异步、失败隔离）：建库/建表 + 基础标签 + 物模型字段。
+	if syncer := resourceContainer.IotpSyncFrom(p.dic.Get); syncer != nil {
+		// OpenAPI 的 insertProduct 没有 Id，必须用 AddProduct 返回的 ps。
+		syncer.ProductCreated(ps, tenant.FromContext(ctx).TenantID)
+	}
 	go func() {
-		p.CreateProductCallBack(insertProduct)
+		p.CreateProductCallBack(ps)
 	}()
 	return ps.Id, nil
 }

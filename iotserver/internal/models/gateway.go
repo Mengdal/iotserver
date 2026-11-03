@@ -13,14 +13,20 @@ const (
 // 见 docs/gateway-integration.md）；edge 兼容参考系统（iotddc / things）的
 // /edge/{connect,property,lastwill} 协议（见 docs/device-access-design.md）。
 const (
-	GatewayProtocolNative = "gatewaymqtt"
-	GatewayProtocolEdge   = "edge"
+	GatewayProtocolNative   = "gatewaymqtt"
+	GatewayProtocolEdge     = "edge"
+	GatewayProtocolIoserver = "ioserver"
 )
 
-// 网关来源。local 是平台自有 MQTT 网关；things 是由 things 平台管理的 /edge 网关。
+// 网关来源。
+//
+//	local    平台自有 MQTT 网关
+//	things   由 things 平台管理的 /edge 网关（配置与设备清单从 things 同步）
+//	ioserver 本地配置的软网关：配置只存在本平台，不参与 things 同步，也不要求远端存在
 const (
-	GatewaySourceLocal  = "local"
-	GatewaySourceThings = "things"
+	GatewaySourceLocal    = "local"
+	GatewaySourceThings   = "things"
+	GatewaySourceIoserver = "ioserver"
 )
 
 // 本地镜像与 things 的同步状态。

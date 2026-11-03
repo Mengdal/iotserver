@@ -74,6 +74,19 @@ type DBClient interface {
 	// UpdateGatewayThingsStatus 只更新同步状态/错误，不改网关展示字段
 	UpdateGatewayThingsStatus(id, status, lastError string, lastSyncAt int64) error
 
+	// ===== 设备级采集配置 =====
+	CollectChannels() ([]models.CollectChannel, error)
+	SaveCollectChannel(channel models.CollectChannel) (models.CollectChannel, error)
+	DeleteCollectChannel(id string) error
+	UpdateCollectPointRemoteIds(deviceId string, remoteIds map[string]int64) error
+	CollectDeviceConfigsByChannel(channelId string) ([]models.CollectDeviceConfig, error)
+	DeleteCollectDeviceConfig(deviceId string) error
+	CollectDeviceConfigByDevice(deviceId string) (models.CollectDeviceConfig, bool, error)
+	SaveCollectDeviceConfig(cfg models.CollectDeviceConfig) error
+	CollectPointConfigsByDevice(deviceId string) ([]models.CollectPointConfig, error)
+	ReplaceCollectPointConfigs(deviceId string, points []models.CollectPointConfig) error
+	ClearCollectPointRemoteIds(deviceId string) error
+
 	// ===== 网关接入：设备定位 =====
 	DeviceByGatewayAndKey(gatewayId, deviceKey string) (models.Device, error)
 	DeviceBySn(deviceSn string) (models.Device, error)

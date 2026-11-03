@@ -24,6 +24,9 @@ export const GatewayRemove = 'gateway:gateway:remove'
 export const GatewayConfig = 'gateway:gateway:config'
 export const GatewayCommand = 'gateway:gateway:command'
 
+export const CollectConfigList = 'collect:config:list'
+export const CollectConfigEdit = 'collect:config:edit'
+
 export const SolutionList = 'solution:list'
 export const SolutionQuery = 'solution:query'
 export const SolutionApply = 'solution:apply'
@@ -137,6 +140,7 @@ export const PERMISSIONS: string[] = [
   PlatformTenantList, PlatformTenantQuery, PlatformTenantAdd, PlatformTenantEdit, PlatformTenantRemove, PlatformTenantSwitch,
   UserList, UserQuery, UserAdd, UserEdit, UserRemove,
   GatewayList, GatewayQuery, GatewayAdd, GatewayEdit, GatewayRemove, GatewayConfig, GatewayCommand,
+  CollectConfigList, CollectConfigEdit,
   SolutionList, SolutionQuery, SolutionApply, SolutionTslAdd, SolutionTslEdit, SolutionTslRemove,
   RoleList, RoleQuery, RoleAdd, RoleEdit, RoleRemove,
   MenuList, MenuQuery, MenuAdd, MenuEdit, MenuRemove, MenuCustomPref, MenuCustomReset,

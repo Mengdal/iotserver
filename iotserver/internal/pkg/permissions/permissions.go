@@ -207,6 +207,12 @@ const (
 	GatewayCommand = "gateway:gateway:command"
 )
 
+// 采集配置（设备级）
+const (
+	CollectConfigList = "collect:config:list"
+	CollectConfigEdit = "collect:config:edit"
+)
+
 // 方案（行业模板一键应用）：设备接入下的子模块
 const (
 	SolutionList  = "solution:list"
@@ -228,6 +234,7 @@ func NamedGroups() [][]NamedPerm {
 		{{"GatewayList", GatewayList}, {"GatewayQuery", GatewayQuery}, {"GatewayAdd", GatewayAdd},
 			{"GatewayEdit", GatewayEdit}, {"GatewayRemove", GatewayRemove},
 			{"GatewayConfig", GatewayConfig}, {"GatewayCommand", GatewayCommand}},
+		{{"CollectConfigList", CollectConfigList}, {"CollectConfigEdit", CollectConfigEdit}},
 		{{"SolutionList", SolutionList}, {"SolutionQuery", SolutionQuery},
 			{"SolutionApply", SolutionApply},
 			{"SolutionTslAdd", SolutionTslAdd}, {"SolutionTslEdit", SolutionTslEdit},

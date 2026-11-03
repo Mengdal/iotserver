@@ -65,6 +65,10 @@ func (ctl *controller) getGatewayApp() interfaces.GatewayItf {
 	return container.GatewayItfFrom(ctl.dic.Get)
 }
 
+func (ctl *controller) getCollectApp() interfaces.CollectConfigItf {
+	return container.CollectConfigFrom(ctl.dic.Get)
+}
+
 func (ctl *controller) getSolutionApp() interfaces.SolutionItf {
 	return container.SolutionItfFrom(ctl.dic.Get)
 }

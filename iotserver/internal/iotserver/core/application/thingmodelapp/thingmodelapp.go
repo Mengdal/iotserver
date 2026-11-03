@@ -29,6 +29,7 @@ import (
 	"iotserver/internal/pkg/di"
 	"iotserver/internal/pkg/errort"
 	"iotserver/internal/pkg/logger"
+	"iotserver/internal/pkg/tenant"
 	"iotserver/internal/pkg/utils"
 	"strings"
 	"time"
@@ -76,13 +77,19 @@ func (t thingModelApp) AddThingModel(ctx context.Context, req dtos.ThingModelAdd
 			property.TypeSpec.Specs = string(typeSpec)
 		}
 		property.Tag = req.Tag
-		err = resourceContainer.DataDBClientFrom(t.dic.Get).AddDatabaseField(ctx, req.ProductId, req.Property.DataType, req.Code, req.Name)
+		if strings.TrimSpace(string(property.TypeSpec.Type)) == "" {
+			return "", errort.NewCommonEdgeX(errort.DefaultReqParamsError, "property data type is required", nil)
+		}
+		err = resourceContainer.DataDBClientFrom(t.dic.Get).AddDatabaseField(ctx, req.ProductId, property.TypeSpec.Type, req.Code, req.Name)
 		if err != nil {
 			return "", err
 		}
 		ds, err := t.dbClient.WithCtx(ctx).AddThingModelProperty(property)
 		if err != nil {
 			return "", err
+		}
+		if syncer := resourceContainer.IotpSyncFrom(t.dic.Get); syncer != nil {
+			syncer.PropertyChanged(req.ProductId, property, tenant.FromContext(ctx).TenantID)
 		}
 		t.ProductUpdateCallback(req.ProductId)
 		return ds.Id, nil
@@ -116,6 +123,9 @@ func (t thingModelApp) AddThingModel(ctx context.Context, req dtos.ThingModelAdd
 		ds, err := t.dbClient.WithCtx(ctx).AddThingModelEvent(event)
 		if err != nil {
 			return "", err
+		}
+		if syncer := resourceContainer.IotpSyncFrom(t.dic.Get); syncer != nil {
+			syncer.EventChanged(req.ProductId, event, tenant.FromContext(ctx).TenantID)
 		}
 		t.ProductUpdateCallback(req.ProductId)
 		return ds.Id, nil
@@ -164,6 +174,9 @@ func (t thingModelApp) AddThingModel(ctx context.Context, req dtos.ThingModelAdd
 		if err != nil {
 			return "", err
 		}
+		if syncer := resourceContainer.IotpSyncFrom(t.dic.Get); syncer != nil {
+			syncer.ActionChanged(req.ProductId, action, tenant.FromContext(ctx).TenantID)
+		}
 		t.ProductUpdateCallback(req.ProductId)
 		return ds.Id, nil
 	default:
@@ -199,8 +212,11 @@ func (t thingModelApp) UpdateThingModel(ctx context.Context, req dtos.ThingModel
 			property.TypeSpec.Specs = string(typeSpec)
 		}
 		property.Tag = req.Tag
+		if strings.TrimSpace(string(property.TypeSpec.Type)) == "" {
+			return errort.NewCommonEdgeX(errort.DefaultReqParamsError, "property data type is required", nil)
+		}
 
-		err = resourceContainer.DataDBClientFrom(t.dic.Get).ModifyDatabaseField(ctx, req.ProductId, req.Property.DataType, req.Code, req.Name)
+		err = resourceContainer.DataDBClientFrom(t.dic.Get).ModifyDatabaseField(ctx, req.ProductId, property.TypeSpec.Type, req.Code, req.Name)
 		if err != nil {
 			return err
 		}
@@ -208,6 +224,9 @@ func (t thingModelApp) UpdateThingModel(ctx context.Context, req dtos.ThingModel
 		err = t.dbClient.WithCtx(ctx).UpdateThingModelProperty(property)
 		if err != nil {
 			return err
+		}
+		if syncer := resourceContainer.IotpSyncFrom(t.dic.Get); syncer != nil {
+			syncer.PropertyChanged(req.ProductId, property, tenant.FromContext(ctx).TenantID)
 		}
 		t.ProductUpdateCallback(req.ProductId)
 		return nil
@@ -242,6 +261,9 @@ func (t thingModelApp) UpdateThingModel(ctx context.Context, req dtos.ThingModel
 		err = t.dbClient.WithCtx(ctx).UpdateThingModelEvent(event)
 		if err != nil {
 			return err
+		}
+		if syncer := resourceContainer.IotpSyncFrom(t.dic.Get); syncer != nil {
+			syncer.EventChanged(req.ProductId, event, tenant.FromContext(ctx).TenantID)
 		}
 		t.ProductUpdateCallback(req.ProductId)
 		return nil
@@ -290,6 +312,9 @@ func (t thingModelApp) UpdateThingModel(ctx context.Context, req dtos.ThingModel
 		err = t.dbClient.WithCtx(ctx).UpdateThingModelAction(action)
 		if err != nil {
 			return err
+		}
+		if syncer := resourceContainer.IotpSyncFrom(t.dic.Get); syncer != nil {
+			syncer.ActionChanged(req.ProductId, action, tenant.FromContext(ctx).TenantID)
 		}
 		t.ProductUpdateCallback(req.ProductId)
 		return nil
@@ -576,6 +601,15 @@ func (t thingModelApp) OpenApiAddThingModel(ctx context.Context, req dtos.OpenAp
 
 	//db.Commit()
 	if shouldCallBack {
+		// OpenAPI 批量写入绕过 AddThingModel，这里统一补一次 iotp 同步。
+		if syncer := resourceContainer.IotpSyncFrom(t.dic.Get); syncer != nil {
+			syncer.ProductCreated(models.Product{
+				Id:         req.ProductId,
+				Properties: properties,
+				Events:     events,
+				Actions:    action,
+			}, tenant.FromContext(ctx).TenantID)
+		}
 		t.ProductUpdateCallback(req.ProductId)
 	}
 

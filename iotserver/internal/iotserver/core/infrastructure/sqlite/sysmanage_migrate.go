@@ -91,6 +91,10 @@ func (c *Client) MigrateSystemTables() error {
 		&models.TenantThingsBinding{},
 		// 参考系统（/edge 协议）接入设备的设备级测点（无物模型时的读取侧来源）
 		&models.DeviceTag{},
+		// 设备级采集配置与点位采集参数
+		&models.CollectChannel{},
+		&models.CollectDeviceConfig{},
+		&models.CollectPointConfig{},
 		// ===== 行业方案 =====
 		&models.Solution{},
 		// ===== 画布看板（落库）=====

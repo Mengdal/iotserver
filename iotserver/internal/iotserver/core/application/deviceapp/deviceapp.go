@@ -169,6 +169,10 @@ func (p *deviceApp) AddDevice(ctx context.Context, req dtos.DeviceAddRequest) (s
 	if err != nil {
 		return "", err
 	}
+	// 元数据同步到 iotp（异步、失败隔离）：注册设备实例与标签。
+	if syncer := resourceContainer.IotpSyncFrom(p.dic.Get); syncer != nil {
+		syncer.DeviceCreated(insertDevice, productInfo, tenant.FromContext(ctx).TenantID)
+	}
 	go func() {
 		p.CreateDeviceCallBack(insertDevice)
 	}()
@@ -195,6 +199,9 @@ func (p *deviceApp) BatchDeleteDevice(ctx context.Context, ids []string) error {
 	}
 	for _, device := range devices {
 		delDevice := device
+		if syncer := resourceContainer.IotpSyncFrom(p.dic.Get); syncer != nil {
+			syncer.DeviceDeleted(delDevice)
+		}
 		go func() {
 			p.DeleteDeviceCallBack(delDevice)
 		}()
@@ -242,6 +249,11 @@ func (p *deviceApp) DeleteDeviceById(ctx context.Context, id string) error {
 	err = p.dbClient.WithCtx(ctx).DeleteDeviceById(id)
 	if err != nil {
 		return err
+	}
+
+	// iotp 设备实例同步删除（历史数据保留）。
+	if syncer := resourceContainer.IotpSyncFrom(p.dic.Get); syncer != nil {
+		syncer.DeviceDeleted(deviceInfo)
 	}
 
 	go func() {

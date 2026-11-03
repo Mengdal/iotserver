@@ -164,6 +164,10 @@ const (
 	PermGatewayConfig  = permissions.GatewayConfig
 	PermGatewayCommand = permissions.GatewayCommand
 
+	// 采集配置（设备级）
+	PermCollectConfigList = permissions.CollectConfigList
+	PermCollectConfigEdit = permissions.CollectConfigEdit
+
 	// 方案（行业模板一键应用）
 	PermSolutionList  = permissions.SolutionList
 	PermSolutionQuery = permissions.SolutionQuery

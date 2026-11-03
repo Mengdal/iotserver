@@ -58,6 +58,7 @@ const menus: AppMenuItem[] = [
       { label: t('产品管理'), key: '/gateway/product/manage', perm: P.ProductList },
       { label: t('设备管理'), key: '/gateway/device/manage', perm: P.DeviceList },
       { label: t('网关管理'), key: '/gateway/gateway/manage', perm: P.GatewayList },
+      { label: t('采集配置'), key: '/gateway/collect/config', perm: P.CollectConfigList },
       { label: t('方案中心'), key: '/solution/center', perm: P.SolutionList },
     ],
   },

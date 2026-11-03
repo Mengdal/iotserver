@@ -24,6 +24,7 @@ import (
 	"iotserver/internal/iotserver/core/application/alertcentreapp"
 	"iotserver/internal/iotserver/core/application/auditlogapp"
 	"iotserver/internal/iotserver/core/application/categorytemplate"
+	"iotserver/internal/iotserver/core/application/collectapp"
 	"iotserver/internal/iotserver/core/application/deviceapp"
 	"iotserver/internal/iotserver/core/application/dmi"
 	"iotserver/internal/iotserver/core/application/docapp"
@@ -33,6 +34,7 @@ import (
 	"iotserver/internal/iotserver/core/application/gatewayapp"
 	"iotserver/internal/iotserver/core/application/gatewayingest"
 	"iotserver/internal/iotserver/core/application/homepageapp"
+	"iotserver/internal/iotserver/core/application/iotpsync"
 	"iotserver/internal/iotserver/core/application/languagesdkapp"
 	"iotserver/internal/iotserver/core/application/messageapp"
 	"iotserver/internal/iotserver/core/application/messagestore"
@@ -393,6 +395,23 @@ func (b *Bootstrap) initClient(ctx context.Context, wg *sync.WaitGroup, dic *di.
 	dic.Update(di.ServiceConstructorMap{
 		container.MessageStoreItfName: func(get di.Get) interface{} {
 			return messageStoreItf
+		},
+	})
+
+	// iotp 元数据同步：产品/物模型 → 库表字段，设备 → 设备实例。
+	// 未配置 [Iotp].Enabled 时为 no-op，平台行为不变。
+	iotpSync := iotpsync.New(dic)
+	dic.Update(di.ServiceConstructorMap{
+		container.IotpSyncItfName: func(get di.Get) interface{} {
+			return iotpSync
+		},
+	})
+
+	// 设备级采集配置：点位按产品物模型生成；当前只保存到平台。
+	collectApp := collectapp.NewCollectApp(ctx, dic)
+	dic.Update(di.ServiceConstructorMap{
+		container.CollectConfigItfName: func(get di.Get) interface{} {
+			return collectApp
 		},
 	})
 

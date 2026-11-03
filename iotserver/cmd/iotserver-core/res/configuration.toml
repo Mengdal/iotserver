@@ -67,6 +67,21 @@ Password = ''
 # 订阅刷新间隔（秒）：界面上增删网关后自动重订阅，无需重启服务；<=0 用默认值 60
 ResyncIntervalSec = 60
 
+# iotp 时序库元数据同步：产品/物模型 → 库表字段，设备 → 设备实例。
+# 只同步元数据，不负责时序数据写入；Enabled=false 时完全跳过。
+# 采集引擎（IOTP Gateway API）：采集配置「下发」时把通道/设备/点位同步过去。
+[CollectEngine]
+Enabled = false
+BaseURL = ''
+TimeoutSec = 10
+
+[Iotp]
+Enabled = false
+BaseURL = ''
+Token = ''
+Database = 'iotserver'
+TimeoutSec = 10
+
 # 调试端点（/debug/pprof）：默认关闭。
 # 开启后需携带 x-token 且账号具备 system:debug:pprof 权限（超级管理员直通）。
 [Pprof]

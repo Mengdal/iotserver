@@ -105,6 +105,24 @@ func RegisterGateway(engine *gin.Engine, dic *di.Container) {
 		v1Auth.POST("gateway/edge/restart", ctl.Perm(middleware.PermGatewayCommand), ctl.GatewayEdgeRestart)
 		v1Auth.POST("gateway/edge/control", ctl.Perm(middleware.PermGatewayCommand), ctl.GatewayEdgeControl)
 		v1Auth.GET("gateway/edge/devices", ctl.Perm(middleware.PermGatewayList), ctl.GatewayEdgeDevices)
+
+		// 设备级采集配置：点位按产品物模型生成，保存到平台；下发接口待接入。
+		v1Auth.GET("collect/config", ctl.Perm(middleware.PermCollectConfigList), ctl.CollectConfigGet)
+		v1Auth.GET("collect/config/template", ctl.Perm(middleware.PermCollectConfigList), ctl.CollectConfigTemplate)
+		v1Auth.GET("collect/config/latest", ctl.Perm(middleware.PermCollectConfigList), ctl.CollectConfigLatest)
+		v1Auth.GET("collect/config/export", ctl.Perm(middleware.PermCollectConfigList), ctl.CollectConfigExport)
+		v1Auth.POST("collect/config/import", ctl.Perm(middleware.PermCollectConfigEdit), ctl.CollectConfigImport)
+		v1Auth.PUT("collect/config", ctl.Perm(middleware.PermCollectConfigEdit), ctl.CollectConfigSave)
+		// IOTP 设备绑定（新版采集引擎接口）：前端使用 /api/v1/iotp_devices。
+		v1Auth.GET("iotp_devices", ctl.Perm(middleware.PermCollectConfigList), ctl.CollectDevices)
+		// 旧路径保留一个版本，避免旧前端直接 404。
+		v1Auth.GET("collect/devices", ctl.Perm(middleware.PermCollectConfigList), ctl.CollectDevices)
+		v1Auth.GET("collect/channels", ctl.Perm(middleware.PermCollectConfigList), ctl.CollectChannels)
+		v1Auth.PUT("collect/channels", ctl.Perm(middleware.PermCollectConfigEdit), ctl.CollectChannelSave)
+		v1Auth.DELETE("collect/channels/:id", ctl.Perm(middleware.PermCollectConfigEdit), ctl.CollectChannelDelete)
+		v1Auth.GET("collect/channels/:id/devices", ctl.Perm(middleware.PermCollectConfigList), ctl.CollectChannelDevices)
+		v1Auth.POST("collect/channels/:id/devices", ctl.Perm(middleware.PermCollectConfigEdit), ctl.CollectChannelBindDevices)
+		v1Auth.DELETE("collect/channels/:id/devices/:deviceId", ctl.Perm(middleware.PermCollectConfigEdit), ctl.CollectChannelUnbindDevice)
 	}
 	/******* 设备接入 - 方案（行业模板一键应用）*******/
 	{

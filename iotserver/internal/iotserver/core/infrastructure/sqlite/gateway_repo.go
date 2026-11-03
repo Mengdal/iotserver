@@ -76,11 +76,14 @@ func gatewayById(c *Client, id string) (models.Gateway, error) {
 // 调用方需要显式使用平台作用域（见 gatewayingest），因为此时还没有租户上下文。
 func gatewayBySn(c *Client, sn string) (models.Gateway, error) {
 	var g models.Gateway
-	if err := c.Pool.Table(models.TableGateway).Where("sn = ?", sn).First(&g).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return g, errort.NewCommonErr(errort.DefaultResourcesNotFound, fmt.Errorf("gateway %s not found", sn))
-		}
-		return g, errort.NewCommonEdgeX(errort.DefaultSystemError, "gateway query failed", err)
+	// 用 Find 而不是 First：未注册网关的上行是正常的拒绝路径，
+	// 不应该让 GORM 每 5 秒打一条红色 record not found 日志。
+	result := c.Pool.Table(models.TableGateway).Where("sn = ?", sn).Limit(1).Find(&g)
+	if result.Error != nil {
+		return g, errort.NewCommonEdgeX(errort.DefaultSystemError, "gateway query failed", result.Error)
+	}
+	if result.RowsAffected == 0 {
+		return g, errort.NewCommonErr(errort.DefaultResourcesNotFound, fmt.Errorf("gateway %s not found", sn))
 	}
 	return g, nil
 }

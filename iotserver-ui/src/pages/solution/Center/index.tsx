@@ -46,6 +46,7 @@ import { useAuth } from '@/utils/auth'
 import * as P from '@/routes/permissions'
 import { t, tt } from '@/i18n'
 import { localized } from '@/utils/localized'
+import './style.less'
 
 const { useMessage } = message
 const { Text } = Typography
@@ -1110,6 +1111,7 @@ const SolutionCenterPage: React.FC = () => {
                 <div
                   key={item.key}
                   onClick={() => setSelectedKey(item.key)}
+                  className={`solution-category${selected ? ' solution-category--selected' : ''}`}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -1118,9 +1120,6 @@ const SolutionCenterPage: React.FC = () => {
                     padding: '8px 10px',
                     borderRadius: 6,
                     cursor: 'pointer',
-                    border: `1px solid ${selected ? '#1677ff' : 'transparent'}`,
-                    background: selected ? '#e6f4ff' : undefined,
-                    color: selected ? '#1677ff' : undefined,
                   }}
                 >
                   <span style={{ overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>

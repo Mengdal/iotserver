@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Alert,
   Button,
@@ -148,7 +149,7 @@ const copyText = async (text: string): Promise<boolean> => {
 interface GatewayFormValues {
   name: string
   sn?: string
-  source?: 'local' | 'things'
+  source?: 'local' | 'things' | 'ioserver'
   vendor?: string
   model?: string
   secret?: string
@@ -163,6 +164,7 @@ interface CommandFormValues {
 }
 
 const GatewayManagePage: React.FC = () => {
+  const navigate = useNavigate()
   const [messageApi, contextHolder] = useMessage()
   const [searchForm] = Form.useForm()
   const [editForm] = Form.useForm<GatewayFormValues>()
@@ -269,7 +271,8 @@ const GatewayManagePage: React.FC = () => {
     if (!await confirmPlatformViewAdd()) return
     setEditing(null)
     editForm.resetFields()
-    editForm.setFieldsValue({ source: 'local' })
+    // 轻量部署默认走本地配置的 ioserver 软网关；things 仍保留给存量接入。
+    editForm.setFieldsValue({ source: 'ioserver' })
     setModalOpen(true)
   }
 
@@ -279,7 +282,9 @@ const GatewayManagePage: React.FC = () => {
     editForm.setFieldsValue({
       sn: record.sn,
       name: record.name,
-      source: record.source === 'things' ? 'things' : 'local',
+      source: record.source === 'things'
+        ? 'things'
+        : (record.source === 'ioserver' ? 'ioserver' : 'local'),
       vendor: record.vendor,
       model: record.model,
       remark: record.remark,
@@ -512,7 +517,16 @@ const GatewayManagePage: React.FC = () => {
   }
 
   const columns: ColumnsType<Gateway> = [
-    { title: t('网关名称'), dataIndex: 'name', width: 180, render: (value: string) => value || '-' },
+    {
+      title: t('网关名称'),
+      dataIndex: 'name',
+      width: 180,
+      render: (value: string, record) => {
+        // 详情页是 ioserver 专用配置工程；其他来源的网关不要误入，避免触发 /stopGW。
+        if (record.source !== 'ioserver') return <span>{value || '-'}</span>
+        return <a onClick={() => navigate(`/gateway/gateway/detail/${record.id}?tab=collect`)}>{value || '-'}</a>
+      },
+    },
     { title: 'SN', dataIndex: 'sn', width: 170, render: (value: string) => <Text copyable={{ text: value }}>{value || '-'}</Text> },
     {
       title: t('厂商/型号'),
@@ -535,8 +549,10 @@ const GatewayManagePage: React.FC = () => {
       width: 120,
       render: (_, record) => (
         <Space direction="vertical" size={0}>
-          <Tag color={record.source === 'things' ? 'geekblue' : 'default'}>
-            {record.source === 'things' ? t('things 网关') : t('平台直连')}
+          <Tag color={record.source === 'things' ? 'geekblue' : (record.source === 'ioserver' ? 'green' : 'default')}>
+            {record.source === 'things'
+              ? t('things 网关')
+              : (record.source === 'ioserver' ? t('ioserver 软网关') : t('平台直连'))}
           </Tag>
           {record.thingsSyncStatus && record.thingsSyncStatus !== 'local' && (
             <Tag color={record.thingsSyncStatus === 'missing' || record.thingsSyncStatus === 'conflict' ? 'error' : 'success'}>
@@ -576,6 +592,11 @@ const GatewayManagePage: React.FC = () => {
       render: (_, record) => (
         <Space size={4} wrap={false} style={{ whiteSpace: 'nowrap' }}>
           {canEdit && <Button type="link" size="small" onClick={() => openEdit(record)}>{t('编辑')}</Button>}
+          {canConfig && record.source === 'ioserver' && (
+            <Button type="link" size="small" onClick={() => navigate(`/gateway/gateway/detail/${record.id}?tab=collect`)}>
+              {t('采集配置')}
+            </Button>
+          )}
           {canEdit && record.source === 'things' && (
             <Button type="link" size="small" onClick={() => openThingsRename(record)}>{t('重命名')}</Button>
           )}
@@ -643,6 +664,7 @@ const GatewayManagePage: React.FC = () => {
         <Col>
           <Space>
             {canAdd && <Button type="primary" icon={<PlusOutlined />} onClick={openAdd}>{t('新增网关')}</Button>}
+            {/* things 仍保留给存量接入；ioserver 网关的配置走行内「本地配置」 */}
             {canEdit && (
               <Button icon={<ReloadOutlined />} loading={reconciling} onClick={handleReconcile}>
                 {t('从 things 刷新')}
@@ -694,6 +716,7 @@ const GatewayManagePage: React.FC = () => {
                 <Select
                   disabled={!!editing}
                   options={[
+                    { value: 'ioserver', label: t('ioserver 软网关') },
                     { value: 'local', label: t('平台直连') },
                     { value: 'things', label: t('things 网关') },
                   ]}

@@ -43,7 +43,11 @@ type ConfigurationStruct struct {
 	Tenant              TenantInfo
 	// EdgeIngest 参考系统（/edge 协议）接入所用的独立 broker 配置
 	EdgeIngest EdgeIngestInfo
-	Topics     struct {
+	// Iotp iotp 时序库的元数据同步配置（产品/物模型 → 库表字段，设备 → 设备实例）
+	Iotp IotpInfo
+	// CollectEngine 采集引擎（IOTP Gateway API）配置：通道/设备/点位下发
+	CollectEngine CollectEngineInfo
+	Topics        struct {
 		CommandTopic TopicInfo
 	}
 }
@@ -68,6 +72,34 @@ type EdgeIngestInfo struct {
 	// ResyncIntervalSec 订阅刷新间隔（秒）。网关在界面上增删后，据此自动重订阅，
 	// 无需重启服务。<=0 时用默认值。
 	ResyncIntervalSec int
+}
+
+// IotpInfo iotp 时序库的元数据同步配置。
+//
+// 只做「产品/物模型 → 库表字段」「设备 → 设备实例」的同步，不负责时序数据写入。
+// Enabled=false 时全部跳过，平台行为与未接入 iotp 完全一致。
+type IotpInfo struct {
+	Enabled bool
+	// BaseURL iotp HTTP 地址，形如 http://host:8080
+	BaseURL string
+	// Token 访问令牌（Authorization: Bearer）
+	Token string
+	// Database 平台数据所在库；留空用 iotserver
+	Database string
+	// TimeoutSec 单次 HTTP 请求超时（秒）；<=0 用 10 秒
+	TimeoutSec int
+}
+
+// CollectEngineInfo 采集引擎（IOTP Gateway API）配置。
+//
+// 采集配置的「下发」把平台里的通道 / 设备 / 点位同步到采集引擎；
+// Enabled=false 或 BaseURL 为空时下发直接报错，保存到平台不受影响。
+type CollectEngineInfo struct {
+	Enabled bool
+	// BaseURL 采集引擎地址，形如 http://host:8081
+	BaseURL string
+	// TimeoutSec 单次 HTTP 请求超时（秒）；<=0 用 10 秒
+	TimeoutSec int
 }
 
 // PprofInfo 调试端点配置。

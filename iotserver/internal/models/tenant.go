@@ -83,6 +83,9 @@ var tenantScopedModels = []tableNamer{
 	&TenantThingsBinding{},
 	&DeviceTag{},
 	&VizBoard{},
+	&CollectChannel{},
+	&CollectDeviceConfig{},
+	&CollectPointConfig{},
 }
 
 var (

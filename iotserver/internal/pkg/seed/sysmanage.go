@@ -65,6 +65,11 @@ const (
 	MenuSolution = "9001000000000000011"
 )
 
+// 设备接入 - 采集配置菜单
+const (
+	MenuCollectConfig = "9001000000000000012"
+)
+
 // 设备接入 - 驱动管理目录（把驱动相关菜单收进去）
 const (
 	MenuDriveGroup = "9001000000000000006"
@@ -135,6 +140,7 @@ var buttonGroups = []buttonGroup{
 	{MenuDrive, "我的驱动", "gateway:drive", crudActions},
 	{MenuGatewayManage, "网关管理", "gateway:gateway", withActions(crudActions,
 		permAction{"config", "下发配置"}, permAction{"command", "下发命令"})},
+	{MenuCollectConfig, "采集配置", "collect:config", []permAction{{"list", "查询"}, {"edit", "修改"}}},
 	// 方案中心：list 权限已挂在菜单上，按钮组只补「应用」与物模型条目的增/改/删
 	{MenuSolution, "方案中心", "solution", []permAction{
 		{"query", "详情"},
@@ -210,6 +216,12 @@ func DefaultMenus() []models.Menu {
 			Id: MenuGatewayManage, ParentId: MenuGatewayId, Name: "网关管理", Path: "/gateway/gateway/manage",
 			Icon: "cloud-server", MenuType: models.MenuTypeMenu, Perms: permissions.GatewayList,
 			Sort: 3, Visible: 1, Status: 1, IsFrame: 1,
+		},
+		{
+			// 采集配置：按设备配置采集参数，点位由产品物模型生成
+			Id: MenuCollectConfig, ParentId: MenuGatewayId, Name: "采集配置", Path: "/gateway/collect/config",
+			Icon: "setting", MenuType: models.MenuTypeMenu, Perms: permissions.CollectConfigList,
+			Sort: 5, Visible: 1, Status: 1, IsFrame: 1,
 		},
 		{
 			// 方案中心：行业方案（物模型 + 告警预设 + 看板预设）一键生成产品与告警规则

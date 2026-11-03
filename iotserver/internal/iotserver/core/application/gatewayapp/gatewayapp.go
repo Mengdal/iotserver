@@ -117,9 +117,15 @@ func (app *gatewayApp) GatewayAdd(ctx context.Context, req dtos.GatewayAddReques
 	if source == models.GatewaySourceThings {
 		return app.gatewayAddThings(ctx, req)
 	}
-	if source != models.GatewaySourceLocal {
+	if source != models.GatewaySourceLocal && source != models.GatewaySourceIoserver {
 		return dtos.GatewayResponse{}, errort.NewCommonErr(errort.DefaultReqParamsError,
 			errort.NewMessageErr("不支持的网关来源 {{.p1}}", map[string]interface{}{"p1": source}))
+	}
+	// ioserver 软网关：配置完全由本平台维护（Gateway.Config），不依赖 things。
+	// 协议默认 ioserver，便于上行接入和后续采集配置下发分流。
+	protocol := strings.TrimSpace(req.Protocol)
+	if protocol == "" && source == models.GatewaySourceIoserver {
+		protocol = models.GatewayProtocolIoserver
 	}
 
 	// 配额校验：目标租户的网关数 + 1 是否超过 max_gateways（0=不限；平台视图不校验）
@@ -134,8 +140,8 @@ func (app *gatewayApp) GatewayAdd(ctx context.Context, req dtos.GatewayAddReques
 		Name:     strings.TrimSpace(req.Name),
 		Sn:       sn,
 		Pk:       strings.TrimSpace(req.Pk),
-		Protocol: strings.TrimSpace(req.Protocol),
-		Source:   models.GatewaySourceLocal,
+		Protocol: protocol,
+		Source:   source,
 		DeptId:   req.DeptId,
 		Vendor:   req.Vendor,
 		Model:    req.Model,
