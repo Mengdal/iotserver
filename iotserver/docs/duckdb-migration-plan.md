@@ -22,12 +22,12 @@
 | 动作 | 对象 |
 | --- | --- |
 | 整包删除 | `internal/tools/datadb/tstorage/`、`internal/tools/datadb/tdengine/` |
-| 部分删除 | `internal/tools/datadb/leveldb/` 只保留 `driverstorage.go`（驱动 KV 存储仍在用），删除时序实现 |
+| 整包删除 | `internal/tools/datadb/leveldb/`：先删时序实现；随后的驱动 KV 存储（`driverstorage.go`）确认从未注册（`driverserver/base.go` 中注册一直处于注释状态），已整包删除 |
 | 删除 | `internal/tools/datadb/timeaware.go`（`TimeAwareInserter`，仅 tstorage/tdengine 使用） |
-| 依赖清理 | `go.mod` 移除 `nakabonne/tstorage`、`taosdata/driver-go/v3`（`goleveldb` 仍被驱动存储使用） |
+| 依赖清理 | `go.mod` 移除 `nakabonne/tstorage`、`taosdata/driver-go/v3`，后来随驱动存储一并移除 `goleveldb` |
 | 代码清理 | `persistence/thinkmodel.go` 从 1244 行降到约 120 行，删掉 21 个后端专属函数与全部 `GetDataDBType()` 分发 |
 
-> 说明：`leveldb` 包名保留（内含驱动 KV 存储），未整体删除。
+> 说明：迁移时保留了 `leveldb` 包内的驱动 KV 存储；它对应的 RPC 服务从未注册过，后续已连同该包整包删除。
 
 ### 1.3 多租户读写闭环
 
