@@ -65,6 +65,8 @@ type DBClient interface {
 	MarkStaleGatewaysOffline(beforeMs int64) (int64, error)
 	TouchGatewayReport(id string, ts int64) error
 	UpdateGatewayConfig(id, config string, version int) error
+	// UpdateGatewayExcludeDeviceKeys 只更新「不接入的设备」名单（逗号分隔，已规范化）
+	UpdateGatewayExcludeDeviceKeys(id, keys string) error
 	GatewayIngestLogExists(gatewayId string, seq int64) (bool, error)
 	AddGatewayIngestLog(log models.GatewayIngestLog) error
 	GatewayDeviceCount(gatewayId string) (int64, error)

@@ -199,6 +199,7 @@ func (p *deviceApp) BatchDeleteDevice(ctx context.Context, ids []string) error {
 	}
 	for _, device := range devices {
 		delDevice := device
+		p.rememberExcludedGatewayDevice(ctx, delDevice)
 		if syncer := resourceContainer.IotpSyncFrom(p.dic.Get); syncer != nil {
 			syncer.DeviceDeleted(delDevice)
 		}
@@ -207,6 +208,39 @@ func (p *deviceApp) BatchDeleteDevice(ctx context.Context, ids []string) error {
 		}()
 	}
 	return nil
+}
+
+// rememberExcludedGatewayDevice 把被删除的网关子设备记进网关的「不接入设备」名单。
+//
+// 为什么需要：参考系统网关把设备清单当作权威全集持续上报——
+//   - connect 报文按 tags[] 全量对齐（edgeingest.handleConnect）
+//   - 数据报文查不到设备时惰性注册（edgeingest.resolveOrProvision）
+//
+// 所以只在平台里删掉设备，网关下一包（实测 60s 一个周期）就会把它注册回来。
+// 排除名单是上面两条路径都会检查的配置，删除时写进去，删除才真正生效。
+// 写失败只告警不返回错误：设备已经删了，不能因为记名单失败让用户以为没删成。
+func (p *deviceApp) rememberExcludedGatewayDevice(ctx context.Context, d models.Device) {
+	if d.GatewayId == "" || d.DeviceKey == "" {
+		return
+	}
+	g, err := p.dbClient.WithCtx(ctx).GatewayById(d.GatewayId)
+	if err != nil {
+		p.lc.Warnf("删除网关子设备后读取网关失败（设备 %s，网关 %s）: %v", d.DeviceKey, d.GatewayId, err)
+		return
+	}
+	current := models.NormalizeGatewayExcludeKeys(g.ExcludeDeviceKeys)
+	keys := models.MergeGatewayExcludeKeys(g.ExcludeDeviceKeys, d.DeviceKey)
+	if keys == current {
+		// 已经在名单里，不重复写
+		return
+	}
+	if len(keys) > models.GatewayExcludeDeviceKeysMaxLen {
+		p.lc.Warnf("网关 %s 的排除名单已满，未能记录被删除的设备 %s", g.Id, d.DeviceKey)
+		return
+	}
+	if err := p.dbClient.WithCtx(ctx).UpdateGatewayExcludeDeviceKeys(g.Id, keys); err != nil {
+		p.lc.Warnf("网关 %s 记录排除设备 %s 失败: %v", g.Id, d.DeviceKey, err)
+	}
 }
 
 func (p *deviceApp) DeviceMqttAuthInfo(ctx context.Context, id string) (dtos.DeviceAuthInfoResponse, error) {
@@ -250,6 +284,8 @@ func (p *deviceApp) DeleteDeviceById(ctx context.Context, id string) error {
 	if err != nil {
 		return err
 	}
+	// 记住「这台网关子设备被删了」，否则网关下一包上报会把它重新注册回来。
+	p.rememberExcludedGatewayDevice(ctx, deviceInfo)
 
 	// iotp 设备实例同步删除（历史数据保留）。
 	if syncer := resourceContainer.IotpSyncFrom(p.dic.Get); syncer != nil {

@@ -156,6 +156,8 @@ interface GatewayFormValues {
   licenseType?: string
   license?: string
   remark?: string
+  /** 网关内不接入的设备标识（逗号分隔）；删除网关子设备时会自动追加 */
+  excludeDeviceKeys?: string
 }
 
 interface CommandFormValues {
@@ -288,6 +290,7 @@ const GatewayManagePage: React.FC = () => {
       vendor: record.vendor,
       model: record.model,
       remark: record.remark,
+      excludeDeviceKeys: record.excludeDeviceKeys || '',
     })
     setModalOpen(true)
   }
@@ -305,7 +308,12 @@ const GatewayManagePage: React.FC = () => {
     try {
       if (editing) {
         // SN 创建后不可修改，更新时不提交 sn
-        const resp = await updateGateway({ ...payload, id: editing.id, deptId: editing.deptId })
+        const resp = await updateGateway({
+          ...payload,
+          id: editing.id,
+          deptId: editing.deptId,
+          excludeDeviceKeys: values.excludeDeviceKeys || '',
+        })
         if (resp.success) {
           messageApi.open({ type: 'success', content: t('修改成功') })
           setModalOpen(false)
@@ -554,7 +562,8 @@ const GatewayManagePage: React.FC = () => {
               ? t('things 网关')
               : (record.source === 'ioserver' ? t('ioserver 软网关') : t('平台直连'))}
           </Tag>
-          {record.thingsSyncStatus && record.thingsSyncStatus !== 'local' && (
+          {/* 同步正常（synced）时不打扰用户，只提示需要处理的异常状态 */}
+          {record.thingsSyncStatus && record.thingsSyncStatus !== 'local' && record.thingsSyncStatus !== 'synced' && (
             <Tag color={record.thingsSyncStatus === 'missing' || record.thingsSyncStatus === 'conflict' ? 'error' : 'success'}>
               {record.thingsSyncStatus}
             </Tag>
@@ -798,6 +807,15 @@ const GatewayManagePage: React.FC = () => {
               </>
             )}
           </Form.Item>
+          {editing && (
+            <Form.Item
+              label={t('不接入的设备')}
+              name="excludeDeviceKeys"
+              tooltip={t('逗号分隔的设备标识。删除网关子设备时会自动加入这里；清空后该设备会在网关下次上报时重新注册。')}
+            >
+              <Input placeholder={t('如 Device1,user')} />
+            </Form.Item>
+          )}
           <Form.Item label={t('备注')} name="remark">
             <Input.TextArea rows={2} placeholder={t('请输入备注')} />
           </Form.Item>

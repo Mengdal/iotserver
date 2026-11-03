@@ -46,6 +46,9 @@ type GatewayUpdateRequest struct {
 	Vendor string `json:"vendor"`
 	Model  string `json:"model"`
 	Remark string `json:"remark"`
+	// ExcludeDeviceKeys 网关内不接入的设备标识（逗号分隔）。
+	// 用指针区分「没提交」与「提交空串清空」：没提交时保持原值。
+	ExcludeDeviceKeys *string `json:"excludeDeviceKeys"`
 }
 
 // GatewayConfigRequest 下发网关采集/上报配置
@@ -96,9 +99,12 @@ type GatewayResponse struct {
 	LastReportAt    int64  `json:"lastReportAt"`
 	Ip              string `json:"ip"`
 	Remark          string `json:"remark"`
-	DeviceCount     int64  `json:"deviceCount"`
-	Created         int64  `json:"created"`
-	Modified        int64  `json:"modified"`
+	// ExcludeDeviceKeys 网关内不接入的设备标识（逗号分隔）。
+	// 删除网关子设备时会自动追加，避免网关下一次上报又把它注册回来。
+	ExcludeDeviceKeys string `json:"excludeDeviceKeys"`
+	DeviceCount       int64  `json:"deviceCount"`
+	Created           int64  `json:"created"`
+	Modified          int64  `json:"modified"`
 	// Mqtt 接入信息：仅新增网关/重置密钥时返回，避免密钥被反复读取
 	Mqtt *GatewayMqttInfo `json:"mqtt,omitempty"`
 	// things 绑定与同步状态（source=things 时有值）

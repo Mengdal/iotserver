@@ -190,6 +190,16 @@ func updateGatewayConfig(c *Client, id, config string, version int) error {
 	}).Error
 }
 
+// updateGatewayExcludeDeviceKeys 只更新排除名单。
+// 单独一个方法而不是塞进 updateGateway：后者是编辑表单的全量写，漏填一个字段就会把
+// 名单清空，设备会在下一包数据里被重新注册回来。
+func updateGatewayExcludeDeviceKeys(c *Client, id, keys string) error {
+	return c.Pool.Table(models.TableGateway).Where("id = ?", id).Updates(map[string]interface{}{
+		"exclude_device_keys": keys,
+		"modified":            time.Now().UnixMilli(),
+	}).Error
+}
+
 // gatewayIngestLogExists 判断该网关的 seq 是否已处理过（断点续传幂等）
 func gatewayIngestLogExists(c *Client, gatewayId string, seq int64) (bool, error) {
 	var count int64
@@ -262,6 +272,10 @@ func (c *Client) TouchGatewayReport(id string, ts int64) error {
 
 func (c *Client) UpdateGatewayConfig(id, config string, version int) error {
 	return updateGatewayConfig(c, id, config, version)
+}
+
+func (c *Client) UpdateGatewayExcludeDeviceKeys(id, keys string) error {
+	return updateGatewayExcludeDeviceKeys(c, id, keys)
 }
 
 func (c *Client) GatewayIngestLogExists(gatewayId string, seq int64) (bool, error) {

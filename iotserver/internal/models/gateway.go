@@ -1,5 +1,7 @@
 package models
 
+import "strings"
+
 // 网关状态
 const (
 	GatewayStatusOffline = 0 // 离线
@@ -95,6 +97,47 @@ type Gateway struct {
 	LastReportAt int64  `gorm:"column:last_report_at;comment:最后上报时间"`
 	Ip           string `gorm:"column:ip;type:string;size:64;comment:最近一次上报IP"`
 	Remark       string `gorm:"column:remark;type:string;size:500;comment:备注"`
+}
+
+// GatewayExcludeDeviceKeysMaxLen 排除名单的软上限（列宽 1000，留点余量）。
+// 超过后不再追加，避免 MySQL 严格模式下写入被截断或报错。
+const GatewayExcludeDeviceKeysMaxLen = 900
+
+// NormalizeGatewayExcludeKeys 规范化排除名单：去首尾空白、丢弃空项、按出现顺序去重。
+func NormalizeGatewayExcludeKeys(keys string) string {
+	parts := strings.Split(keys, ",")
+	out := make([]string, 0, len(parts))
+	seen := make(map[string]struct{}, len(parts))
+	for _, p := range parts {
+		k := strings.TrimSpace(p)
+		if k == "" {
+			continue
+		}
+		if _, dup := seen[k]; dup {
+			continue
+		}
+		seen[k] = struct{}{}
+		out = append(out, k)
+	}
+	return strings.Join(out, ",")
+}
+
+// MergeGatewayExcludeKeys 把 key 追加到排除名单末尾（已存在则原样返回规范化结果）。
+func MergeGatewayExcludeKeys(current, key string) string {
+	key = strings.TrimSpace(key)
+	normalized := NormalizeGatewayExcludeKeys(current)
+	if key == "" {
+		return normalized
+	}
+	for _, k := range strings.Split(normalized, ",") {
+		if k == key {
+			return normalized
+		}
+	}
+	if normalized == "" {
+		return key
+	}
+	return normalized + "," + key
 }
 
 func (table *Gateway) TableName() string {

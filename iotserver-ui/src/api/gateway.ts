@@ -61,6 +61,8 @@ export interface Gateway {
   thingsSyncStatus?: string
   thingsLastSyncAt?: number
   thingsLastError?: string
+  /** 网关内不接入的设备标识（逗号分隔）；删除网关子设备时会自动追加 */
+  excludeDeviceKeys?: string
 }
 
 /** 可下发的网关命令 */

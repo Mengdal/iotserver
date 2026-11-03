@@ -55,12 +55,14 @@ func toGatewayResponse(g models.Gateway, deviceCount int64, deptNames map[string
 		LastReportAt:    g.LastReportAt,
 		Ip:              g.Ip,
 		Remark:          g.Remark,
-		DeviceCount:     deviceCount,
-		Created:         g.Created,
-		Modified:        g.Modified,
-		Source:          sourceOf(g),
-		ThingsGatewayId: g.ThingsGatewayId,
-		ThingsProjectId: g.ThingsProjectId,
+		// 排除名单：让界面能看见/撤销「删除设备后自动排除」的结果。
+		ExcludeDeviceKeys: g.ExcludeDeviceKeys,
+		DeviceCount:       deviceCount,
+		Created:           g.Created,
+		Modified:          g.Modified,
+		Source:            sourceOf(g),
+		ThingsGatewayId:   g.ThingsGatewayId,
+		ThingsProjectId:   g.ThingsProjectId,
 		ThingsSyncStatus: func() string {
 			if g.ThingsSyncStatus == "" {
 				if sourceOf(g) == models.GatewaySourceThings {
@@ -257,6 +259,18 @@ func (app *gatewayApp) GatewayUpdate(ctx context.Context, req dtos.GatewayUpdate
 		}
 		if model == "" {
 			model = old.Model
+		}
+	}
+	// 排除名单走独立更新：UpdateGateway 只写展示字段，避免这里漏填就把它清空。
+	if req.ExcludeDeviceKeys != nil {
+		keys := models.NormalizeGatewayExcludeKeys(*req.ExcludeDeviceKeys)
+		if len(keys) > models.GatewayExcludeDeviceKeysMaxLen {
+			return errort.NewCommonErr(errort.DefaultReqParamsError,
+				errort.NewMessageErr("排除名单过长（上限 {{.p1}} 字符）", map[string]interface{}{
+					"p1": models.GatewayExcludeDeviceKeysMaxLen}))
+		}
+		if err := app.dbClient.WithCtx(ctx).UpdateGatewayExcludeDeviceKeys(req.Id, keys); err != nil {
+			return err
 		}
 	}
 	return app.dbClient.WithCtx(ctx).UpdateGateway(models.Gateway{
