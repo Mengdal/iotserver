@@ -14,13 +14,6 @@ export interface ThingsConnectionStatus {
   projectCount: number
 }
 
-export interface ThingsReconcileResult {
-  tenants: number
-  gateways: number
-  missing: number
-  failed: number
-}
-
 /** 测试 things 连接（平台管理员） */
 export function testThingsConnection<T = ThingsConnectionStatus> () {
   return httpRequest<any, CommonResponse<T>>({
@@ -35,14 +28,6 @@ export function getThingsProjects<T = ThingsProject[]> (keyword?: string) {
     url: '/api/v1/things/projects',
     method: 'get',
     params: keyword ? { keyword } : undefined,
-  })
-}
-
-/** 全量对账 */
-export function reconcileThings<T = ThingsReconcileResult> () {
-  return httpRequest<any, CommonResponse<T>>({
-    url: '/api/v1/things/reconcile',
-    method: 'post',
   })
 }
 
@@ -64,13 +49,5 @@ export function renameTenantThingsProject<T = void> (tenantId: string, name: str
     url: `/api/v1/tenant/${tenantId}/things-project`,
     method: 'put',
     data: { name },
-  })
-}
-
-/** 对当前租户执行一次 things 网关对账 */
-export function reconcileTenantThings<T = ThingsReconcileResult> () {
-  return httpRequest<any, CommonResponse<T>>({
-    url: '/api/v1/gateway/things-reconcile',
-    method: 'post',
   })
 }

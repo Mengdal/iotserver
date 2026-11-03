@@ -103,15 +103,6 @@ export function updateGateway<T = void> (data: Record<string, any>) {
   })
 }
 
-/** 在 things 中重命名网关并同步本地名称 */
-export function renameThingsGateway<T = void> (id: string, name: string) {
-  return httpRequest<any, CommonResponse<T>>({
-    url: '/api/v1/gateway/things-rename',
-    method: 'post',
-    data: { id, name },
-  })
-}
-
 export function deleteGateway<T = void> (id: string) {
   return httpRequest<any, CommonResponse<T>>({
     url: `/api/v1/gateway/${id}`,
