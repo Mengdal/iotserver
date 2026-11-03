@@ -110,15 +110,6 @@ export function deleteGateway<T = void> (id: string) {
   })
 }
 
-/** 下发配置：config 是 JSON 字符串，后端校验合法性并返回新版本号 */
-export function pushGatewayConfig<T = { configVersion: number }> (id: string, config: string) {
-  return httpRequest<any, CommonResponse<T>>({
-    url: '/api/v1/gateway/config',
-    method: 'put',
-    data: { id, config },
-  })
-}
-
 /** 下发命令：restart / sync（ota 已下线） */
 export function sendGatewayCommand<T = void> (id: string, command: GatewayCommandType, payload?: string) {
   return httpRequest<any, CommonResponse<T>>({

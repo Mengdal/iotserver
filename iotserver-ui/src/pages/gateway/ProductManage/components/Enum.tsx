@@ -117,5 +117,3 @@ export const Enum: React.FC<EnumProps> = (props) => {
     </>
   )
 }
-
-export default Enum

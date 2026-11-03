@@ -22,15 +22,6 @@ export interface ReportDaum {
   time: number
 }
 
-export interface HistoryProperty {
-  list: ReportDaum[]
-  code: string
-  data_type: string
-  unit: string
-  name: string
-  access_mode: string
-}
-
 export function getHistoryProperty<T> (id: string, data: {
   code: string
   start: number

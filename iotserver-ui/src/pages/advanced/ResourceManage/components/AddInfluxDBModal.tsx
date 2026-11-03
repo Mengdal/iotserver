@@ -176,5 +176,3 @@ export const AddInfluxDBModal = forwardRef<AddInfluxDBModalRef, AddInfluxDBModal
     </Drawer>
   )
 })
-
-export default AddInfluxDBModal

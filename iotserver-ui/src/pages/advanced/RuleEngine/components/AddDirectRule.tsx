@@ -398,5 +398,3 @@ export const AddDirectRule = forwardRef<AddDirectRuleRef, AddDirectRuleProps>(({
     </Drawer>
   )
 })
-
-export default AddDirectRule

@@ -111,5 +111,3 @@ export const AddScene = forwardRef<AddSceneRef, AddSceneProps>(({ onFinish }, re
     </Drawer>
   )
 })
-
-export default AddScene

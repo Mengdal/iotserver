@@ -25,7 +25,7 @@ import type { ColumnsType } from 'antd/es/table'
 import { Line } from '@ant-design/plots'
 import dayjs from 'dayjs'
 // eslint-disable-next-line
-import { getDevice, getProductList, useGetProductList } from '@/api'
+import { getDevice, useGetProductList } from '@/api'
 import { DeviceProperty, ReportDaum, getDeviceProperty, getHistoryProperty } from '@/api/device-thingmodel'
 import { DevicesType } from '@/api/devices'
 import { useAuth } from '@/utils/auth'

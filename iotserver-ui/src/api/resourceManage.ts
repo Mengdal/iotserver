@@ -128,22 +128,6 @@ export interface KafkaResource {
   }
 }
 
-export interface RedisResource {
-  id: string
-  name: string
-  type: string
-  option: {
-    addr: string
-    password: string
-    db: string
-    key: number
-    field: string
-    dataType: string
-    expire: string
-    rowkindField: string
-  }
-}
-
 export interface InfluxDBResource {
   id: string
   name: string

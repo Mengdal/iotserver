@@ -159,5 +159,3 @@ export const DockerConfigModal = forwardRef<DockerConfigModalRef, DockerConfigMo
     </>
   )
 })
-
-export default DockerConfigModal

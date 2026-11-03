@@ -39,5 +39,3 @@ export const WebSocketProvider:React.FC<WebSocketProps> = ({ children }) => {
     </WebSocketContext.Provider>
   )
 }
-
-export default WebSocketProvider

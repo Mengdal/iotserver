@@ -141,5 +141,3 @@ export const AddRuleModal = forwardRef<AddRuleModalRef, AddRuleModalProps>(({ on
     </Drawer>
   )
 })
-
-export default AddRuleModal

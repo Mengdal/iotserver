@@ -187,5 +187,3 @@ export const AddMqttModal = forwardRef<AddMqttModalRef, AddMqttModalProps>(({ on
     </Drawer>
   )
 })
-
-export default AddMqttModal

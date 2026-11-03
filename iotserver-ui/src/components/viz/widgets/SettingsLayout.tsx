@@ -101,5 +101,3 @@ export const SettingGroup: React.FC<SettingGroupProps> = ({ title, extra, classN
     </section>
   )
 }
-
-export default SettingGroup

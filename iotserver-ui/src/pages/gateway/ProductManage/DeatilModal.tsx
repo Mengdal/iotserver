@@ -333,5 +333,3 @@ export const DetailModal = forwardRef<DetailModalRef, DetailModalProps>(({ produ
     </Drawer>
   )
 })
-
-export default DetailModal

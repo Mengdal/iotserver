@@ -769,5 +769,3 @@ export const EditRuleModal = forwardRef<EditRuleModalRef, EditRuleModalProps>(({
     </Drawer>
   )
 })
-
-export default EditRuleModal

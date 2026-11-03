@@ -145,5 +145,3 @@ export const AuthorizationModal = forwardRef<AuthorizationModalRef, Authorizatio
     </Modal>
   )
 })
-
-export default AuthorizationModal

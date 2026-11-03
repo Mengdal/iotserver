@@ -120,5 +120,3 @@ export const AddImageModal = forwardRef<AddImageModalRef, AddImageModalProps>(({
     </Drawer>
   )
 })
-
-export default AddImageModal

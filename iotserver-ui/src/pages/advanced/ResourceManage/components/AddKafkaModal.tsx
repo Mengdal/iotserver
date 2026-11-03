@@ -172,5 +172,3 @@ export const AddKafkaModal = forwardRef<AddKafkaModalRef, AddKafkaModalProps>(({
     </Drawer>
   )
 })
-
-export default AddKafkaModal

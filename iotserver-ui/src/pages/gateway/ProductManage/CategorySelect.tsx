@@ -62,5 +62,3 @@ export const CategorySelect: React.FC<CategorySelectProps> = (props) => {
     </>
   )
 }
-
-export default CategorySelect

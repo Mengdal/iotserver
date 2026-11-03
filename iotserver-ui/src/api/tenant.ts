@@ -44,13 +44,6 @@ export function getTenants<T = TableReponseType<Tenant>> (params?: Record<string
   })
 }
 
-export function getTenantInfo<T = Tenant> (id: string) {
-  return httpRequest<any, CommonResponse<T>>({
-    url: `/api/v1/tenant/${id}`,
-    method: 'get',
-  })
-}
-
 export function addTenant<T = Tenant> (data: Record<string, any>) {
   return httpRequest<any, CommonResponse<T>>({
     url: '/api/v1/tenant',

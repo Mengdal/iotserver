@@ -194,5 +194,3 @@ export class WebSocketClass {
     this.websocket.close(1000, 'CLOSE_NORMAL')
   }
 }
-
-export default WebSocketClass

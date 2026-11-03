@@ -235,5 +235,3 @@ export const EditModal = forwardRef<EditModalRef, EditModalProps>(({ onSuccess }
     </Drawer>
   )
 })
-
-export default EditModal

@@ -139,5 +139,3 @@ export const LogModal = forwardRef<LogModalRef, LogModalProps>((props, ref) => {
     </Modal>
   )
 })
-
-export default LogModal

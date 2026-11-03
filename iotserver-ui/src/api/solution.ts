@@ -77,15 +77,6 @@ export function getSolution<T = Solution> (key: string) {
   })
 }
 
-/** 一键应用方案：生成产品（并发布）、可选建设备与告警规则 */
-export function applySolution<T = SolutionApplyResponse> (key: string, data: SolutionApplyRequest) {
-  return httpRequest<any, CommonResponse<T>>({
-    url: `/api/v1/solution/${key}/apply`,
-    method: 'post',
-    data,
-  })
-}
-
 // ===== 方案物模型功能项（属性 / 事件 / 服务）增删改 =====
 
 /** 物模型功能项类型：property 属性 / event 事件 / action 服务 */

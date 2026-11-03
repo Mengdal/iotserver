@@ -167,5 +167,3 @@ export const AddModal = forwardRef<AddModalRef, AddModalProps>(({ onFinish }, re
     </Drawer>
   )
 })
-
-export default AddModal

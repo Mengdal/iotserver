@@ -70,11 +70,6 @@ export interface Sub_rule {
   option: object
 }
 
-export interface RuleLibraries {
-  id: string
-  // sub_rule: Sub_rule[]
-}
-
 export function editAlarmRules<T> (id : string, data: any) {
   return httpRequest<any, CommonResponse<T>>({
     url: `/api/v1/alert-rule/${id}`,

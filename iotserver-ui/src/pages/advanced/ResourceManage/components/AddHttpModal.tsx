@@ -240,5 +240,3 @@ export const AddHttpModal = forwardRef<AddHttpModalRef, AddHttpModalProps>(({ on
     </Drawer>
   )
 })
-
-export default AddHttpModal

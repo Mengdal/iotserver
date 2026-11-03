@@ -161,4 +161,3 @@ export const BrandProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 }
 
 export const useBrand = () => useContext(BrandContext)
-export default BrandContext

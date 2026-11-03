@@ -250,5 +250,3 @@ export const AddModal = forwardRef<AddModalRef, AddModalProps>(({ deviceServersO
     </Drawer>
   )
 })
-
-export default AddModal

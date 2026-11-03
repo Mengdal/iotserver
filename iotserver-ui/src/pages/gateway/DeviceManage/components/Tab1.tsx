@@ -141,5 +141,3 @@ export const DetailTab1: React.FC<DetailTab1Props> = () => {
     </>
   )
 }
-
-export default DetailTab1

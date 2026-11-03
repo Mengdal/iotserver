@@ -247,5 +247,3 @@ export const Tab1Modal = forwardRef<Tab1ModalRef, Tab1ModalProps>((props, ref) =
     </Modal>
   )
 })
-
-export default Tab1Modal

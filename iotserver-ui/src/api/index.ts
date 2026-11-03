@@ -14,15 +14,12 @@ export { addDevice, editDevices, deleteDevice, getDeviceDetail, getDeviceStatusT
 
 export { useGetDeviceServers, useGetDeviceStatusTemplate, useGetIotPlatform, useGetProductList } from './hooks'
 
-export * from './home'
 export * from './alarmList'
 export * from './alarmRulesList'
-export * from './systemMonitor'
 export * from './login'
 export * from './resourceManage'
 export * from './RuleEngine'
 export * from './SceneLinkage'
-export * from './documents'
 export * from './sysManage'
 export * from './tenant'
 export * from './gateway'

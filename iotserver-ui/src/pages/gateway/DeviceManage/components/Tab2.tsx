@@ -229,5 +229,3 @@ export const DetailTab2: React.FC<DetailTab2Props> = ({ events }) => {
     </div>
   )
 }
-
-export default DetailTab2

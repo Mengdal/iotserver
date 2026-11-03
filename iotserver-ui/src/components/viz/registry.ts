@@ -1,4 +1,3 @@
-import type { VizWidget } from '@/api'
 import type { VizWidgetManifest } from './types'
 import { textManifest } from './widgets/TextWidget'
 import { containerManifest, legacyChartManifest } from './widgets/misc'
@@ -35,20 +34,9 @@ export function getWidgetManifest (type?: string): VizWidgetManifest | undefined
   return registry.get(String(type || DEFAULT_WIDGET_TYPE).toLowerCase())
 }
 
-/** 全部已登记类型（顺序即组件库顺序） */
-export function allWidgetManifests (): VizWidgetManifest[] {
-  return manifests
-}
-
 /** 组件库里可新建的组件：排除已下线类型（容器带 layoutOnly 标记，渲染由编辑器负责） */
 export function paletteManifests (): VizWidgetManifest[] {
   return manifests.filter(m => m.type !== legacyChartManifest.type)
-}
-
-/** 是否是数据类组件（要参与批量取数） */
-export function isDataWidget (w: VizWidget): boolean {
-  const manifest = getWidgetManifest(w.type)
-  return !!(manifest && manifest.data && manifest.buildQuery)
 }
 
 /** 缺省类型：老记录没有 type 字段时按文本处理 */

@@ -211,5 +211,3 @@ export const DetailTab3: React.FC<DetailTab3Props> = ({ actions }) => {
     </div>
   )
 }
-
-export default DetailTab3

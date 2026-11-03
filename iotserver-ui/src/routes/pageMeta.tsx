@@ -172,8 +172,6 @@ export function resolvePageTitle (pathname: string): string | undefined {
   return lookupMenuName(meta.menuPath || pathname) || meta.title
 }
 
-export default pageMetas
-
 /**
  * 当前路径应在侧边栏选中的菜单项。
  * 详情页等带动态段的路由没有一一对应的菜单（如 /gateway/device/manage/:productId、

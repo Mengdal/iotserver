@@ -107,9 +107,6 @@ export interface SysAuditLog {
   loginTime: number
 }
 
-/** @deprecated 旧「登入日志」类型，兼容别名 → SysAuditLog */
-export type SysLoginLog = SysAuditLog
-
 export interface SysConfig {
   id: string
   configKey: string
@@ -154,13 +151,6 @@ export function getSysUsers<T = TableReponseType<SysUser>> (params?: Record<stri
     url: '/api/v1/sys-user',
     method: 'get',
     params,
-  })
-}
-
-export function getSysUserInfo<T = SysUser> (id: string) {
-  return httpRequest<any, CommonResponse<T>>({
-    url: `/api/v1/sys-user/${id}`,
-    method: 'get',
   })
 }
 
@@ -221,13 +211,6 @@ export function getAllSysRoles<T = SysRole[]> () {
   })
 }
 
-export function getSysRoleInfo<T = SysRole> (id: string) {
-  return httpRequest<any, CommonResponse<T>>({
-    url: `/api/v1/role/${id}`,
-    method: 'get',
-  })
-}
-
 export function addSysRole<T = void> (data: Record<string, any>) {
   return httpRequest<any, CommonResponse<T>>({
     url: '/api/v1/role',
@@ -268,28 +251,11 @@ export function setRoleMenus<T = void> (roleId: string, menuIds: string[]) {
   })
 }
 
-// ===== 菜单管理 =====
-
-export function getSysMenus<T = TableReponseType<SysMenu>> (params?: Record<string, any>) {
-  return httpRequest<any, CommonResponse<T>>({
-    url: '/api/v1/menu',
-    method: 'get',
-    params,
-  })
-}
-
 export function getSysMenuTree<T = SysMenu[]> (params?: Record<string, any>) {
   return httpRequest<any, CommonResponse<T>>({
     url: '/api/v1/menu/tree',
     method: 'get',
     params,
-  })
-}
-
-export function getSysMenuInfo<T = SysMenu> (id: string) {
-  return httpRequest<any, CommonResponse<T>>({
-    url: `/api/v1/menu/${id}`,
-    method: 'get',
   })
 }
 
@@ -352,28 +318,11 @@ export function resetSysMenuTenant<T = void> (tenantId: string) {
   })
 }
 
-// ===== 部门管理 =====
-
-export function getSysDepts<T = TableReponseType<SysDept>> (params?: Record<string, any>) {
-  return httpRequest<any, CommonResponse<T>>({
-    url: '/api/v1/dept',
-    method: 'get',
-    params,
-  })
-}
-
 export function getSysDeptTree<T = SysDept[]> (params?: Record<string, any>) {
   return httpRequest<any, CommonResponse<T>>({
     url: '/api/v1/dept-tree',
     method: 'get',
     params,
-  })
-}
-
-export function getSysDeptInfo<T = SysDept> (id: string) {
-  return httpRequest<any, CommonResponse<T>>({
-    url: `/api/v1/dept/${id}`,
-    method: 'get',
   })
 }
 
@@ -426,20 +375,6 @@ export function clearSysAuditLogs<T = void> () {
   })
 }
 
-// ===== 登入日志（旧接口，兼容别名 → 审查日志；后端旧路由仍保留一版） =====
-
-export function getSysLoginLogs<T = TableReponseType<SysAuditLog>> (params?: Record<string, any>) {
-  return getSysAuditLogs<T>(params)
-}
-
-export function deleteSysLoginLog<T = void> (ids: string[]) {
-  return deleteSysAuditLogs<T>(ids)
-}
-
-export function clearSysLoginLog<T = void> () {
-  return clearSysAuditLogs<T>()
-}
-
 // ===== 系统配置 =====
 
 export function getSysConfigs<T = TableReponseType<SysConfig>> (params?: Record<string, any>) {
@@ -447,37 +382,6 @@ export function getSysConfigs<T = TableReponseType<SysConfig>> (params?: Record<
     url: '/api/v1/system-setup',
     method: 'get',
     params,
-  })
-}
-
-export function getSysConfigInfo<T = SysConfig> (id: string) {
-  return httpRequest<any, CommonResponse<T>>({
-    url: `/api/v1/system-setup/${id}`,
-    method: 'get',
-  })
-}
-
-export function addSysConfig<T = void> (data: Record<string, any>) {
-  return httpRequest<any, CommonResponse<T>>({
-    url: '/api/v1/system-setup',
-    method: 'post',
-    data,
-  })
-}
-
-export function updateSysConfig<T = void> (data: Record<string, any>) {
-  return httpRequest<any, CommonResponse<T>>({
-    url: '/api/v1/system-setup',
-    method: 'put',
-    data,
-  })
-}
-
-export function deleteSysConfig<T = void> (ids: string[]) {
-  return httpRequest<any, CommonResponse<T>>({
-    url: '/api/v1/system-setup',
-    method: 'delete',
-    data: { ids },
   })
 }
 

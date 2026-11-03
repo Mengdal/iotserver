@@ -109,5 +109,3 @@ export const StandardFuncModal = forwardRef<StandardFuncModalRef, StandardFuncMo
 })
 
 StandardFuncModal.displayName = 'StandardFuncModal'
-
-export default StandardFuncModal

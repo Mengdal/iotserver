@@ -1,4 +1,4 @@
-import { httpRequest, http } from '@/utils/request'
+import { httpRequest } from '@/utils/request'
 import { CommonResponse } from '@/types'
 
 export function getDeviceStatusTemplate () {
@@ -59,13 +59,5 @@ export function deleteDevice (id: string) {
   return httpRequest<any, CommonResponse<any>>({
     url: `/api/v1/device/${id}`,
     method: 'delete',
-  })
-}
-
-export function uploadValidated (data: FormData) {
-  return http({
-    url: '/api/v1/device/upload-validated',
-    method: 'post',
-    data,
   })
 }

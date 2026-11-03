@@ -110,5 +110,3 @@ export const Struct: React.FC<StructProps> = ({ showView, disabled, value = [], 
     </>
   )
 }
-
-export default Struct

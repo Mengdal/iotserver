@@ -78,5 +78,3 @@ export const BatchBindModal = forwardRef<BatchBindModalRef, BatchBindModalProps>
     </Modal>
   )
 })
-
-export default BatchBindModal

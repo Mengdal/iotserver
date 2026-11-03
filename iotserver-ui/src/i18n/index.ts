@@ -135,9 +135,4 @@ export function tt (value?: string | null): string {
   return i18n.exists(value) ? t(value) : value
 }
 
-/** 按当前语言取一个「中英文二选一」的值（用于后端返回的字段只有中文时的兜底） */
-export function pick (zh: string, en: string): string {
-  return currentLocale() === 'en-US' ? en : zh
-}
-
 export default i18n
