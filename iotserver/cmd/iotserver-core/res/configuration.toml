@@ -37,10 +37,16 @@ DataSource = 'manifest/docker/db-data/core-data/core.db?_timeout=5000'
 [Databases.Data]
 # 单文件列存：一个 DuckDB 数据库文件，事务不产生 Parquet 文件，
 # 因此不需要分区 / 合并小文件 / 过期快照那一整套文件生命周期管理。
-# 改为 'iotp' 时数据写入外部 iotp 时序库（认证参数见 [Integrations.Iotp]），DataSource 不再使用；
-# iotp 模式不支持按设备删数据 / 保留期清理 / 在线导出，消息数按宽表行统计。
+# 改为 'iotp' 时数据写入外部 iotp 时序库，连接参数与 DuckDB 同在本段，
+# DataSource 不再使用；iotp 模式不支持按设备删数据 / 保留期清理 / 在线导出，
+# 消息数按宽表行统计。
 Type = 'duckdb'
 DataSource = 'manifest/docker/db-data/duckdb/core-data.duckdb'
+# iotp 连接参数（Type='iotp' 时使用；只填 BaseURL 也会启用 iotp 元数据同步/实时值读取）：
+# BaseURL = 'http://host:8080'
+# Token = ''
+# Name = 'iotserver'   # iotp 库名
+# Timeout = 10000      # 毫秒
 
 [MessageQueue]
 Protocol = 'tcp'
@@ -66,20 +72,10 @@ Password = ''
 # 订阅刷新间隔（秒）：界面上增删网关后自动重订阅，无需重启服务；<=0 用默认值 60
 ResyncIntervalSec = 60
 
-# iotp 时序库元数据同步：产品/物模型 → 库表字段，设备 → 设备实例。
-# 只同步元数据，不负责时序数据写入；Enabled=false 时完全跳过。
 # 采集引擎（IOTP Gateway API）：采集配置「下发」时把通道/设备/点位同步过去。
 [Integrations.CollectEngine]
 Enabled = false
 BaseURL = ''
-TimeoutSec = 10
-
-# iotp 时序库接入：元数据同步（iotpsync）与数据后端（Type='iotp'）共用。
-[Integrations.Iotp]
-Enabled = false
-BaseURL = ''
-Token = ''
-Database = 'iotserver'
 TimeoutSec = 10
 
 # 调试端点（/debug/pprof）：默认关闭。

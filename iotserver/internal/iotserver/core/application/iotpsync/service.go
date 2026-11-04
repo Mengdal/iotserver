@@ -31,21 +31,18 @@ func New(dic *di.Container) *Service {
 	cfg := container.ConfigurationFrom(dic.Get)
 	lc := pkgContainer.LoggingClientFrom(dic.Get)
 	service := &Service{dic: dic, lc: lc}
-	if cfg == nil || !cfg.Integrations.Iotp.Enabled || strings.TrimSpace(cfg.Integrations.Iotp.BaseURL) == "" {
+	if cfg == nil {
 		lc.Infof("iotp 元数据同步未启用")
 		return service
 	}
-	database := strings.TrimSpace(cfg.Integrations.Iotp.Database)
-	if database == "" {
-		database = "iotserver"
-	}
-	timeout := time.Duration(cfg.Integrations.Iotp.TimeoutSec) * time.Second
-	if timeout <= 0 {
-		timeout = 10 * time.Second
+	db, ok := cfg.IotpConfig()
+	if !ok {
+		lc.Infof("iotp 元数据同步未启用")
+		return service
 	}
 	service.enabled = true
-	service.client = iotp.New(cfg.Integrations.Iotp.BaseURL, cfg.Integrations.Iotp.Token, database, timeout)
-	lc.Infof("iotp 元数据同步已启用: %s db=%s", cfg.Integrations.Iotp.BaseURL, database)
+	service.client = iotp.New(db.BaseURL, db.Token, db.IotpDatabaseName(), db.IotpTimeout())
+	lc.Infof("iotp 元数据同步已启用: %s db=%s", db.BaseURL, db.IotpDatabaseName())
 	return service
 }
 

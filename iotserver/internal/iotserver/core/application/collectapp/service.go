@@ -53,9 +53,8 @@ func NewCollectApp(ctx context.Context, dic *di.Container) *service {
 			time.Duration(configuration.Integrations.CollectEngine.TimeoutSec)*time.Second)
 	}
 	var iotpClient *iotp.Client
-	if configuration.Integrations.Iotp.Enabled && strings.TrimSpace(configuration.Integrations.Iotp.BaseURL) != "" {
-		iotpClient = iotp.New(configuration.Integrations.Iotp.BaseURL, configuration.Integrations.Iotp.Token,
-			configuration.Integrations.Iotp.Database, time.Duration(configuration.Integrations.Iotp.TimeoutSec)*time.Second)
+	if db, ok := configuration.IotpConfig(); ok {
+		iotpClient = iotp.New(db.BaseURL, db.Token, db.IotpDatabaseName(), db.IotpTimeout())
 	}
 	return &service{
 		dic:        dic,

@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/BurntSushi/toml"
 
@@ -112,46 +113,33 @@ func TestDuckDBDataSourceRoundTrip(t *testing.T) {
 	}
 }
 
-// Type=iotp 时认证参数必须显式配置，缺失时启动直接报错而不是静默回落到 DuckDB。
+// Type=iotp 时 BaseURL 必须显式配置，缺失时启动直接报错而不是静默回落到 DuckDB。
 func TestNewDataDBClientIotpRequiresConfig(t *testing.T) {
 	lc := logger.NewClient("datasource-test", "error", "")
-	cases := []struct {
-		name string
-		iotp config.IotpInfo
-	}{
-		{"disabled", config.IotpInfo{BaseURL: "http://127.0.0.1:8080", Database: "iotserver"}},
-		{"no-base-url", config.IotpInfo{Enabled: true, Token: "tok", Database: "iotserver"}},
+	cfg := &config.ConfigurationStruct{
+		Databases: map[string]bootstrapConfig.Database{
+			"Data": {Type: "iotp", Token: "tok", Name: "iotserver"},
+		},
 	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			cfg := &config.ConfigurationStruct{
-				Databases: map[string]bootstrapConfig.Database{
-					"Data": {Type: "iotp"},
-				},
-				Integrations: config.IntegrationsInfo{Iotp: tc.iotp},
-			}
-			_, err := NewDatabase(cfg).newDataDBClient(lc, nil)
-			if err == nil || !strings.Contains(err.Error(), "Iotp") {
-				t.Fatalf("应返回 iotp 配置错误，实际: %v", err)
-			}
-		})
+	_, err := NewDatabase(cfg).newDataDBClient(lc, nil)
+	if err == nil || !strings.Contains(err.Error(), "BaseURL") {
+		t.Fatalf("应返回 iotp 配置错误，实际: %v", err)
 	}
 }
 
-// 配置完整时返回 iotp 数据层，且类型标识为 iotp。
+// [Databases.Data] 中的 iotp 连接参数完整时返回 iotp 数据层。
 func TestNewDataDBClientIotp(t *testing.T) {
 	lc := logger.NewClient("datasource-test", "error", "")
 	cfg := &config.ConfigurationStruct{
 		Databases: map[string]bootstrapConfig.Database{
-			"Data": {Type: "iotp"},
+			"Data": {
+				Type:    "iotp",
+				BaseURL: "http://127.0.0.1:8080",
+				Token:   "tok",
+				Name:    "iotserver",
+				Timeout: 5000,
+			},
 		},
-		Integrations: config.IntegrationsInfo{Iotp: config.IotpInfo{
-			Enabled:    true,
-			BaseURL:    "http://127.0.0.1:8080",
-			Token:      "tok",
-			Database:   "iotserver",
-			TimeoutSec: 5,
-		}},
 	}
 	client, err := NewDatabase(cfg).newDataDBClient(lc, nil)
 	if err != nil {
@@ -160,6 +148,9 @@ func TestNewDataDBClientIotp(t *testing.T) {
 	defer client.CloseSession()
 	if got := client.GetDataDBType(); got != constants.Iotp {
 		t.Fatalf("GetDataDBType = %q, want %q", got, constants.Iotp)
+	}
+	if db := cfg.GetDataDatabaseInfo(); db.IotpDatabaseName() != "iotserver" || db.IotpTimeout() != 5*time.Second {
+		t.Fatalf("iotp 连接参数解析错误: %+v", db)
 	}
 }
 

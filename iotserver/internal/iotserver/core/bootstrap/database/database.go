@@ -18,7 +18,6 @@ import (
 	"iotserver/internal/tools/datadb/iotpdb"
 	"iotserver/internal/tools/iotp"
 	"strings"
-	"time"
 
 	"iotserver/internal/pkg/di"
 	"iotserver/internal/pkg/logger"
@@ -75,17 +74,12 @@ func (d Database) newDataDBClient(
 			RetentionDays: defaultDataRetentionDays,
 		}, lc)
 	case string(constants.Iotp):
-		// 外部 iotp 时序库：认证参数复用 [Integrations.Iotp]（BaseURL/Token/Database/TimeoutSec）。
-		cfg := d.database.Integrations.Iotp
-		if !cfg.Enabled || strings.TrimSpace(cfg.BaseURL) == "" {
-			return nil, errors.New("database configuration error: Type=iotp 需要 [Integrations.Iotp].Enabled=true 且 BaseURL 非空")
+		// 外部 iotp 时序库：连接参数与 DuckDB 同处 [Databases.Data]。
+		if strings.TrimSpace(dataDbInfo.BaseURL) == "" {
+			return nil, errors.New("database configuration error: Type=iotp 需要 [Databases.Data].BaseURL 非空")
 		}
-		timeout := time.Duration(cfg.TimeoutSec) * time.Second
-		if timeout <= 0 {
-			timeout = 10 * time.Second
-		}
-		api := iotp.New(cfg.BaseURL, cfg.Token, cfg.Database, timeout)
-		lc.Infof("时序数据层: iotp (%s, db=%s)", cfg.BaseURL, api.Database())
+		api := iotp.New(dataDbInfo.BaseURL, dataDbInfo.Token, dataDbInfo.IotpDatabaseName(), dataDbInfo.IotpTimeout())
+		lc.Infof("时序数据层: iotp (%s, db=%s)", dataDbInfo.BaseURL, api.Database())
 		return iotpdb.New(api, dbClient, lc), nil
 	default:
 		return nil, fmt.Errorf("database configuration error: 不支持的数据层类型 %q（可选 duckdb / iotp）", dataDbInfo.Type)

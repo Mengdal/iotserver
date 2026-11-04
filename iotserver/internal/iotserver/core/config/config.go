@@ -46,8 +46,6 @@ type ConfigurationStruct struct {
 type IntegrationsInfo struct {
 	// EdgeIngest 参考系统（/edge 协议）接入所用的独立 broker 配置
 	EdgeIngest EdgeIngestInfo
-	// Iotp iotp 时序库配置：元数据同步与数据后端共用
-	Iotp IotpInfo
 	// CollectEngine 采集引擎（IOTP Gateway API）配置：通道/设备/点位下发
 	CollectEngine CollectEngineInfo
 }
@@ -72,23 +70,6 @@ type EdgeIngestInfo struct {
 	// ResyncIntervalSec 订阅刷新间隔（秒）。网关在界面上增删后，据此自动重订阅，
 	// 无需重启服务。<=0 时用默认值。
 	ResyncIntervalSec int
-}
-
-// IotpInfo iotp 时序库的接入配置。
-//
-// 既用于「产品/物模型 → 库表字段」「设备 → 设备实例」的元数据同步（iotpsync），
-// 也在 [Databases.Data].Type = "iotp" 时作为时序数据后端。
-// Enabled=false 时全部跳过，平台行为与未接入 iotp 完全一致。
-type IotpInfo struct {
-	Enabled bool
-	// BaseURL iotp HTTP 地址，形如 http://host:8080
-	BaseURL string
-	// Token 访问令牌（Authorization: Bearer）
-	Token string
-	// Database 平台数据所在库；留空用 iotserver
-	Database string
-	// TimeoutSec 单次 HTTP 请求超时（秒）；<=0 用 10 秒
-	TimeoutSec int
 }
 
 // CollectEngineInfo 采集引擎（IOTP Gateway API）配置。
@@ -250,6 +231,16 @@ func (c *ConfigurationStruct) GetDatabaseInfo() bootstrapConfig.Database {
 // GetDataDatabaseInfo 返回时序数据库配置。
 func (c *ConfigurationStruct) GetDataDatabaseInfo() bootstrapConfig.Database {
 	return c.Databases["Data"]
+}
+
+// IotpConfig 返回 iotp 连接参数；BaseURL 为空表示未接入 iotp。
+//
+// iotp 作为时序数据库的一种，连接参数统一放在 [Databases.Data]：
+// BaseURL / Token / Name（库名）/ Timeout（毫秒）。Type='iotp' 时数据写入 iotp；
+// 未选择 iotp 但配置了 BaseURL 时，仅启用元数据同步与实时值读取。
+func (c *ConfigurationStruct) IotpConfig() (bootstrapConfig.Database, bool) {
+	db := c.GetDataDatabaseInfo()
+	return db, strings.TrimSpace(db.BaseURL) != ""
 }
 
 // GetInsecureSecrets returns the service's InsecureSecrets.

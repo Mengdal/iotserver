@@ -35,28 +35,22 @@ DataSource = 'iotserver/db-data/core-data/core.db?_timeout=5000'
 
 [Databases.Data]
 # 时序数据层：默认 duckdb（单文件列存）。
-# 改为 'iotp' 时数据写入外部 iotp 时序库，认证参数复用下面的 [Integrations.Iotp]，
-# 此时 DataSource 不再使用。iotp 模式暂不支持按设备删数据 / 保留期清理 /
+# 改为 'iotp' 时数据写入外部 iotp 时序库，连接参数与 DuckDB 同在本段，
+# DataSource 不再使用。iotp 模式暂不支持按设备删数据 / 保留期清理 /
 # 在线导出，消息数按宽表行统计（与 DuckDB 按测点行统计会有差异）。
 Type = 'duckdb'
 DataSource = 'iotserver/db-data/duckdb/core-data.duckdb'
+# iotp 连接参数（Type='iotp' 时使用；只填 BaseURL 也会启用 iotp 元数据同步/实时值读取）：
+# BaseURL = 'http://host:8080'
+# Token = ''
+# Name = 'iotserver'   # iotp 库名
+# Timeout = 10000      # 毫秒
 
 [MessageQueue]
 Protocol = 'tcp'
 Host = 'mqtt-broker'
 Port = 58090
 PublishTopicPrefix = 'eventbus/in'
-
-# iotp 时序库接入：既用于元数据同步（产品/物模型 → 库表字段、设备 → 设备实例），
-# 也作为 [Databases.Data].Type = 'iotp' 时的时序数据后端。
-# Enabled=false 时完全跳过，平台行为与未接入一致。
-[Integrations]
-[Integrations.Iotp]
-Enabled = false
-BaseURL = ''        # 形如 http://host:8080
-Token = ''          # Authorization: Bearer <token>
-Database = 'iotserver'
-TimeoutSec = 10
 
 # 多租户隔离（多租户：一个实例服务多个租户，按 tenant_id 行级隔离）
 # Enforce=false（迁移期）：未带租户上下文的调用不过滤，仅打告警日志；

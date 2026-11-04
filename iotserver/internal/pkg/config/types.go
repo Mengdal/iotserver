@@ -16,6 +16,7 @@ package config
 import (
 	"fmt"
 	"strings"
+	"time"
 )
 
 // ServiceInfo contains configuration settings necessary for the basic operation of any EdgeX service.
@@ -134,6 +135,25 @@ type Database struct {
 	Cluster    []string
 	Username   string
 	Password   string
+	// BaseURL / Token 仅 iotp 使用：HTTP 地址（如 http://host:8080）与 Bearer 令牌。
+	BaseURL string
+	Token   string
+}
+
+// IotpDatabaseName 返回 iotp 库名（Name 复用为库名），缺省 iotserver。
+func (d Database) IotpDatabaseName() string {
+	if name := strings.TrimSpace(d.Name); name != "" {
+		return name
+	}
+	return "iotserver"
+}
+
+// IotpTimeout 返回 iotp 请求超时；Timeout 单位为毫秒，<=0 用 10 秒。
+func (d Database) IotpTimeout() time.Duration {
+	if d.Timeout > 0 {
+		return time.Duration(d.Timeout) * time.Millisecond
+	}
+	return 10 * time.Second
 }
 
 // Credentials encapsulates username-password attributes.

@@ -392,7 +392,7 @@ func (b *Bootstrap) initClient(ctx context.Context, wg *sync.WaitGroup, dic *di.
 	})
 
 	// iotp 元数据同步：产品/物模型 → 库表字段，设备 → 设备实例。
-	// 未配置 [Integrations.Iotp].Enabled 时为 no-op，平台行为不变。
+	// 未在 [Databases.Data] 配置 iotp BaseURL 时为 no-op，平台行为不变。
 	iotpSync := iotpsync.New(dic)
 	dic.Update(di.ServiceConstructorMap{
 		container.IotpSyncItfName: func(get di.Get) interface{} {

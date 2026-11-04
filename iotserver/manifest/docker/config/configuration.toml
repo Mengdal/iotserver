@@ -41,6 +41,11 @@ DataSource = 'iotserver/db-data/core-data/core.db?_timeout=5000'
 # 路径相对容器工作目录 /var/bin/，即宿主机 manifest/docker/db-data/（compose 已挂载，重建容器不丢数据）。
 Type = 'duckdb'
 DataSource = 'iotserver/db-data/duckdb/core-data.duckdb'
+# iotp 连接参数（Type='iotp' 时使用）：
+# BaseURL = 'http://host:8080'
+# Token = ''
+# Name = 'iotserver'
+# Timeout = 10000      # 毫秒
 
 # 调试端点 /debug/pprof：默认关闭（暴露协程栈/堆内存）。开启后需 x-token + system:debug:pprof 权限。
 [Pprof]
