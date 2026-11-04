@@ -45,3 +45,6 @@ Thumbs.db
 # ===== 驱动实例数据（本机进程模式下的运行目录） =====
 # 平台跑在容器里时用 /var/bin/iotserver；本机 make run/start 时退回项目根目录
 /driver-data/
+
+# ub-mode 工具输出（crapper/dryer/mutator）
+.metrics/
