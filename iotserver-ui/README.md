@@ -19,11 +19,10 @@
 
 ## 安装
 
-本项目采用` yarn` 进行包管理
+本项目使用 `npm` 进行包管理（提交 `package-lock.json`，不使用 `yarn.lock`）。
 
 ```shell
 
-#npm
 npm install
 ```
 
