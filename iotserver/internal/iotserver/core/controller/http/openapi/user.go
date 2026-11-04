@@ -16,6 +16,7 @@ package openapi
 
 import (
 	buildInErrors "errors"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"iotserver/internal/dtos"
@@ -54,6 +55,11 @@ func (ctl *controller) RefreshToken(c *gin.Context) {
 	refreshToken := c.Param("refreshToken")
 	if refreshToken == "" {
 		openapihelper.ReaderFail(c, errort.TokenValid)
+		return
+	}
+	// 未初始化的空密钥会让任何人都能自签 refresh token，必须拒绝。
+	if strings.TrimSpace(jwt2.RefreshKey) == "" {
+		openapihelper.ReaderFail(c, errort.SystemErrorCode)
 		return
 	}
 	jwt := jwt2.NewJWT(jwt2.RefreshKey)

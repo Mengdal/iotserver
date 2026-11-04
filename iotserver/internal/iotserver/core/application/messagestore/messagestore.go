@@ -64,6 +64,7 @@ func (wp *MessageStore) GenAckChan(id string) *MsgAckChan {
 	ack := &MsgAckChan{
 		Id:       id,
 		DataChan: make(chan interface{}, 1),
+		onClose:  func() { wp.ackMap.Delete(id) },
 	}
 	wp.ackMap.Store(id, ack)
 	return ack

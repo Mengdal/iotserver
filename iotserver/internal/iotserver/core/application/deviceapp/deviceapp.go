@@ -597,19 +597,40 @@ func (p *deviceApp) DevicesImport(ctx context.Context, file *dtos.ImportFile, pr
 	return total, nil
 }
 
+// DevicesReportMsgGather 汇总每个租户昨天的消息量。
+//
+// msg_gather 是租户隔离表：必须按租户分别统计并带租户上下文写入，
+// 否则 Enforce=true 时写入失败，默认策略下 tenant_id 为空、租户看板永远为 0。
+// 平台视图查询时不受租户过滤，按日期求和即可得到全平台总量。
 func (p *deviceApp) DevicesReportMsgGather(ctx context.Context) error {
-	var count int
-	var err error
 	startTime, endTime := GetYesterdayStartTimeAndEndTime()
+	date := time.Now().AddDate(0, 0, -1).Format("2006-01-02")
 	persistApp := resourceContainer.PersistItfFrom(p.dic.Get)
-	count, err = persistApp.SearchDeviceMsgCount(ctx, startTime, endTime)
+
+	tenants, _, err := p.dbClient.WithCtx(tenant.Platform(ctx)).
+		TenantSearch(0, -1, dtos.TenantSearchQueryRequest{})
 	if err != nil {
 		return err
 	}
-	var msgGather models.MsgGather
-	msgGather.Count = count
-	msgGather.Date = time.Now().AddDate(0, 0, -1).Format("2006-01-02")
-	return p.dbClient.WithCtx(ctx).AddMsgGather(msgGather)
+
+	var firstErr error
+	for _, t := range tenants {
+		tenantCtx := tenant.With(ctx, tenant.Context{TenantID: t.Id})
+		count, countErr := persistApp.SearchDeviceMsgCount(tenantCtx, startTime, endTime)
+		if countErr != nil {
+			if firstErr == nil {
+				firstErr = countErr
+			}
+			continue
+		}
+		if addErr := p.dbClient.WithCtx(tenantCtx).AddMsgGather(models.MsgGather{
+			Count: count,
+			Date:  date,
+		}); addErr != nil && firstErr == nil {
+			firstErr = addErr
+		}
+	}
+	return firstErr
 }
 
 func GetYesterdayStartTimeAndEndTime() (int64, int64) {

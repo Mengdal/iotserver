@@ -134,9 +134,10 @@ func (tmq *MessageApp) ThingModelMsgReport(ctx context.Context, msg dtos.ThingMo
 		response.Success = false
 		response.Code = strconv.Itoa(errort.KindDatabaseError)
 		response.ErrorMessage = err.Error()
-	} else {
-		response.Code = "0"
-		response.Success = true
+		// 落库失败必须向上返回：网关接入层据此决定是否登记幂等记录/允许重试。
+		return response, err
 	}
+	response.Code = "0"
+	response.Success = true
 	return response, nil
 }

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 
 	"iotserver/internal/dtos"
 	"iotserver/internal/models"
@@ -203,8 +204,9 @@ func updateGatewayExcludeDeviceKeys(c *Client, id, keys string) error {
 // gatewayIngestLogExists 判断该网关的 seq 是否已处理过（断点续传幂等）
 func gatewayIngestLogExists(c *Client, gatewayId string, seq int64) (bool, error) {
 	var count int64
+	// 只有成功处理过的批次才算「已处理」：失败批次（status=0）必须允许网关重发时重试。
 	if err := c.Pool.Table(models.TableGatewayIngestLog).
-		Where("gateway_id = ? AND seq = ?", gatewayId, seq).Count(&count).Error; err != nil {
+		Where("gateway_id = ? AND seq = ? AND status = 1", gatewayId, seq).Count(&count).Error; err != nil {
 		return false, errort.NewCommonEdgeX(errort.DefaultSystemError, "ingest log query failed", err)
 	}
 	return count > 0, nil
@@ -223,7 +225,12 @@ func addGatewayIngestLog(c *Client, log models.GatewayIngestLog) error {
 	if log.ReceivedAt == 0 {
 		log.ReceivedAt = time.Now().UnixMilli()
 	}
-	return c.Pool.Table(models.TableGatewayIngestLog).Create(&log).Error
+	// 失败记录（status=0）不计入幂等判断；重试成功后 upsert 同一 (gateway_id, seq)
+	// 记录为 status=1，避免主键冲突后一直停留在失败状态。
+	return c.Pool.Table(models.TableGatewayIngestLog).Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "id"}},
+		DoUpdates: clause.AssignmentColumns([]string{"msg_count", "status", "error", "received_at"}),
+	}).Create(&log).Error
 }
 
 // gatewayDeviceCount / gatewayOnlineCount 列表页统计

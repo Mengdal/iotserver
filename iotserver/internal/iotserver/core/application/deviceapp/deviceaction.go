@@ -177,7 +177,7 @@ func (p *deviceApp) SetDeviceProperty(req dtos.OpenApiSetDeviceThingModel) (err 
 	if status == constants.RunStatusStarted {
 		client, errX := rpcclient.NewDriverRpcClient(deviceService.BaseAddress, false, "", deviceService.Id, p.lc)
 		if errX != nil {
-			return err
+			return errX
 		}
 		defer client.Close()
 
@@ -252,7 +252,7 @@ func (p *deviceApp) DeviceEffectivePropertyData(deviceEffectivePropertyDataReq d
 
 		client, errX := rpcclient.NewDriverRpcClient(deviceService.BaseAddress, false, "", deviceService.Id, p.lc)
 		if errX != nil {
-			return dtos.DeviceEffectivePropertyDataResponse{}, err
+			return dtos.DeviceEffectivePropertyDataResponse{}, errX
 		}
 		defer client.Close()
 		var rpcRequest thingmodel.ThingModelIssueMsg
@@ -322,7 +322,7 @@ func (p *deviceApp) DeviceInvokeThingService(ctx context.Context, invokeDeviceSe
 	if status == constants.RunStatusStarted {
 		client, errX := rpcclient.NewDriverRpcClient(deviceService.BaseAddress, false, "", deviceService.Id, p.lc)
 		if errX != nil {
-			return nil, err
+			return nil, errX
 		}
 		defer client.Close()
 		var rpcRequest thingmodel.ThingModelIssueMsg

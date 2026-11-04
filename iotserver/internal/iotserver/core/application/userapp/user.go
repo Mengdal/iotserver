@@ -486,6 +486,7 @@ func (uapp *userApp) InitPassword(ctx context.Context, req dtos.InitPasswordRequ
 	}
 	jwt2.SetOpenAPIKey(newUser.OpenAPIKey)
 	jwt2.SetJwtSignKey(newUser.GatewayKey)
+	jwt2.SetRefreshKey(jwt2.DeriveRefreshKey(newUser.OpenAPIKey))
 	_, edgeXErr = uapp.dbClient.WithCtx(ctx).AddUser(newUser)
 	if edgeXErr != nil {
 		lc.Errorf("add user error %v", edgeXErr)
@@ -588,14 +589,22 @@ func (uapp *userApp) CreateTokenDetail(userName string) (*dtos.TokenDetail, erro
 		dataScope     string
 		platformAdmin bool
 	)
-	if user, err := sysDb.GetUserByUserName(userName); err == nil {
-		userID = parseClaimUserId(user.Id)
-		tenantId = user.TenantId
-		deptId = user.DeptId
-		adminRole, scope := uapp.roleInfo(sysDb, user.Id)
-		dataScope = scope
-		platformAdmin = adminRole && user.TenantId == ""
+	user, err := sysDb.GetUserByUserName(userName)
+	if err != nil {
+		// 刷新令牌不能为已删除/不存在的用户换发访问令牌
+		return nil, errort.NewCommonErr(errort.DefaultTokenPermission,
+			fmt.Errorf("user %s not found: %w", userName, err))
 	}
+	if user.Status == 0 {
+		return nil, errort.NewCommonErr(errort.AppAccountDisabled,
+			fmt.Errorf("account %s is disabled", userName))
+	}
+	userID = parseClaimUserId(user.Id)
+	tenantId = user.TenantId
+	deptId = user.DeptId
+	adminRole, scope := uapp.roleInfo(sysDb, user.Id)
+	dataScope = scope
+	platformAdmin = adminRole && user.TenantId == ""
 	// OpenAPI 登录与刷新 token 都要遵守租户停用/到期规则
 	if err := uapp.tenantAccessErr(context.Background(), tenantId); err != nil {
 		return nil, err
@@ -608,7 +617,10 @@ func (uapp *userApp) CreateTokenDetail(userName string) (*dtos.TokenDetail, erro
 		DataScope:     dataScope,
 		PlatformAdmin: platformAdmin,
 	}
-	var err error
+	if strings.TrimSpace(jwt2.RefreshKey) == "" {
+		return nil, errort.NewCommonErr(errort.DefaultSystemError,
+			fmt.Errorf("refresh token key is not initialized"))
+	}
 	td.AccessToken, err = uapp.createToken(base, td.AtExpires, jwt2.JwtSignKey)
 	if err != nil {
 		return nil, err
@@ -653,6 +665,11 @@ func (uapp *userApp) InitJwtKey() {
 	}
 	jwt2.SetOpenAPIKey(user.OpenAPIKey)
 	jwt2.SetJwtSignKey(user.GatewayKey)
+	refreshKey := jwt2.DeriveRefreshKey(user.OpenAPIKey)
+	if refreshKey == "" {
+		uapp.lc.Errorf("OpenAPI refresh key 初始化失败：管理员 OpenAPIKey 为空")
+	}
+	jwt2.SetRefreshKey(refreshKey)
 }
 
 /******************************* 内部工具 *******************************/

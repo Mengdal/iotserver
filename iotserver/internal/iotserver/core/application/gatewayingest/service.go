@@ -294,9 +294,12 @@ func (s *Service) handleData(ctx context.Context, g models.Gateway, payload []by
 			s.lc.Debugf("写入网关上报日志失败(可能重复): %v", err)
 		}
 	}
-	_ = s.dbClient.WithCtx(ctx).TouchGatewayReport(g.Id, msg.Ts)
+	// 存活信号用接收时间，不能用报文里的采集时间：断点续传的批次带的是过去时间戳，
+	// 用它写 last_online_at 会把正在积极补传的网关误判为离线。
+	receivedAt := time.Now().UnixMilli()
+	_ = s.dbClient.WithCtx(ctx).TouchGatewayReport(g.Id, receivedAt)
 	// 收到数据即视为在线
-	_ = s.gatewayItf.GatewayOnline(ctx, g.Sn, "", msg.Ts)
+	_ = s.gatewayItf.GatewayOnline(ctx, g.Sn, "", receivedAt)
 
 	if firstErr != nil {
 		return firstErr

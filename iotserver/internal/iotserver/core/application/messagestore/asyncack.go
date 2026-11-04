@@ -21,15 +21,25 @@ type MsgAckChan struct {
 	Id       string
 	IsClosed bool
 	DataChan chan interface{}
+	// onClose 关闭时从 MessageStore 的 map 中移除自身，避免超时/失败调用永久堆积。
+	onClose func()
+}
+
+func (mac *MsgAckChan) closeLocked() {
+	if mac.IsClosed {
+		return
+	}
+	close(mac.DataChan)
+	mac.IsClosed = true
+	if mac.onClose != nil {
+		mac.onClose()
+	}
 }
 
 func (mac *MsgAckChan) TryCloseChan() {
 	mac.Mu.Lock()
 	defer mac.Mu.Unlock()
-	if !mac.IsClosed {
-		close(mac.DataChan)
-		mac.IsClosed = true
-	}
+	mac.closeLocked()
 }
 
 func (mac *MsgAckChan) TrySendDataAndCloseChan(data interface{}) bool {
@@ -37,8 +47,7 @@ func (mac *MsgAckChan) TrySendDataAndCloseChan(data interface{}) bool {
 	defer mac.Mu.Unlock()
 	if !mac.IsClosed {
 		mac.DataChan <- data
-		close(mac.DataChan)
-		mac.IsClosed = true
+		mac.closeLocked()
 		return true
 	}
 	return false

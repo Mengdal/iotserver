@@ -264,13 +264,22 @@ func TestIngestUnknownDeviceIsReported(t *testing.T) {
 	if err := f.svc.HandleMessage(gatewaymqtt.UpTopic("GW-0001", "data"), payload); err == nil {
 		t.Fatal("未注册的设备应报错")
 	}
-	// 失败也要留痕，便于对账
+	// 失败也要留痕，便于对账；但不能算「已处理」，否则网关重发时会被去重丢弃。
 	exists, err := f.db.WithCtx(tenant.Platform(context.Background())).GatewayIngestLogExists(f.gateway.Id, 4001)
 	if err != nil {
 		t.Fatalf("查询上报日志失败: %v", err)
 	}
-	if !exists {
-		t.Fatal("失败的上报也应写入网关上报日志")
+	if exists {
+		t.Fatal("失败的上报不应被当作已处理")
+	}
+	var count int64
+	if err := f.db.Pool.Table(models.TableGatewayIngestLog).
+		Where("gateway_id = ? AND seq = ? AND status = 0", f.gateway.Id, 4001).
+		Count(&count).Error; err != nil {
+		t.Fatalf("查询失败日志失败: %v", err)
+	}
+	if count == 0 {
+		t.Fatal("失败的上报也应写入网关上报日志（status=0）")
 	}
 }
 

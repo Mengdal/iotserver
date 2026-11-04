@@ -165,6 +165,7 @@ func (pst *persistApp) searchDeviceHistoryPropertyData(ctx context.Context, req 
 		response, count, err = pst.dataDbClient.GetDeviceProperty(req, deviceInfo)
 		if err != nil {
 			pst.lc.Errorf("GetDeviceProperty error %+v", err)
+			return response, count, err
 		}
 		break
 	}

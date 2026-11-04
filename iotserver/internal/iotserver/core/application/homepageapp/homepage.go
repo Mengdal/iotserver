@@ -167,11 +167,16 @@ func (h homePageApp) HomePageInfo(ctx context.Context, req dtos.HomePageRequest)
 	return responseResponse, nil
 }
 
+// getMsgGatherCountByDate 汇总某天的消息量。
+//
+// msg_gather 一天可能有多个租户各一行：租户视图只会查到自己的行（求和即本租户），
+// 平台视图不受租户过滤、求和即全平台总量。
 func getMsgGatherCountByDate(msgGather []models.MsgGather, data string) int {
+	total := 0
 	for _, gather := range msgGather {
 		if gather.Date == data {
-			return gather.Count
+			total += gather.Count
 		}
 	}
-	return 0
+	return total
 }
