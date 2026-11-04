@@ -29,6 +29,8 @@ type Menu struct {
 	// IsFrame 1=内链（不是外链） 0=外链。不能写 default:1——GORM 会把 0 当未设置
 	// 而改用默认值，外链类型将永远存不进去。
 	IsFrame int `gorm:"column:is_frame;type:int;comment:是否外链 1否 0是"`
+	// LinkMode 仅链接菜单使用：0 站内/新窗口跳转（默认），1 在当前页内用 iframe 嵌入。
+	LinkMode int `gorm:"column:link_mode;type:int;comment:链接打开方式 0跳转 1嵌入"`
 	// PlatformOnly=1 表示平台级菜单（如「租户管理」），不下发给租户用户
 	PlatformOnly int `gorm:"column:platform_only;type:int;default:0;comment:是否平台级菜单 1是 0否"`
 	// TenantId 菜单归属：'' = 平台原始菜单（只有平台管理员能写）；非空 = 该租户的自建菜单。

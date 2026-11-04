@@ -235,6 +235,7 @@ const SysMenuPage: React.FC = () => {
       visible: 1,
       status: 1,
       isFrame: 1,
+      linkMode: 0,
     })
     setModalOpen(true)
   }
@@ -256,6 +257,7 @@ const SysMenuPage: React.FC = () => {
       visible: record.visible,
       status: record.status,
       isFrame: record.isFrame,
+      linkMode: record.linkMode ?? 0,
       remark: record.remark,
     })
     setModalOpen(true)
@@ -606,16 +608,28 @@ const SysMenuPage: React.FC = () => {
                 <IconSelect placeholder={t('请选择图标')} />
               </Form.Item>
               {watchedMenuType === 'L' && (
-                <Form.Item
-                  label={t('链接类型')}
-                  name="isFrame"
-                  extra={t('内链跳转到平台页面；外链在新窗口打开')}
-                >
-                  <Radio.Group>
-                    <Radio value={1}>{t('内链')}</Radio>
-                    <Radio value={0}>{t('外链')}</Radio>
-                  </Radio.Group>
-                </Form.Item>
+                <>
+                  <Form.Item
+                    label={t('链接类型')}
+                    name="isFrame"
+                    extra={t('内链跳转到平台页面；外链在新窗口打开')}
+                  >
+                    <Radio.Group>
+                      <Radio value={1}>{t('内链')}</Radio>
+                      <Radio value={0}>{t('外链')}</Radio>
+                    </Radio.Group>
+                  </Form.Item>
+                  <Form.Item
+                    label={t('打开方式')}
+                    name="linkMode"
+                    extra={t('嵌入会在当前页面内用 iframe 展示；目标站点禁止嵌入时会显示空白')}
+                  >
+                    <Radio.Group>
+                      <Radio value={0}>{t('跳转')}</Radio>
+                      <Radio value={1}>{t('嵌入页面')}</Radio>
+                    </Radio.Group>
+                  </Form.Item>
+                </>
               )}
               <Form.Item
                 label={watchedMenuType === 'L' ? t('链接地址') : t('路由地址')}

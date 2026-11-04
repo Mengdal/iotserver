@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { UserOutlined } from '@ant-design/icons'
 import { Layout, Space, Menu, Avatar, Dropdown, Modal, Form, Input, Select, MenuProps, message } from 'antd'
-import { buildMenus, buildMenusFromBackend, isExternalLink } from '@/routes/menus'
+import { buildEmbedMenuKey, buildMenus, buildMenusFromBackend, isExternalLink, parseEmbedMenuKey } from '@/routes/menus'
 import { resolveMenuPath, resolvePageMeta, resolvePageTitle } from '@/routes/pageMeta'
 import { AdvanceBreadcrumb } from '@/components/Breadcrumb'
 import { useBrand } from '@/components/Brand'
@@ -151,6 +151,12 @@ const MainLayout: React.FC = () => {
   // 侧边栏当前选中项：详情页/带过滤参数的列表页（如 /gateway/device/manage/:productId）
   // 没有与完整路径一一对应的菜单，回落到所属菜单，避免跳转后侧边栏没有任何高亮。
   const selectedMenuKey = useMemo(() => {
+    // 嵌入页：菜单 key 是合成的 embed:...，用当前 src/title 还原，保证侧边栏高亮
+    if (location.pathname === '/common/embed') {
+      const params = new URLSearchParams(location.search)
+      const src = params.get('src') || ''
+      if (src) return buildEmbedMenuKey(src, params.get('title') || '')
+    }
     const menuPath = resolveMenuPath(location.pathname)
     if (menuPath) return menuPath
     let best = ''
@@ -165,7 +171,7 @@ const MainLayout: React.FC = () => {
     }
     walk(siderMenus as any[])
     return best || location.pathname
-  }, [siderMenus, location.pathname])
+  }, [siderMenus, location.pathname, location.search])
 
   // 内容区自己滚动（见 style.less）：切路由时手动回到顶部，保持原来整页滚动的体验。
   // 只依赖 pathname：菜单/权限异步刷新（getUserGetInfo）不能把用户滚到一半的页面拉回顶部。
@@ -384,6 +390,13 @@ const MainLayout: React.FC = () => {
             selectedKeys={[selectedMenuKey]}
             onClick={({ key }) => {
               const target = String(key)
+              // 「嵌入」型链接：在当前内容区用 iframe 打开
+              const embed = parseEmbedMenuKey(target)
+              if (embed) {
+                const search = new URLSearchParams({ src: embed.src, title: embed.title }).toString()
+                navigate(`/common/embed?${search}`)
+                return
+              }
               // 菜单管理里配置的外链（http/https）新窗口打开
               if (isExternalLink(target)) {
                 window.open(target, '_blank', 'noopener,noreferrer')

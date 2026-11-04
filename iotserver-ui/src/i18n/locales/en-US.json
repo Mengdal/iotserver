@@ -1755,5 +1755,11 @@
   "内链必须以 / 开头": "Internal links must start with /",
   "内链跳转到平台页面；外链在新窗口打开": "Internal links open a platform page; external links open in a new window",
   "例如 https://example.com": "e.g. https://example.com",
-  "例如 /home/dashboard": "e.g. /home/dashboard"
+  "例如 /home/dashboard": "e.g. /home/dashboard",
+  "打开方式": "Open mode",
+  "跳转": "Navigate",
+  "嵌入页面": "Embedded page",
+  "嵌入会在当前页面内用 iframe 展示；目标站点禁止嵌入时会显示空白": "Embedded mode shows the target in an iframe on this page; sites that forbid embedding will appear blank",
+  "缺少嵌入地址": "Missing embed address",
+  "链接菜单以 iframe 嵌入的目标页面。": "The target page embedded by a link menu via iframe."
 }

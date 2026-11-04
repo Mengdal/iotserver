@@ -180,6 +180,8 @@ export interface BackendMenuItem {
   status?: number
   sort?: number
   isFrame?: number
+  /** 链接打开方式：0 跳转，1 嵌入 iframe */
+  linkMode?: number
   children?: BackendMenuItem[]
 }
 
@@ -192,6 +194,31 @@ function backendMenuLabel (item: BackendMenuItem): string {
 /** 后端菜单里 http(s):// 开头视为外链 */
 export function isExternalLink (path?: string): boolean {
   return !!path && /^https?:\/\//i.test(path)
+}
+
+/** 嵌入型链接的菜单 key 前缀：点击后跳到 /common/embed?src=...，而不是直接 navigate 目标地址 */
+export const EMBED_MENU_PREFIX = 'embed:'
+
+export interface EmbedMenuTarget {
+  src: string
+  title: string
+}
+
+export function buildEmbedMenuKey (src: string, title: string): string {
+  return EMBED_MENU_PREFIX + encodeURIComponent(JSON.stringify({ src, title }))
+}
+
+export function parseEmbedMenuKey (key?: string): EmbedMenuTarget | null {
+  if (!key || !key.startsWith(EMBED_MENU_PREFIX)) return null
+  try {
+    const parsed = JSON.parse(decodeURIComponent(key.slice(EMBED_MENU_PREFIX.length)))
+    if (typeof parsed?.src === 'string' && parsed.src) {
+      return { src: parsed.src, title: String(parsed.title || '') }
+    }
+  } catch {
+    // 非法的自定义 key 按普通菜单处理
+  }
+  return null
 }
 
 /**
@@ -219,9 +246,13 @@ export function buildMenusFromBackend (list?: BackendMenuItem[]): Array<SubMenuT
         return
       }
       if (!item.path) return
+      const label = backendMenuLabel(item)
+      const embed = item.menuType === 'L' && Number(item.linkMode) === 1
       result.push({
-        label: backendMenuLabel(item),
-        key: item.path,
+        label,
+        // 嵌入型链接不能直接 navigate 到目标（外链会把应用带走、内链会丢掉 iframe），
+        // 用合成 key 交给 Layout 打开 /common/embed。
+        key: embed ? buildEmbedMenuKey(item.path, label) : item.path,
         icon,
       } as MenuItemType)
     })

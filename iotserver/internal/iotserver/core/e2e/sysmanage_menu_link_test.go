@@ -35,6 +35,18 @@ func TestMenuLinkTypeInternalAndExternal(t *testing.T) {
 		t.Fatalf("内链菜单字段错误: %+v", in)
 	}
 
+	// 嵌入模式：仅链接菜单可用
+	embedID, ok, msg := mtAddMenu(t, env, env.token, dtos.SysMenuAddRequest{
+		ParentId: "0", Name: "嵌入内链", Path: "/home/dashboard",
+		MenuType: models.MenuTypeLink, LinkMode: 1, Status: 1, Visible: 1,
+	})
+	if !ok {
+		t.Fatalf("新增嵌入链接失败: %s", msg)
+	}
+	if row := mtMenuRow(t, env, embedID); row.LinkMode != 1 || row.IsFrame != 1 {
+		t.Fatalf("嵌入链接字段错误: %+v", row)
+	}
+
 	// 链接必须是合法地址
 	if _, ok, _ := mtAddMenu(t, env, env.token, dtos.SysMenuAddRequest{
 		ParentId: "0", Name: "非法链接", Path: "example.com", MenuType: models.MenuTypeLink,

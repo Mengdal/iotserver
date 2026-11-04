@@ -99,6 +99,11 @@ const pageMetas: Record<string, PageMeta> = {
   '/common/userProfile': {
     describe: t('个人中心可查看与修改当前账号的资料，并支持修改登录密码。'),
   },
+  '/common/embed': {
+    title: t('嵌入页面'),
+    banner: 'none',
+    describe: t('链接菜单以 iframe 嵌入的目标页面。'),
+  },
   '/documents/documents': {
     // 产品介绍页：整页直接展示 hero + 能力介绍，不要标题条
     banner: 'none',

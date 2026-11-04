@@ -33,6 +33,7 @@ import PlatformTenant from '@/pages/platform/Tenant'
 import SolutionCenter from '@/pages/solution/Center'
 import DataHistoryQuery from '@/pages/data/HistoryQuery'
 import UserProfile from '@/pages/admin/UserProfile'
+import EmbedPage from '@/pages/common/EmbedPage'
 import VizDashboard from '@/pages/viz/Dashboard'
 import BoardManage from '@/pages/viz/BoardManage'
 import VizView from '@/pages/viz/View'
@@ -190,6 +191,11 @@ const router = createBrowserRouter([
       {
         path: '/common/userProfile',
         element: <UserProfile />,
+      },
+      // 链接菜单「嵌入」打开方式的内容区
+      {
+        path: '/common/embed',
+        element: <EmbedPage />,
       },
       // ===== 平台管理（平台管理员专属，入口由后端菜单下发） =====
       {

@@ -27,7 +27,9 @@ type SysMenuAddRequest struct {
 	Visible   int    `json:"visible"`
 	Status    int    `json:"status"`
 	IsFrame   int    `json:"isFrame"`
-	Remark    string `json:"remark"`
+	// LinkMode 链接打开方式：0 跳转，1 嵌入（仅 menuType=L 使用）
+	LinkMode int    `json:"linkMode"`
+	Remark   string `json:"remark"`
 }
 
 // SysMenuUpdateRequest 编辑菜单
@@ -45,6 +47,7 @@ type SysMenuUpdateRequest struct {
 	Visible   int    `json:"visible"`
 	Status    int    `json:"status"`
 	IsFrame   int    `json:"isFrame"`
+	LinkMode  int    `json:"linkMode"`
 	Remark    string `json:"remark"`
 }
 
@@ -94,6 +97,7 @@ type SysMenuResponse struct {
 	Visible   int    `json:"visible"`
 	Status    int    `json:"status"`
 	IsFrame   int    `json:"isFrame"`
+	LinkMode  int    `json:"linkMode"`
 	// TenantId 菜单归属：'' = 平台菜单（只有平台管理员能写），非空 = 该租户的自建菜单
 	TenantId string            `json:"tenantId"`
 	Remark   string            `json:"remark"`

@@ -447,6 +447,7 @@ func (uapp *userApp) SysMenuAdd(ctx context.Context, req dtos.SysMenuAddRequest)
 		Visible:    req.Visible,
 		Status:     req.Status,
 		IsFrame:    isFrame,
+		LinkMode:   normalizeLinkMode(menuType, req.LinkMode),
 		TenantId:   target,
 		Remark:     req.Remark,
 		Timestamps: models.Timestamps{Created: nowMilli(), Modified: nowMilli()},
@@ -499,6 +500,7 @@ func (uapp *userApp) SysMenuUpdate(ctx context.Context, req dtos.SysMenuUpdateRe
 	menu.Visible = req.Visible
 	menu.Status = req.Status
 	menu.IsFrame = isFrame
+	menu.LinkMode = normalizeLinkMode(menuType, req.LinkMode)
 	// 归属不可变（已校验与 target 相等，这里显式写回，避免 Save 把归属改掉）
 	menu.TenantId = target
 	menu.Remark = req.Remark
@@ -1136,6 +1138,14 @@ func normalizeMenuType(menuType string) string {
 	default:
 		return models.MenuTypeMenu
 	}
+}
+
+// normalizeLinkMode 只有链接菜单允许选择「嵌入」，其余类型一律回到 0（跳转）。
+func normalizeLinkMode(menuType string, linkMode int) int {
+	if menuType == models.MenuTypeLink && linkMode == 1 {
+		return 1
+	}
+	return 0
 }
 
 func isExternalMenuPath(path string) bool {
