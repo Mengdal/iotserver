@@ -48,12 +48,14 @@ type TabKey = 'tenant' | 'platform'
 const menuTypeOptions = [
   { label: t('目录'), value: 'M' },
   { label: t('菜单'), value: 'C' },
+  { label: t('链接'), value: 'L' },
   { label: t('按钮'), value: 'F' },
 ]
 
 const menuTypeTag: Record<string, { color: string, text: string }> = {
   M: { color: 'purple', text: t('目录') },
   C: { color: 'blue', text: t('菜单') },
+  L: { color: 'cyan', text: t('链接') },
   F: { color: 'default', text: t('按钮') },
 }
 
@@ -73,7 +75,8 @@ interface ParentOption {
 function toParentOptions (list: SysMenu[]): ParentOption[] {
   const result: ParentOption[] = []
   list.forEach(item => {
-    if (item.menuType === 'F') return
+    // 按钮、链接都是叶子，不能作为父级
+    if (item.menuType === 'F' || item.menuType === 'L') return
     const option: ParentOption = { value: item.id, title: menuDisplayName(item) }
     if (item.children && item.children.length > 0) {
       const children = toParentOptions(item.children)
@@ -112,6 +115,7 @@ const SysMenuPage: React.FC = () => {
   const [editForm] = Form.useForm()
   const [renameForm] = Form.useForm()
   const watchedMenuType: string | undefined = Form.useWatch('menuType', editForm)
+  const watchedIsFrame: number | undefined = Form.useWatch('isFrame', editForm)
 
   // 编辑范围在租户切换时会整页刷新，因此挂载时读取一次即可
   const [platformAdmin] = useState(() => isPlatformAdmin())
@@ -263,6 +267,11 @@ const SysMenuPage: React.FC = () => {
     if (tenantView) {
       // 租户自建菜单不得携带权限标识（后端对非空 perms 直接报参数错误）
       delete payload.perms
+    }
+    if (payload.menuType === 'L') {
+      // 链接是纯导航项，不绑定组件与权限标识
+      payload.component = ''
+      payload.perms = ''
     }
     const resp = editing
       ? await updateSysMenu({ ...payload, id: editing.id })
@@ -467,7 +476,7 @@ const SysMenuPage: React.FC = () => {
       fixed: 'right',
       render: (_, record) => (
         <Space size={4} wrap={false} style={{ whiteSpace: 'nowrap' }}>
-          {canAdd && record.menuType !== 'F' && (
+          {canAdd && record.menuType !== 'F' && record.menuType !== 'L' && (
             <Button type="link" size="small" onClick={() => openAdd(record.id)}>{t('新增下级')}</Button>
           )}
           {canEdit && <Button type="link" size="small" onClick={() => openEdit(record)}>{t('编辑')}</Button>}
@@ -596,15 +605,55 @@ const SysMenuPage: React.FC = () => {
               <Form.Item label={t('图标')} name="icon">
                 <IconSelect placeholder={t('请选择图标')} />
               </Form.Item>
-              <Form.Item label={t('路由地址')} name="path">
-                <Input placeholder={t('例如 /admin/sysUser')} />
+              {watchedMenuType === 'L' && (
+                <Form.Item
+                  label={t('链接类型')}
+                  name="isFrame"
+                  extra={t('内链跳转到平台页面；外链在新窗口打开')}
+                >
+                  <Radio.Group>
+                    <Radio value={1}>{t('内链')}</Radio>
+                    <Radio value={0}>{t('外链')}</Radio>
+                  </Radio.Group>
+                </Form.Item>
+              )}
+              <Form.Item
+                label={watchedMenuType === 'L' ? t('链接地址') : t('路由地址')}
+                name="path"
+                rules={watchedMenuType === 'L'
+                  ? [
+                    { required: true, message: t('请输入链接地址') },
+                    {
+                      validator: (_rule, value) => {
+                        const target = String(value || '').trim()
+                        if (!target) return Promise.resolve()
+                        if (watchedIsFrame === 0) {
+                          return /^https?:\/\//i.test(target)
+                            ? Promise.resolve()
+                            : Promise.reject(new Error(t('外链必须以 http:// 或 https:// 开头')))
+                        }
+                        return target.startsWith('/')
+                          ? Promise.resolve()
+                          : Promise.reject(new Error(t('内链必须以 / 开头')))
+                      },
+                    },
+                  ]
+                  : []}
+              >
+                <Input
+                  placeholder={watchedMenuType === 'L'
+                    ? (watchedIsFrame === 0 ? t('例如 https://example.com') : t('例如 /home/dashboard'))
+                    : t('例如 /admin/sysUser')}
+                />
               </Form.Item>
-              <Form.Item label={t('组件路径')} name="component">
-                <Input placeholder={t('前端组件路径（可选）')} />
-              </Form.Item>
+              {watchedMenuType !== 'L' && (
+                <Form.Item label={t('组件路径')} name="component">
+                  <Input placeholder={t('前端组件路径（可选）')} />
+                </Form.Item>
+              )}
             </>
           )}
-          {tenantView
+          {watchedMenuType !== 'L' && (tenantView
             ? (
               <Form.Item label={t('权限标识')}>
                 <span style={{ color: 'rgba(0, 0, 0, 0.45)' }}>
@@ -616,7 +665,7 @@ const SysMenuPage: React.FC = () => {
               <Form.Item label={t('权限标识')} name="perms">
                 <Input placeholder={t('例如 system:user:list')} />
               </Form.Item>
-            )}
+            ))}
           <Form.Item label={t('显示排序')} name="sort">
             <InputNumber min={0} style={{ width: '100%' }} />
           </Form.Item>

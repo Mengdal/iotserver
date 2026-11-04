@@ -5,6 +5,9 @@ const (
 	MenuTypeDir    = "M" // 目录
 	MenuTypeMenu   = "C" // 菜单
 	MenuTypeButton = "F" // 按钮
+	// MenuTypeLink 链接：叶子导航项，Path 为内链路由（/xxx）或外链地址（http(s)://）。
+	// IsFrame=1 内链、0 外链；该值由 Path 推导，不接受客户端任意指定。
+	MenuTypeLink = "L"
 )
 
 // Menu 菜单（同时承载前端菜单树与按钮权限）
@@ -18,12 +21,14 @@ type Menu struct {
 	Path      string `gorm:"column:path;type:string;size:255;comment:路由地址"`
 	Component string `gorm:"column:component;type:string;size:255;comment:组件路径"`
 	Icon      string `gorm:"column:icon;type:string;size:128;comment:菜单图标"`
-	MenuType  string `gorm:"column:menu_type;type:string;size:8;default:C;comment:菜单类型 M目录 C菜单 F按钮"`
+	MenuType  string `gorm:"column:menu_type;type:string;size:8;default:C;comment:菜单类型 M目录 C菜单 F按钮 L链接"`
 	Perms     string `gorm:"column:perms;type:string;size:255;comment:权限标识"`
 	Sort      int    `gorm:"column:sort;type:int;default:0;comment:显示顺序"`
 	Visible   int    `gorm:"column:visible;type:int;default:1;comment:是否显示 1显示 0隐藏"`
 	Status    int    `gorm:"column:status;type:int;default:1;comment:状态 1正常 0停用"`
-	IsFrame   int    `gorm:"column:is_frame;type:int;default:1;comment:是否外链 1否 0是"`
+	// IsFrame 1=内链（不是外链） 0=外链。不能写 default:1——GORM 会把 0 当未设置
+	// 而改用默认值，外链类型将永远存不进去。
+	IsFrame int `gorm:"column:is_frame;type:int;comment:是否外链 1否 0是"`
 	// PlatformOnly=1 表示平台级菜单（如「租户管理」），不下发给租户用户
 	PlatformOnly int `gorm:"column:platform_only;type:int;default:0;comment:是否平台级菜单 1是 0否"`
 	// TenantId 菜单归属：'' = 平台原始菜单（只有平台管理员能写）；非空 = 该租户的自建菜单。

@@ -1744,5 +1744,16 @@
   "该设备还没有上报过数据": "This device has not reported any data yet",
   "更多操作": "More actions",
   "通道下设备": "Devices on this channel",
-  "正在加载设备配置": "Loading device configuration"
+  "正在加载设备配置": "Loading device configuration",
+  "链接": "Link",
+  "链接类型": "Link type",
+  "内链": "Internal link",
+  "外链": "External link",
+  "链接地址": "Link address",
+  "请输入链接地址": "Enter the link address",
+  "外链必须以 http:// 或 https:// 开头": "External links must start with http:// or https://",
+  "内链必须以 / 开头": "Internal links must start with /",
+  "内链跳转到平台页面；外链在新窗口打开": "Internal links open a platform page; external links open in a new window",
+  "例如 https://example.com": "e.g. https://example.com",
+  "例如 /home/dashboard": "e.g. /home/dashboard"
 }

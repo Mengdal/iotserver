@@ -386,7 +386,7 @@ const MainLayout: React.FC = () => {
               const target = String(key)
               // 菜单管理里配置的外链（http/https）新窗口打开
               if (isExternalLink(target)) {
-                window.open(target)
+                window.open(target, '_blank', 'noopener,noreferrer')
                 return
               }
               navigate(target)

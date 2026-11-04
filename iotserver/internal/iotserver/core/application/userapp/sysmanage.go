@@ -425,37 +425,31 @@ func (uapp *userApp) SysMenuAdd(ctx context.Context, req dtos.SysMenuAddRequest)
 	}
 	db := uapp.dbClient.WithCtx(ctx)
 	parentId := normalizeParentId(req.ParentId)
-	if parentId != "0" {
-		parent, err := db.SysMenuById(parentId)
-		if err != nil {
-			return err
-		}
-		// 允许把自建菜单挂在平台菜单下；但不能挂到其他租户的菜单下
-		if !menuInScope(parent, target) {
-			return errort.NewCommonErr(errort.AppPermissionDenied,
-				errort.NewMessageErr("父菜单 {{.p1}} 不在当前作用域内", map[string]interface{}{"p1": parentId}))
-		}
+	if err := uapp.validateMenuParent(ctx, parentId, "", target); err != nil {
+		return err
+	}
+	menuType := normalizeMenuType(req.MenuType)
+	path, isFrame, err := uapp.resolveMenuTarget(ctx, "", menuType, req.Path, req.IsFrame)
+	if err != nil {
+		return err
 	}
 	menu := models.Menu{
 		Id:         utils.GenUUID(),
 		ParentId:   parentId,
 		Name:       req.Name,
 		NameEn:     req.NameEn,
-		Path:       req.Path,
+		Path:       path,
 		Component:  req.Component,
 		Icon:       req.Icon,
-		MenuType:   normalizeMenuType(req.MenuType),
+		MenuType:   menuType,
 		Perms:      req.Perms,
 		Sort:       req.Sort,
 		Visible:    req.Visible,
 		Status:     req.Status,
-		IsFrame:    req.IsFrame,
+		IsFrame:    isFrame,
 		TenantId:   target,
 		Remark:     req.Remark,
 		Timestamps: models.Timestamps{Created: nowMilli(), Modified: nowMilli()},
-	}
-	if menu.IsFrame == 0 {
-		menu.IsFrame = 1
 	}
 	if menu.Visible == 0 {
 		menu.Visible = 1
@@ -463,7 +457,7 @@ func (uapp *userApp) SysMenuAdd(ctx context.Context, req dtos.SysMenuAddRequest)
 	if menu.Status == 0 {
 		menu.Status = 1
 	}
-	_, err := db.AddSysMenu(menu)
+	_, err = db.AddSysMenu(menu)
 	return err
 }
 
@@ -485,38 +479,26 @@ func (uapp *userApp) SysMenuUpdate(ctx context.Context, req dtos.SysMenuUpdateRe
 	if parentId == req.Id {
 		return errort.NewCommonErr(errort.AppParentSelf, fmt.Errorf("parent menu can not be itself"))
 	}
-	if parentId != "0" {
-		parent, pErr := db.SysMenuById(parentId)
-		if pErr != nil {
-			return pErr
-		}
-		if !menuInScope(parent, target) {
-			return errort.NewCommonErr(errort.AppPermissionDenied,
-				errort.NewMessageErr("父菜单 {{.p1}} 不在当前作用域内", map[string]interface{}{"p1": parentId}))
-		}
-		// 防止把父节点挂到自己的子节点下
-		descendants, dErr := uapp.menuDescendants(req.Id, target)
-		if dErr != nil {
-			return dErr
-		}
-		for _, id := range descendants {
-			if id == parentId {
-				return errort.NewCommonErr(errort.AppParentSelf, fmt.Errorf("parent menu can not be its child"))
-			}
-		}
+	if err = uapp.validateMenuParent(ctx, parentId, req.Id, target); err != nil {
+		return err
+	}
+	menuType := normalizeMenuType(req.MenuType)
+	path, isFrame, linkErr := uapp.resolveMenuTarget(ctx, req.Id, menuType, req.Path, req.IsFrame)
+	if linkErr != nil {
+		return linkErr
 	}
 	menu.ParentId = parentId
 	menu.Name = req.Name
 	menu.NameEn = req.NameEn
-	menu.Path = req.Path
+	menu.Path = path
 	menu.Component = req.Component
 	menu.Icon = req.Icon
-	menu.MenuType = normalizeMenuType(req.MenuType)
+	menu.MenuType = menuType
 	menu.Perms = req.Perms
 	menu.Sort = req.Sort
 	menu.Visible = req.Visible
 	menu.Status = req.Status
-	menu.IsFrame = req.IsFrame
+	menu.IsFrame = isFrame
 	// 归属不可变（已校验与 target 相等，这里显式写回，避免 Save 把归属改掉）
 	menu.TenantId = target
 	menu.Remark = req.Remark
@@ -638,6 +620,61 @@ func (uapp *userApp) completeMenuAncestors(menus []models.Menu, tenantId string)
 		}
 	}
 	return result, nil
+}
+
+// resolveMenuTarget 归一化菜单目标；链接类型额外保证「不能把已有子级的节点改为链接」。
+func (uapp *userApp) resolveMenuTarget(ctx context.Context, menuId, menuType, path string, isFrame int) (string, int, error) {
+	path, frame, err := normalizeMenuTarget(menuType, path, isFrame)
+	if err != nil {
+		return "", 0, errort.NewCommonErr(errort.DefaultReqParamsError, err)
+	}
+	if menuType != models.MenuTypeLink || menuId == "" {
+		return path, frame, nil
+	}
+	childCount, err := uapp.dbClient.WithCtx(ctx).SysMenuCountByParentIds([]string{menuId})
+	if err != nil {
+		return "", 0, err
+	}
+	if childCount > 0 {
+		return "", 0, errort.NewCommonErr(errort.DefaultReqParamsError,
+			errort.NewMessageErr("该菜单下还有子级，不能改为链接类型", nil))
+	}
+	return path, frame, nil
+}
+
+// validateMenuParent 校验父菜单：存在、在当前作用域内、不是链接叶子；
+// menuId 非空时（编辑）还要防止把节点挂到自己的后代下。
+func (uapp *userApp) validateMenuParent(ctx context.Context, parentId, menuId, target string) error {
+	if parentId == "0" {
+		return nil
+	}
+	parent, err := uapp.dbClient.WithCtx(ctx).SysMenuById(parentId)
+	if err != nil {
+		return err
+	}
+	// 允许把自建菜单挂在平台菜单下；但不能挂到其他租户的菜单下
+	if !menuInScope(parent, target) {
+		return errort.NewCommonErr(errort.AppPermissionDenied,
+			errort.NewMessageErr("父菜单 {{.p1}} 不在当前作用域内", map[string]interface{}{"p1": parentId}))
+	}
+	// 链接是叶子导航项，不能再挂子级
+	if parent.MenuType == models.MenuTypeLink {
+		return errort.NewCommonErr(errort.DefaultReqParamsError,
+			errort.NewMessageErr("链接菜单不能作为父级", nil))
+	}
+	if menuId == "" {
+		return nil
+	}
+	descendants, err := uapp.menuDescendants(menuId, target)
+	if err != nil {
+		return err
+	}
+	for _, id := range descendants {
+		if id == parentId {
+			return errort.NewCommonErr(errort.AppParentSelf, fmt.Errorf("parent menu can not be its child"))
+		}
+	}
+	return nil
 }
 
 func (uapp *userApp) menuDescendants(rootId, tenantId string) ([]string, error) {
@@ -1094,11 +1131,37 @@ func normalizeParentId(parentId string) string {
 
 func normalizeMenuType(menuType string) string {
 	switch menuType {
-	case models.MenuTypeDir, models.MenuTypeMenu, models.MenuTypeButton:
+	case models.MenuTypeDir, models.MenuTypeMenu, models.MenuTypeButton, models.MenuTypeLink:
 		return menuType
 	default:
 		return models.MenuTypeMenu
 	}
+}
+
+func isExternalMenuPath(path string) bool {
+	lower := strings.ToLower(strings.TrimSpace(path))
+	return strings.HasPrefix(lower, "http://") || strings.HasPrefix(lower, "https://")
+}
+
+// normalizeMenuTarget 约束导航目标的取值：
+//   - 非链接类型固定 IsFrame=1（不是外链）；
+//   - 链接类型必须是内链（/ 开头）或外链（http(s):// 开头），IsFrame 由 Path 推导，
+//     不接受客户端随意指定，避免出现「标记外链但地址是内部路由」这类非法状态。
+func normalizeMenuTarget(menuType, path string, _ int) (string, int, error) {
+	path = strings.TrimSpace(path)
+	if menuType != models.MenuTypeLink {
+		return path, 1, nil
+	}
+	if path == "" {
+		return "", 0, fmt.Errorf("链接菜单必须填写链接地址")
+	}
+	if isExternalMenuPath(path) {
+		return path, 0, nil
+	}
+	if strings.HasPrefix(path, "/") {
+		return path, 1, nil
+	}
+	return "", 0, fmt.Errorf("链接地址必须以 / 开头（内链）或以 http://、https:// 开头（外链）")
 }
 
 func dedupStrings(items []string) []string {
