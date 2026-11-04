@@ -74,9 +74,10 @@ type EdgeIngestInfo struct {
 	ResyncIntervalSec int
 }
 
-// IotpInfo iotp 时序库的元数据同步配置。
+// IotpInfo iotp 时序库的接入配置。
 //
-// 只做「产品/物模型 → 库表字段」「设备 → 设备实例」的同步，不负责时序数据写入。
+// 既用于「产品/物模型 → 库表字段」「设备 → 设备实例」的元数据同步（iotpsync），
+// 也在 [Databases.Data.Primary].Type = "iotp" 时作为时序数据后端。
 // Enabled=false 时全部跳过，平台行为与未接入 iotp 完全一致。
 type IotpInfo struct {
 	Enabled bool

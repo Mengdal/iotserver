@@ -40,6 +40,8 @@ DataSource = 'manifest/docker/db-data/core-data/core.db?_timeout=5000'
 [Databases.Data.Primary]
 # 单文件列存：一个 DuckDB 数据库文件，事务不产生 Parquet 文件，
 # 因此不需要分区 / 合并小文件 / 过期快照那一整套文件生命周期管理。
+# 改为 'iotp' 时数据写入外部 iotp 时序库（认证参数见 [Iotp]），DataSource 不再使用；
+# iotp 模式不支持按设备删数据 / 保留期清理 / 在线导出，消息数按宽表行统计。
 Type = 'duckdb'
 DataSource = 'manifest/docker/db-data/duckdb/core-data.duckdb'
 
@@ -75,6 +77,7 @@ Enabled = false
 BaseURL = ''
 TimeoutSec = 10
 
+# iotp 时序库接入：元数据同步（iotpsync）与数据后端（Type='iotp'）共用。
 [Iotp]
 Enabled = false
 BaseURL = ''

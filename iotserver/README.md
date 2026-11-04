@@ -21,11 +21,29 @@ make test
 
 | 配置项 | 说明 |
 | --- | --- |
-| `Databases.Data.Primary.Type` | 数据层：`duckdb` |
-| `Databases.Data.Primary.DataSource` | DuckDB 数据库文件路径 |
+| `Databases.Data.Primary.Type` | 数据层：`duckdb`（默认）或 `iotp` |
+| `Databases.Data.Primary.DataSource` | DuckDB 数据库文件路径（`iotp` 模式下不生效） |
+| `Iotp.Enabled` / `BaseURL` / `Token` | iotp 地址与认证；`Type=iotp` 时必须启用 |
+| `Iotp.Database` | iotp 库名，缺省 `iotserver` |
 | `Service.CallbackUrl` | eKuiper 规则动作回调基地址 |
 | `Service.CallbackToken` | 回调共享密钥；非空时回调必须带 `x-callback-token` |
 | `Pprof.Enabled` | 调试端点 `/debug/pprof`，默认关闭 |
+
+### 时序数据后端：DuckDB / iotp
+
+默认写入本地 DuckDB 单文件。把 `[Databases.Data.Primary].Type` 改为 `iotp`，并配置
+`[Iotp]`（`Enabled = true`、`BaseURL`、`Token`、`Database`），即可把时序数据写入外部
+iotp 时序库；重启生效。切换不迁移既有 DuckDB 数据（文件原样保留）。所用令牌必须同时
+具备元数据与 `/write` 写权限，否则服务启动正常但数据写入会被 iotp 以 403 拒绝。
+
+iotp 是「一个产品一张宽表」，适配层负责宽窄转换：有产品的设备写 `p_<产品ID>`，
+无产品设备（网关子设备）写兜底表 `p_default`；字段按物模型/首包惰性创建，设备写入前自动注册。
+iotp 模式下的能力边界：
+
+- 不支持按设备/产品删除历史，也不执行租户保留期清理（由 iotp 侧自行管理）；
+- 不支持在线导出/备份（接口返回「当前数据层不支持在线导出」）；
+- 消息数按宽表行统计，与 DuckDB 按测点行统计的数值会有差异；
+- 物模型字段类型变更在 iotp 已有数据时会被拒绝，适配层记录日志并保留旧类型。
 
 ## Docker 部署
 

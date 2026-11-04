@@ -31,4 +31,6 @@ const (
 	Tstorage DataType = "tstorage"
 	// DuckDB 单文件列存（本地原生表）
 	DuckDB DataType = "duckdb"
+	// Iotp 外部 iotp 时序库（HTTP API，按产品宽表存储）
+	Iotp DataType = "iotp"
 )

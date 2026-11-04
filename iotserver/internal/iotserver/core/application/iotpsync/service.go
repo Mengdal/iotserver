@@ -8,11 +8,9 @@ import (
 	"context"
 	"strings"
 	"time"
-	"unicode"
 
 	"iotserver/internal/iotserver/core/container"
 	"iotserver/internal/models"
-	"iotserver/internal/pkg/constants"
 	pkgContainer "iotserver/internal/pkg/container"
 	"iotserver/internal/pkg/di"
 	"iotserver/internal/pkg/logger"
@@ -77,12 +75,12 @@ func (s *Service) PropertyChanged(productID string, property models.Properties, 
 
 // EventChanged 物模型事件新增/修改后同步字段。
 func (s *Service) EventChanged(productID string, event models.Events, tenantID string) {
-	s.changeField(productID, "evt_"+FieldName(event.Code))
+	s.changeField(productID, "evt_"+iotp.FieldName(event.Code))
 }
 
 // ActionChanged 物模型服务新增/修改后同步字段。
 func (s *Service) ActionChanged(productID string, action models.Actions, tenantID string) {
-	s.changeField(productID, "act_"+FieldName(action.Code))
+	s.changeField(productID, "act_"+iotp.FieldName(action.Code))
 }
 
 func (s *Service) changeField(productID, fieldName string) {
@@ -90,11 +88,11 @@ func (s *Service) changeField(productID, fieldName string) {
 		return
 	}
 	go s.run("field:"+productID+":"+fieldName, func(ctx context.Context) error {
-		table := TableName(productID)
+		table := iotp.TableName(productID)
 		if err := s.client.EnsureDatabase(ctx); err != nil {
 			return err
 		}
-		if err := s.client.EnsureTable(ctx, table, baseFields()); err != nil {
+		if err := s.client.EnsureTable(ctx, table, iotp.BaseFields()); err != nil {
 			return err
 		}
 		return s.client.AddField(ctx, table, iotp.Field{Name: fieldName, Type: iotp.TypeString})
@@ -137,40 +135,40 @@ func (s *Service) run(what string, fn func(context.Context) error) {
 }
 
 func (s *Service) syncProduct(ctx context.Context, product models.Product, tenantID string) error {
-	table := TableName(product.Id)
-	fields := baseFields()
+	table := iotp.TableName(product.Id)
+	fields := iotp.BaseFields()
 	for _, property := range product.Properties {
 		fields = append(fields, propertyField(property))
 	}
 	for _, event := range product.Events {
-		fields = append(fields, iotp.Field{Name: "evt_" + FieldName(event.Code), Type: iotp.TypeString})
+		fields = append(fields, iotp.Field{Name: "evt_" + iotp.FieldName(event.Code), Type: iotp.TypeString})
 	}
 	for _, action := range product.Actions {
-		fields = append(fields, iotp.Field{Name: "act_" + FieldName(action.Code), Type: iotp.TypeString})
+		fields = append(fields, iotp.Field{Name: "act_" + iotp.FieldName(action.Code), Type: iotp.TypeString})
 	}
 	if err := s.client.EnsureDatabase(ctx); err != nil {
 		return err
 	}
-	return s.client.EnsureTable(ctx, table, dedupe(fields))
+	return s.client.EnsureTable(ctx, table, iotp.DedupeFields(fields))
 }
 
 func (s *Service) syncProperty(ctx context.Context, productID string, property models.Properties) error {
-	table := TableName(productID)
+	table := iotp.TableName(productID)
 	if err := s.client.EnsureDatabase(ctx); err != nil {
 		return err
 	}
-	if err := s.client.EnsureTable(ctx, table, baseFields()); err != nil {
+	if err := s.client.EnsureTable(ctx, table, iotp.BaseFields()); err != nil {
 		return err
 	}
 	return s.client.AddField(ctx, table, propertyField(property))
 }
 
 func (s *Service) syncDevice(ctx context.Context, device models.Device, product models.Product, tenantID string) error {
-	table := TableName(product.Id)
+	table := iotp.TableName(product.Id)
 	if err := s.client.EnsureDatabase(ctx); err != nil {
 		return err
 	}
-	if err := s.client.EnsureTable(ctx, table, baseFields()); err != nil {
+	if err := s.client.EnsureTable(ctx, table, iotp.BaseFields()); err != nil {
 		return err
 	}
 	deviceKey := strings.TrimSpace(device.DeviceKey)
@@ -199,74 +197,9 @@ func (s *Service) syncDevice(ctx context.Context, device models.Device, product 
 	})
 }
 
-// TableName 产品表名：p_<产品ID>。
-func TableName(productID string) string {
-	return "p_" + FieldName(productID)
-}
-
-// FieldName 把物模型 code 转成 iotp 合法字段名：
-// 只保留字母/数字/下划线，保留名加 f_ 前缀。
-func FieldName(code string) string {
-	var builder strings.Builder
-	for _, r := range strings.TrimSpace(code) {
-		if unicode.IsLetter(r) || unicode.IsDigit(r) || r == '_' {
-			builder.WriteRune(r)
-		} else {
-			builder.WriteRune('_')
-		}
-	}
-	name := builder.String()
-	if name == "" {
-		return "f_unknown"
-	}
-	switch strings.ToLower(name) {
-	case "time", "device_id", "table", "name", "gateway",
-		"tenant_id", "product_id", "device_sn", "device_key", "dept_id":
-		return "f_" + name
-	}
-	return name
-}
-
-// FieldType 平台物模型类型 → iotp 字段类型。
-func FieldType(spec constants.SpecsType) string {
-	switch spec {
-	case constants.SpecsTypeInt:
-		return iotp.TypeI64
-	case constants.SpecsTypeFloat:
-		return iotp.TypeF64
-	case constants.SpecsTypeBool:
-		return iotp.TypeBool
-	default:
-		return iotp.TypeString
-	}
-}
-
 func propertyField(property models.Properties) iotp.Field {
 	return iotp.Field{
-		Name: FieldName(property.Code),
-		Type: FieldType(property.TypeSpec.Type),
+		Name: iotp.FieldName(property.Code),
+		Type: iotp.FieldType(property.TypeSpec.Type),
 	}
-}
-
-func baseFields() []iotp.Field {
-	return []iotp.Field{
-		{Name: "tenant_id", Type: iotp.TypeString, IsTag: true},
-		{Name: "product_id", Type: iotp.TypeString, IsTag: true},
-		{Name: "device_sn", Type: iotp.TypeString, IsTag: true},
-		{Name: "device_key", Type: iotp.TypeString, IsTag: true},
-		{Name: "dept_id", Type: iotp.TypeString, IsTag: true},
-	}
-}
-
-func dedupe(fields []iotp.Field) []iotp.Field {
-	seen := make(map[string]struct{}, len(fields))
-	out := make([]iotp.Field, 0, len(fields))
-	for _, field := range fields {
-		if _, ok := seen[field.Name]; ok {
-			continue
-		}
-		seen[field.Name] = struct{}{}
-		out = append(out, field)
-	}
-	return out
 }

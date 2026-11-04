@@ -19,8 +19,8 @@ func TestFieldType(t *testing.T) {
 		constants.SpecsTypeArray:  iotp.TypeString,
 	}
 	for spec, want := range cases {
-		if got := FieldType(spec); got != want {
-			t.Fatalf("FieldType(%s) = %s, want %s", spec, got, want)
+		if got := iotp.FieldType(spec); got != want {
+			t.Fatalf("iotp.FieldType(%s) = %s, want %s", spec, got, want)
 		}
 	}
 }
@@ -35,15 +35,15 @@ func TestFieldName(t *testing.T) {
 		"":            "f_unknown",
 	}
 	for code, want := range cases {
-		if got := FieldName(code); got != want {
-			t.Fatalf("FieldName(%q) = %q, want %q", code, got, want)
+		if got := iotp.FieldName(code); got != want {
+			t.Fatalf("iotp.FieldName(%q) = %q, want %q", code, got, want)
 		}
 	}
 }
 
 func TestTableName(t *testing.T) {
-	if got := TableName("81234567"); got != "p_81234567" {
-		t.Fatalf("TableName = %q", got)
+	if got := iotp.TableName("81234567"); got != "p_81234567" {
+		t.Fatalf("iotp.TableName = %q", got)
 	}
 }
 

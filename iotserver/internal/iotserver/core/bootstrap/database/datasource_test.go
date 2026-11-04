@@ -9,8 +9,12 @@ import (
 
 	"github.com/BurntSushi/toml"
 
+	bootstrapConfig "iotserver/internal/pkg/config"
+
 	"iotserver/internal/dtos"
+	"iotserver/internal/iotserver/core/config"
 	"iotserver/internal/models"
+	"iotserver/internal/pkg/constants"
 	"iotserver/internal/pkg/logger"
 	"iotserver/internal/pkg/tenant"
 	"iotserver/internal/tools/datadb/duckdb"
@@ -107,6 +111,71 @@ func TestDuckDBDataSourceRoundTrip(t *testing.T) {
 	}
 	if rows[0].Value != 23.5 || rows[0].Time != ts {
 		t.Fatalf("数据不一致: %+v", rows[0])
+	}
+}
+
+// Type=iotp 时认证参数必须显式配置，缺失时启动直接报错而不是静默回落到 DuckDB。
+func TestNewDataDBClientIotpRequiresConfig(t *testing.T) {
+	lc := logger.NewClient("datasource-test", "error", "")
+	cases := []struct {
+		name string
+		iotp config.IotpInfo
+	}{
+		{"disabled", config.IotpInfo{BaseURL: "http://127.0.0.1:8080", Database: "iotserver"}},
+		{"no-base-url", config.IotpInfo{Enabled: true, Token: "tok", Database: "iotserver"}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := &config.ConfigurationStruct{
+				Databases: map[string]map[string]bootstrapConfig.Database{
+					"Data": {"Primary": {Type: "iotp"}},
+				},
+				Iotp: tc.iotp,
+			}
+			_, err := NewDatabase(cfg).newDataDBClient(lc, nil)
+			if err == nil || !strings.Contains(err.Error(), "Iotp") {
+				t.Fatalf("应返回 iotp 配置错误，实际: %v", err)
+			}
+		})
+	}
+}
+
+// 配置完整时返回 iotp 数据层，且类型标识为 iotp。
+func TestNewDataDBClientIotp(t *testing.T) {
+	lc := logger.NewClient("datasource-test", "error", "")
+	cfg := &config.ConfigurationStruct{
+		Databases: map[string]map[string]bootstrapConfig.Database{
+			"Data": {"Primary": {Type: "iotp"}},
+		},
+		Iotp: config.IotpInfo{
+			Enabled:    true,
+			BaseURL:    "http://127.0.0.1:8080",
+			Token:      "tok",
+			Database:   "iotserver",
+			TimeoutSec: 5,
+		},
+	}
+	client, err := NewDatabase(cfg).newDataDBClient(lc, nil)
+	if err != nil {
+		t.Fatalf("构造 iotp 数据层失败: %v", err)
+	}
+	defer client.CloseSession()
+	if got := client.GetDataDBType(); got != constants.Iotp {
+		t.Fatalf("GetDataDBType = %q, want %q", got, constants.Iotp)
+	}
+}
+
+// 未配置 Type 时保持默认 DuckDB 语义之外的明确错误（不再 panic）。
+func TestNewDataDBClientUnknownType(t *testing.T) {
+	lc := logger.NewClient("datasource-test", "error", "")
+	cfg := &config.ConfigurationStruct{
+		Databases: map[string]map[string]bootstrapConfig.Database{
+			"Data": {"Primary": {Type: "mystery"}},
+		},
+	}
+	if _, err := NewDatabase(cfg).newDataDBClient(lc, nil); err == nil ||
+		!strings.Contains(err.Error(), "duckdb / iotp") {
+		t.Fatalf("未知类型应返回错误，实际: %v", err)
 	}
 }
 

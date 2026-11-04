@@ -37,6 +37,10 @@ DataSource = 'iotserver/db-data/core-data/core.db?_timeout=5000'
 
 [Databases.Data]
 [Databases.Data.Primary]
+# 时序数据层：默认 duckdb（单文件列存）。
+# 改为 'iotp' 时数据写入外部 iotp 时序库，认证参数复用下面的 [Iotp]，
+# 此时 DataSource 不再使用。iotp 模式暂不支持按设备删数据 / 保留期清理 /
+# 在线导出，消息数按宽表行统计（与 DuckDB 按测点行统计会有差异）。
 Type = 'duckdb'
 DataSource = 'iotserver/db-data/duckdb/core-data.duckdb'
 
@@ -46,6 +50,16 @@ Host = 'mqtt-broker'
 Port = 58090
 Type = 'mqtt'
 PublishTopicPrefix = 'eventbus/in'
+
+# iotp 时序库接入：既用于元数据同步（产品/物模型 → 库表字段、设备 → 设备实例），
+# 也作为 [Databases.Data.Primary].Type = 'iotp' 时的时序数据后端。
+# Enabled=false 时完全跳过，平台行为与未接入一致。
+[Iotp]
+Enabled = false
+BaseURL = ''        # 形如 http://host:8080
+Token = ''          # Authorization: Bearer <token>
+Database = 'iotserver'
+TimeoutSec = 10
 
 # 画布看板（布局 + 文本组件）
 # 看板登记文件：看板名称/图标/首页标记，以及每个组件的位置、类型与文本
