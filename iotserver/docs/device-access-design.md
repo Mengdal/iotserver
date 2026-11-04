@@ -34,7 +34,7 @@
 
 **解析陷阱**：`/edge/property/history/{pk}/{sn}/post` 比实时主题**多一段**。段数不同不能靠固定下标，必须先判 `history` 前缀再取 `pk`/`sn`。参考系统是靠 `message.getTopic().contains(Constants.HISTORY)` 区分的（`PropertyPostProcessor.java:111`）。
 
-**连哪个 broker**：参考系统的上行数据在**另一个 broker** 上，与平台内部的消息总线（`MessageQueue`，`PublishTopicPrefix = eventbus/in`）不是同一个。因此有独立配置段 `[EdgeIngest]`（`Broker` / `Username` / `Password`），`Broker` 留空则回落到 `MessageQueue`。**不能**直接把 `MessageQueue.Host` 改过去——那会把平台的内部总线一起搬到对方去，规则引擎/事件链路会断。
+**连哪个 broker**：参考系统的上行数据在**另一个 broker** 上，与平台内部的消息总线（`MessageQueue`，`PublishTopicPrefix = eventbus/in`）不是同一个。因此有独立配置段 `[Integrations.EdgeIngest]`（`Broker` / `Username` / `Password`），`Broker` 留空则回落到 `MessageQueue`。**不能**直接把 `MessageQueue.Host` 改过去——那会把平台的内部总线一起搬到对方去，规则引擎/事件链路会断。
 
 **订阅粒度：按网关逐个拼主题，绝不用通配。** 平台只订阅「网关管理里登记过的」网关：
 
@@ -50,7 +50,7 @@
 1. **数据边界**：参考系统的 broker 上挂着**别的客户**的网关，而该 broker 实测**允许匿名订阅**——用 `/edge/property/+/+/post` 这种通配，等于把别人家的生产数据一起拉进本平台。
 2. **开销**：网关一多，通配订阅的流量与解析成本不可控，而这些数据平台根本用不上。
 
-订阅集合由 `syncSubscriptions` 按网关表**增量对齐**（默认每 60 秒，配置 `[EdgeIngest].ResyncIntervalSec`）：新网关自动订阅、已删网关自动退订，**界面上增删网关无需重启服务**。MQTT 客户端内部维护「应当订阅的主题集合」，因此**断线重连后动态订阅不会丢**。
+订阅集合由 `syncSubscriptions` 按网关表**增量对齐**（默认每 60 秒，配置 `[Integrations.EdgeIngest].ResyncIntervalSec`）：新网关自动订阅、已删网关自动退订，**界面上增删网关无需重启服务**。MQTT 客户端内部维护「应当订阅的主题集合」，因此**断线重连后动态订阅不会丢**。
 
 ### 1.2 身份映射
 

@@ -104,13 +104,13 @@ func (s *Service) config() *coreConfig.ConfigurationStruct {
 
 // Start 连接参考系统的 broker，并按已登记网关逐个订阅 /edge 上行主题。
 //
-// broker 取 [EdgeIngest].Broker（未配置则回落到 MessageQueue），主题**按网关逐个拼**，
+// broker 取 [Integrations.EdgeIngest].Broker（未配置则回落到 MessageQueue），主题**按网关逐个拼**，
 // 不用通配——理由见 edgeprotocol.TopicsForGateway。
 func (s *Service) Start() error {
 	cfg := s.config()
-	username, password := cfg.EdgeIngest.Credentials(cfg.MessageQueue)
+	username, password := cfg.Integrations.EdgeIngest.Credentials(cfg.MessageQueue)
 	req := dtos.NewMQTTClient{
-		Broker:   cfg.EdgeIngest.BrokerURL(cfg.MessageQueue),
+		Broker:   cfg.Integrations.EdgeIngest.BrokerURL(cfg.MessageQueue),
 		ClientId: pkgMQTT.InstanceClientID(mqttClientIDPrefix),
 		Username: username,
 		Password: password,
@@ -140,7 +140,7 @@ func (s *Service) Start() error {
 		// 订阅失败不阻断启动：网关可能还没建，后续 resync 会补上
 		s.warnf("参考系统接入：初始订阅失败（等待下次对齐）: %v", err)
 	}
-	go s.resyncLoop(resyncInterval(cfg.EdgeIngest.ResyncIntervalSec))
+	go s.resyncLoop(resyncInterval(cfg.Integrations.EdgeIngest.ResyncIntervalSec))
 	return nil
 }
 

@@ -23,8 +23,8 @@ make test
 | --- | --- |
 | `Databases.Data.Type` | 数据层：`duckdb`（默认）或 `iotp` |
 | `Databases.Data.DataSource` | DuckDB 数据库文件路径（`iotp` 模式下不生效） |
-| `Iotp.Enabled` / `BaseURL` / `Token` | iotp 地址与认证；`Type=iotp` 时必须启用 |
-| `Iotp.Database` | iotp 库名，缺省 `iotserver` |
+| `Integrations.Iotp.Enabled` / `BaseURL` / `Token` | iotp 地址与认证；`Type=iotp` 时必须启用 |
+| `Integrations.Iotp.Database` | iotp 库名，缺省 `iotserver` |
 | `Service.CallbackUrl` | eKuiper 规则动作回调基地址 |
 | `Service.CallbackToken` | 回调共享密钥；非空时回调必须带 `x-callback-token` |
 | `Pprof.Enabled` | 调试端点 `/debug/pprof`，默认关闭 |
@@ -32,7 +32,7 @@ make test
 ### 时序数据后端：DuckDB / iotp
 
 默认写入本地 DuckDB 单文件。把 `[Databases.Data].Type` 改为 `iotp`，并配置
-`[Iotp]`（`Enabled = true`、`BaseURL`、`Token`、`Database`），即可把时序数据写入外部
+`[Integrations.Iotp]`（`Enabled = true`、`BaseURL`、`Token`、`Database`），即可把时序数据写入外部
 iotp 时序库；重启生效。切换不迁移既有 DuckDB 数据（文件原样保留）。所用令牌必须同时
 具备元数据与 `/write` 写权限，否则服务启动正常但数据写入会被 iotp 以 403 拒绝。
 

@@ -75,10 +75,10 @@ func (d Database) newDataDBClient(
 			RetentionDays: defaultDataRetentionDays,
 		}, lc)
 	case string(constants.Iotp):
-		// 外部 iotp 时序库：认证参数复用 [Iotp]（BaseURL/Token/Database/TimeoutSec）。
-		cfg := d.database.Iotp
+		// 外部 iotp 时序库：认证参数复用 [Integrations.Iotp]（BaseURL/Token/Database/TimeoutSec）。
+		cfg := d.database.Integrations.Iotp
 		if !cfg.Enabled || strings.TrimSpace(cfg.BaseURL) == "" {
-			return nil, errors.New("database configuration error: Type=iotp 需要 [Iotp].Enabled=true 且 BaseURL 非空")
+			return nil, errors.New("database configuration error: Type=iotp 需要 [Integrations.Iotp].Enabled=true 且 BaseURL 非空")
 		}
 		timeout := time.Duration(cfg.TimeoutSec) * time.Second
 		if timeout <= 0 {

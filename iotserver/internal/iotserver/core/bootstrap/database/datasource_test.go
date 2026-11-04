@@ -128,7 +128,7 @@ func TestNewDataDBClientIotpRequiresConfig(t *testing.T) {
 				Databases: map[string]bootstrapConfig.Database{
 					"Data": {Type: "iotp"},
 				},
-				Iotp: tc.iotp,
+				Integrations: config.IntegrationsInfo{Iotp: tc.iotp},
 			}
 			_, err := NewDatabase(cfg).newDataDBClient(lc, nil)
 			if err == nil || !strings.Contains(err.Error(), "Iotp") {
@@ -145,13 +145,13 @@ func TestNewDataDBClientIotp(t *testing.T) {
 		Databases: map[string]bootstrapConfig.Database{
 			"Data": {Type: "iotp"},
 		},
-		Iotp: config.IotpInfo{
+		Integrations: config.IntegrationsInfo{Iotp: config.IotpInfo{
 			Enabled:    true,
 			BaseURL:    "http://127.0.0.1:8080",
 			Token:      "tok",
 			Database:   "iotserver",
 			TimeoutSec: 5,
-		},
+		}},
 	}
 	client, err := NewDatabase(cfg).newDataDBClient(lc, nil)
 	if err != nil {

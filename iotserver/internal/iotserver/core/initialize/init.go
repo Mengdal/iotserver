@@ -392,7 +392,7 @@ func (b *Bootstrap) initClient(ctx context.Context, wg *sync.WaitGroup, dic *di.
 	})
 
 	// iotp 元数据同步：产品/物模型 → 库表字段，设备 → 设备实例。
-	// 未配置 [Iotp].Enabled 时为 no-op，平台行为不变。
+	// 未配置 [Integrations.Iotp].Enabled 时为 no-op，平台行为不变。
 	iotpSync := iotpsync.New(dic)
 	dic.Update(di.ServiceConstructorMap{
 		container.IotpSyncItfName: func(get di.Get) interface{} {
@@ -428,8 +428,8 @@ func (b *Bootstrap) initClient(ctx context.Context, wg *sync.WaitGroup, dic *di.
 
 	// 参考系统控制通道：重启 / 标签树 / 属性写。实测 things 的 1883 端口承接这些管理命令，
 	// 与上行（EdgeIngest.Broker）分开配置；连接失败不阻断启动。
-	edgeUser, edgePass := configuration.EdgeIngest.Credentials(configuration.MessageQueue)
-	edgeCtl := edgectl.New(configuration.EdgeIngest.ControlBrokerURL(configuration.MessageQueue), edgeUser, edgePass, lc)
+	edgeUser, edgePass := configuration.Integrations.EdgeIngest.Credentials(configuration.MessageQueue)
+	edgeCtl := edgectl.New(configuration.Integrations.EdgeIngest.ControlBrokerURL(configuration.MessageQueue), edgeUser, edgePass, lc)
 	if err := edgeCtl.Start(); err != nil {
 		lc.Errorf("参考系统控制通道启动失败（网关控制不可用）: %v", err)
 	}

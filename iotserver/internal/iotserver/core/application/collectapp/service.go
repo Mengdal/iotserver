@@ -48,14 +48,14 @@ type service struct {
 func NewCollectApp(ctx context.Context, dic *di.Container) *service {
 	configuration := container.ConfigurationFrom(dic.Get)
 	var engine *collectengine.Client
-	if configuration.CollectEngine.Enabled && strings.TrimSpace(configuration.CollectEngine.BaseURL) != "" {
-		engine = collectengine.New(configuration.CollectEngine.BaseURL,
-			time.Duration(configuration.CollectEngine.TimeoutSec)*time.Second)
+	if configuration.Integrations.CollectEngine.Enabled && strings.TrimSpace(configuration.Integrations.CollectEngine.BaseURL) != "" {
+		engine = collectengine.New(configuration.Integrations.CollectEngine.BaseURL,
+			time.Duration(configuration.Integrations.CollectEngine.TimeoutSec)*time.Second)
 	}
 	var iotpClient *iotp.Client
-	if configuration.Iotp.Enabled && strings.TrimSpace(configuration.Iotp.BaseURL) != "" {
-		iotpClient = iotp.New(configuration.Iotp.BaseURL, configuration.Iotp.Token,
-			configuration.Iotp.Database, time.Duration(configuration.Iotp.TimeoutSec)*time.Second)
+	if configuration.Integrations.Iotp.Enabled && strings.TrimSpace(configuration.Integrations.Iotp.BaseURL) != "" {
+		iotpClient = iotp.New(configuration.Integrations.Iotp.BaseURL, configuration.Integrations.Iotp.Token,
+			configuration.Integrations.Iotp.Database, time.Duration(configuration.Integrations.Iotp.TimeoutSec)*time.Second)
 	}
 	return &service{
 		dic:        dic,
@@ -69,7 +69,7 @@ func NewCollectApp(ctx context.Context, dic *di.Container) *service {
 func (s *service) engineClient() (*collectengine.Client, error) {
 	if s.engine == nil {
 		return nil, errort.NewCommonErr(errort.DefaultSystemError,
-			fmt.Errorf("未启用采集引擎，请在 configuration 中配置 [CollectEngine]"))
+			fmt.Errorf("未启用采集引擎，请在 configuration 中配置 [Integrations.CollectEngine]"))
 	}
 	return s.engine, nil
 }

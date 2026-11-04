@@ -38,9 +38,15 @@ type ConfigurationStruct struct {
 	DockerManage DockerManage
 	Pprof        PprofInfo
 	Tenant       TenantInfo
+	// Integrations 外部系统接入配置，按被接入方归属。
+	Integrations IntegrationsInfo
+}
+
+// IntegrationsInfo 外部系统接入配置。
+type IntegrationsInfo struct {
 	// EdgeIngest 参考系统（/edge 协议）接入所用的独立 broker 配置
 	EdgeIngest EdgeIngestInfo
-	// Iotp iotp 时序库的元数据同步配置（产品/物模型 → 库表字段，设备 → 设备实例）
+	// Iotp iotp 时序库配置：元数据同步与数据后端共用
 	Iotp IotpInfo
 	// CollectEngine 采集引擎（IOTP Gateway API）配置：通道/设备/点位下发
 	CollectEngine CollectEngineInfo
