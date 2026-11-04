@@ -62,73 +62,56 @@ func (c *Client) GetDeviceProperty(req dtos.ThingModelPropertyDataRequest, devic
 	return response, count, nil
 }
 
-// aggregateProperty 用 SQL 分桶聚合；桶数由应用层 aggregate.Validate 限制。
+// aggregateProperty 聚合属性数据。
+//
+// iotp 的查询协调器（v1 白名单）只允许「纯列 / 裸聚合」投影，GROUP BY 里不能写
+// 时间分桶表达式，也没有 arg_min/arg_max；因此这里取回时间窗内的原始行，
+// 用与本地数据层相同的 aggregate.Bucketize 分桶，保证结果语义一致。
 func (c *Client) aggregateProperty(target deviceTarget, field string, req dtos.ThingModelPropertyDataRequest, start, end int64) ([]dtos.ReportData, int, error) {
 	var response []dtos.ReportData
-	if err := c.ensureLoaded(context.Background(), target.table); err != nil {
-		c.debugf("iotp: 读取表结构失败，按未知类型处理: %v", err)
+	if req.AggInterval <= 0 {
+		return response, 0, nil
 	}
 	method := req.AggMethod
 	if method == "" {
 		method = aggregate.MethodAvg
 	}
-	// 文本列无法做数值聚合：直接返回空，行为与 DuckDB 跳过非数值行一致。
-	if aggregate.IsNumericMethod(method) && c.schemaType(target.table, strings.Trim(field, `"`)) == iotp.TypeString {
-		return response, 0, nil
-	}
-
-	intervalMs := int64(req.AggInterval) * 1000
-	expr, numericOnly := aggExpr(method, field)
-	having := ""
-	if numericOnly {
-		having = fmt.Sprintf(" HAVING count(%s) > 0", field)
-	}
-	sql := fmt.Sprintf(`SELECT (time // %d) * %d AS bucket, cast(%s as varchar) AS v FROM %s
+	// 单次最多取回的行数：超过时 iotp 可能先截断（返回 truncated），此时聚合结果
+	// 只覆盖部分数据，记录告警便于定位。
+	const maxRawRows = 100000
+	sql := fmt.Sprintf(`SELECT time, %s AS v FROM %s
 		WHERE device_id = %d AND time >= %d AND time <= %d AND %s IS NOT NULL
-		GROUP BY bucket%s ORDER BY bucket DESC`,
-		intervalMs, intervalMs, expr, c.tableRef(target.table),
-		target.iotpID, start, end, field, having)
+		ORDER BY time DESC LIMIT %d`,
+		field, c.tableRef(target.table), target.iotpID, start, end, field, maxRawRows)
 
-	rows, err := c.queryOrEmpty(sql)
+	ctx, cancel := context.WithTimeout(context.Background(), readTimeout)
+	defer cancel()
+	result, err := c.api.Query(ctx, sql, "")
 	if err != nil {
+		var apiErr *iotp.APIError
+		if errors.As(err, &apiErr) && apiErr.Code == "UNPROCESSABLE" {
+			return response, 0, nil
+		}
 		return response, 0, err
 	}
-	buckets := make([]dtos.ReportData, 0, len(rows))
-	for _, row := range rows {
-		raw, ok := row["v"].(string)
-		if !ok {
-			continue
-		}
-		buckets = append(buckets, dtos.ReportData{
-			Value: restoreAggValue(raw),
-			Time:  int64(numberOf(row["bucket"])),
+	if result.Truncated || len(result.Rows) >= maxRawRows {
+		c.warnf("iotp: 聚合取数达到上限（%d 行），结果可能不完整: %s", len(result.Rows), target.table)
+	}
+
+	raw := make([]dtos.ReportData, 0, len(result.Rows))
+	for _, row := range result.Rows {
+		raw = append(raw, dtos.ReportData{
+			Value: restoreValue(row["v"]),
+			Time:  int64(numberOf(row["time"])),
 		})
 	}
+	buckets := aggregate.Bucketize(raw, req.AggInterval, method)
 	if req.IsAll {
 		return buckets, len(buckets), nil
 	}
 	page, pageSize := normalizePage(req.Page, req.PageSize, false)
 	pageRows, total := aggregate.Paginate(buckets, page, pageSize)
 	return pageRows, total, nil
-}
-
-func aggExpr(method, field string) (expr string, numericOnly bool) {
-	switch method {
-	case aggregate.MethodCount:
-		return "count(*)", false
-	case aggregate.MethodFirst:
-		return fmt.Sprintf("arg_min(cast(%s as varchar), time)", field), false
-	case aggregate.MethodLast:
-		return fmt.Sprintf("arg_max(cast(%s as varchar), time)", field), false
-	case aggregate.MethodMax:
-		return fmt.Sprintf("max(%s)", field), true
-	case aggregate.MethodMin:
-		return fmt.Sprintf("min(%s)", field), true
-	case aggregate.MethodSum:
-		return fmt.Sprintf("sum(%s)", field), true
-	default: // avg
-		return fmt.Sprintf("avg(%s)", field), true
-	}
 }
 
 /* ------------------------------ 事件 / 服务 ------------------------------ */
@@ -463,15 +446,6 @@ func (c *Client) listTables() ([]string, error) {
 	return tables, nil
 }
 
-func (c *Client) schemaType(table, field string) string {
-	c.schemaMu.Lock()
-	defer c.schemaMu.Unlock()
-	if schema, ok := c.schemas[table]; ok {
-		return schema[field]
-	}
-	return ""
-}
-
 func selectFields(fields []string) string {
 	out := make([]string, 0, len(fields))
 	for _, field := range fields {
@@ -544,18 +518,6 @@ func restoreValue(value any) any {
 	default:
 		return value
 	}
-}
-
-// restoreAggValue 把 cast 成字符串的聚合值还原成数值或字符串。
-func restoreAggValue(raw string) interface{} {
-	trimmed := strings.TrimSpace(raw)
-	if trimmed == "" {
-		return raw
-	}
-	if value, err := strconv.ParseFloat(trimmed, 64); err == nil {
-		return value
-	}
-	return raw
 }
 
 func quoteString(value string) string {

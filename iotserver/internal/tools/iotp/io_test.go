@@ -36,7 +36,7 @@ func TestWriteQueryAndTables(t *testing.T) {
 
 	result, err := client.Write(ctx, []WriteRow{{
 		Measurement: "p_1",
-		Tags:        map[string]string{"device_id": "7"},
+		Tags:        map[string]any{"device_id": 7},
 		Fields:      map[string]any{"temperature": 23.5},
 		Timestamp:   1700000000000,
 	}})
@@ -50,7 +50,7 @@ func TestWriteQueryAndTables(t *testing.T) {
 		t.Errorf("写路径 = %q, want /write?db=iotserver", writePath)
 	}
 	body := string(writeBody)
-	for _, want := range []string{`"measurement":"p_1"`, `"device_id":"7"`, `"temperature":23.5`, `"timestamp":1700000000000`} {
+	for _, want := range []string{`"measurement":"p_1"`, `"device_id":7`, `"temperature":23.5`, `"timestamp":1700000000000`} {
 		if !strings.Contains(body, want) {
 			t.Errorf("写入报文缺少 %s：%s", want, body)
 		}

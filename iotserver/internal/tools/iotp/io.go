@@ -12,8 +12,9 @@ import (
 // 时间戳单位为毫秒；为 0 时由 iotp 使用服务端当前时间。
 type WriteRow struct {
 	Measurement string
-	// Tags 行协议标签，当前只支持 device_id（值转成字符串）。
-	Tags map[string]string
+	// Tags 行协议标签，当前只支持 device_id。
+	// 注意：JSON 信封里 device_id 必须是数字，字符串形式会被整条丢弃（"no valid elements"）。
+	Tags map[string]any
 	// Fields 测点值。数值/布尔/字符串会被 iotp 按严格类型校验。
 	Fields map[string]any
 	// Timestamp epoch 毫秒。
@@ -47,10 +48,10 @@ func (r WriteResult) Reason(name string) int {
 }
 
 type writeEnvelope struct {
-	Measurement string            `json:"measurement"`
-	Tags        map[string]string `json:"tags,omitempty"`
-	Fields      map[string]any    `json:"fields"`
-	Timestamp   int64             `json:"timestamp,omitempty"`
+	Measurement string         `json:"measurement"`
+	Tags        map[string]any `json:"tags,omitempty"`
+	Fields      map[string]any `json:"fields"`
+	Timestamp   int64          `json:"timestamp,omitempty"`
 }
 
 // Write 批量写入数据点。rows 为空时直接返回。

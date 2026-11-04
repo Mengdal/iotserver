@@ -168,8 +168,8 @@ func TestInsertPropertyUsesProductTableAndFloatType(t *testing.T) {
 	body := bodies[0]
 	for _, want := range []string{
 		`"measurement":"p_67126069"`,
-		`"device_id":"81283089"`,
-		`"temperature":23.0`, // F64 列必须带小数点，否则 iotp 按整数拒绝
+		`"device_id":81283089`, // 必须是数字，字符串会被 iotp 整条丢弃
+		`"temperature":23.0`,   // F64 列必须带小数点，否则 iotp 按整数拒绝
 		`"timestamp":1700000000000`,
 	} {
 		if !strings.Contains(body, want) {
@@ -339,7 +339,8 @@ func TestAggregateProperty(t *testing.T) {
 	f := newFakeIotp(t)
 	f.fields["p_67126069"] = append(baseFieldSet(), iotp.Field{Name: "temperature", Type: iotp.TypeF64})
 	f.queryFn = func(sql string) []map[string]any {
-		return []map[string]any{{"bucket": float64(1700000000000), "v": "23.5"}}
+		// 聚合走客户端分桶：数据层只返回原始行（iotp v1 查询白名单不支持分桶表达式）。
+		return []map[string]any{{"time": float64(1700000000000), "v": float64(23.5)}}
 	}
 	c := newTestClient(f, testDevice())
 
@@ -356,8 +357,8 @@ func TestAggregateProperty(t *testing.T) {
 	if total != 1 || len(rows) != 1 || rows[0].Value != 23.5 {
 		t.Fatalf("聚合结果 = %+v total=%d", rows, total)
 	}
-	if !strings.Contains(f.queries[0], "avg(") || !strings.Contains(f.queries[0], "GROUP BY bucket") {
-		t.Errorf("聚合 SQL 异常: %s", f.queries[0])
+	if !strings.Contains(f.queries[0], "ORDER BY time DESC") || strings.Contains(f.queries[0], "GROUP BY") {
+		t.Errorf("聚合应取原始行后在客户端分桶: %s", f.queries[0])
 	}
 }
 

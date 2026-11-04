@@ -56,4 +56,8 @@ func TestDeviceID(t *testing.T) {
 	if first <= 0 || first != second {
 		t.Fatalf("DeviceID hash unstable: %d / %d", first, second)
 	}
+	// 派生设备保留区 [2^40, +∞) 不允许源设备使用，否则写入返回 400。
+	if first >= iotp.DerivedDeviceIDStart {
+		t.Fatalf("DeviceID hash 落在派生设备保留区: %d", first)
+	}
 }

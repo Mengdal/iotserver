@@ -259,7 +259,7 @@ func groupRows(rows []pendingRow) []writeGroup {
 		if !ok {
 			item = &writeGroup{row: iotp.WriteRow{
 				Measurement: row.table,
-				Tags:        map[string]string{"device_id": strconv.FormatInt(row.deviceID, 10)},
+				Tags:        map[string]any{"device_id": row.deviceID},
 				Fields:      make(map[string]any, len(row.fields)),
 				Timestamp:   row.ts,
 			}}
@@ -276,6 +276,24 @@ func groupRows(rows []pendingRow) []writeGroup {
 		out = append(out, *merged[k])
 	}
 	return out
+}
+
+func tagInt64(value any) (int64, bool) {
+	switch v := value.(type) {
+	case int64:
+		return v, true
+	case int:
+		return int64(v), true
+	case float64:
+		return int64(v), true
+	case json.Number:
+		n, err := v.Int64()
+		return n, err == nil
+	case string:
+		n, err := strconv.ParseInt(v, 10, 64)
+		return n, err == nil
+	}
+	return 0, false
 }
 
 func writeRowsOf(groups []writeGroup) []iotp.WriteRow {
@@ -342,8 +360,8 @@ func (c *Client) remediate(ctx context.Context, rows []iotp.WriteRow) {
 		for name, value := range row.Fields {
 			_ = c.addField(ctx, row.Measurement, iotp.Field{Name: name, Type: iotp.InferType(value)})
 		}
-		id, err := strconv.ParseInt(row.Tags["device_id"], 10, 64)
-		if err != nil {
+		id, ok := tagInt64(row.Tags["device_id"])
+		if !ok {
 			continue
 		}
 		if device, ok := c.cachedByIotpID(id); ok {

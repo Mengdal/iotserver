@@ -23,6 +23,10 @@ const (
 	TypeF64    = "F64"
 	TypeBool   = "Bool"
 	TypeString = "String"
+
+	// DerivedDeviceIDStart iotp 为聚合（rollup）派生设备保留的 ID 区间起点（2^40）。
+	// 源设备（真实写入的设备实例）ID 必须小于该值，否则写入会被 400 拒绝。
+	DerivedDeviceIDStart = int64(1) << 40
 )
 
 // Field 表字段。iotp 只有 I64 / F64 / Bool / String 四种类型。
@@ -262,6 +266,10 @@ func (c *Client) DeleteDevice(ctx context.Context, deviceID int64) error {
 //
 // 平台 ID 默认是 8 位数字（utils.RandomNum），直接解析即可；
 // 非数字 ID 退化为 53 位 FNV 哈希，保证在 JS 安全整数范围内。
+// DeviceID 把平台设备 ID 映射成 iotp 的 device_id。
+//
+// 纯数字 ID 直接使用；其它形态用 FNV-64a 派生，但必须落在 2^40 以下——
+// iotp 把 [2^40, +∞) 保留给聚合派生的设备，源设备写入该区间会被 400 拒绝。
 func DeviceID(id string) int64 {
 	trimmed := strings.TrimSpace(id)
 	if n, err := strconv.ParseInt(trimmed, 10, 64); err == nil && n > 0 {
@@ -269,7 +277,7 @@ func DeviceID(id string) int64 {
 	}
 	h := fnv.New64a()
 	_, _ = h.Write([]byte(trimmed))
-	n := int64(h.Sum64() & ((1 << 53) - 1))
+	n := int64(h.Sum64() & uint64(DerivedDeviceIDStart-1))
 	if n == 0 {
 		n = 1
 	}

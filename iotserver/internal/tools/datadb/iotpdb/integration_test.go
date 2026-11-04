@@ -29,6 +29,16 @@ func TestIntegrationWriteQuery(t *testing.T) {
 	lc := logger.NewClient("iotp-e2e", "info", "")
 	api := iotp.New(baseURL, token, db, 10*time.Second)
 	device := testDevice()
+	// 允许用环境变量指定独立的产品/设备，避免往目标库的真实产品表里写测试数据。
+	if v := os.Getenv("IOTP_DEVICE"); v != "" {
+		device.Id = v
+	}
+	if v := os.Getenv("IOTP_PRODUCT"); v != "" {
+		device.ProductId = v
+	}
+	if v := os.Getenv("IOTP_TENANT"); v != "" {
+		device.TenantField = models.TenantField{TenantId: v}
+	}
 	meta := &fakeMeta{devices: map[string]models.Device{device.Id: device}, all: []models.Device{device}}
 	c := newClient(api, meta, lc, false)
 	defer c.CloseSession()
