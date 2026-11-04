@@ -19,10 +19,6 @@ import (
 	bootstrapConfig "iotserver/internal/pkg/config"
 )
 
-var (
-	DefaultEnv = "pro"
-)
-
 // Struct used to parse the JSON configuration file
 type ConfigurationStruct struct {
 	Writable     WritableInfo

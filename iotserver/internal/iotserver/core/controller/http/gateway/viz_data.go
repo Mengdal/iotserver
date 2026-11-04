@@ -60,8 +60,8 @@ const (
 	vizDataTimeout = 20 * time.Second
 	// latest 模式的回看窗口。
 	//
-	// ⚠️ 数据层在「不传时间范围 + Last」时只回溯最近 30 分钟（见 duckdb/helpers.go 的 timeWindow、
-	// tstorage/client.go 的半小时窗口），设备半小时没上报就会查空。所以这里显式给一个回看窗口。
+	// ⚠️ 数据层在「不传时间范围 + Last」时只回溯最近 30 分钟（见 duckdb/helpers.go 与
+	// iotpdb/query.go 的 timeWindow），设备半小时没上报就会查空。所以这里显式给一个回看窗口。
 	vizDataLatestLookback = 30 * 24 * time.Hour
 )
 

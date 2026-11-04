@@ -1,7 +1,8 @@
 # DuckDB 数据层迁移与遗留问题处置方案
 
-> 背景：时序数据层已统一为 DuckDB（单文件列存）。历史上的 DuckLake 实现已经整体删除，
-> 不再作为可选后端；本文记录 DuckDB 的落地改动、原有时序库问题的最终处置，以及仍然待办的事项。
+> 背景：时序数据层默认使用 DuckDB（单文件列存），也可在 `[Databases.Data]` 中选择
+> 外部 iotp 时序库（见仓库 README）。历史上的 DuckLake 实现已经整体删除，不再作为可选后端；
+> 本文记录 DuckDB 的落地改动、原有时序库问题的最终处置，以及仍然待办的事项。
 
 ## 一、已落地改动
 
@@ -133,7 +134,7 @@ leveldb 时间区间丢边界点、leveldb 计数函数恒返回 1。
 DuckLake 数据层已整体删除：
 
 - 删除 `internal/tools/datadb/ducklake/` 与 `tools/lakectl`；
-- `[Databases.Data]` 只接受 `Type = 'duckdb'`，Docker 部署默认值同步改为 DuckDB；
+- `[Databases.Data]` 支持 `Type = 'duckdb'`（默认）或 `'iotp'`，Docker 部署默认值为 DuckDB；
 - 删除配置结构中的 `Dsn`、`OverrideDataPath` 字段和相关脚本分支；
 - 升级前如已有 `db-data/ducklake/` 数据，需要先用旧版本导出/迁移到 DuckDB；新版本不会读取该目录。
 

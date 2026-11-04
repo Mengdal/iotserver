@@ -244,7 +244,7 @@ func (app *gatewayApp) GatewayUpdate(ctx context.Context, req dtos.GatewayUpdate
 	if sourceOf(old) == models.GatewaySourceThings {
 		if name != "" && name != old.Name {
 			return errort.NewCommonErr(errort.DefaultReqParamsError,
-				errort.NewMessageErr("things 网关名称请在「things 重命名」中修改", nil))
+				errort.NewMessageErr("things 网关名称由 things 平台管理，请到 things 控制台修改", nil))
 		}
 		if model != "" && model != old.Model {
 			return errort.NewCommonErr(errort.DefaultReqParamsError,

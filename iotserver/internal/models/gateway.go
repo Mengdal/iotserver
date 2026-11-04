@@ -100,7 +100,7 @@ type Gateway struct {
 }
 
 // GatewayExcludeDeviceKeysMaxLen 排除名单的软上限（列宽 1000，留点余量）。
-// 超过后不再追加，避免 MySQL 严格模式下写入被截断或报错。
+// 超过后不再追加，避免字符串列写入被截断或报错。
 const GatewayExcludeDeviceKeysMaxLen = 900
 
 // NormalizeGatewayExcludeKeys 规范化排除名单：去首尾空白、丢弃空项、按出现顺序去重。

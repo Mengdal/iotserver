@@ -1,7 +1,7 @@
 // Package aggregate 提供历史数据的聚合（时间分桶 + 聚合方法）能力。
 //
-// 该实现是后端无关的纯函数：SQL 型数据层在 SQL 里分桶，
-// 本地 KV / 内存型数据层（LevelDB、TStorage）先取回范围内全部原始行，再调用这里的 Bucketize。
+// 该实现是后端无关的纯函数：DuckDB 在 SQL 里直接分桶；
+// 不支持 SQL 分桶的数据层（当前为 iotp）先取回范围内原始行，再调用这里的 Bucketize。
 //
 // 语义约定（有测试覆盖）：
 //   - 桶按 epoch 对齐：bucketStart = ts - (ts % intervalMs)，单位毫秒、与时区无关；
