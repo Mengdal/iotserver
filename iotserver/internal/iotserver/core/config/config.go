@@ -16,8 +16,6 @@ import (
 	"fmt"
 	"strings"
 
-	"go.uber.org/atomic"
-
 	bootstrapConfig "iotserver/internal/pkg/config"
 )
 
@@ -27,29 +25,24 @@ var (
 
 // Struct used to parse the JSON configuration file
 type ConfigurationStruct struct {
-	Writable            WritableInfo
-	MessageQueue        MessageQueueInfo
-	Clients             map[string]bootstrapConfig.ClientInfo
-	Databases           map[string]map[string]bootstrapConfig.Database
-	Registry            bootstrapConfig.RegistryInfo
-	Service             bootstrapConfig.ServiceInfo
-	RpcServer           bootstrapConfig.RPCServiceInfo
-	SecretStore         bootstrapConfig.SecretStoreInfo
-	WebServer           bootstrapConfig.ServiceInfo
-	DockerManage        DockerManage
-	ApplicationSettings ApplicationSettings
-	Viz                 VizInfo
-	Pprof               PprofInfo
-	Tenant              TenantInfo
+	Writable     WritableInfo
+	MessageQueue MessageQueueInfo
+	Clients      map[string]bootstrapConfig.ClientInfo
+	Databases    map[string]map[string]bootstrapConfig.Database
+	Registry     bootstrapConfig.RegistryInfo
+	Service      bootstrapConfig.ServiceInfo
+	RpcServer    bootstrapConfig.RPCServiceInfo
+	SecretStore  bootstrapConfig.SecretStoreInfo
+	WebServer    bootstrapConfig.ServiceInfo
+	DockerManage DockerManage
+	Pprof        PprofInfo
+	Tenant       TenantInfo
 	// EdgeIngest 参考系统（/edge 协议）接入所用的独立 broker 配置
 	EdgeIngest EdgeIngestInfo
 	// Iotp iotp 时序库的元数据同步配置（产品/物模型 → 库表字段，设备 → 设备实例）
 	Iotp IotpInfo
 	// CollectEngine 采集引擎（IOTP Gateway API）配置：通道/设备/点位下发
 	CollectEngine CollectEngineInfo
-	Topics        struct {
-		CommandTopic TopicInfo
-	}
 }
 
 // EdgeIngestInfo 参考系统（iotddc / things，/edge 协议）接入的 broker 配置。
@@ -110,14 +103,6 @@ type PprofInfo struct {
 	Enabled bool
 }
 
-// VizInfo 画布看板（布局 + 文本组件）配置
-type VizInfo struct {
-	// BoardsFile 历史字段：看板早已改为落库（viz_board 表）并按租户隔离，
-	// 内置看板也改成了编译期种子（internal/pkg/seed/boards）。
-	// 这里保留仅为兼容旧配置文件，不再读取。
-	BoardsFile string
-}
-
 // TenantInfo 多租户隔离配置
 type TenantInfo struct {
 	// Enforce 无租户上下文的调用是否 fail-closed。
@@ -128,17 +113,9 @@ type TenantInfo struct {
 }
 
 type WritableInfo struct {
-	PersistData     atomic.Bool  `toml:"-"`
-	PersistPeriod   atomic.Int32 `toml:"-"`
 	LogLevel        string
 	LogPath         string
 	InsecureSecrets bootstrapConfig.InsecureSecrets
-	DebugProfile    bool
-	IsNewModel      bool
-}
-
-type TopicInfo struct {
-	Topic string
 }
 
 type DockerManage struct {
@@ -156,10 +133,6 @@ type MessageQueueInfo struct {
 	Port int
 	// Protocol indicates the protocol to use when accessing the message queue.
 	Protocol string
-	// Indicates the message queue platform being used.
-	Type string
-	// Indicates the topic the data is published/subscribed
-	SubscribeTopics []string
 	// Indicates the topic prefix the data is published to. Note that /<device-profile-name>/<device-name> will be
 	// added to this Publish Topic prefix as the complete publish topic
 	PublishTopicPrefix string
@@ -171,18 +144,6 @@ type MessageQueueInfo struct {
 
 func (m MessageQueueInfo) Enable() bool {
 	return !(m.Host == "" || m.Port <= 0)
-}
-
-type ApplicationSettings struct {
-	DeviceIds       string
-	ResDir          string
-	DriverDir       string
-	IsScreenControl bool
-	OTADir          string
-	CloseAuthToken  bool
-	GatewayEdition  string // 网关版本标识
-	WebBuildPath    string // 前端路径
-	TedgeNumber     string
 }
 
 // URL constructs a URL from the protocol, host and port and returns that as a string.
@@ -286,26 +247,7 @@ func (c *ConfigurationStruct) GetDataDatabaseInfo() map[string]bootstrapConfig.D
 	return cfg
 }
 
-// GetDataDatabaseInfo returns a database information map for events & readings.
-func (c *ConfigurationStruct) GetRedisInfo() map[string]bootstrapConfig.Database {
-	cfg := c.Databases["Redis"]
-	return cfg
-}
-
 // GetInsecureSecrets returns the service's InsecureSecrets.
 func (c *ConfigurationStruct) GetInsecureSecrets() bootstrapConfig.InsecureSecrets {
 	return c.Writable.InsecureSecrets
-}
-
-// 判断是否为物模型
-func (c *ConfigurationStruct) IsThingModel() bool {
-	return c.Writable.IsNewModel
-}
-
-func (c *ConfigurationStruct) GetPersistData() bool {
-	return c.Writable.PersistData.Load()
-}
-
-func (c *ConfigurationStruct) GetPersisPeriod() int32 {
-	return c.Writable.PersistPeriod.Load()
 }

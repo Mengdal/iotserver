@@ -32,8 +32,6 @@ type ServiceInfo struct {
 	// ServerBindAddr specifies an IP address or hostname
 	// for ListenAndServe to bind to, such as 0.0.0.0
 	ServerBindAddr string
-	// The protocol that should be used to call this service
-	Protocol string
 	// StartupMsg specifies a string to log once service
 	// initialization and startup is completed.
 	StartupMsg string
@@ -61,13 +59,6 @@ func (s ServiceInfo) CallbackBaseUrl() string {
 		return strings.TrimRight(strings.TrimSpace(s.CallbackUrl), "/")
 	}
 	return CallbackBaseUrlDefault
-}
-
-// Url provides a way to obtain the full url of the host service for use in initialization or, in some cases,
-// responses to a caller.
-func (s ServiceInfo) Url() string {
-	url := fmt.Sprintf("%s://%s:%v", s.Protocol, s.Host, s.Port)
-	return url
 }
 
 // ConfigProviderInfo defines the type and location (via host/port) of the desired configuration provider (e.g. Consul, Eureka)

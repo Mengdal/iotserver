@@ -6,7 +6,6 @@ LogPath = 'iotserver/logs/iotserver-core.log'
 Host = '0.0.0.0'
 ServerBindAddr = '' # Leave blank so default to Host value unless different value is needed.
 Port = 58081
-Protocol = 'http'
 Timeout = 45000
 # eKuiper 规则回调平台（告警上报 / 场景触发）使用的基地址。
 # docker-compose 部署用服务名 http://iotserver-core:58081；本地直接跑服务时填容器可达的宿主机地址。
@@ -49,7 +48,6 @@ DataSource = 'manifest/docker/db-data/duckdb/core-data.duckdb'
 Protocol = 'tcp'
 Host = '127.0.0.1'
 Port = 58090
-Type = 'mqtt'
 PublishTopicPrefix = 'eventbus/in'
 
 # 参考系统（iotddc / things）接入所用的 broker。
@@ -89,11 +87,6 @@ TimeoutSec = 10
 # 开启后需携带 x-token 且账号具备 system:debug:pprof 权限（超级管理员直通）。
 [Pprof]
 Enabled = false
-
-# 画布看板（布局 + 文本组件）
-# 看板登记文件：看板名称/图标/首页标记，以及每个组件的位置、类型与文本
-[Viz]
-BoardsFile = '.viz-boards.json'
 
 # 多租户隔离（多租户：一个实例服务多个租户，按 tenant_id 行级隔离）
 # Enforce=false（迁移期）：未带租户上下文的调用不过滤，仅打告警日志；
