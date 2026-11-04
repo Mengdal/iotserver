@@ -133,7 +133,7 @@ leveldb 时间区间丢边界点、leveldb 计数函数恒返回 1。
 DuckLake 数据层已整体删除：
 
 - 删除 `internal/tools/datadb/ducklake/` 与 `tools/lakectl`；
-- `[Databases.Data.Primary]` 只接受 `Type = 'duckdb'`，Docker 部署默认值同步改为 DuckDB；
+- `[Databases.Data]` 只接受 `Type = 'duckdb'`，Docker 部署默认值同步改为 DuckDB；
 - 删除配置结构中的 `Dsn`、`OverrideDataPath` 字段和相关脚本分支；
 - 升级前如已有 `db-data/ducklake/` 数据，需要先用旧版本导出/迁移到 DuckDB；新版本不会读取该目录。
 

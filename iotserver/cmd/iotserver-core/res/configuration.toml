@@ -31,12 +31,10 @@ Timeout = 120
 
 [Databases]
 [Databases.Metadata]
-[Databases.Metadata.Primary]
 Type = 'sqlite'
 DataSource = 'manifest/docker/db-data/core-data/core.db?_timeout=5000'
 
 [Databases.Data]
-[Databases.Data.Primary]
 # 单文件列存：一个 DuckDB 数据库文件，事务不产生 Parquet 文件，
 # 因此不需要分区 / 合并小文件 / 过期快照那一整套文件生命周期管理。
 # 改为 'iotp' 时数据写入外部 iotp 时序库（认证参数见 [Iotp]），DataSource 不再使用；

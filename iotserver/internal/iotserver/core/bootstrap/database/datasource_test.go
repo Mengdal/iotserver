@@ -20,7 +20,7 @@ import (
 	"iotserver/internal/tools/datadb/duckdb"
 )
 
-// 配置文件里的 [Databases.Data.Primary] 必须指向可用的 DuckDB DataSource。
+// 配置文件里的 [Databases.Data] 必须指向可用的 DuckDB DataSource。
 func TestConfiguredDataSourceIsDuckDB(t *testing.T) {
 	root := repoRoot(t)
 	cases := []struct {
@@ -36,18 +36,16 @@ func TestConfiguredDataSourceIsDuckDB(t *testing.T) {
 			var cfg struct {
 				Databases struct {
 					Data struct {
-						Primary struct {
-							Type       string
-							DataSource string
-							Dsn        string
-						}
+						Type       string
+						DataSource string
+						Dsn        string
 					}
 				}
 			}
 			if _, err := toml.DecodeFile(tc.path, &cfg); err != nil {
 				t.Fatalf("解析配置失败: %v", err)
 			}
-			p := cfg.Databases.Data.Primary
+			p := cfg.Databases.Data
 			if p.Type != "duckdb" {
 				t.Fatalf("Type = %q, want duckdb", p.Type)
 			}
@@ -127,8 +125,8 @@ func TestNewDataDBClientIotpRequiresConfig(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			cfg := &config.ConfigurationStruct{
-				Databases: map[string]map[string]bootstrapConfig.Database{
-					"Data": {"Primary": {Type: "iotp"}},
+				Databases: map[string]bootstrapConfig.Database{
+					"Data": {Type: "iotp"},
 				},
 				Iotp: tc.iotp,
 			}
@@ -144,8 +142,8 @@ func TestNewDataDBClientIotpRequiresConfig(t *testing.T) {
 func TestNewDataDBClientIotp(t *testing.T) {
 	lc := logger.NewClient("datasource-test", "error", "")
 	cfg := &config.ConfigurationStruct{
-		Databases: map[string]map[string]bootstrapConfig.Database{
-			"Data": {"Primary": {Type: "iotp"}},
+		Databases: map[string]bootstrapConfig.Database{
+			"Data": {Type: "iotp"},
 		},
 		Iotp: config.IotpInfo{
 			Enabled:    true,
@@ -169,8 +167,8 @@ func TestNewDataDBClientIotp(t *testing.T) {
 func TestNewDataDBClientUnknownType(t *testing.T) {
 	lc := logger.NewClient("datasource-test", "error", "")
 	cfg := &config.ConfigurationStruct{
-		Databases: map[string]map[string]bootstrapConfig.Database{
-			"Data": {"Primary": {Type: "mystery"}},
+		Databases: map[string]bootstrapConfig.Database{
+			"Data": {Type: "mystery"},
 		},
 	}
 	if _, err := NewDatabase(cfg).newDataDBClient(lc, nil); err == nil ||

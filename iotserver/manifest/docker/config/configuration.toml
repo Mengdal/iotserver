@@ -32,13 +32,11 @@ Timeout = 120
 
 [Databases]
 [Databases.Metadata]
-[Databases.Metadata.Primary]
 Type = 'sqlite'
 DataSource = 'iotserver/db-data/core-data/core.db?_timeout=5000'
 
 
 [Databases.Data]
-[Databases.Data.Primary]
 # 数据层：DuckDB 单文件列存。
 # 路径相对容器工作目录 /var/bin/，即宿主机 manifest/docker/db-data/（compose 已挂载，重建容器不丢数据）。
 Type = 'duckdb'

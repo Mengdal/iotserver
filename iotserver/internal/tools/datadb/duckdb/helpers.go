@@ -7,7 +7,7 @@
 //     ts_ms 的 zone map 天然狭窄，时间范围查询能直接跳过大量 row group；
 //   - 单写者约束：同一个 .db 文件同一时刻只允许一个进程打开。
 //
-// 配置约定（configuration.toml 的 [Databases.Data.Primary]）：
+// 配置约定（configuration.toml 的 [Databases.Data]）：
 //
 //	Type       = 'duckdb'
 //	DataSource = 'manifest/docker/db-data/duckdb/core-data.duckdb'   # 单个数据库文件

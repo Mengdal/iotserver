@@ -27,7 +27,6 @@ Timeout = 120
 
 [Databases]
 [Databases.Metadata]
-[Databases.Metadata.Primary]
 Type = 'sqlite'
 DataSource = 'iotserver/db-data/core-data/core.db?_timeout=5000'
 #Type = 'mysql'
@@ -35,7 +34,6 @@ DataSource = 'iotserver/db-data/core-data/core.db?_timeout=5000'
 
 
 [Databases.Data]
-[Databases.Data.Primary]
 # 时序数据层：默认 duckdb（单文件列存）。
 # 改为 'iotp' 时数据写入外部 iotp 时序库，认证参数复用下面的 [Iotp]，
 # 此时 DataSource 不再使用。iotp 模式暂不支持按设备删数据 / 保留期清理 /
@@ -50,7 +48,7 @@ Port = 58090
 PublishTopicPrefix = 'eventbus/in'
 
 # iotp 时序库接入：既用于元数据同步（产品/物模型 → 库表字段、设备 → 设备实例），
-# 也作为 [Databases.Data.Primary].Type = 'iotp' 时的时序数据后端。
+# 也作为 [Databases.Data].Type = 'iotp' 时的时序数据后端。
 # Enabled=false 时完全跳过，平台行为与未接入一致。
 [Iotp]
 Enabled = false

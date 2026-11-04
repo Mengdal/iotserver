@@ -28,7 +28,8 @@ type ConfigurationStruct struct {
 	Writable     WritableInfo
 	MessageQueue MessageQueueInfo
 	Clients      map[string]bootstrapConfig.ClientInfo
-	Databases    map[string]map[string]bootstrapConfig.Database
+	// Databases 按用途归属：Metadata（元数据）/ Data（时序）。
+	Databases    map[string]bootstrapConfig.Database
 	Registry     bootstrapConfig.RegistryInfo
 	Service      bootstrapConfig.ServiceInfo
 	RpcServer    bootstrapConfig.RPCServiceInfo
@@ -70,7 +71,7 @@ type EdgeIngestInfo struct {
 // IotpInfo iotp 时序库的接入配置。
 //
 // 既用于「产品/物模型 → 库表字段」「设备 → 设备实例」的元数据同步（iotpsync），
-// 也在 [Databases.Data.Primary].Type = "iotp" 时作为时序数据后端。
+// 也在 [Databases.Data].Type = "iotp" 时作为时序数据后端。
 // Enabled=false 时全部跳过，平台行为与未接入 iotp 完全一致。
 type IotpInfo struct {
 	Enabled bool
@@ -235,16 +236,14 @@ func (c *ConfigurationStruct) GetRegistryInfo() bootstrapConfig.RegistryInfo {
 	return c.Registry
 }
 
-// GetDatabaseInfo returns a database information map.
-func (c *ConfigurationStruct) GetDatabaseInfo() map[string]bootstrapConfig.Database {
-	cfg := c.Databases["Metadata"]
-	return cfg
+// GetDatabaseInfo 返回元数据库配置。
+func (c *ConfigurationStruct) GetDatabaseInfo() bootstrapConfig.Database {
+	return c.Databases["Metadata"]
 }
 
-// GetDataDatabaseInfo returns a database information map for events & readings.
-func (c *ConfigurationStruct) GetDataDatabaseInfo() map[string]bootstrapConfig.Database {
-	cfg := c.Databases["Data"]
-	return cfg
+// GetDataDatabaseInfo 返回时序数据库配置。
+func (c *ConfigurationStruct) GetDataDatabaseInfo() bootstrapConfig.Database {
+	return c.Databases["Data"]
 }
 
 // GetInsecureSecrets returns the service's InsecureSecrets.

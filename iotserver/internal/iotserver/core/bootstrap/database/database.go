@@ -49,7 +49,7 @@ func NewDatabase(database *config.ConfigurationStruct) Database {
 func (d Database) newDBClient(
 	lc logger.LoggingClient) (interfaces.DBClient, error) {
 
-	databaseInfo := d.database.GetDatabaseInfo()["Primary"]
+	databaseInfo := d.database.GetDatabaseInfo()
 	switch databaseInfo.Type {
 	case string(constants.SQLite):
 		return sqlite.NewClient(dtos.Configuration{
@@ -64,7 +64,7 @@ func (d Database) newDBClient(
 
 func (d Database) newDataDBClient(
 	lc logger.LoggingClient, dbClient interfaces.DBClient) (interfaces.DataDBClient, error) {
-	dataDbInfo := d.database.GetDataDatabaseInfo()["Primary"]
+	dataDbInfo := d.database.GetDataDatabaseInfo()
 
 	switch dataDbInfo.Type {
 	case string(constants.DuckDB):

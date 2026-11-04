@@ -51,7 +51,7 @@ func (ctl *controller) SystemBackup(c *gin.Context) {
 	dir := strings.TrimSpace(req.Dir)
 	if dir == "" {
 		// 默认落到数据库文件同级的 backup/<时间戳>/
-		dbPath := ctl.cfg.GetDataDatabaseInfo()["Primary"].DataSource
+		dbPath := ctl.cfg.GetDataDatabaseInfo().DataSource
 		base := filepath.Dir(dbPath)
 		dir = filepath.Join(base, "backup", time.Now().Format("20060102-150405"))
 	}
