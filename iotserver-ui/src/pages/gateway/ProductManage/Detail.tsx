@@ -12,6 +12,7 @@ import { get } from 'lodash'
 import './style.less'
 import { productRelease, productUnrelease } from '@/api/devices'
 import { t, tt } from '@/i18n'
+import { safeJsonParse } from '@/utils/json'
 
 const { Text, Link } = Typography
 const { useForm, useWatch } = Form
@@ -218,21 +219,22 @@ const ProductDetail = () => {
               render (value, record) {
                 const type = get<ProductThingModelType, string, TypeSpec | ''>(record, 'type_spec.type', '') as TypeSpec
                 const specs = get<ProductThingModelType, string, string>(record, 'type_spec.specs', '{}') as TypeSpec
+                // specs 可能是空串或历史脏数据：解析失败按空对象处理，不能让整页渲染崩溃。
+                const specsObj = safeJsonParse<Record<string, any>>(specs, {})
 
                 if (type === 'array') {
-                  const size = JSON.parse(specs)?.size
+                  const size = specsObj?.size
                   return size === undefined || size === null ? '-' : t('数组个数: {{count}}', { count: size })
                 } else if (type === 'text') {
-                  const length = JSON.parse(specs)?.length
+                  const length = specsObj?.length
                   return length === undefined || length === null ? '-' : t('数据长度: {{count}}', { count: length })
                 } else if (type === 'date') {
                   return t('整数类型Int64的UTC时间戳 (毫秒)')
                 } else if (type === 'bool' || type === 'enum') {
-                  return Object.entries(JSON.parse(specs))
+                  return Object.entries(specsObj)
                     .map(([k, v]) => `${k}-${v}`)
                     .map((text, index) => <Tag color="processing" key={index}>{text}</Tag>)
                 } else if (type === 'int' || type === 'float') {
-                  const specsObj = JSON.parse(specs)
                   return (
                     <>
                       <div>{t('取值范围:')} {specsObj?.min}-{specsObj?.max}</div>

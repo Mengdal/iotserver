@@ -62,11 +62,8 @@ http.interceptors.response.use(
 )
 
 export function httpRequest <T = any, R = AxiosResponse<T>, D = any> (config: AxiosRequestConfig<D>): Promise<R> {
-  return http<T, R, D>(config).then((resp: any) => {
-    if (resp.statusText === 'OK' && resp.status === 200) {
-      return resp.data
-    }
-
-    return resp
-  })
+  // 响应拦截器已保证只有 2xx 才进入 then；这里不能再依赖 statusText：
+  // HTTP/2 下 statusText 为空、201 等 2xx 也不是 "OK"，否则会把整个
+  // AxiosResponse 当成业务数据返回。
+  return http<T, R, D>(config).then((resp: any) => resp.data as R)
 }

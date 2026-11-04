@@ -10,6 +10,7 @@ import { AuthorizationModal, AuthorizationModalRef } from './AuthorizationModal'
 import { RunStatusMap } from '@/utils/statusMap'
 import { CloudInstance } from '@/api/cloud-instance'
 import { t } from '@/i18n'
+import { safeJsonParse } from '@/utils/json'
 
 const { Text } = Typography
 
@@ -121,7 +122,7 @@ const MyService: React.FC<MyServiceProps> = () => {
                           }
 
                           if (key === 'authorization') {
-                            const template = JSON.parse(record?.extend_template)
+                            const template = safeJsonParse<any[]>(record?.extend_template, [])
                             if (Array.isArray(template) && template.length) {
                               authorizationModalRef.current?.open(record)
                             } else {

@@ -290,7 +290,7 @@ export const EditRuleModal = forwardRef<EditRuleModalRef, EditRuleModalProps>(({
               form.validateFields()
                 .then(values => {
                   console.log('values', values)
-                  // setSubmitting(true)
+                  setSubmitting(true)
                   const params = {
                     id: ruleInfo?.id,
                     condition: 'anyone',

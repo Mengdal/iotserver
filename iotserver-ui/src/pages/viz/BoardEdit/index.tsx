@@ -459,14 +459,12 @@ const BoardEdit: React.FC = () => {
   /** 容器：把子级提到容器的父级，再删掉容器本身 */
   const unwrapContainer = (containerId: string) => {
     const parent = parentOf[containerId] || ''
-    const kids = childrenByParent.get(containerId) || []
-    const kidIds = kids.map(k => k.id)
-    const doomed = collectDescendantIds(containerId, parentOf)
-    const doomedSet = new Set([containerId].concat(doomed))
-    setWidgets(prev => prev.filter(w => !doomedSet.has(w.id)))
+    // 只删容器自身；容器最多两层，直接子级就是它里面的全部组件。
+    const kidIds = (childrenByParent.get(containerId) || []).map(k => k.id)
+    setWidgets(prev => prev.filter(w => w.id !== containerId))
     setParentOf((prev) => {
       const copy = { ...prev }
-      doomedSet.forEach(wid => delete copy[wid])
+      delete copy[containerId]
       kidIds.forEach(wid => { copy[wid] = parent })
       return copy
     })

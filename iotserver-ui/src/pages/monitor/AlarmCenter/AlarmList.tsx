@@ -8,6 +8,7 @@ import { AlertPlate } from './types'
 import { ArrowsAltOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import { t, tt } from '@/i18n'
+import { safeJsonParse } from '@/utils/json'
 
 const { Text } = Typography
 const { useMessage } = message
@@ -372,7 +373,12 @@ const AlarmList: React.FC<AlarmListProps> = ({
                     </Popconfirm>
                     <Typography.Link
                       onClick={() => {
-                        const { code, device_id, trigger, end_at, start_at } = JSON.parse((record as any).alert_result)
+                        const loc = safeJsonParse<any>((record as any).alert_result, null)
+                        if (!loc?.device_id) {
+                          messageApi.open({ type: 'warning', content: t('暂无数据') })
+                          return
+                        }
+                        const { code, device_id, trigger, end_at, start_at } = loc
                         navigate(`/gateway/device/detail/${encodeURIComponent(device_id)}?code=${encodeURIComponent(code)}&trigger=${encodeURIComponent(trigger)}&end_at=${encodeURIComponent(end_at)}&start_at=${encodeURIComponent(start_at)}`)
                       }}
                     >{t('数据定位')}</Typography.Link>

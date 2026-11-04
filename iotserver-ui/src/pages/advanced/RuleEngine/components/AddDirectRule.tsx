@@ -306,7 +306,7 @@ export const AddDirectRule = forwardRef<AddDirectRuleRef, AddDirectRuleProps>(({
                     placeholder={t('请选择')}
                     loading={dataResourceApi.loading}
                     showSearch
-                    onSearch={(search) => dataResourceApi.run({ name: search, type: 'HTTP推送' })}
+                    onSearch={(search) => dataResourceApi.run({ name: search, type: resource_type })}
                     allowClear
                     options={dataResourceApi.data}
                   />

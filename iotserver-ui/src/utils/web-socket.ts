@@ -80,8 +80,10 @@ export class WebSocketClass {
   }
 
   private reconnect () {
-    console.log('reconnect', this.lockReconnect)
+    // 锁只用于避免并发重连；必须在调度前加锁、在定时器里释放，
+    // 不能依赖收到消息时置位（否则收到过消息的连接将永远无法重连）。
     if (this.lockReconnect) return
+    this.lockReconnect = true
 
     setTimeout(() => {
       this.lockReconnect = false
@@ -116,7 +118,6 @@ export class WebSocketClass {
 
   private onmessage (event: MessageEvent<any>) {
     console.log('[ws] onmessage')
-    this.lockReconnect = true
     try {
       const data = JSON.parse(event.data)
       const { resolveMap = [], successCallback } = this.callbackMap.get(data?.code) || {}

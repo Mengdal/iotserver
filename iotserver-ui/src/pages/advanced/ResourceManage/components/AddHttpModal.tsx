@@ -155,6 +155,7 @@ export const AddHttpModal = forwardRef<AddHttpModalRef, AddHttpModalProps>(({ on
               validator (rule, value, callback) {
                 if (!value) {
                   callback(t('请输入'))
+                  return
                 }
                 callback()
               },

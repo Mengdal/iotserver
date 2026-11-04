@@ -1,6 +1,6 @@
 import React, { createContext, useEffect, useState } from 'react'
 import { WebSocketClass } from '@/utils/web-socket'
-import { xToken } from '@/utils/config'
+import { getXToken } from '@/utils/config'
 
 export const WebSocketContext = createContext<{
   ws: WebSocketClass | undefined
@@ -22,7 +22,7 @@ export const WebSocketProvider:React.FC<WebSocketProps> = ({ children }) => {
       reconnectionAttempts: 60,
       path: '/api/v1/ws/',
       query: {
-        'x-token': xToken,
+        'x-token': getXToken(),
       },
     })
 
