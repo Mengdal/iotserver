@@ -89,7 +89,6 @@ func toMenuResponse(m models.Menu) dtos.SysMenuResponse {
 		Visible:   m.Visible,
 		Status:    m.Status,
 		IsFrame:   m.IsFrame,
-		LinkMode:  m.LinkMode,
 		TenantId:  m.TenantId,
 		Remark:    m.Remark,
 		Created:   m.Created,

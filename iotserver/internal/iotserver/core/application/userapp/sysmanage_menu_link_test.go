@@ -15,18 +15,6 @@ func TestNormalizeMenuTypeLink(t *testing.T) {
 	}
 }
 
-func TestNormalizeLinkMode(t *testing.T) {
-	if got := normalizeLinkMode(models.MenuTypeLink, 1); got != 1 {
-		t.Fatalf("链接菜单应允许嵌入模式，实际 %d", got)
-	}
-	if got := normalizeLinkMode(models.MenuTypeLink, 0); got != 0 {
-		t.Fatalf("链接菜单默认跳转，实际 %d", got)
-	}
-	if got := normalizeLinkMode(models.MenuTypeMenu, 1); got != 0 {
-		t.Fatalf("非链接菜单不允许嵌入，实际 %d", got)
-	}
-}
-
 func TestNormalizeMenuTarget(t *testing.T) {
 	cases := []struct {
 		name     string

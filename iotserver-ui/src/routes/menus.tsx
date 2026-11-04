@@ -180,8 +180,6 @@ export interface BackendMenuItem {
   status?: number
   sort?: number
   isFrame?: number
-  /** 链接打开方式：0 跳转，1 嵌入 iframe */
-  linkMode?: number
   children?: BackendMenuItem[]
 }
 
@@ -247,7 +245,8 @@ export function buildMenusFromBackend (list?: BackendMenuItem[]): Array<SubMenuT
       }
       if (!item.path) return
       const label = backendMenuLabel(item)
-      const embed = item.menuType === 'L' && Number(item.linkMode) === 1
+      // 链接菜单语义：内链在当前页嵌入，外链在新窗口跳转。
+      const embed = item.menuType === 'L' && !isExternalLink(item.path)
       result.push({
         label,
         // 嵌入型链接不能直接 navigate 到目标（外链会把应用带走、内链会丢掉 iframe），

@@ -49,8 +49,6 @@ export interface SysMenu {
   visible: number
   status: number
   isFrame: number
-  /** 链接打开方式：0 跳转，1 嵌入 iframe（仅链接菜单） */
-  linkMode?: number
   remark: string
   /** 菜单归属：'' = 平台原始菜单；非空 = 该租户的自建菜单 */
   tenantId?: string
