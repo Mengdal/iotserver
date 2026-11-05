@@ -14,7 +14,6 @@ import (
 	"iotserver/internal/iotserver/core/container"
 	"iotserver/internal/iotserver/core/infrastructure/sqlite"
 	"iotserver/internal/pkg/constants"
-	"iotserver/internal/tools/datadb/duckdb"
 	"iotserver/internal/tools/datadb/iotpdb"
 	"iotserver/internal/tools/iotp"
 	"strings"
@@ -69,10 +68,7 @@ func (d Database) newDataDBClient(
 	case string(constants.DuckDB):
 		// 单文件列存：DataSource = DuckDB 数据库文件路径
 		// 保留天数默认值；按租户的保留策略由应用层（retention）执行
-		return duckdb.NewClient(dtos.Configuration{
-			DataSource:    dataDbInfo.DataSource,
-			RetentionDays: defaultDataRetentionDays,
-		}, lc)
+		return newDuckDBClient(dataDbInfo.DataSource, defaultDataRetentionDays, lc)
 	case string(constants.Iotp):
 		// 外部 iotp 时序库：连接参数与 DuckDB 同处 [Databases.Data]。
 		if strings.TrimSpace(dataDbInfo.BaseURL) == "" {

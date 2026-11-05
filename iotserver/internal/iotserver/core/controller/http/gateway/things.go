@@ -23,19 +23,6 @@ func (ctl *controller) ThingsTestConnection(c *gin.Context) {
 }
 
 // @Tags    系统管理-things
-// @Summary things 项目列表
-// @Produce json
-// @Router  /api/v1/things/projects [get]
-func (ctl *controller) ThingsProjects(c *gin.Context) {
-	list, err := container.ThingsItfFrom(ctl.dic.Get).ListProjects(c, c.Query("keyword"))
-	if err != nil {
-		httphelper.RenderFail(c, err, c.Writer, ctl.lc)
-		return
-	}
-	httphelper.ResultSuccess(list, c.Writer, ctl.lc)
-}
-
-// @Tags    系统管理-things
 // @Summary 全量对账
 // @Produce json
 // @Router  /api/v1/things/reconcile [post]

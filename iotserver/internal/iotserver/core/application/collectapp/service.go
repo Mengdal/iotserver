@@ -14,6 +14,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -135,6 +136,244 @@ func (s *service) filterAccessibleBindings(ctx context.Context, bindings []colle
 		}
 	}
 	return filtered, nil
+}
+
+/******************************* 概览 *******************************/
+
+// CollectOverview 采集配置总体概览：通道/设备/点位数量。
+func (s *service) CollectOverview(ctx context.Context) (dtos.CollectOverviewDTO, error) {
+	channels, err := s.CollectChannels(ctx)
+	if err != nil {
+		return dtos.CollectOverviewDTO{}, err
+	}
+	devices, err := s.CollectDevices(ctx)
+	if err != nil {
+		return dtos.CollectOverviewDTO{}, err
+	}
+	counts, err := s.dbClient.WithCtx(ctx).CollectPointCounts()
+	if err != nil {
+		return dtos.CollectOverviewDTO{}, err
+	}
+	overview := dtos.CollectOverviewDTO{
+		ChannelCount: len(channels),
+		Channels:     make([]dtos.CollectOverviewChannelDTO, 0, len(channels)),
+	}
+	index := make(map[int64]int, len(channels))
+	for _, channel := range channels {
+		index[channel.Id] = len(overview.Channels)
+		overview.Channels = append(overview.Channels, dtos.CollectOverviewChannelDTO{
+			Id:          channel.Id,
+			Name:        channel.Name,
+			ChannelType: channel.ChannelType,
+			Protocol:    channel.Protocol,
+			Enabled:     channel.Enabled,
+		})
+	}
+	for _, device := range devices {
+		overview.DeviceCount++
+		if device.Enabled {
+			overview.EnabledDeviceCount++
+		} else {
+			overview.DisabledDeviceCount++
+		}
+		points := int(counts[strconv.FormatInt(device.IotpId, 10)])
+		overview.PointCount += points
+		if idx, ok := index[device.ChannelId]; ok {
+			overview.Channels[idx].DeviceCount++
+			overview.Channels[idx].PointCount += points
+		}
+	}
+	return overview, nil
+}
+
+// CollectRealtime 查询当前用户可访问设备的实时点位数据。
+func (s *service) CollectRealtime(ctx context.Context, channelId, deviceId, keyword string) ([]dtos.CollectRealtimeValueDTO, error) {
+	channels, err := s.CollectChannels(ctx)
+	if err != nil {
+		return nil, err
+	}
+	channelNames := make(map[int64]string, len(channels))
+	pollByChannel := make(map[int64]int64, len(channels))
+	for _, channel := range channels {
+		channelNames[channel.Id] = channel.Name
+		pollByChannel[channel.Id] = int64(channel.PollIntervalMs)
+	}
+	filterChannel := int64(0)
+	if strings.TrimSpace(channelId) != "" {
+		filterChannel, err = parsePositiveId(channelId, "channel id")
+		if err != nil {
+			return nil, err
+		}
+		if _, ok := channelNames[filterChannel]; !ok {
+			return nil, errort.NewCommonErr(errort.DefaultResourcesNotFound, fmt.Errorf("通道不存在或无权访问"))
+		}
+	}
+	filterDevice := int64(0)
+	if strings.TrimSpace(deviceId) != "" {
+		filterDevice, err = parsePositiveId(deviceId, "device id")
+		if err != nil {
+			return nil, err
+		}
+	}
+	devices, err := s.CollectDevices(ctx)
+	if err != nil {
+		return nil, err
+	}
+	client, err := s.engineClient()
+	if err != nil {
+		return nil, err
+	}
+	records := make(map[string]collectengine.TagRealtimeRecord)
+	total := -1
+	for page := 1; page <= 20; page++ {
+		result, pageErr := client.RealtimeTagsPage(0, page, 1000)
+		if pageErr != nil {
+			return nil, pageErr
+		}
+		for _, record := range result.Items {
+			records[record.Id] = record
+		}
+		if total < 0 {
+			total = result.Total
+		}
+		if len(result.Items) == 0 || page*1000 >= total {
+			break
+		}
+	}
+	kw := strings.ToLower(strings.TrimSpace(keyword))
+	db := s.dbClient.WithCtx(ctx)
+	now := time.Now().UnixMilli()
+	allPoints, err := db.CollectPointConfigsAll()
+	if err != nil {
+		return nil, err
+	}
+	pointsByDevice := make(map[string][]models.CollectPointConfig, len(devices))
+	for _, point := range allPoints {
+		pointsByDevice[point.DeviceId] = append(pointsByDevice[point.DeviceId], point)
+	}
+	result := make([]dtos.CollectRealtimeValueDTO, 0)
+	for _, device := range devices {
+		if filterChannel > 0 && device.ChannelId != filterChannel {
+			continue
+		}
+		if filterDevice > 0 && device.IotpId != filterDevice {
+			continue
+		}
+		staleAfter := 3 * pollByChannel[device.ChannelId]
+		if staleAfter < 15000 {
+			staleAfter = 15000
+		}
+		points := pointsByDevice[strconv.FormatInt(device.IotpId, 10)]
+		deviceMatch := kw != "" && strings.Contains(strings.ToLower(device.DeviceName), kw)
+		for _, point := range points {
+			if kw != "" && !deviceMatch && !strings.Contains(strings.ToLower(point.TagId), kw) {
+				continue
+			}
+			item := dtos.CollectRealtimeValueDTO{
+				IotpId:         device.IotpId,
+				DeviceName:     device.DeviceName,
+				ChannelId:      device.ChannelId,
+				ChannelName:    channelNames[device.ChannelId],
+				TagId:          point.TagId,
+				DataType:       point.DataType,
+				Status:         "no_data",
+				LastWriteValue: point.LastWriteValue,
+				LastWriteTime:  point.LastWriteTime,
+			}
+			if !device.Enabled {
+				item.Status = "disabled"
+				result = append(result, item)
+				continue
+			}
+			record, ok := records[fmt.Sprintf("%d.%s", device.IotpId, point.TagId)]
+			if !ok {
+				result = append(result, item)
+				continue
+			}
+			item.Value = record.Value
+			item.RawValue = rawCollectValue(record.Value, point.Multiplier, point.Offset)
+			item.Time = normalizeEngineTimestamp(record.Timestamp)
+			switch record.StatusText() {
+			case "Error":
+				item.Status = "error"
+			case "Good":
+				if item.Time > 0 {
+					if now-item.Time > staleAfter {
+						item.Status = "stale"
+					} else {
+						item.Status = "normal"
+					}
+				}
+			}
+			result = append(result, item)
+		}
+	}
+	sort.SliceStable(result, func(i, j int) bool {
+		if result[i].ChannelName != result[j].ChannelName {
+			return result[i].ChannelName < result[j].ChannelName
+		}
+		if result[i].DeviceName != result[j].DeviceName {
+			return result[i].DeviceName < result[j].DeviceName
+		}
+		return result[i].TagId < result[j].TagId
+	})
+	return result, nil
+}
+
+// CollectWrite 向点位写入值：校验设备绑定、点位读写模式和设备使能后提交引擎。
+func (s *service) CollectWrite(ctx context.Context, req dtos.CollectWriteRequest) error {
+	if req.DeviceId <= 0 {
+		return errort.NewCommonErr(errort.DefaultIdEmpty, fmt.Errorf("device id is required"))
+	}
+	tagId := strings.TrimSpace(req.TagId)
+	if tagId == "" {
+		return errort.NewCommonErr(errort.DefaultReqParamsError, fmt.Errorf("标签ID不能为空"))
+	}
+	client, err := s.engineClient()
+	if err != nil {
+		return err
+	}
+	binding, _, found, err := s.bindingForIotp(client, req.DeviceId)
+	if err != nil {
+		return err
+	}
+	if !found {
+		return errort.NewCommonErr(errort.DefaultReqParamsError, fmt.Errorf("设备未绑定通道"))
+	}
+	if ok, err := s.canAccessChannel(ctx, binding.ChannelId); err != nil {
+		return err
+	} else if !ok {
+		return errort.NewCommonErr(errort.DefaultReqParamsError, fmt.Errorf("设备未绑定通道"))
+	}
+	db := s.dbClient.WithCtx(ctx)
+	iotpKey := strconv.FormatInt(req.DeviceId, 10)
+	if cfg, cfgFound, cfgErr := db.CollectDeviceConfigByDevice(iotpKey); cfgErr != nil {
+		return cfgErr
+	} else if cfgFound && !cfg.Enabled {
+		return errort.NewCommonErr(errort.DefaultReqParamsError, fmt.Errorf("设备已停用，无法写入"))
+	}
+	points, err := db.CollectPointConfigsByDevice(iotpKey)
+	if err != nil {
+		return err
+	}
+	var point *models.CollectPointConfig
+	for index := range points {
+		if points[index].TagId == tagId {
+			point = &points[index]
+			break
+		}
+	}
+	if point == nil {
+		return errort.NewCommonErr(errort.DefaultReqParamsError, fmt.Errorf("点位不存在或尚未保存"))
+	}
+	accessMode := strings.ToUpper(strings.TrimSpace(point.AccessMode))
+	if accessMode != "W" && accessMode != "RW" {
+		return errort.NewCommonErr(errort.DefaultReqParamsError, fmt.Errorf("点位只读，不能写入"))
+	}
+	if err := client.WriteTag(binding.Id, tagId, req.Value); err != nil {
+		return err
+	}
+	return db.UpdateCollectPointLastWrite(iotpKey, tagId, req.Value, time.Now().UnixMilli())
 }
 
 /******************************* 通道 *******************************/
@@ -430,23 +669,35 @@ func (s *service) CollectChannelBindDevices(ctx context.Context, channelId strin
 			remark = existingCfg.Remark
 		}
 
-		currentChannel := int64(0)
-		currentDeviceId := int64(0)
-		alreadyBound := false
+		existingBindings := make([]collectengine.Device, 0, 1)
 		boundDeviceId := int64(0)
 		for _, binding := range bindings {
 			if binding.IotpId != iotpId {
 				continue
 			}
+			existingBindings = append(existingBindings, binding)
 			if binding.ChannelId == id {
-				alreadyBound = true
 				boundDeviceId = binding.Id
-				break
 			}
-			currentChannel = binding.ChannelId
-			currentDeviceId = binding.Id
 		}
-		if alreadyBound {
+		hadOldBinding := len(existingBindings) > 0
+		if boundDeviceId > 0 {
+			// 同一设备只保留目标通道这一条绑定，清掉历史重复绑定。
+			for _, binding := range existingBindings {
+				if binding.Id == boundDeviceId {
+					continue
+				}
+				if ok, err := s.canAccessChannel(ctx, binding.ChannelId); err != nil {
+					return err
+				} else if !ok {
+					return errort.NewCommonErr(errort.DefaultReqParamsError,
+						fmt.Errorf("设备在其他通道存在绑定但无权访问"))
+				}
+				if err := client.DeleteDevice(binding.Id); err != nil {
+					return err
+				}
+				bindings = removeDevice(bindings, binding.Id)
+			}
 			if err := db.SaveCollectDeviceConfig(models.CollectDeviceConfig{
 				DeviceId:  iotpKey,
 				ChannelId: strconv.FormatInt(id, 10),
@@ -460,6 +711,15 @@ func (s *service) CollectChannelBindDevices(ctx context.Context, channelId strin
 			if err != nil {
 				return err
 			}
+			if !enabled {
+				if err := s.deleteDeviceTags(client, boundDeviceId, points); err != nil {
+					return err
+				}
+				if err := db.ClearCollectPointRemoteIds(iotpKey); err != nil {
+					return err
+				}
+				continue
+			}
 			if len(points) > 0 {
 				if _, err := s.syncDeviceTags(client, db, iotpKey, boundDeviceId, points, points); err != nil {
 					return err
@@ -467,17 +727,21 @@ func (s *service) CollectChannelBindDevices(ctx context.Context, channelId strin
 			}
 			continue
 		}
-		// 同一个 IOTP 设备换通道：先删旧设备（级联删除旧点位），再建新设备。
-		if currentDeviceId > 0 {
-			if ok, err := s.canAccessChannel(ctx, currentChannel); err != nil {
-				return err
-			} else if !ok {
-				return errort.NewCommonErr(errort.DefaultReqParamsError, fmt.Errorf("设备已绑定到其他通道"))
+		// 同一个 IOTP 设备换通道：先删掉所有旧绑定（级联删除旧点位），再建新设备。
+		if hadOldBinding {
+			for _, binding := range existingBindings {
+				if ok, err := s.canAccessChannel(ctx, binding.ChannelId); err != nil {
+					return err
+				} else if !ok {
+					return errort.NewCommonErr(errort.DefaultReqParamsError, fmt.Errorf("设备已绑定到其他通道"))
+				}
 			}
-			if err := client.DeleteDevice(currentDeviceId); err != nil {
-				return err
+			for _, binding := range existingBindings {
+				if err := client.DeleteDevice(binding.Id); err != nil {
+					return err
+				}
+				bindings = removeDevice(bindings, binding.Id)
 			}
-			bindings = removeDevice(bindings, currentDeviceId)
 		}
 		created, err := client.CreateDevice(id, iotpId)
 		if err != nil {
@@ -513,11 +777,17 @@ func (s *service) CollectChannelBindDevices(ctx context.Context, channelId strin
 		if err != nil {
 			return err
 		}
+		if !enabled {
+			if err := db.ClearCollectPointRemoteIds(iotpKey); err != nil {
+				return err
+			}
+			continue
+		}
 		if len(points) == 0 {
 			continue
 		}
 		// 换通道时旧通道的引擎点位要迁走；新建绑定时则把本地点位补到新通道。
-		if currentChannel > 0 {
+		if hadOldBinding {
 			if err := db.ClearCollectPointRemoteIds(iotpKey); err != nil {
 				return err
 			}
@@ -626,6 +896,7 @@ func (s *service) CollectConfigGet(ctx context.Context, deviceId string) (dtos.C
 	if err != nil {
 		return response, err
 	}
+	response.Configured = len(points) > 0
 	if len(points) > 0 {
 		response.Points = make([]dtos.CollectPointDTO, 0, len(points))
 		for index, point := range points {
@@ -720,6 +991,7 @@ func (s *service) CollectConfigLatest(ctx context.Context, deviceId string) (dto
 	if !found || strings.TrimSpace(cfg.ChannelId) == "" {
 		return response, errort.NewCommonErr(errort.DefaultReqParamsError, fmt.Errorf("设备未绑定通道"))
 	}
+	deviceEnabled := cfg.Enabled
 	channelId, err := parsePositiveId(cfg.ChannelId, "channel id")
 	if err != nil {
 		return response, err
@@ -728,6 +1000,12 @@ func (s *service) CollectConfigLatest(ctx context.Context, deviceId string) (dto
 		return response, err
 	} else if !ok {
 		return response, errort.NewCommonErr(errort.DefaultResourcesNotFound, fmt.Errorf("通道不存在或无权访问"))
+	}
+	// 优先走采集引擎的点位实时值（已做倍率/偏移换算）；引擎不可用时回退时序库。
+	if items, ok, engineErr := s.engineLatestValues(ctx, iotpId, points, deviceEnabled); engineErr == nil && ok {
+		response.Available = true
+		response.Items = items
+		return response, nil
 	}
 	if s.iotpClient == nil {
 		response.Message = "未启用时序库，无法查看实时数据"
@@ -760,8 +1038,14 @@ func (s *service) CollectConfigLatest(ctx context.Context, deviceId string) (dto
 	}
 	now := time.Now().UnixMilli()
 	for _, point := range points {
-		item := dtos.CollectMonitorValueDTO{TagId: point.TagId, DataType: point.DataType, Status: "no_data"}
-		if !point.Enabled {
+		item := dtos.CollectMonitorValueDTO{
+			TagId:          point.TagId,
+			DataType:       point.DataType,
+			Status:         "no_data",
+			LastWriteValue: point.LastWriteValue,
+			LastWriteTime:  point.LastWriteTime,
+		}
+		if !deviceEnabled {
 			item.Status = "disabled"
 			response.Items = append(response.Items, item)
 			continue
@@ -772,6 +1056,7 @@ func (s *service) CollectConfigLatest(ctx context.Context, deviceId string) (dto
 				ts = updatedAt
 			}
 			item.Value = field.Value
+			item.RawValue = rawCollectValue(field.Value, point.Multiplier, point.Offset)
 			item.Time = ts
 			if ts > 0 && now-ts > staleAfter {
 				item.Status = "stale"
@@ -782,6 +1067,111 @@ func (s *service) CollectConfigLatest(ctx context.Context, deviceId string) (dto
 		response.Items = append(response.Items, item)
 	}
 	return response, nil
+}
+
+// engineLatestValues 读取采集引擎内存中的点位实时值。
+func (s *service) engineLatestValues(ctx context.Context, iotpId int64, points []models.CollectPointConfig, deviceEnabled bool) ([]dtos.CollectMonitorValueDTO, bool, error) {
+	client, err := s.engineClient()
+	if err != nil {
+		return nil, false, err
+	}
+	binding, _, found, err := s.bindingForIotp(client, iotpId)
+	if err != nil {
+		return nil, false, err
+	}
+	if !found {
+		return nil, false, nil
+	}
+	page, err := client.RealtimeTags(binding.Id)
+	if err != nil {
+		return nil, false, err
+	}
+	if len(page.Items) == 0 {
+		return nil, false, nil
+	}
+	records := make(map[string]collectengine.TagRealtimeRecord, len(page.Items))
+	for _, record := range page.Items {
+		records[record.TagCode()] = record
+	}
+	staleAfter := 3 * s.channelPollInterval(ctx, binding.ChannelId)
+	if staleAfter < 15000 {
+		staleAfter = 15000
+	}
+	now := time.Now().UnixMilli()
+	items := make([]dtos.CollectMonitorValueDTO, 0, len(points))
+	for _, point := range points {
+		item := dtos.CollectMonitorValueDTO{
+			TagId:          point.TagId,
+			DataType:       point.DataType,
+			Status:         "no_data",
+			LastWriteValue: point.LastWriteValue,
+			LastWriteTime:  point.LastWriteTime,
+		}
+		if !deviceEnabled {
+			item.Status = "disabled"
+			items = append(items, item)
+			continue
+		}
+		record, ok := records[point.TagId]
+		if !ok {
+			items = append(items, item)
+			continue
+		}
+		item.Time = normalizeEngineTimestamp(record.Timestamp)
+		switch record.StatusText() {
+		case "Error":
+			item.Status = "error"
+			item.Value = record.Value
+			item.RawValue = rawCollectValue(record.Value, point.Multiplier, point.Offset)
+		case "Good":
+			if item.Time > 0 {
+				item.Value = record.Value
+				item.RawValue = rawCollectValue(record.Value, point.Multiplier, point.Offset)
+				if now-item.Time > staleAfter {
+					item.Status = "stale"
+				} else {
+					item.Status = "normal"
+				}
+			}
+		}
+		items = append(items, item)
+	}
+	return items, true, nil
+}
+
+// normalizeEngineTimestamp 引擎时间戳可能是秒（10 位）或毫秒，统一成毫秒。
+func normalizeEngineTimestamp(timestamp int64) int64 {
+	if timestamp > 0 && timestamp < 1e12 {
+		return timestamp * 1000
+	}
+	return timestamp
+}
+
+// rawCollectValue 由工程值反推原始值（引擎实时值已完成倍率/偏移换算）。
+func rawCollectValue(value any, multiplier, offset float64) any {
+	var number float64
+	switch typed := value.(type) {
+	case float64:
+		number = typed
+	case float32:
+		number = float64(typed)
+	case int:
+		number = float64(typed)
+	case int64:
+		number = float64(typed)
+	case string:
+		parsed, err := strconv.ParseFloat(strings.TrimSpace(typed), 64)
+		if err != nil {
+			return value
+		}
+		number = parsed
+	default:
+		return value
+	}
+	if multiplier == 0 {
+		return value
+	}
+	return strconv.FormatFloat((number-offset)/multiplier, 'f', -1, 64)
 }
 
 // channelPollInterval 读取通道轮询周期（毫秒）。
@@ -859,12 +1249,13 @@ func (s *service) CollectConfigSave(ctx context.Context, req dtos.CollectConfigS
 		}
 		localId := ""
 		remoteId := int64(0)
+		lastWriteValue := ""
+		lastWriteTime := int64(0)
 		if previous, ok := existingByTag[tagId]; ok {
 			localId = previous.Id
-			// 未使能的点位不下发引擎；清掉远端 ID，让同步逻辑删除旧 tag。
-			if point.Enabled {
-				remoteId = previous.RemoteId
-			}
+			remoteId = previous.RemoteId
+			lastWriteValue = previous.LastWriteValue
+			lastWriteTime = previous.LastWriteTime
 		}
 		sortIndex := point.Sort
 		if sortIndex == 0 {
@@ -881,8 +1272,11 @@ func (s *service) CollectConfigSave(ctx context.Context, req dtos.CollectConfigS
 			Multiplier: point.Multiplier,
 			Offset:     point.Offset,
 			Storage:    point.Storage,
-			Enabled:    point.Enabled,
-			Sort:       sortIndex,
+			// 使能是设备级状态，点位统一按启用保存
+			Enabled:        true,
+			LastWriteValue: lastWriteValue,
+			LastWriteTime:  lastWriteTime,
+			Sort:           sortIndex,
 		})
 	}
 
@@ -912,6 +1306,66 @@ func (s *service) CollectConfigSave(ctx context.Context, req dtos.CollectConfigS
 	}
 	_, err = s.syncDeviceTags(client, db, iotpKey, binding.Id, existing, points)
 	return err
+}
+
+// CollectConfigSetEnabled 切换设备级采集使能：停用移除引擎点位，启用重新下发。
+func (s *service) CollectConfigSetEnabled(ctx context.Context, req dtos.CollectConfigEnabledRequest) error {
+	if req.DeviceId <= 0 {
+		return errort.NewCommonErr(errort.DefaultIdEmpty, fmt.Errorf("device id is required"))
+	}
+	client, err := s.engineClient()
+	if err != nil {
+		return err
+	}
+	binding, _, found, err := s.bindingForIotp(client, req.DeviceId)
+	if err != nil {
+		return err
+	}
+	if !found {
+		return errort.NewCommonErr(errort.DefaultReqParamsError, fmt.Errorf("设备未绑定通道"))
+	}
+	if ok, err := s.canAccessChannel(ctx, binding.ChannelId); err != nil {
+		return err
+	} else if !ok {
+		return errort.NewCommonErr(errort.DefaultReqParamsError, fmt.Errorf("设备未绑定通道"))
+	}
+	db := s.dbClient.WithCtx(ctx)
+	iotpKey := strconv.FormatInt(req.DeviceId, 10)
+	cfg, found, err := db.CollectDeviceConfigByDevice(iotpKey)
+	if err != nil {
+		return err
+	}
+	if !found {
+		return errort.NewCommonErr(errort.DefaultReqParamsError, fmt.Errorf("设备未绑定通道"))
+	}
+	if cfg.Enabled == req.Enabled {
+		return nil
+	}
+	points, err := db.CollectPointConfigsByDevice(iotpKey)
+	if err != nil {
+		return err
+	}
+	if !req.Enabled {
+		if err := s.deleteDeviceTags(client, binding.Id, points); err != nil {
+			return err
+		}
+		if err := db.ClearCollectPointRemoteIds(iotpKey); err != nil {
+			return err
+		}
+	} else {
+		for _, point := range points {
+			if strings.TrimSpace(point.Address) == "" {
+				return errort.NewCommonErr(errort.DefaultReqParamsError,
+					fmt.Errorf("点位 %s 地址为空，请先在点表中填写后再启用", point.TagId))
+			}
+		}
+		if _, err := s.syncDeviceTags(client, db, iotpKey, binding.Id, points, points); err != nil {
+			return err
+		}
+	}
+	cfg.ChannelId = strconv.FormatInt(binding.ChannelId, 10)
+	cfg.Enabled = req.Enabled
+	return db.SaveCollectDeviceConfig(cfg)
 }
 
 func removeDevice(devices []collectengine.Device, id int64) []collectengine.Device {
@@ -979,10 +1433,6 @@ func (s *service) syncDeviceTags(client *collectengine.Client, db pointRemoteUpd
 	mapping := make(map[string]int64, len(newPoints))
 	missing := make(map[string]string)
 	for _, point := range newPoints {
-		// 未使能的点位保留在平台本地，但不创建/更新引擎 tag。
-		if !point.Enabled {
-			continue
-		}
 		desired := collectengine.Tag{
 			DeviceId:    deviceId,
 			TagCode:     point.TagId,
@@ -1134,11 +1584,21 @@ func (s *service) deleteDeviceTags(client *collectengine.Client, deviceId int64,
 
 func (s *service) deviceDTOs(ctx context.Context, bindings []collectengine.Device) []dtos.CollectDeviceDTO {
 	result := make([]dtos.CollectDeviceDTO, 0, len(bindings))
+	enabledByDevice := make(map[string]bool)
+	if configs, err := s.dbClient.WithCtx(ctx).CollectDeviceConfigs(); err == nil {
+		for _, cfg := range configs {
+			enabledByDevice[cfg.DeviceId] = cfg.Enabled
+		}
+	}
 	for _, binding := range bindings {
 		local, product := s.resolveIotpDevice(ctx, binding.IotpId)
 		name := local.Name
 		if strings.TrimSpace(name) == "" {
 			name = fmt.Sprintf("#%d", binding.IotpId)
+		}
+		enabled, ok := enabledByDevice[strconv.FormatInt(binding.IotpId, 10)]
+		if !ok {
+			enabled = true
 		}
 		result = append(result, dtos.CollectDeviceDTO{
 			IotpId:      binding.IotpId,
@@ -1147,6 +1607,7 @@ func (s *service) deviceDTOs(ctx context.Context, bindings []collectengine.Devic
 			DeviceName:  name,
 			ProductId:   local.ProductId,
 			ProductName: product.Name,
+			Enabled:     enabled,
 		})
 	}
 	return result
@@ -1215,7 +1676,7 @@ func localPointDTO(point models.CollectPointConfig, index int) dtos.CollectPoint
 		Multiplier: point.Multiplier,
 		Offset:     point.Offset,
 		Storage:    point.Storage,
-		Enabled:    point.Enabled,
+		Enabled:    true,
 		Sort:       index,
 	}
 }

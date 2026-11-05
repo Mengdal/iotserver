@@ -22,7 +22,6 @@ import {
   Tag,
   Tooltip,
   Tree,
-  Upload,
   message,
 } from 'antd'
 import {
@@ -49,20 +48,30 @@ import {
   CollectChannel,
   CollectConfig,
   CollectDevice,
+  CollectImportDevicePreview,
+  CollectOverview,
+  CollectOverviewChannel,
+  CollectRealtimeValue,
+  CollectImportPreview,
   CollectMonitorStatus,
   CollectMonitorValue,
   CollectMonitorResult,
   CollectPoint,
   bindChannelDevices,
   deleteCollectChannel,
-  exportCollectPoints,
+  exportAllCollectPoints,
   getCollectChannels,
   getCollectConfig,
+  getCollectOverview,
+  getCollectRealtime,
   getCollectDevices,
   getCollectLatest,
   getCollectTemplate,
-  importCollectPoints,
+  importAllCollectPoints,
+  previewCollectImport,
   saveCollectChannel,
+  setCollectDeviceEnabled,
+  writeCollectTag,
   saveCollectConfig,
   unbindChannelDevice,
 } from '@/api/collect'
@@ -131,6 +140,20 @@ const CollectConfigPage: React.FC = () => {
   })
   const [channels, setChannels] = useState<CollectChannel[]>([])
   const [selectedChannel, setSelectedChannel] = useState<CollectChannel | null>(null)
+  const [overviewSelected, setOverviewSelected] = useState(false)
+  const [overview, setOverview] = useState<CollectOverview | null>(null)
+  const [overviewLoading, setOverviewLoading] = useState(false)
+  const [realtimeValues, setRealtimeValues] = useState<CollectRealtimeValue[]>([])
+  const [realtimeLoading, setRealtimeLoading] = useState(false)
+  const [realtimeChannelId, setRealtimeChannelId] = useState<number | undefined>()
+  const [realtimeDeviceId, setRealtimeDeviceId] = useState<number | undefined>()
+  const [realtimeKeyword, setRealtimeKeyword] = useState('')
+  const [realtimeKeywordInput, setRealtimeKeywordInput] = useState('')
+  const [realtimeRefreshSeq, setRealtimeRefreshSeq] = useState(0)
+  const [realtimePage, setRealtimePage] = useState(1)
+  const [writePoint, setWritePoint] = useState<CollectPoint | null>(null)
+  const [writeValue, setWriteValue] = useState('')
+  const [writing, setWriting] = useState(false)
   const [collectDevices, setCollectDevices] = useState<CollectDevice[]>([])
   const [deviceLoading, setDeviceLoading] = useState(false)
   const [expandedKeys, setExpandedKeys] = useState<React.Key[]>([])
@@ -140,6 +163,13 @@ const CollectConfigPage: React.FC = () => {
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [exporting, setExporting] = useState(false)
+  const bulkImportInputRef = useRef<HTMLInputElement | null>(null)
+  const [bulkPreviewOpen, setBulkPreviewOpen] = useState(false)
+  const [bulkPreview, setBulkPreview] = useState<CollectImportPreview | null>(null)
+  const [bulkFile, setBulkFile] = useState<File | null>(null)
+  const [bulkImporting, setBulkImporting] = useState(false)
+  const [bulkPreviewLoading, setBulkPreviewLoading] = useState(false)
+  const [enablingDeviceId, setEnablingDeviceId] = useState<number | null>(null)
   const [viewMode, setViewMode] = useState<'edit' | 'monitor'>('edit')
   const [monitor, setMonitor] = useState<CollectMonitorResult | null>(null)
   const [monitorLoading, setMonitorLoading] = useState(false)
@@ -211,13 +241,18 @@ const CollectConfigPage: React.FC = () => {
     setExpandedKeys(prev => Array.from(new Set([...prev, ...keys])))
   }, [channels])
 
-  const loadDeviceConfig = async (device: CollectDevice) => {
+  const loadDeviceConfig = async (device: CollectDevice, nextMode?: 'auto' | 'edit') => {
     setSelectedDevice(device)
     setLoading(true)
     try {
       const resp = await getCollectConfig(device.iotpId)
       if (resp.success) {
         setConfig(resp.result)
+        if (nextMode === 'edit') {
+          setViewMode('edit')
+        } else if (nextMode === 'auto') {
+          setViewMode(resp.result.configured ? 'monitor' : 'edit')
+        }
         setDirty(false)
         setShowErrors(false)
       } else {
@@ -228,6 +263,48 @@ const CollectConfigPage: React.FC = () => {
       setLoading(false)
     }
   }
+
+  const loadRealtime = useCallback(async () => {
+    if (!overviewSelected) return
+    setRealtimeLoading(true)
+    try {
+      const resp = await getCollectRealtime({
+        channelId: realtimeChannelId,
+        deviceId: realtimeDeviceId,
+        keyword: realtimeKeyword,
+      })
+      if (resp.success) {
+        setRealtimeValues(resp.result || [])
+      } else {
+        messageApi.error(resp.errorMsg)
+      }
+    } finally {
+      setRealtimeLoading(false)
+    }
+  }, [overviewSelected, realtimeChannelId, realtimeDeviceId, realtimeKeyword, messageApi])
+
+  useEffect(() => {
+    if (!overviewSelected) return
+    loadRealtime().catch(() => undefined)
+    const timer = window.setInterval(() => {
+      loadRealtime().catch(() => undefined)
+    }, 3000)
+    return () => window.clearInterval(timer)
+  }, [overviewSelected, loadRealtime, realtimeRefreshSeq])
+
+  const loadOverview = useCallback(async () => {
+    setOverviewLoading(true)
+    try {
+      const resp = await getCollectOverview()
+      if (resp.success) {
+        setOverview(resp.result)
+      } else {
+        messageApi.error(resp.errorMsg)
+      }
+    } finally {
+      setOverviewLoading(false)
+    }
+  }, [messageApi])
 
   /** 切换设备/通道前，有未保存修改时先确认。 */
   const confirmDiscard = (onOk: () => void) => {
@@ -255,6 +332,7 @@ const CollectConfigPage: React.FC = () => {
   const requestChannelSelect = (channel: CollectChannel) => {
     if (channel.id === selectedChannel?.id && !selectedDevice) return
     confirmDiscard(() => {
+      setOverviewSelected(false)
       setSelectedChannel(channel)
       setSelectedDevice(null)
       setConfig(null)
@@ -266,9 +344,10 @@ const CollectConfigPage: React.FC = () => {
   const requestDeviceSelect = (device: CollectDevice) => {
     if (device.iotpId === selectedDevice?.iotpId && device.channelId === selectedDevice?.channelId) return
     confirmDiscard(() => {
+      setOverviewSelected(false)
       const channel = channels.find(item => item.id === device.channelId) || null
       if (channel) setSelectedChannel(channel)
-      loadDeviceConfig(device)
+      loadDeviceConfig(device, 'auto')
     })
   }
 
@@ -276,17 +355,30 @@ const CollectConfigPage: React.FC = () => {
   const requestDeviceConfig = (device: CollectDevice) => {
     const sameDevice = device.iotpId === selectedDevice?.iotpId && device.channelId === selectedDevice?.channelId
     confirmDiscard(() => {
+      setOverviewSelected(false)
       const channel = channels.find(item => item.id === device.channelId) || null
       if (channel) setSelectedChannel(channel)
       setViewMode('edit')
       setMonitor(null)
       if (sameDevice && config) return
-      loadDeviceConfig(device)
+      loadDeviceConfig(device, 'edit')
     })
   }
 
   const handleTreeSelect = (keys: React.Key[]) => {
     const key = String(keys[0] || '')
+    if (key === 'root') {
+      confirmDiscard(() => {
+        setOverviewSelected(true)
+        setSelectedChannel(null)
+        setSelectedDevice(null)
+        setConfig(null)
+        setDirty(false)
+        setShowErrors(false)
+        loadOverview().catch(() => undefined)
+      })
+      return
+    }
     if (key.startsWith('device:')) {
       const [, channelIdText, iotpIdText] = key.split(':')
       const channelId = Number(channelIdText)
@@ -309,29 +401,6 @@ const CollectConfigPage: React.FC = () => {
     setDirty(true)
   }
 
-  const addPoint = () => {
-    setConfig(prev => (prev
-      ? {
-        ...prev,
-        points: [
-          ...prev.points,
-          {
-            tagId: '',
-            address: '',
-            dataType: 'int16',
-            accessMode: 'R',
-            multiplier: 1,
-            offset: 0,
-            storage: true,
-            enabled: true,
-            sort: prev.points.length,
-          },
-        ],
-      }
-      : prev))
-    setDirty(true)
-  }
-
   const removePoint = (index: number) => {
     setConfig(prev => (prev ? { ...prev, points: prev.points.filter((_, i) => i !== index) } : prev))
     setDirty(true)
@@ -343,7 +412,7 @@ const CollectConfigPage: React.FC = () => {
 
   const missingCount = config ? config.points.filter(pointMissing).length : 0
   // 数据少时也铺满一屏，避免卡片过矮显得紧凑。
-  const pageBodyMinHeight = 'max(460px, calc(100vh - 350px))'
+  const pageBodyMinHeight = 'max(460px, calc(100vh - 328px))'
 
   const handleGenerateTemplate = async () => {
     if (!config) return
@@ -370,17 +439,16 @@ const CollectConfigPage: React.FC = () => {
     messageApi.success(t('已补充 {{count}} 个点位', { count: additions.length }))
   }
 
-  const handleExport = async () => {
-    if (!config) return
+  const handleBulkExport = async () => {
     setExporting(true)
     try {
-      const resp = await exportCollectPoints(config.deviceId)
+      const resp = await exportAllCollectPoints()
       const blob = resp.data as Blob
       const disposition = String(resp.headers?.['content-disposition'] || '')
       const matched = /filename\*?=(?:UTF-8'')?([^;]+)/i.exec(disposition)
       const fileName = matched
         ? decodeURIComponent(matched[1].replace(/"/g, ''))
-        : `${config.deviceName || 'points'}.xlsx`
+        : 'CollectPointsAll.xlsx'
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
@@ -395,31 +463,113 @@ const CollectConfigPage: React.FC = () => {
     }
   }
 
-  const handleImport = async (file: File): Promise<boolean> => {
-    if (!config) return false
+  const handleBulkFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+    if (dirty) {
+      messageApi.warning(t('有未保存的修改，请先保存后再批量导入'))
+      return
+    }
     if (!/\.xlsx$/i.test(file.name)) {
       messageApi.error(t('仅支持 .xlsx 文件'))
-      return false
+      return
     }
+    setBulkPreviewLoading(true)
     try {
-      const resp = await importCollectPoints(config.deviceId, file)
+      const resp = await previewCollectImport(file)
       if (!resp.success) {
         messageApi.error(resp.errorMsg)
-        return false
+        return
       }
-      const points = (resp.result || []).map((point, index) => ({ ...point, sort: index }))
-      if (points.length === 0) {
-        messageApi.warning(t('Excel 中没有有效点位'))
-        return false
-      }
-      setConfig(prev => (prev ? { ...prev, points } : prev))
-      setDirty(true)
-      setShowErrors(false)
-      messageApi.success(t('已导入 {{count}} 个点位，保存后生效', { count: points.length }))
+      setBulkFile(file)
+      setBulkPreview(resp.result)
+      setBulkPreviewOpen(true)
     } catch (error) {
       messageApi.error(t('导入失败'))
+    } finally {
+      setBulkPreviewLoading(false)
     }
-    return false
+  }
+
+  const handleBulkApply = async () => {
+    if (!bulkFile) return
+    setBulkImporting(true)
+    try {
+      const resp = await importAllCollectPoints(bulkFile)
+      if (!resp.success) {
+        messageApi.error(resp.errorMsg)
+        return
+      }
+      const result = resp.result
+      const failedIds = new Set(result.failed.map(item => item.deviceId))
+      const previewDevices = bulkPreview?.devices || []
+      const importedOutside = selectedChannel
+        ? previewDevices.filter(device => device.channelId !== selectedChannel.id && !failedIds.has(device.deviceId)).length
+        : 0
+      setBulkPreviewOpen(false)
+      setBulkPreview(null)
+      setBulkFile(null)
+      if (result.failed.length > 0) {
+        Modal.warning({
+          title: t('部分设备导入失败'),
+          width: 520,
+          content: (
+            <div>
+              <p>{t('成功导入 {{devices}} 台设备、{{points}} 个点位', { devices: result.devices, points: result.points })}</p>
+              {importedOutside > 0 && (
+                <p>{t('其中 {{count}} 台设备不在当前通道', { count: importedOutside })}</p>
+              )}
+              <ul style={{ paddingLeft: 18, marginBottom: 0 }}>
+                {result.failed.map(item => (
+                  <li key={`${item.deviceId}-${item.deviceName}`}>
+                    {item.deviceName || `#${item.deviceId}`}：{item.message}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ),
+        })
+      } else if (importedOutside > 0) {
+        messageApi.success(t('成功导入 {{devices}} 台设备、{{points}} 个点位，其中 {{outside}} 台不在当前通道', {
+          devices: result.devices,
+          points: result.points,
+          outside: importedOutside,
+        }))
+      } else {
+        messageApi.success(t('成功导入 {{devices}} 台设备、{{points}} 个点位', {
+          devices: result.devices,
+          points: result.points,
+        }))
+      }
+      refreshChannels()
+      loadCollectDevices()
+      if (selectedDevice) loadDeviceConfig(selectedDevice)
+    } catch (error) {
+      messageApi.error(t('导入失败'))
+    } finally {
+      setBulkImporting(false)
+    }
+  }
+
+  const handleDeviceEnabledChange = async (device: CollectDevice, enabled: boolean) => {
+    setEnablingDeviceId(device.iotpId)
+    try {
+      const resp = await setCollectDeviceEnabled(device.iotpId, enabled)
+      if (!resp.success) {
+        messageApi.error(resp.errorMsg)
+        return
+      }
+      messageApi.success(enabled ? t('设备已启用') : t('设备已停用'))
+      await loadCollectDevices()
+      if (selectedDevice?.iotpId === device.iotpId) {
+        await loadDeviceConfig(device)
+      }
+    } catch (error) {
+      messageApi.error(t('操作失败'))
+    } finally {
+      setEnablingDeviceId(null)
+    }
   }
 
   const handleSave = async () => {
@@ -649,13 +799,9 @@ const CollectConfigPage: React.FC = () => {
     loadPickerDevices(1, pickerPageSize, '')
   }
 
-  const handleBindDevices = async () => {
+  const doBindDevices = async () => {
     if (!pickerChannel?.id) return
     const deviceIds = pickerSelected.map(key => String(key))
-    if (deviceIds.length === 0) {
-      messageApi.warning(t('请选择要添加的设备'))
-      return
-    }
     const resp = await bindChannelDevices(pickerChannel.id, deviceIds)
     if (!resp.success) {
       messageApi.error(resp.errorMsg)
@@ -678,6 +824,45 @@ const CollectConfigPage: React.FC = () => {
         }
       }
     }
+  }
+
+  const handleBindDevices = () => {
+    if (!pickerChannel?.id) return
+    const deviceIds = pickerSelected.map(key => String(key))
+    if (deviceIds.length === 0) {
+      messageApi.warning(t('请选择要添加的设备'))
+      return
+    }
+    const moving = pickerSelected
+      .map(key => collectDevices.find(device => device.deviceId === String(key)))
+      .filter((device): device is CollectDevice => !!device && device.channelId !== pickerChannel.id)
+    if (moving.length === 0) {
+      doBindDevices().catch(() => undefined)
+      return
+    }
+    Modal.confirm({
+      title: t('设备将移动到当前通道'),
+      width: 480,
+      okText: t('移动并添加'),
+      cancelText: t('取消'),
+      content: (
+        <div>
+          <p>{t('以下设备已在其他通道，添加后会移动到 {{channel}}：', { channel: pickerChannel.name })}</p>
+          <ul style={{ paddingLeft: 18 }}>
+            {moving.map(device => {
+              const oldChannel = channels.find(channel => channel.id === device.channelId)?.name || `#${device.channelId}`
+              return (
+                <li key={device.iotpId}>
+                  {device.deviceName}：{oldChannel} → {pickerChannel.name}
+                </li>
+              )
+            })}
+          </ul>
+          <p style={{ marginBottom: 0 }}>{t('点位配置会保留，采集引擎里的点位会重新创建。')}</p>
+        </div>
+      ),
+      onOk: doBindDevices,
+    })
   }
 
   const openChannelDeleteConfirm = (channel: CollectChannel) => {
@@ -735,7 +920,7 @@ const CollectConfigPage: React.FC = () => {
   const treeData = [
     {
       key: 'root',
-      selectable: false,
+      selectable: true,
       title: (
         <Dropdown menu={rootMenu} trigger={['contextMenu']}>
           <span style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%' }}>
@@ -760,9 +945,6 @@ const CollectConfigPage: React.FC = () => {
                 <ClusterOutlined />
                 <span>{channel.name}</span>
                 <Tag color="default" style={{ marginInlineEnd: 0 }}>{channelTypeLabel(channel.channelType)}</Tag>
-                {channelSummary(channel) && (
-                  <span style={{ color: '#8a949c', fontSize: 11 }}>{channelSummary(channel)}</span>
-                )}
                 <Dropdown menu={channelMenu(channel)} trigger={['click']} placement="bottomRight">
                   <Button
                     type="text"
@@ -811,11 +993,13 @@ const CollectConfigPage: React.FC = () => {
     },
   ]
 
-  const selectedKeys = selectedDevice
-    ? [`device:${selectedDevice.channelId}:${selectedDevice.iotpId}`]
-    : selectedChannel?.id
-      ? [`channel:${selectedChannel.id}`]
-      : []
+  const selectedKeys = overviewSelected
+    ? ['root']
+    : selectedDevice
+      ? [`device:${selectedDevice.channelId}:${selectedDevice.iotpId}`]
+      : selectedChannel?.id
+        ? [`channel:${selectedChannel.id}`]
+        : []
 
   const pointColumns: ColumnsType<CollectPoint> = [
     {
@@ -907,14 +1091,6 @@ const CollectConfigPage: React.FC = () => {
       ),
     },
     {
-      title: t('使能'),
-      dataIndex: 'enabled',
-      width: 50,
-      render: (value: boolean, _record, index) => (
-        <Switch size="small" checked={value !== false} onChange={next => patchPoint(index, { enabled: next })} />
-      ),
-    },
-    {
       title: t('操作'),
       width: 56,
       fixed: 'right',
@@ -937,15 +1113,40 @@ const CollectConfigPage: React.FC = () => {
   const monitorColumns: ColumnsType<CollectPoint> = [
     { title: t('标签ID'), dataIndex: 'tagId', width: 125, fixed: 'left', ellipsis: true },
     {
+      title: t('原始值'),
+      key: 'rawValue',
+      width: 90,
+      render: (_value, point) => {
+        const raw = monitorByTag.get(point.tagId)?.rawValue
+        if (raw === null || raw === undefined || raw === '') return '-'
+        const numeric = Number(raw)
+        return Number.isFinite(numeric) ? String(parseFloat(numeric.toFixed(4))) : String(raw)
+      },
+    },
+    {
       title: t('当前值'),
       key: 'value',
       width: 100,
       render: (_value, point) => {
         const item = monitorByTag.get(point.tagId)
         if (!item || item.value === null || item.value === undefined || item.value === '') return '-'
-        if (typeof item.value !== 'number') return String(item.value)
-        const engineering = item.value * (point.multiplier || 1) + (point.offset || 0)
-        return Number.isFinite(engineering) ? String(parseFloat(engineering.toFixed(4))) : String(item.value)
+        // 后端已按点位倍率/偏移换算为工程值，这里直接展示
+        const numeric = Number(item.value)
+        return Number.isFinite(numeric) ? String(parseFloat(numeric.toFixed(4))) : String(item.value)
+      },
+    },
+    {
+      title: t('最后设定值'),
+      key: 'lastWriteValue',
+      width: 110,
+      render: (_value, point) => {
+        const item = monitorByTag.get(point.tagId)
+        if (!item?.lastWriteValue) return '-'
+        return (
+          <span title={item.lastWriteTime ? dayjs(item.lastWriteTime).format('YYYY-MM-DD HH:mm:ss') : undefined}>
+            {item.lastWriteValue}
+          </span>
+        )
       },
     },
     {
@@ -958,6 +1159,8 @@ const CollectConfigPage: React.FC = () => {
             return <Tag color="green">{t('正常')}</Tag>
           case 'stale':
             return <Tag color="orange">{t('超时')}</Tag>
+          case 'error':
+            return <Tag color="red">{t('采集错误')}</Tag>
           case 'disabled':
             return <Tag>{t('未使能')}</Tag>
           default:
@@ -977,10 +1180,25 @@ const CollectConfigPage: React.FC = () => {
     { title: t('地址'), dataIndex: 'address', width: 140, ellipsis: true },
     { title: t('数据类型'), dataIndex: 'dataType', width: 70 },
     {
-      title: t('使能'),
-      dataIndex: 'enabled',
-      width: 50,
-      render: (value: boolean) => <Tag>{value ? t('是') : t('否')}</Tag>,
+      title: t('操作'),
+      key: 'write',
+      width: 60,
+      fixed: 'right',
+      render: (_value, point) => {
+        const writable = ['W', 'RW'].includes((point.accessMode || '').toUpperCase())
+        return (
+          <Button
+            type="link"
+            size="small"
+            style={{ padding: 0 }}
+            disabled={!writable}
+            title={writable ? undefined : t('点位只读，不能写入')}
+            onClick={() => openWritePoint(point)}
+          >
+            {t('写入')}
+          </Button>
+        )
+      },
     },
   ]
 
@@ -990,7 +1208,21 @@ const CollectConfigPage: React.FC = () => {
 
   const channelDeviceColumns: ColumnsType<CollectDevice> = [
     { title: t('设备名称'), dataIndex: 'deviceName', ellipsis: true },
+    { title: t('设备ID'), dataIndex: 'iotpId', width: 130, ellipsis: true },
     { title: t('产品'), dataIndex: 'productName', width: 140, ellipsis: true },
+    {
+      title: t('使能'),
+      dataIndex: 'enabled',
+      width: 80,
+      render: (value: boolean, device) => (
+        <Switch
+          size="small"
+          checked={value !== false}
+          loading={enablingDeviceId === device.iotpId}
+          onChange={next => handleDeviceEnabledChange(device, next)}
+        />
+      ),
+    },
     {
       title: t('操作'),
       width: 96,
@@ -1001,7 +1233,7 @@ const CollectConfigPage: React.FC = () => {
           style={{ padding: 0 }}
           onClick={() => requestDeviceConfig(device)}
         >
-          {t('配置点位')}
+          {t('配置')}
         </Button>
       ),
     },
@@ -1009,11 +1241,22 @@ const CollectConfigPage: React.FC = () => {
 
   const pickerColumns: ColumnsType<DevicesType> = [
     { title: t('设备名称'), dataIndex: 'name', ellipsis: true },
-    { title: t('产品'), dataIndex: 'product_name', width: 160, ellipsis: true },
+    { title: t('产品'), dataIndex: 'product_name', width: 140, ellipsis: true },
+    {
+      title: t('当前通道'),
+      key: 'boundChannel',
+      width: 110,
+      render: (_value, record) => {
+        const binding = collectDevices.find(device => device.deviceId === record.id)
+        if (!binding) return <span style={{ color: '#8a949c' }}>{t('未绑定')}</span>
+        const name = channels.find(channel => channel.id === binding.channelId)?.name || `#${binding.channelId}`
+        return <Tag color={binding.channelId === pickerChannel?.id ? 'default' : 'orange'}>{name}</Tag>
+      },
+    },
     {
       title: t('状态'),
       dataIndex: 'status',
-      width: 90,
+      width: 80,
       render: (value: string) => <Tag>{value || '-'}</Tag>,
     },
   ]
@@ -1045,6 +1288,133 @@ const CollectConfigPage: React.FC = () => {
     localStorage.setItem(TREE_WIDTH_STORAGE_KEY, String(DEFAULT_TREE_WIDTH))
   }
 
+  const projectMenu: MenuProps = {
+    items: [
+      { key: 'import', label: t('导入'), icon: <UploadOutlined /> },
+      { key: 'export', label: t('导出'), icon: <DownloadOutlined /> },
+    ],
+    onClick: ({ key }) => {
+      if (key === 'import') bulkImportInputRef.current?.click()
+      if (key === 'export') {
+        handleBulkExport().catch(() => undefined)
+      }
+    },
+  }
+
+  const openWritePoint = (point: CollectPoint) => {
+    if (!config) return
+    if (!config.enabled) {
+      messageApi.warning(t('设备已停用，无法写入'))
+      return
+    }
+    setWritePoint(point)
+    setWriteValue('')
+  }
+
+  const handleWritePoint = async () => {
+    if (!config || !writePoint) return
+    setWriting(true)
+    try {
+      const resp = await writeCollectTag(config.deviceId, writePoint.tagId, writeValue)
+      if (!resp.success) {
+        messageApi.error(resp.errorMsg)
+        return
+      }
+      messageApi.success(t('写入请求已提交，最终结果以驱动回调为准'))
+      setWritePoint(null)
+      loadMonitor(true).catch(() => undefined)
+    } finally {
+      setWriting(false)
+    }
+  }
+
+  const overviewStats = [
+    { label: t('通道数'), value: overview?.channelCount ?? 0 },
+    { label: t('设备数'), value: overview?.deviceCount ?? 0 },
+    { label: t('点位数'), value: overview?.pointCount ?? 0 },
+    { label: t('停用设备'), value: overview?.disabledDeviceCount ?? 0 },
+  ]
+
+  const overviewColumns: ColumnsType<CollectOverviewChannel> = [
+    { title: t('通道'), dataIndex: 'name', ellipsis: true },
+    { title: t('协议类型'), dataIndex: 'channelType', width: 90, render: (value: string) => channelTypeLabel(value) },
+    { title: t('协议'), dataIndex: 'protocol', width: 150, ellipsis: true },
+    { title: t('设备数'), dataIndex: 'deviceCount', width: 80 },
+    { title: t('点位数'), dataIndex: 'pointCount', width: 80 },
+    {
+      title: t('状态'),
+      dataIndex: 'enabled',
+      width: 80,
+      render: (value: boolean) => (
+        <Tag color={value ? 'green' : 'default'}>{value ? t('启用') : t('停用')}</Tag>
+      ),
+    },
+    {
+      title: t('操作'),
+      width: 90,
+      render: (_value, record) => (
+        <Button
+          type="link"
+          size="small"
+          style={{ padding: 0 }}
+          onClick={() => {
+            const channel = channels.find(item => item.id === record.id)
+            if (channel) requestChannelSelect(channel)
+          }}
+        >
+          {t('查看通道')}
+        </Button>
+      ),
+    },
+  ]
+
+  const realtimeStatusTag = (status: CollectMonitorStatus) => {
+    switch (status) {
+      case 'normal':
+        return <Tag color="green">{t('正常')}</Tag>
+      case 'stale':
+        return <Tag color="orange">{t('超时')}</Tag>
+      case 'error':
+        return <Tag color="red">{t('采集错误')}</Tag>
+      case 'disabled':
+        return <Tag>{t('未使能')}</Tag>
+      default:
+        return <Tag>{t('无数据')}</Tag>
+    }
+  }
+
+  const realtimeColumns: ColumnsType<CollectRealtimeValue> = [
+    { title: t('通道'), dataIndex: 'channelName', width: 70 },
+    { title: t('设备'), dataIndex: 'deviceName', width: 100, ellipsis: true },
+    { title: t('标签ID'), dataIndex: 'tagId', width: 160, ellipsis: true },
+    {
+      title: t('当前值'),
+      dataIndex: 'value',
+      width: 90,
+      render: (value: string) => {
+        if (!value) return '-'
+        const numeric = Number(value)
+        return Number.isFinite(numeric) ? String(parseFloat(numeric.toFixed(4))) : value
+      },
+    },
+    {
+      title: t('状态'),
+      dataIndex: 'status',
+      width: 70,
+      render: (status: CollectMonitorStatus) => realtimeStatusTag(status),
+    },
+    {
+      title: t('更新时间'),
+      dataIndex: 'time',
+      width: 130,
+      render: (time: number) => (time ? dayjs(time).format('MM-DD HH:mm:ss') : '-'),
+    },
+  ]
+
+  const bulkCrossChannelDevices = (bulkPreview?.devices || []).filter(
+    device => selectedChannel && device.channelId !== selectedChannel.id,
+  )
+
   return (
     <Card className="admin-page">
       {contextHolder}
@@ -1055,7 +1425,7 @@ const CollectConfigPage: React.FC = () => {
             title={(
               <Tooltip title={t('右键操作，双击展开或配置')}>
                 <span style={{ cursor: 'help' }}>
-                  {t('数据采集')}
+                  {t('配置工程')}
                   <InfoCircleOutlined style={{ marginLeft: 6, color: '#8a949c', fontSize: 11 }} />
                 </span>
               </Tooltip>
@@ -1066,11 +1436,28 @@ const CollectConfigPage: React.FC = () => {
                   type="text"
                   size="small"
                   icon={<ReloadOutlined />}
-                  title={t('刷新')}
+                  title={t('刷新通道和设备列表')}
                   onClick={() => {
                     refreshChannels()
                     loadCollectDevices()
                   }}
+                />
+                <Dropdown menu={projectMenu} trigger={['click']} placement="bottomRight">
+                  <Button
+                    type="text"
+                    size="small"
+                    icon={<MoreOutlined />}
+                    title={t('更多操作')}
+                    loading={bulkPreviewLoading || exporting}
+                  />
+                </Dropdown>
+                <input
+                  id="collect-bulk-import"
+                  ref={bulkImportInputRef}
+                  type="file"
+                  accept=".xlsx"
+                  style={{ display: 'none' }}
+                  onChange={handleBulkFileChange}
                 />
                 <Button size="small" type="primary" icon={<PlusOutlined />} onClick={() => openChannelModal()}>
                   {t('新增通道')}
@@ -1105,188 +1492,286 @@ const CollectConfigPage: React.FC = () => {
         />
 
         <Col flex="1 1 auto">
-          {!selectedChannel
+          {overviewSelected
             ? (
-              <Card size="small" bodyStyle={{ minHeight: pageBodyMinHeight }}>
-                <div style={{ margin: 'auto' }}>
-                  <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t('请选择左侧通道')} />
-                </div>
+              <Card
+                size="small"
+                loading={overviewLoading}
+                title={t('采集概览')}
+                extra={(
+                  <Button
+                    size="small"
+                    icon={<ReloadOutlined />}
+                    onClick={() => {
+                      loadOverview().catch(() => undefined)
+                      loadRealtime().catch(() => undefined)
+                    }}
+                  >
+                    {t('刷新')}
+                  </Button>
+                )}
+                bodyStyle={{ minHeight: pageBodyMinHeight }}
+              >
+                <Row gutter={12} style={{ marginBottom: 16 }}>
+                  {overviewStats.map(item => (
+                    <Col span={6} key={item.label}>
+                      <div style={{ background: '#f7f9fc', borderRadius: 6, padding: '12px 14px' }}>
+                        <div style={{ color: '#8a949c', fontSize: 12 }}>{item.label}</div>
+                        <div style={{ fontSize: 24, fontWeight: 600, marginTop: 4 }}>{item.value}</div>
+                      </div>
+                    </Col>
+                  ))}
+                </Row>
+                <div style={{ marginBottom: 8, fontWeight: 600 }}>{t('通道明细')}</div>
+                <Table<CollectOverviewChannel>
+                  className="collect-point-table"
+                  size="small"
+                  bordered
+                  rowKey="id"
+                  columns={overviewColumns}
+                  dataSource={overview?.channels || []}
+                  pagination={false}
+                  locale={{ emptyText: t('还没有通道') }}
+                />
+                <div style={{ margin: '24px 0 8px', fontWeight: 600 }}>{t('实时数据')}</div>
+                <Space wrap style={{ marginBottom: 12 }}>
+                  <Select
+                    allowClear
+                    placeholder={t('全部通道')}
+                    style={{ width: 150 }}
+                    value={realtimeChannelId}
+                    options={channels.map(channel => ({ value: channel.id, label: channel.name }))}
+                    onChange={value => {
+                      setRealtimeChannelId(value)
+                      setRealtimeDeviceId(undefined)
+                      setRealtimePage(1)
+                    }}
+                  />
+                  <Select
+                    allowClear
+                    placeholder={t('全部设备')}
+                    style={{ width: 170 }}
+                    value={realtimeDeviceId}
+                    options={collectDevices
+                      .filter(device => !realtimeChannelId || device.channelId === realtimeChannelId)
+                      .map(device => ({ value: device.iotpId, label: device.deviceName }))}
+                    onChange={value => {
+                      setRealtimeDeviceId(value)
+                      setRealtimePage(1)
+                    }}
+                  />
+                  <Input
+                    allowClear
+                    placeholder={t('设备或标签关键字')}
+                    style={{ width: 200 }}
+                    value={realtimeKeywordInput}
+                    onChange={event => {
+                      setRealtimeKeywordInput(event.target.value)
+                      setRealtimePage(1)
+                    }}
+                    onPressEnter={() => {
+                      setRealtimeKeyword(realtimeKeywordInput)
+                      setRealtimeRefreshSeq(value => value + 1)
+                      setRealtimePage(1)
+                    }}
+                  />
+                  <Button onClick={() => {
+                    setRealtimeKeyword(realtimeKeywordInput)
+                    setRealtimeRefreshSeq(value => value + 1)
+                    setRealtimePage(1)
+                  }}>
+                    {t('查询')}
+                  </Button>
+                  <span style={{ color: '#8a949c', fontSize: 11 }}>{t('每 3 秒自动刷新')}</span>
+                </Space>
+                <Table<CollectRealtimeValue>
+                  className="collect-point-table"
+                  size="small"
+                  bordered
+                  rowKey={record => `${record.iotpId}:${record.tagId}`}
+                  loading={realtimeLoading}
+                  columns={realtimeColumns}
+                  dataSource={realtimeValues}
+                  pagination={{
+                    current: realtimePage,
+                    pageSize: 10,
+                    showSizeChanger: false,
+                    showTotal: count => t('共 {{count}} 条', { count }),
+                    onChange: page => setRealtimePage(page),
+                  }}
+                  locale={{ emptyText: t('暂无实时数据') }}
+                  scroll={{ x: 640 }}
+                />
               </Card>
             )
-            : !selectedDevice
+            : !selectedChannel
               ? (
-                <Card
-                  size="small"
-                  title={(
-                    <Space>
-                      <ClusterOutlined />
-                      <span>{selectedChannel.name}</span>
-                      <Tag color="default">{channelTypeLabel(selectedChannel.channelType)}</Tag>
-                    </Space>
-                  )}
-                  extra={(
-                    <Space>
-                      <Button size="small" icon={<PlusOutlined />} onClick={() => openDevicePicker(selectedChannel)}>
-                        {t('添加设备')}
-                      </Button>
-                      <Button size="small" icon={<EditOutlined />} onClick={() => openChannelModal(selectedChannel)}>
-                        {t('编辑通道')}
-                      </Button>
-                    </Space>
-                  )}
-                  bodyStyle={{ minHeight: pageBodyMinHeight }}
-                >
-                  <Descriptions size="small" column={2} bordered style={{ marginBottom: 16 }}>
-                    <Descriptions.Item label={t('协议')}>{selectedChannel.protocol || '-'}</Descriptions.Item>
-                    <Descriptions.Item label={t('连接参数')}>{channelSummary(selectedChannel) || '-'}</Descriptions.Item>
-                    <Descriptions.Item label={t('轮询周期(ms)')}>{selectedChannel.pollIntervalMs || '-'}</Descriptions.Item>
-                    <Descriptions.Item label={t('超时(ms)')}>{selectedChannel.timeoutMs || '-'}</Descriptions.Item>
-                    <Descriptions.Item label={t('状态')}>
-                      <Tag color={selectedChannel.enabled ? 'green' : 'default'}>
-                        {selectedChannel.enabled ? t('启用') : t('停用')}
-                      </Tag>
-                    </Descriptions.Item>
-                  </Descriptions>
-                  <div style={{ marginBottom: 8, fontWeight: 600 }}>{t('通道下设备')}</div>
-                  <Table<CollectDevice>
-                    className="collect-point-table"
-                    size="small"
-                    bordered
-                    rowKey={device => `${device.channelId}:${device.iotpId}`}
-                    columns={channelDeviceColumns}
-                    dataSource={channelDevices}
-                    pagination={false}
-                    locale={{ emptyText: t('该通道下还没有设备') }}
-                  />
+                <Card size="small" bodyStyle={{ minHeight: pageBodyMinHeight }}>
+                  <div style={{ margin: 'auto' }}>
+                    <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t('请选择左侧通道')} />
+                  </div>
                 </Card>
               )
-              : !config
+              : !selectedDevice
                 ? (
-                  <Card size="small" loading={loading} bodyStyle={{ minHeight: pageBodyMinHeight }}>
-                    <div style={{ margin: 'auto' }}>
-                      <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t('正在加载设备配置')} />
-                    </div>
-                  </Card>
-                )
-                : (
                   <Card
                     size="small"
-                    loading={loading}
                     title={(
                       <Space>
-                        <span>{config.deviceName}</span>
-                        {config.productName && (
-                          <Tag color="default" icon={<AppstoreOutlined />}>{config.productName}</Tag>
-                        )}
-                        <Tag color="default" icon={<ClusterOutlined />}>
-                          {config.channelName || selectedChannel.name}
-                        </Tag>
-                        <Segmented
-                          size="small"
-                          value={viewMode}
-                          options={[
-                            { label: t('编辑'), value: 'edit' },
-                            { label: t('监控'), value: 'monitor' },
-                          ]}
-                          onChange={handleViewModeChange}
-                        />
-                        {dirty && <Tag color="orange">{t('未保存')}</Tag>}
-                      </Space>
-                    )}
-                    extra={(
-                      <Space>
-                        <Button
-                          size="small"
-                          icon={<ReloadOutlined />}
-                          loading={viewMode === 'monitor' ? monitorLoading : false}
-                          onClick={() => {
-                            if (viewMode === 'monitor') {
-                              loadMonitor(true).catch(() => undefined)
-                            } else if (selectedDevice) {
-                              loadDeviceConfig(selectedDevice)
-                            }
-                          }}
-                        >
-                          {t('刷新')}
-                        </Button>
-                        {viewMode === 'edit' && (
-                          <Button size="small" type="primary" icon={<SaveOutlined />} loading={saving} onClick={handleSave}>
-                            {t('保存')}
-                          </Button>
-                        )}
+                        <ClusterOutlined />
+                        <span>{selectedChannel.name}</span>
                       </Space>
                     )}
                     bodyStyle={{ minHeight: pageBodyMinHeight }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                      <div>
-                        <span style={{ fontWeight: 600, marginRight: 8 }}>
-                          {viewMode === 'monitor' ? t('实时值') : t('点表')}
-                        </span>
-                        <span style={{ color: '#8a949c', fontSize: 11 }}>
-                          {t('共 {{count}} 个点位', { count: config.points.length })}
-                          {viewMode === 'edit' && missingCount > 0 && (
-                            <span style={{ color: showErrors ? '#c0392b' : '#b26a00' }}>
-                              {' · '}{t('{{count}} 个待填写', { count: missingCount })}
-                            </span>
-                          )}
-                          {viewMode === 'monitor' && monitorUpdatedAt > 0 && (
-                            <span>{' · '}{t('最后刷新 {{time}}', { time: dayjs(monitorUpdatedAt).format('HH:mm:ss') })}</span>
-                          )}
-                        </span>
-                      </div>
-                      {viewMode === 'edit'
-                        ? (
-                          <Space size={4}>
-                            <Button size="small" onClick={handleGenerateTemplate}>
-                              {t('从物模型生成')}
-                            </Button>
-                            <Button size="small" icon={<PlusOutlined />} onClick={addPoint}>
-                              {t('新增点位')}
-                            </Button>
-                            <Upload accept=".xlsx" showUploadList={false} beforeUpload={handleImport}>
-                              <Button size="small" icon={<UploadOutlined />}>{t('导入')}</Button>
-                            </Upload>
-                            <Button
-                              size="small"
-                              icon={<DownloadOutlined />}
-                              loading={exporting}
-                              onClick={handleExport}
-                            >
-                              {t('导出')}
-                            </Button>
-                          </Space>
-                        )
-                        : (
-                          <span style={{ color: '#8a949c', fontSize: 11 }}>{t('每 3 秒自动刷新')}</span>
-                        )}
-                    </div>
-                    {viewMode === 'monitor' && monitor?.message && (
-                      <Alert
-                        style={{ marginBottom: 8 }}
-                        type={monitor.available ? 'info' : 'warning'}
-                        showIcon
-                        message={t(monitor.message)}
-                      />
-                    )}
-                    <Table<CollectPoint>
+                    <div style={{ marginBottom: 8, fontWeight: 600 }}>{t('通道详情')}</div>
+                    <Descriptions size="small" column={2} bordered style={{ marginBottom: 16 }}>
+                      <Descriptions.Item label={t('协议类型')}>
+                        {channelTypeLabel(selectedChannel.channelType)}
+                      </Descriptions.Item>
+                      <Descriptions.Item label={t('协议')}>{selectedChannel.protocol || '-'}</Descriptions.Item>
+                      <Descriptions.Item label={t('连接参数')}>{channelSummary(selectedChannel) || '-'}</Descriptions.Item>
+                      <Descriptions.Item label={t('轮询周期(ms)')}>{selectedChannel.pollIntervalMs || '-'}</Descriptions.Item>
+                      <Descriptions.Item label={t('超时(ms)')}>{selectedChannel.timeoutMs || '-'}</Descriptions.Item>
+                      <Descriptions.Item label={t('状态')}>
+                        <Tag color={selectedChannel.enabled ? 'green' : 'default'}>
+                          {selectedChannel.enabled ? t('启用') : t('停用')}
+                        </Tag>
+                      </Descriptions.Item>
+                    </Descriptions>
+                    <div style={{ marginBottom: 8, fontWeight: 600 }}>{t('通道设备')}</div>
+                    <Table<CollectDevice>
                       className="collect-point-table"
-                      rowKey={(_record, index) => String(index ?? 0)}
                       size="small"
                       bordered
-                      columns={viewMode === 'monitor' ? monitorColumns : pointColumns}
-                      dataSource={config.points}
+                      rowKey={device => `${device.channelId}:${device.iotpId}`}
+                      columns={channelDeviceColumns}
+                      dataSource={channelDevices}
                       pagination={false}
-                      scroll={{ x: viewMode === 'monitor' ? 680 : 760 }}
-                      rowClassName={(_record, index) => {
-                        if (viewMode !== 'edit' || !showErrors) return ''
-                        const point = config.points[index ?? 0]
-                        return point && pointMissing(point) ? 'collect-row-error' : ''
-                      }}
-                      locale={{ emptyText: t('还没有点位') }}
+                      locale={{ emptyText: t('该通道下还没有设备') }}
                     />
                   </Card>
-                )}
+                )
+                : !config
+                  ? (
+                    <Card size="small" loading={loading} bodyStyle={{ minHeight: pageBodyMinHeight }}>
+                      <div style={{ margin: 'auto' }}>
+                        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t('正在加载设备配置')} />
+                      </div>
+                    </Card>
+                  )
+                  : (
+                    <Card
+                      size="small"
+                      loading={loading}
+                      title={(
+                        <Space>
+                          <span>{config.deviceName}</span>
+                          {config.productName && (
+                            <Tag color="default" icon={<AppstoreOutlined />}>{config.productName}</Tag>
+                          )}
+                          <Tag color="default" icon={<ClusterOutlined />}>
+                            {config.channelName || selectedChannel.name}
+                          </Tag>
+                          <Segmented
+                            size="small"
+                            value={viewMode}
+                            options={[
+                              { label: t('编辑'), value: 'edit' },
+                              { label: t('监控'), value: 'monitor' },
+                            ]}
+                            onChange={handleViewModeChange}
+                          />
+                          {dirty && <Tag color="orange">{t('未保存')}</Tag>}
+                        </Space>
+                      )}
+                      extra={(
+                        <Space>
+                          <Button
+                            size="small"
+                            icon={<ReloadOutlined />}
+                            title={viewMode === 'monitor' ? t('立即刷新实时值') : t('刷新当前设备点表')}
+                            loading={viewMode === 'monitor' ? monitorLoading : false}
+                            onClick={() => {
+                              if (viewMode === 'monitor') {
+                                loadMonitor(true).catch(() => undefined)
+                              } else if (selectedDevice) {
+                                if (dirty) {
+                                  confirmDiscard(() => {
+                                    loadDeviceConfig(selectedDevice)
+                                  })
+                                } else {
+                                  loadDeviceConfig(selectedDevice)
+                                }
+                              }
+                            }}
+                          >
+                            {t('刷新')}
+                          </Button>
+                          {viewMode === 'edit' && (
+                            <Button size="small" type="primary" icon={<SaveOutlined />} loading={saving} onClick={handleSave}>
+                              {t('保存')}
+                            </Button>
+                          )}
+                        </Space>
+                      )}
+                      bodyStyle={{ minHeight: pageBodyMinHeight }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                        <div>
+                          <span style={{ fontWeight: 600, marginRight: 8 }}>
+                            {viewMode === 'monitor' ? t('实时值') : t('点表')}
+                          </span>
+                          <span style={{ color: '#8a949c', fontSize: 11 }}>
+                            {t('共 {{count}} 个点位', { count: config.points.length })}
+                            {viewMode === 'edit' && missingCount > 0 && (
+                              <span style={{ color: showErrors ? '#c0392b' : '#b26a00' }}>
+                                {' · '}{t('{{count}} 个待填写', { count: missingCount })}
+                              </span>
+                            )}
+                            {viewMode === 'monitor' && monitorUpdatedAt > 0 && (
+                              <span>{' · '}{t('最后刷新 {{time}}', { time: dayjs(monitorUpdatedAt).format('HH:mm:ss') })}</span>
+                            )}
+                          </span>
+                        </div>
+                        {viewMode === 'edit'
+                          ? (
+                            <Space size={4}>
+                              <Button size="small" onClick={handleGenerateTemplate}>
+                                {t('从物模型生成')}
+                              </Button>
+                            </Space>
+                          )
+                          : (
+                            <span style={{ color: '#8a949c', fontSize: 11 }}>{t('每 3 秒自动刷新')}</span>
+                          )}
+                      </div>
+                      {viewMode === 'monitor' && monitor?.message && (
+                        <Alert
+                          style={{ marginBottom: 8 }}
+                          type={monitor.available ? 'info' : 'warning'}
+                          showIcon
+                          message={t(monitor.message)}
+                        />
+                      )}
+                      <Table<CollectPoint>
+                        className="collect-point-table"
+                        rowKey={(_record, index) => String(index ?? 0)}
+                        size="small"
+                        bordered
+                        columns={viewMode === 'monitor' ? monitorColumns : pointColumns}
+                        dataSource={config.points}
+                        pagination={false}
+                        scroll={{ x: viewMode === 'monitor' ? 900 : 700 }}
+                        rowClassName={(_record, index) => {
+                          if (viewMode !== 'edit' || !showErrors) return ''
+                          const point = config.points[index ?? 0]
+                          return point && pointMissing(point) ? 'collect-row-error' : ''
+                        }}
+                        locale={{ emptyText: t('还没有点位') }}
+                      />
+                    </Card>
+                  )}
         </Col>
       </Row>
 
@@ -1417,7 +1902,7 @@ const CollectConfigPage: React.FC = () => {
         width={720}
       >
         <div style={{ marginBottom: 8, color: '#8a949c', fontSize: 12 }}>
-          {t('从系统设备中选择并绑定到当前通道；已在其他通道的设备添加后会移动过来')}
+          {t('已在其他通道的设备会移动到当前通道，点位配置保留；当前通道下的设备不可重复添加')}
         </div>
         <Space.Compact style={{ width: '100%', marginBottom: 8 }}>
           <Input
@@ -1454,6 +1939,105 @@ const CollectConfigPage: React.FC = () => {
             onChange: (nextPage, nextPageSize) => loadPickerDevices(nextPage, nextPageSize, pickerName),
           }}
         />
+      </Modal>
+
+      <Modal
+        title={t('写入点位')}
+        open={!!writePoint}
+        centered
+        width={420}
+        okText={t('写入')}
+        cancelText={t('取消')}
+        confirmLoading={writing}
+        onOk={handleWritePoint}
+        onCancel={() => {
+          if (!writing) setWritePoint(null)
+        }}
+      >
+        {writePoint && (
+          <Input
+            size="large"
+            autoFocus
+            value={writeValue}
+            onChange={event => setWriteValue(event.target.value)}
+            placeholder={t('输入写入值')}
+          />
+        )}
+      </Modal>
+
+      <Modal
+        title={t('批量导入点位')}
+        open={bulkPreviewOpen}
+        width={640}
+        okText={t('覆盖导入')}
+        cancelText={t('取消')}
+        confirmLoading={bulkImporting}
+        okButtonProps={{
+          disabled: !bulkPreview || bulkPreview.devices.length === 0 || bulkPreview.errors.length > 0,
+        }}
+        onOk={handleBulkApply}
+        onCancel={() => {
+          if (bulkImporting) return
+          setBulkPreviewOpen(false)
+          setBulkPreview(null)
+          setBulkFile(null)
+        }}
+      >
+        {bulkPreview && (
+          <>
+            {bulkPreview.errors.length > 0 && (
+              <Alert
+                type="error"
+                showIcon
+                style={{ marginBottom: 12 }}
+                message={t('有 {{count}} 条校验错误，修正后重新导入', { count: bulkPreview.errors.length })}
+                description={(
+                  <div style={{ maxHeight: 140, overflow: 'auto' }}>
+                    {bulkPreview.errors.map(item => (
+                      <div key={`${item.row}-${item.message}`}>
+                        {t('第 {{row}} 行：{{message}}', { row: item.row, message: item.message })}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              />
+            )}
+            {bulkCrossChannelDevices.length > 0 && (
+              <Alert
+                type="warning"
+                showIcon
+                style={{ marginBottom: 12 }}
+                message={t('文件包含其他通道设备，确认后也会一起导入')}
+                description={bulkCrossChannelDevices.map(device => (
+                  `${device.channelName || `#${device.channelId}`} / ${device.deviceName}`
+                )).join('、')}
+              />
+            )}
+            <div style={{ marginBottom: 8 }}>
+              {t('共 {{devices}} 台设备、{{points}} 个点位', {
+                devices: bulkPreview.devices.length,
+                points: bulkPreview.devices.reduce((sum, item) => sum + item.points, 0),
+              })}
+            </div>
+            <Table<CollectImportDevicePreview>
+              size="small"
+              bordered
+              rowKey="deviceId"
+              pagination={false}
+              dataSource={bulkPreview.devices}
+              locale={{ emptyText: t('文件中没有有效点位') }}
+              columns={[
+                { title: t('通道'), dataIndex: 'channelName', width: 100 },
+                { title: t('设备名称'), dataIndex: 'deviceName' },
+                { title: t('设备ID'), dataIndex: 'deviceId', width: 130 },
+                { title: t('点位数量'), dataIndex: 'points', width: 90 },
+              ]}
+            />
+            <div style={{ color: '#8a949c', fontSize: 11, marginTop: 8 }}>
+              {t('导入会覆盖文件中设备的点位，未出现的设备保持不变')}
+            </div>
+          </>
+        )}
       </Modal>
     </Card>
   )

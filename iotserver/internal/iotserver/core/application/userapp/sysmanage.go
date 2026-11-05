@@ -1145,9 +1145,11 @@ func isExternalMenuPath(path string) bool {
 
 // normalizeMenuTarget 约束导航目标的取值：
 //   - 非链接类型固定 IsFrame=1（不是外链）；
-//   - 链接类型必须是内链（/ 开头）或外链（http(s):// 开头），IsFrame 由 Path 推导，
-//     不接受客户端随意指定，避免出现「标记外链但地址是内部路由」这类非法状态。
-func normalizeMenuTarget(menuType, path string, _ int) (string, int, error) {
+//   - 内链（IsFrame=1，当前页 iframe 嵌入）可以是站内路径（/ 开头）或完整的 http(s) 地址；
+//   - 外链（IsFrame=0，新窗口跳转）必须是 http(s) 地址。
+//
+// 链接类型由用户选择，不再从地址形态反推：外部 URL 同样可以作为「内链」嵌入。
+func normalizeMenuTarget(menuType, path string, isFrame int) (string, int, error) {
 	path = strings.TrimSpace(path)
 	if menuType != models.MenuTypeLink {
 		return path, 1, nil
@@ -1155,13 +1157,16 @@ func normalizeMenuTarget(menuType, path string, _ int) (string, int, error) {
 	if path == "" {
 		return "", 0, fmt.Errorf("链接菜单必须填写链接地址")
 	}
-	if isExternalMenuPath(path) {
-		return path, 0, nil
+	if isFrame == 0 {
+		if isExternalMenuPath(path) {
+			return path, 0, nil
+		}
+		return "", 0, fmt.Errorf("外链必须以 http:// 或 https:// 开头")
 	}
-	if strings.HasPrefix(path, "/") {
+	if isExternalMenuPath(path) || strings.HasPrefix(path, "/") {
 		return path, 1, nil
 	}
-	return "", 0, fmt.Errorf("链接地址必须以 / 开头（内链）或以 http://、https:// 开头（外链）")
+	return "", 0, fmt.Errorf("内链地址必须以 / 开头，或填写完整的 http://、https:// 地址")
 }
 
 func dedupStrings(items []string) []string {

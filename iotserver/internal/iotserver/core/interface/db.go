@@ -81,13 +81,17 @@ type DBClient interface {
 	SaveCollectChannel(channel models.CollectChannel) (models.CollectChannel, error)
 	DeleteCollectChannel(id string) error
 	UpdateCollectPointRemoteIds(deviceId string, remoteIds map[string]int64) error
+	CollectDeviceConfigs() ([]models.CollectDeviceConfig, error)
 	CollectDeviceConfigsByChannel(channelId string) ([]models.CollectDeviceConfig, error)
 	DeleteCollectDeviceConfig(deviceId string) error
 	CollectDeviceConfigByDevice(deviceId string) (models.CollectDeviceConfig, bool, error)
 	SaveCollectDeviceConfig(cfg models.CollectDeviceConfig) error
 	CollectPointConfigsByDevice(deviceId string) ([]models.CollectPointConfig, error)
+	CollectPointConfigsAll() ([]models.CollectPointConfig, error)
+	CollectPointCounts() (map[string]int64, error)
 	ReplaceCollectPointConfigs(deviceId string, points []models.CollectPointConfig) error
 	ClearCollectPointRemoteIds(deviceId string) error
+	UpdateCollectPointLastWrite(deviceId, tagId, value string, ts int64) error
 
 	// ===== 网关接入：设备定位 =====
 	DeviceByGatewayAndKey(gatewayId, deviceKey string) (models.Device, error)

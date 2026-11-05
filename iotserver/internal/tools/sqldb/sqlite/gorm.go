@@ -11,7 +11,7 @@ import (
 	"iotserver/internal/pkg/logger"
 	tenantplugin "iotserver/internal/tools/sqldb/tenant"
 
-	"gorm.io/driver/sqlite"
+	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
 

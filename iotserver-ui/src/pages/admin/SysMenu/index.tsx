@@ -627,14 +627,16 @@ const SysMenuPage: React.FC = () => {
                       validator: (_rule, value) => {
                         const target = String(value || '').trim()
                         if (!target) return Promise.resolve()
+                        const isExternal = /^https?:\/\//i.test(target)
                         if (watchedIsFrame === 0) {
-                          return /^https?:\/\//i.test(target)
+                          return isExternal
                             ? Promise.resolve()
                             : Promise.reject(new Error(t('外链必须以 http:// 或 https:// 开头')))
                         }
-                        return target.startsWith('/')
+                        // 内链既可以是站内路径，也可以是外部 URL（用 iframe 嵌入）
+                        return isExternal || target.startsWith('/')
                           ? Promise.resolve()
-                          : Promise.reject(new Error(t('内链必须以 / 开头')))
+                          : Promise.reject(new Error(t('内链地址必须以 / 开头，或填写完整的 http://、https:// 地址')))
                       },
                     },
                   ]
@@ -642,7 +644,7 @@ const SysMenuPage: React.FC = () => {
               >
                 <Input
                   placeholder={watchedMenuType === 'L'
-                    ? (watchedIsFrame === 0 ? t('例如 https://example.com') : t('例如 /home/dashboard'))
+                    ? (watchedIsFrame === 0 ? t('例如 https://example.com') : t('例如 /home/dashboard 或 https://example.com'))
                     : t('例如 /admin/sysUser')}
                 />
               </Form.Item>

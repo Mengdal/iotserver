@@ -245,8 +245,8 @@ export function buildMenusFromBackend (list?: BackendMenuItem[]): Array<SubMenuT
       }
       if (!item.path) return
       const label = backendMenuLabel(item)
-      // 链接菜单语义：内链在当前页嵌入，外链在新窗口跳转。
-      const embed = item.menuType === 'L' && !isExternalLink(item.path)
+      // 链接菜单语义：内链在当前页嵌入（站内路径或外部 URL 均可），外链在新窗口跳转。
+      const embed = item.menuType === 'L' && Number(item.isFrame) === 1
       result.push({
         label,
         // 嵌入型链接不能直接 navigate 到目标（外链会把应用带走、内链会丢掉 iframe），

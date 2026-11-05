@@ -13,9 +13,15 @@ type CollectConfigItf interface {
 	CollectConfigSave(ctx context.Context, req dtos.CollectConfigSaveRequest) error
 	CollectConfigTemplate(ctx context.Context, deviceId string) ([]dtos.CollectPointDTO, error)
 	CollectConfigLatest(ctx context.Context, deviceId string) (dtos.CollectMonitorResponse, error)
+	CollectConfigSetEnabled(ctx context.Context, req dtos.CollectConfigEnabledRequest) error
 	CollectConfigExport(ctx context.Context, deviceId string) (*dtos.ExportFile, error)
-	CollectConfigImport(ctx context.Context, deviceId string, file *dtos.ImportFile) ([]dtos.CollectPointDTO, error)
+	CollectConfigExportAll(ctx context.Context, channelId string) (*dtos.ExportFile, error)
+	CollectConfigImportAllPreview(ctx context.Context, file *dtos.ImportFile) (dtos.CollectImportPreview, error)
+	CollectConfigImportAll(ctx context.Context, file *dtos.ImportFile) (dtos.CollectImportResult, error)
 
+	CollectOverview(ctx context.Context) (dtos.CollectOverviewDTO, error)
+	CollectRealtime(ctx context.Context, channelId, deviceId, keyword string) ([]dtos.CollectRealtimeValueDTO, error)
+	CollectWrite(ctx context.Context, req dtos.CollectWriteRequest) error
 	CollectChannels(ctx context.Context) ([]dtos.CollectChannelDTO, error)
 	CollectChannelSave(ctx context.Context, req dtos.CollectChannelSaveRequest) (dtos.CollectChannelDTO, error)
 	CollectChannelDelete(ctx context.Context, id string) error

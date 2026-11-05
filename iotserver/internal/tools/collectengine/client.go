@@ -47,6 +47,55 @@ type Tag struct {
 	Storage     bool   `json:"storage"`
 }
 
+// TagRealtimeRecord 点位实时值（采集引擎内存中的最新回调记录）。
+type TagRealtimeRecord struct {
+	// Id 运行点位 ID：iotpId.tagCode
+	Id        string `json:"id"`
+	Status    any    `json:"status"`
+	Value     string `json:"value"`
+	Timestamp int64  `json:"timestamp"`
+}
+
+// TagCode 去掉 iotpId 前缀后的标签编码。
+func (r TagRealtimeRecord) TagCode() string {
+	if index := strings.Index(r.Id, "."); index >= 0 {
+		return r.Id[index+1:]
+	}
+	return r.Id
+}
+
+// StatusText 统一状态：192/Good、0/Error，其他为 Uncertain。
+func (r TagRealtimeRecord) StatusText() string {
+	switch value := r.Status.(type) {
+	case float64:
+		switch int(value) {
+		case 192:
+			return "Good"
+		case 0:
+			return "Error"
+		}
+	case string:
+		switch value {
+		case "192", "Good":
+			return "Good"
+		case "0", "Error":
+			return "Error"
+		}
+		if value != "" {
+			return value
+		}
+	}
+	return "Uncertain"
+}
+
+// TagRealtimePage 点位实时数据分页。
+type TagRealtimePage struct {
+	Items    []TagRealtimeRecord `json:"items"`
+	Total    int                 `json:"total"`
+	Page     int                 `json:"page"`
+	PageSize int                 `json:"pageSize"`
+}
+
 // APIError 采集引擎返回的业务错误。
 type APIError struct {
 	Code    int
@@ -140,6 +189,37 @@ func (c *Client) DeleteDevice(id int64) error {
 }
 
 /******************************* 点位 *******************************/
+
+// RealtimeTags 查询某台引擎设备下所有点位的实时值。
+func (c *Client) RealtimeTags(deviceID int64) (TagRealtimePage, error) {
+	return c.RealtimeTagsPage(deviceID, 1, 1000)
+}
+
+// WriteTag 向点位写入值；deviceID 是引擎设备自增 ID。
+func (c *Client) WriteTag(deviceID int64, tagCode, value string) error {
+	return c.postForm("/api/v1/tags/write", map[string]string{
+		"deviceId": strconv.FormatInt(deviceID, 10),
+		"tagCode":  tagCode,
+		"value":    value,
+	}, nil)
+}
+
+// RealtimeTagsPage 分页查询点位实时值；deviceID<=0 时查询全部。
+func (c *Client) RealtimeTagsPage(deviceID int64, page, pageSize int) (TagRealtimePage, error) {
+	if page <= 0 {
+		page = 1
+	}
+	if pageSize <= 0 || pageSize > 1000 {
+		pageSize = 1000
+	}
+	path := fmt.Sprintf("/api/v1/tags/realtime?page=%d&pageSize=%d", page, pageSize)
+	if deviceID > 0 {
+		path += fmt.Sprintf("&deviceId=%d", deviceID)
+	}
+	var result TagRealtimePage
+	err := c.get(path, &result)
+	return result, err
+}
 
 func (c *Client) ListTags() ([]Tag, error) {
 	var result []Tag

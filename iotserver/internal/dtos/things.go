@@ -36,21 +36,6 @@ type ThingsConnectionStatus struct {
 	ProjectCount int64  `json:"projectCount"`
 }
 
-// TenantThingsBindRequest 将已有租户绑定到已有 things 项目，或创建新项目后绑定。
-type TenantThingsBindRequest struct {
-	// ProjectId 已有项目 ID；为 0 时使用 Name 创建新项目
-	ProjectId int64 `json:"projectId"`
-	// Name 项目名称（ProjectId=0 时必填）
-	Name string `json:"name"`
-	// Description 项目备注
-	Description string `json:"description"`
-}
-
-// TenantThingsRenameRequest 重命名租户绑定的 things 项目。
-type TenantThingsRenameRequest struct {
-	Name string `json:"name" binding:"required"`
-}
-
 // ThingsReconcileResult 对账结果。
 type ThingsReconcileResult struct {
 	Tenants  int `json:"tenants"`

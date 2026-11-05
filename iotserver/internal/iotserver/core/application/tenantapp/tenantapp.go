@@ -80,12 +80,9 @@ func (app *tenantApp) TenantAdd(ctx context.Context, req dtos.TenantAddRequest) 
 	}
 	var project dtos.ThingsProject
 	if enabled {
-		name := strings.TrimSpace(req.ThingsProjectName)
-		if name == "" {
-			return res, errort.NewCommonErr(errort.DefaultReqParamsError,
-				errort.NewMessageErr("things 项目名称不能为空", nil))
-		}
-		project, err = app.things.CreateProject(ctx, name, req.Remark)
+		// 租户管理不再让用户维护 things 项目名称：按「租户名-租户编码」自动生成，
+		// 保证网关管理仍能拿到绑定的项目，同时租户界面不出现 things 字段。
+		project, err = app.things.CreateProject(ctx, tenantThingsProjectName(req.Name, code), req.Remark)
 		if err != nil {
 			return res, err
 		}
@@ -256,67 +253,38 @@ func (app *tenantApp) TenantDelete(ctx context.Context, id string) error {
 	return nil
 }
 
-// TenantBindThingsProject 绑定已有项目，或为存量租户创建新项目后绑定。
-func (app *tenantApp) TenantBindThingsProject(ctx context.Context, id string, req dtos.TenantThingsBindRequest) error {
-	if _, err := app.dbClient.WithCtx(ctx).TenantById(id); err != nil {
-		return err
+// tenantThingsProjectName 生成 things 项目名：租户名 + 租户编码，长度限制 4~30。
+// 编码后缀保证同一服务账号下不同租户的项目名不会重名。
+func tenantThingsProjectName(name, code string) string {
+	base := strings.TrimSpace(name)
+	code = strings.TrimSpace(code)
+	if base == "" {
+		base = code
 	}
-	enabled, err := app.thingsEnabled(ctx)
-	if err != nil {
-		return err
+	if base == "" {
+		base = "tenant"
 	}
-	if !enabled {
-		return errort.NewCommonErr(errort.AppThingsDisabled, errort.NewMessageErr("things 集成未启用", nil))
-	}
-
-	var project dtos.ThingsProject
-	if req.ProjectId > 0 {
-		list, err := app.things.ListProjects(ctx, "")
-		if err != nil {
-			return err
+	suffix := "-" + code
+	maxBase := 30 - len([]rune(suffix))
+	if maxBase < 1 {
+		r := []rune(code)
+		if len(r) > 30 {
+			r = r[:30]
 		}
-		found := false
-		for _, p := range list {
-			if p.Id == req.ProjectId {
-				project = p
-				found = true
-				break
-			}
-		}
-		if !found {
-			return errort.NewCommonErr(errort.AppThingsProjectNotFound,
-				errort.NewMessageErr("things 项目不存在", nil))
-		}
-	} else {
-		project, err = app.things.CreateProject(ctx, req.Name, req.Description)
-		if err != nil {
-			return err
-		}
+		return string(r)
 	}
-
-	if old, found, err := app.getTenantBinding(ctx, id); err != nil {
-		return err
-	} else if found && old.ThingsProjectId != project.Id {
-		return errort.NewCommonErr(errort.DefaultReqParamsError,
-			errort.NewMessageErr("当前租户已绑定其他 things 项目，请先解绑", nil))
+	r := []rune(base)
+	if len(r) > maxBase {
+		r = r[:maxBase]
 	}
-	return app.things.BindTenantProject(ctx, id, project.Id, project.Name)
-}
-
-// TenantRenameThingsProject 修改绑定项目名称。
-func (app *tenantApp) TenantRenameThingsProject(ctx context.Context, id string, name string) error {
-	b, found, err := app.getTenantBinding(ctx, id)
-	if err != nil {
-		return err
+	out := string(r) + suffix
+	if len([]rune(out)) < 4 {
+		out = "tenant" + suffix
 	}
-	if !found {
-		return errort.NewCommonErr(errort.AppThingsBindingMissing,
-			errort.NewMessageErr("当前租户尚未绑定 things 项目", nil))
+	if len([]rune(out)) > 30 {
+		out = string([]rune(out)[:30])
 	}
-	if err = app.things.RenameProject(ctx, b.ThingsProjectId, name); err != nil {
-		return err
-	}
-	return app.things.BindTenantProject(ctx, id, b.ThingsProjectId, strings.TrimSpace(name))
+	return out
 }
 
 func (app *tenantApp) thingsEnabled(ctx context.Context) (bool, error) {

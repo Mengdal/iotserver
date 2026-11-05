@@ -20,22 +20,25 @@ func TestNormalizeMenuTarget(t *testing.T) {
 		name     string
 		menuType string
 		path     string
+		isFrame  int // 1 内链（嵌入），0 外链（跳转）
 		wantPath string
-		wantLink int // 0 外链，1 内链
+		wantLink int
 		wantErr  bool
 	}{
-		{"菜单保留内链并标记非外链", models.MenuTypeMenu, "/home/dashboard", "/home/dashboard", 1, false},
-		{"普通菜单忽略外部 isFrame", models.MenuTypeMenu, "https://example.com", "https://example.com", 1, false},
-		{"内链", models.MenuTypeLink, " /home/dashboard ", "/home/dashboard", 1, false},
-		{"外链 http", models.MenuTypeLink, "http://example.com/a", "http://example.com/a", 0, false},
-		{"外链 https 大写", models.MenuTypeLink, "HTTPS://example.com", "HTTPS://example.com", 0, false},
-		{"空链接", models.MenuTypeLink, "  ", "", 0, true},
-		{"非法协议", models.MenuTypeLink, "ftp://example.com", "", 0, true},
-		{"缺少前导斜杠", models.MenuTypeLink, "home/dashboard", "", 0, true},
+		{"菜单保留内链并标记非外链", models.MenuTypeMenu, "/home/dashboard", 0, "/home/dashboard", 1, false},
+		{"普通菜单忽略外部 isFrame", models.MenuTypeMenu, "https://example.com", 0, "https://example.com", 1, false},
+		{"内链站内路径", models.MenuTypeLink, " /home/dashboard ", 1, "/home/dashboard", 1, false},
+		{"内链外部地址也允许嵌入", models.MenuTypeLink, "https://github.com/unclebob/ub-mode", 1, "https://github.com/unclebob/ub-mode", 1, false},
+		{"外链 http", models.MenuTypeLink, "http://example.com/a", 0, "http://example.com/a", 0, false},
+		{"外链 https 大写", models.MenuTypeLink, "HTTPS://example.com", 0, "HTTPS://example.com", 0, false},
+		{"外链不允许站内路径", models.MenuTypeLink, "/home/dashboard", 0, "", 0, true},
+		{"空链接", models.MenuTypeLink, "  ", 1, "", 0, true},
+		{"非法协议", models.MenuTypeLink, "ftp://example.com", 1, "", 0, true},
+		{"内链缺少前导斜杠", models.MenuTypeLink, "home/dashboard", 1, "", 0, true},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			path, link, err := normalizeMenuTarget(tc.menuType, tc.path, 9)
+			path, link, err := normalizeMenuTarget(tc.menuType, tc.path, tc.isFrame)
 			if tc.wantErr {
 				if err == nil {
 					t.Fatalf("应返回错误，实际 path=%q isFrame=%d", path, link)

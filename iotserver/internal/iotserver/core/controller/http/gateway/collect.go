@@ -74,20 +74,51 @@ func (ctl *controller) CollectConfigExport(c *gin.Context) {
 }
 
 // @Tags    设备接入-采集配置
-// @Summary 解析导入的点表 Excel（返回点位，需再保存）
+// @Summary 导出全部设备点表 Excel（可按通道过滤）
+// @Produce application/octet-stream
+// @Success 200 {file} binary
+// @Router  /api/v1/collect/config/export-all [get]
+func (ctl *controller) CollectConfigExportAll(c *gin.Context) {
+	file, err := ctl.getCollectApp().CollectConfigExportAll(c, c.Query("channelId"))
+	if err != nil {
+		httphelper.RenderFail(c, err, c.Writer, ctl.lc)
+		return
+	}
+	defer file.Excel.Close()
+	data, err := file.Excel.WriteToBuffer()
+	if err != nil {
+		httphelper.RenderFail(c, errort.NewCommonErr(errort.DefaultReadExcelErrorCode, err), c.Writer, ctl.lc)
+		return
+	}
+	httphelper.ResultExcelData(c, file.FileName, data)
+}
+
+// @Tags    设备接入-采集配置
+// @Summary 切换设备级采集使能
+// @Accept  json
+// @Produce json
+// @Success 200 {object} httphelper.CommonResponse
+// @Router  /api/v1/collect/config/enabled [put]
+func (ctl *controller) CollectConfigSetEnabled(c *gin.Context) {
+	var req dtos.CollectConfigEnabledRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		httphelper.RenderFail(c, errort.NewCommonErr(errort.DefaultReqParamsError, err), c.Writer, ctl.lc)
+		return
+	}
+	if err := ctl.getCollectApp().CollectConfigSetEnabled(c, req); err != nil {
+		httphelper.RenderFail(c, err, c.Writer, ctl.lc)
+		return
+	}
+	httphelper.ResultSuccess(nil, c.Writer, ctl.lc)
+}
+
+// @Tags    设备接入-采集配置
+// @Summary 批量导入点表预览（不写库）
 // @Accept  multipart/form-data
 // @Produce json
 // @Success 200 {object} httphelper.CommonResponse
-// @Router  /api/v1/collect/config/import [post]
-func (ctl *controller) CollectConfigImport(c *gin.Context) {
-	deviceId := c.PostForm("deviceId")
-	if deviceId == "" {
-		deviceId = c.Query("deviceId")
-	}
-	if deviceId == "" {
-		httphelper.RenderFail(c, errort.NewCommonErr(errort.DefaultIdEmpty, errort.NewMessageErr("设备 ID 不能为空", nil)), c.Writer, ctl.lc)
-		return
-	}
+// @Router  /api/v1/collect/config/import-all/preview [post]
+func (ctl *controller) CollectConfigImportAllPreview(c *gin.Context) {
 	header, err := c.FormFile("file")
 	if err != nil {
 		httphelper.RenderFail(c, errort.NewCommonErr(errort.DefaultUploadFileErrorCode, err), c.Writer, ctl.lc)
@@ -105,7 +136,39 @@ func (ctl *controller) CollectConfigImport(c *gin.Context) {
 		return
 	}
 	defer file.Excel.Close()
-	res, err := ctl.getCollectApp().CollectConfigImport(c, deviceId, file)
+	res, err := ctl.getCollectApp().CollectConfigImportAllPreview(c, file)
+	if err != nil {
+		httphelper.RenderFail(c, err, c.Writer, ctl.lc)
+		return
+	}
+	httphelper.ResultSuccess(res, c.Writer, ctl.lc)
+}
+
+// @Tags    设备接入-采集配置
+// @Summary 批量导入点表（覆盖文件中出现的设备点位）
+// @Accept  multipart/form-data
+// @Produce json
+// @Success 200 {object} httphelper.CommonResponse
+// @Router  /api/v1/collect/config/import-all [post]
+func (ctl *controller) CollectConfigImportAll(c *gin.Context) {
+	header, err := c.FormFile("file")
+	if err != nil {
+		httphelper.RenderFail(c, errort.NewCommonErr(errort.DefaultUploadFileErrorCode, err), c.Writer, ctl.lc)
+		return
+	}
+	reader, err := header.Open()
+	if err != nil {
+		httphelper.RenderFail(c, errort.NewCommonErr(errort.DefaultUploadFileErrorCode, err), c.Writer, ctl.lc)
+		return
+	}
+	defer reader.Close()
+	file, err := dtos.NewImportFile(reader)
+	if err != nil {
+		httphelper.RenderFail(c, errort.NewCommonErr(errort.DefaultUploadFileErrorCode, err), c.Writer, ctl.lc)
+		return
+	}
+	defer file.Excel.Close()
+	res, err := ctl.getCollectApp().CollectConfigImportAll(c, file)
 	if err != nil {
 		httphelper.RenderFail(c, err, c.Writer, ctl.lc)
 		return
@@ -149,6 +212,54 @@ func (ctl *controller) CollectConfigSave(c *gin.Context) {
 		return
 	}
 	httphelper.ResultSuccess(nil, c.Writer, ctl.lc)
+}
+
+// @Tags    设备接入-采集配置
+// @Summary 写入点位值
+// @Accept  json
+// @Produce json
+// @Success 200 {object} httphelper.CommonResponse
+// @Router  /api/v1/collect/config/write [post]
+func (ctl *controller) CollectWrite(c *gin.Context) {
+	var req dtos.CollectWriteRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		httphelper.RenderFail(c, errort.NewCommonErr(errort.DefaultReqParamsError, err), c.Writer, ctl.lc)
+		return
+	}
+	if err := ctl.getCollectApp().CollectWrite(c, req); err != nil {
+		httphelper.RenderFail(c, err, c.Writer, ctl.lc)
+		return
+	}
+	httphelper.ResultSuccess(nil, c.Writer, ctl.lc)
+}
+
+// @Tags    设备接入-采集配置
+// @Summary 采集配置总体概览
+// @Produce json
+// @Success 200 {object} httphelper.CommonResponse
+// @Router  /api/v1/collect/overview [get]
+func (ctl *controller) CollectOverview(c *gin.Context) {
+	res, err := ctl.getCollectApp().CollectOverview(c)
+	if err != nil {
+		httphelper.RenderFail(c, err, c.Writer, ctl.lc)
+		return
+	}
+	httphelper.ResultSuccess(res, c.Writer, ctl.lc)
+}
+
+// @Tags    设备接入-采集配置
+// @Summary 查询采集实时数据
+// @Produce json
+// @Success 200 {object} httphelper.CommonResponse
+// @Router  /api/v1/collect/realtime [get]
+func (ctl *controller) CollectRealtime(c *gin.Context) {
+	res, err := ctl.getCollectApp().CollectRealtime(c,
+		c.Query("channelId"), c.Query("deviceId"), c.Query("keyword"))
+	if err != nil {
+		httphelper.RenderFail(c, err, c.Writer, ctl.lc)
+		return
+	}
+	httphelper.ResultSuccess(res, c.Writer, ctl.lc)
 }
 
 // @Tags    设备接入-采集配置

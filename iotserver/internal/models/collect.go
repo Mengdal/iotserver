@@ -87,7 +87,10 @@ type CollectPointConfig struct {
 	// Storage 是否存储
 	Storage bool `gorm:"column:storage;type:bool;comment:是否存储"`
 	Enabled bool `gorm:"column:enabled;type:bool;comment:是否启用"`
-	Sort    int  `gorm:"column:sort;type:int;comment:排序"`
+	// LastWriteValue 最后一次通过平台写入的值（异步下发，不一定等于最终生效值）
+	LastWriteValue string `gorm:"column:last_write_value;type:string;size:255;comment:最后设定值"`
+	LastWriteTime  int64  `gorm:"column:last_write_time;type:bigint;comment:最后设定时间"`
+	Sort           int    `gorm:"column:sort;type:int;comment:排序"`
 }
 
 func (m *CollectPointConfig) TableName() string {

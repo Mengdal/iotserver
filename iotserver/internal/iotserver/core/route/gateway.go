@@ -70,13 +70,9 @@ func RegisterGateway(engine *gin.Engine, dic *di.Container) {
 		platform.POST("tenant", ctl.Perm(middleware.PermPlatformTenantAdd), ctl.TenantAdd)
 		platform.PUT("tenant", ctl.Perm(middleware.PermPlatformTenantEdit), ctl.TenantUpdate)
 		platform.DELETE("tenant/:id", ctl.Perm(middleware.PermPlatformTenantRemove), ctl.TenantDelete)
-		// 存量租户绑定已有 things 项目，或为存量租户创建项目
-		platform.POST("tenant/:id/things-project", ctl.Perm(middleware.PermPlatformTenantEdit), ctl.TenantBindThingsProject)
-		platform.PUT("tenant/:id/things-project", ctl.Perm(middleware.PermPlatformTenantEdit), ctl.TenantRenameThingsProject)
 
-		// things 平台测试连接 / 项目列表 / 全量对账
+		// things 平台测试连接 / 全量对账
 		platform.POST("things/test", ctl.Perm(middleware.PermConfigEdit), ctl.ThingsTestConnection)
-		platform.GET("things/projects", ctl.Perm(middleware.PermPlatformTenantEdit), ctl.ThingsProjects)
 		platform.POST("things/reconcile", ctl.Perm(middleware.PermConfigEdit), ctl.ThingsReconcile)
 
 		// 系统配置是全局唯一一份（sys_config 没有 tenant_id），写接口只允许平台管理员：
@@ -110,13 +106,19 @@ func RegisterGateway(engine *gin.Engine, dic *di.Container) {
 		v1Auth.GET("collect/config", ctl.Perm(middleware.PermCollectConfigList), ctl.CollectConfigGet)
 		v1Auth.GET("collect/config/template", ctl.Perm(middleware.PermCollectConfigList), ctl.CollectConfigTemplate)
 		v1Auth.GET("collect/config/latest", ctl.Perm(middleware.PermCollectConfigList), ctl.CollectConfigLatest)
+		v1Auth.PUT("collect/config/enabled", ctl.Perm(middleware.PermCollectConfigEdit), ctl.CollectConfigSetEnabled)
 		v1Auth.GET("collect/config/export", ctl.Perm(middleware.PermCollectConfigList), ctl.CollectConfigExport)
-		v1Auth.POST("collect/config/import", ctl.Perm(middleware.PermCollectConfigEdit), ctl.CollectConfigImport)
+		v1Auth.GET("collect/config/export-all", ctl.Perm(middleware.PermCollectConfigList), ctl.CollectConfigExportAll)
+		v1Auth.POST("collect/config/import-all/preview", ctl.Perm(middleware.PermCollectConfigEdit), ctl.CollectConfigImportAllPreview)
+		v1Auth.POST("collect/config/import-all", ctl.Perm(middleware.PermCollectConfigEdit), ctl.CollectConfigImportAll)
+		v1Auth.POST("collect/config/write", ctl.Perm(middleware.PermCollectConfigEdit), ctl.CollectWrite)
 		v1Auth.PUT("collect/config", ctl.Perm(middleware.PermCollectConfigEdit), ctl.CollectConfigSave)
 		// IOTP 设备绑定（新版采集引擎接口）：前端使用 /api/v1/iotp_devices。
 		v1Auth.GET("iotp_devices", ctl.Perm(middleware.PermCollectConfigList), ctl.CollectDevices)
 		// 旧路径保留一个版本，避免旧前端直接 404。
 		v1Auth.GET("collect/devices", ctl.Perm(middleware.PermCollectConfigList), ctl.CollectDevices)
+		v1Auth.GET("collect/overview", ctl.Perm(middleware.PermCollectConfigList), ctl.CollectOverview)
+		v1Auth.GET("collect/realtime", ctl.Perm(middleware.PermCollectConfigList), ctl.CollectRealtime)
 		v1Auth.GET("collect/channels", ctl.Perm(middleware.PermCollectConfigList), ctl.CollectChannels)
 		v1Auth.PUT("collect/channels", ctl.Perm(middleware.PermCollectConfigEdit), ctl.CollectChannelSave)
 		v1Auth.DELETE("collect/channels/:id", ctl.Perm(middleware.PermCollectConfigEdit), ctl.CollectChannelDelete)
