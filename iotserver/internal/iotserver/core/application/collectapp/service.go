@@ -17,12 +17,14 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"iotserver/internal/dtos"
 	"iotserver/internal/iotserver/core/container"
 	interfaces "iotserver/internal/iotserver/core/interface"
 	"iotserver/internal/models"
+	"iotserver/internal/pkg/collectgateway"
 	"iotserver/internal/pkg/constants"
 	pkgContainer "iotserver/internal/pkg/container"
 	"iotserver/internal/pkg/di"
@@ -42,47 +44,86 @@ type service struct {
 	dic        *di.Container
 	lc         logger.LoggingClient
 	dbClient   interfaces.DBClient
-	engine     *collectengine.Client
 	iotpClient *iotp.Client
+
+	engineMu sync.Mutex
+	engines  map[string]*collectengine.Client
 }
 
 func NewCollectApp(ctx context.Context, dic *di.Container) *service {
 	configuration := container.ConfigurationFrom(dic.Get)
-	var engine *collectengine.Client
-	if configuration.Integrations.CollectEngine.Enabled && strings.TrimSpace(configuration.Integrations.CollectEngine.BaseURL) != "" {
-		engine = collectengine.New(configuration.Integrations.CollectEngine.BaseURL,
-			time.Duration(configuration.Integrations.CollectEngine.TimeoutSec)*time.Second)
-	}
 	var iotpClient *iotp.Client
 	if db, ok := configuration.IotpConfig(); ok {
 		iotpClient = iotp.New(db.BaseURL, db.Token, db.IotpDatabaseName(), db.IotpTimeout())
 	}
-	return &service{
+	s := &service{
 		dic:        dic,
 		lc:         pkgContainer.LoggingClientFrom(dic.Get),
 		dbClient:   container.DBClientFrom(dic.Get),
-		engine:     engine,
 		iotpClient: iotpClient,
+		engines:    make(map[string]*collectengine.Client),
 	}
+	// 把旧版没有 gateway_id 的通道/点位迁移到默认软网关。
+	// 采集引擎地址现在只保存在网关记录上。
+	s.normalizeCollectChannelIDs(ctx)
+	s.migrateLegacyCollectData(ctx)
+	return s
 }
 
-func (s *service) engineClient() (*collectengine.Client, error) {
-	if s.engine == nil {
-		return nil, errort.NewCommonErr(errort.DefaultSystemError,
-			fmt.Errorf("未启用采集引擎，请在 configuration 中配置 [Integrations.CollectEngine]"))
-	}
-	return s.engine, nil
+// currentGatewayID 返回当前采集配置所属的软网关 ID。
+func currentGatewayID(ctx context.Context) string {
+	return strings.TrimSpace(collectgateway.From(ctx))
 }
 
-// ownedChannelIds 当前租户在本地登记过的采集通道（键为采集引擎通道 ID）。
+// engineClient 按当前软网关解析采集引擎客户端。
+// 采集引擎地址保存在 gateway 记录上，因此每个软网关可以接不同的引擎实例。
+func (s *service) engineClient(ctx context.Context) (*collectengine.Client, error) {
+	gatewayID := currentGatewayID(ctx)
+	if gatewayID == "" {
+		return nil, errort.NewCommonErr(errort.DefaultReqParamsError,
+			fmt.Errorf("请从网关管理进入采集配置"))
+	}
+	gateway, err := s.dbClient.WithCtx(ctx).GatewayById(gatewayID)
+	if err != nil {
+		return nil, err
+	}
+	if gateway.Source != models.GatewaySourceIoserver {
+		return nil, errort.NewCommonErr(errort.DefaultReqParamsError,
+			fmt.Errorf("该网关不是软网关，无法配置采集"))
+	}
+	baseURL := strings.TrimSpace(gateway.EngineBaseURL)
+	if baseURL == "" {
+		return nil, errort.NewCommonErr(errort.DefaultReqParamsError,
+			fmt.Errorf("软网关未配置采集引擎地址，请先编辑网关"))
+	}
+	timeoutSec := gateway.EngineTimeoutSec
+	if timeoutSec <= 0 {
+		timeoutSec = 10
+	}
+	cacheKey := fmt.Sprintf("%s|%s|%d", gatewayID, baseURL, timeoutSec)
+	s.engineMu.Lock()
+	defer s.engineMu.Unlock()
+	if client, ok := s.engines[cacheKey]; ok {
+		return client, nil
+	}
+	client := collectengine.New(baseURL, time.Duration(timeoutSec)*time.Second)
+	s.engines[cacheKey] = client
+	return client, nil
+}
+
+// ownedChannelIds 当前租户在指定软网关下登记过的采集通道（键为采集引擎通道 ID）。
 func (s *service) ownedChannelIds(ctx context.Context) (map[string]struct{}, error) {
 	channels, err := s.dbClient.WithCtx(ctx).CollectChannels()
 	if err != nil {
 		return nil, err
 	}
+	gatewayID := currentGatewayID(ctx)
 	owned := make(map[string]struct{}, len(channels))
 	for _, channel := range channels {
-		owned[channel.Id] = struct{}{}
+		if channel.GatewayId != gatewayID {
+			continue
+		}
+		owned[strconv.FormatInt(channel.RemoteId, 10)] = struct{}{}
 	}
 	return owned, nil
 }
@@ -101,13 +142,22 @@ func (s *service) canAccessChannel(ctx context.Context, channelId int64) (bool, 
 	return ok, nil
 }
 
+// localCollectChannelID 本地通道登记表的主键。
+// 采集引擎的通道 ID 只在单个引擎内唯一，不同软网关会从 1 开始重复，
+// 因此本地主键必须带上网关 ID，避免网关之间互相覆盖。
+func localCollectChannelID(gatewayID string, remoteID int64) string {
+	return gatewayID + ":" + strconv.FormatInt(remoteID, 10)
+}
+
 // saveChannelOwnership 创建/更新通道时登记归属，供租户隔离与删除清理使用。
 func (s *service) saveChannelOwnership(ctx context.Context, channel collectengine.Channel, channelType string) error {
 	if channel.Id <= 0 {
 		return nil
 	}
+	gatewayID := currentGatewayID(ctx)
 	_, err := s.dbClient.WithCtx(ctx).SaveCollectChannel(models.CollectChannel{
-		Id:             strconv.FormatInt(channel.Id, 10),
+		Id:             localCollectChannelID(gatewayID, channel.Id),
+		GatewayId:      gatewayID,
 		RemoteId:       channel.Id,
 		Name:           channel.ChannelCode,
 		ChannelType:    channelType,
@@ -150,9 +200,21 @@ func (s *service) CollectOverview(ctx context.Context) (dtos.CollectOverviewDTO,
 	if err != nil {
 		return dtos.CollectOverviewDTO{}, err
 	}
-	counts, err := s.dbClient.WithCtx(ctx).CollectPointCounts()
+	// 点位表没有网关字段，按当前网关的设备集合过滤，避免把其他网关的点位算进来。
+	// 用 SQL 聚合（GROUP BY device_id）只取回计数，不把全部点位行读进内存。
+	deviceIds := make(map[string]struct{}, len(devices))
+	for _, device := range devices {
+		deviceIds[strconv.FormatInt(device.IotpId, 10)] = struct{}{}
+	}
+	allCounts, err := s.dbClient.WithCtx(ctx).CollectPointCounts()
 	if err != nil {
 		return dtos.CollectOverviewDTO{}, err
+	}
+	counts := make(map[string]int64, len(deviceIds))
+	for deviceId, total := range allCounts {
+		if _, ok := deviceIds[deviceId]; ok {
+			counts[deviceId] = total
+		}
 	}
 	overview := dtos.CollectOverviewDTO{
 		ChannelCount: len(channels),
@@ -219,7 +281,7 @@ func (s *service) CollectRealtime(ctx context.Context, channelId, deviceId, keyw
 	if err != nil {
 		return nil, err
 	}
-	client, err := s.engineClient()
+	client, err := s.engineClient(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -329,7 +391,7 @@ func (s *service) CollectWrite(ctx context.Context, req dtos.CollectWriteRequest
 	if tagId == "" {
 		return errort.NewCommonErr(errort.DefaultReqParamsError, fmt.Errorf("标签ID不能为空"))
 	}
-	client, err := s.engineClient()
+	client, err := s.engineClient(ctx)
 	if err != nil {
 		return err
 	}
@@ -349,8 +411,13 @@ func (s *service) CollectWrite(ctx context.Context, req dtos.CollectWriteRequest
 	iotpKey := strconv.FormatInt(req.DeviceId, 10)
 	if cfg, cfgFound, cfgErr := db.CollectDeviceConfigByDevice(iotpKey); cfgErr != nil {
 		return cfgErr
-	} else if cfgFound && !cfg.Enabled {
-		return errort.NewCommonErr(errort.DefaultReqParamsError, fmt.Errorf("设备已停用，无法写入"))
+	} else if cfgFound {
+		if cfg.GatewayId != currentGatewayID(ctx) {
+			return errort.NewCommonErr(errort.DefaultReqParamsError, fmt.Errorf("设备未绑定到当前软网关"))
+		}
+		if !cfg.Enabled {
+			return errort.NewCommonErr(errort.DefaultReqParamsError, fmt.Errorf("设备已停用，无法写入"))
+		}
 	}
 	points, err := db.CollectPointConfigsByDevice(iotpKey)
 	if err != nil {
@@ -379,7 +446,7 @@ func (s *service) CollectWrite(ctx context.Context, req dtos.CollectWriteRequest
 /******************************* 通道 *******************************/
 
 func (s *service) CollectChannels(ctx context.Context) ([]dtos.CollectChannelDTO, error) {
-	client, err := s.engineClient()
+	client, err := s.engineClient(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -409,7 +476,7 @@ func (s *service) CollectChannels(ctx context.Context) ([]dtos.CollectChannelDTO
 }
 
 func (s *service) CollectChannelSave(ctx context.Context, req dtos.CollectChannelSaveRequest) (dtos.CollectChannelDTO, error) {
-	client, err := s.engineClient()
+	client, err := s.engineClient(ctx)
 	if err != nil {
 		return dtos.CollectChannelDTO{}, err
 	}
@@ -526,7 +593,7 @@ func (s *service) CollectChannelSave(ctx context.Context, req dtos.CollectChanne
 }
 
 func (s *service) CollectChannelDelete(ctx context.Context, id string) error {
-	client, err := s.engineClient()
+	client, err := s.engineClient(ctx)
 	if err != nil {
 		return err
 	}
@@ -550,13 +617,17 @@ func (s *service) CollectChannelDelete(ctx context.Context, id string) error {
 	if err := client.DeleteChannel(channelId); err != nil {
 		return err
 	}
-	// 清理平台本地的设备点表缓存。
+	// 清理平台本地的设备点表缓存。通道 ID 在不同软网关下会重复，必须按网关过滤。
 	db := s.dbClient.WithCtx(ctx)
+	gatewayID := currentGatewayID(ctx)
 	configs, err := db.CollectDeviceConfigsByChannel(strconv.FormatInt(channelId, 10))
 	if err != nil {
 		return err
 	}
 	for _, cfg := range configs {
+		if cfg.GatewayId != gatewayID {
+			continue
+		}
 		if err := db.ReplaceCollectPointConfigs(cfg.DeviceId, nil); err != nil {
 			return err
 		}
@@ -564,13 +635,13 @@ func (s *service) CollectChannelDelete(ctx context.Context, id string) error {
 			return err
 		}
 	}
-	return db.DeleteCollectChannel(strconv.FormatInt(channelId, 10))
+	return db.DeleteCollectChannel(localCollectChannelID(gatewayID, channelId))
 }
 
 /******************************* IOTP 设备绑定 *******************************/
 
 func (s *service) CollectDevices(ctx context.Context) ([]dtos.CollectDeviceDTO, error) {
-	client, err := s.engineClient()
+	client, err := s.engineClient(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -586,7 +657,7 @@ func (s *service) CollectDevices(ctx context.Context) ([]dtos.CollectDeviceDTO, 
 }
 
 func (s *service) CollectChannelDevices(ctx context.Context, channelId string) ([]dtos.CollectDeviceDTO, error) {
-	client, err := s.engineClient()
+	client, err := s.engineClient(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -607,7 +678,7 @@ func (s *service) CollectChannelDevices(ctx context.Context, channelId string) (
 }
 
 func (s *service) CollectChannelBindDevices(ctx context.Context, channelId string, deviceIds []string) error {
-	client, err := s.engineClient()
+	client, err := s.engineClient(ctx)
 	if err != nil {
 		return err
 	}
@@ -662,6 +733,11 @@ func (s *service) CollectChannelBindDevices(ctx context.Context, channelId strin
 		if err != nil {
 			return err
 		}
+		// 同一台设备只归属一个软网关；跨网关需要先在原网关移除，避免两边引擎重复采集。
+		if hadCfg && existingCfg.GatewayId != "" && existingCfg.GatewayId != currentGatewayID(ctx) {
+			return errort.NewCommonErr(errort.DefaultReqParamsError,
+				fmt.Errorf("设备已绑定到其他软网关，请先在原网关移除"))
+		}
 		enabled := true
 		remark := ""
 		if hadCfg {
@@ -701,6 +777,7 @@ func (s *service) CollectChannelBindDevices(ctx context.Context, channelId strin
 			if err := db.SaveCollectDeviceConfig(models.CollectDeviceConfig{
 				DeviceId:  iotpKey,
 				ChannelId: strconv.FormatInt(id, 10),
+				GatewayId: currentGatewayID(ctx),
 				Enabled:   enabled,
 				Remark:    remark,
 			}); err != nil {
@@ -767,6 +844,7 @@ func (s *service) CollectChannelBindDevices(ctx context.Context, channelId strin
 		if err := db.SaveCollectDeviceConfig(models.CollectDeviceConfig{
 			DeviceId:  iotpKey,
 			ChannelId: strconv.FormatInt(id, 10),
+			GatewayId: currentGatewayID(ctx),
 			Enabled:   enabled,
 			Remark:    remark,
 		}); err != nil {
@@ -804,7 +882,7 @@ func (s *service) CollectChannelBindDevices(ctx context.Context, channelId strin
 }
 
 func (s *service) CollectChannelUnbindDevice(ctx context.Context, channelId, deviceId string) error {
-	client, err := s.engineClient()
+	client, err := s.engineClient(ctx)
 	if err != nil {
 		return err
 	}
@@ -852,7 +930,7 @@ func (s *service) CollectChannelUnbindDevice(ctx context.Context, channelId, dev
 
 func (s *service) CollectConfigGet(ctx context.Context, deviceId string) (dtos.CollectConfigResponse, error) {
 	response := dtos.CollectConfigResponse{Points: []dtos.CollectPointDTO{}}
-	client, err := s.engineClient()
+	client, err := s.engineClient(ctx)
 	if err != nil {
 		return response, err
 	}
@@ -930,7 +1008,7 @@ func (s *service) CollectConfigTemplate(ctx context.Context, deviceId string) ([
 		return result, err
 	}
 	// 模板读取同样要校验通道归属，避免跨租户按 iotpId 读取产品物模型。
-	client, err := s.engineClient()
+	client, err := s.engineClient(ctx)
 	if err != nil {
 		return result, err
 	}
@@ -990,6 +1068,9 @@ func (s *service) CollectConfigLatest(ctx context.Context, deviceId string) (dto
 	}
 	if !found || strings.TrimSpace(cfg.ChannelId) == "" {
 		return response, errort.NewCommonErr(errort.DefaultReqParamsError, fmt.Errorf("设备未绑定通道"))
+	}
+	if cfg.GatewayId != currentGatewayID(ctx) {
+		return response, errort.NewCommonErr(errort.DefaultReqParamsError, fmt.Errorf("设备未绑定到当前软网关"))
 	}
 	deviceEnabled := cfg.Enabled
 	channelId, err := parsePositiveId(cfg.ChannelId, "channel id")
@@ -1071,7 +1152,7 @@ func (s *service) CollectConfigLatest(ctx context.Context, deviceId string) (dto
 
 // engineLatestValues 读取采集引擎内存中的点位实时值。
 func (s *service) engineLatestValues(ctx context.Context, iotpId int64, points []models.CollectPointConfig, deviceEnabled bool) ([]dtos.CollectMonitorValueDTO, bool, error) {
-	client, err := s.engineClient()
+	client, err := s.engineClient(ctx)
 	if err != nil {
 		return nil, false, err
 	}
@@ -1181,9 +1262,9 @@ func (s *service) channelPollInterval(ctx context.Context, channelId int64) int6
 	if err != nil {
 		return 0
 	}
-	key := strconv.FormatInt(channelId, 10)
+	gatewayID := currentGatewayID(ctx)
 	for _, channel := range channels {
-		if channel.Id == key && channel.PollIntervalMs > 0 {
+		if channel.GatewayId == gatewayID && channel.RemoteId == channelId && channel.PollIntervalMs > 0 {
 			return int64(channel.PollIntervalMs)
 		}
 	}
@@ -1191,7 +1272,7 @@ func (s *service) channelPollInterval(ctx context.Context, channelId int64) int6
 }
 
 func (s *service) CollectConfigSave(ctx context.Context, req dtos.CollectConfigSaveRequest) error {
-	client, err := s.engineClient()
+	client, err := s.engineClient(ctx)
 	if err != nil {
 		return err
 	}
@@ -1284,11 +1365,16 @@ func (s *service) CollectConfigSave(ctx context.Context, req dtos.CollectConfigS
 	if cfg, cfgFound, err := db.CollectDeviceConfigByDevice(iotpKey); err != nil {
 		return err
 	} else if cfgFound {
+		if cfg.GatewayId != "" && cfg.GatewayId != currentGatewayID(ctx) {
+			return errort.NewCommonErr(errort.DefaultReqParamsError,
+				fmt.Errorf("设备已绑定到其他软网关，请先在原网关移除"))
+		}
 		remark = cfg.Remark
 	}
 	if err := db.SaveCollectDeviceConfig(models.CollectDeviceConfig{
 		DeviceId:  iotpKey,
 		ChannelId: strconv.FormatInt(binding.ChannelId, 10),
+		GatewayId: currentGatewayID(ctx),
 		Enabled:   req.Enabled,
 		Remark:    remark,
 	}); err != nil {
@@ -1313,7 +1399,7 @@ func (s *service) CollectConfigSetEnabled(ctx context.Context, req dtos.CollectC
 	if req.DeviceId <= 0 {
 		return errort.NewCommonErr(errort.DefaultIdEmpty, fmt.Errorf("device id is required"))
 	}
-	client, err := s.engineClient()
+	client, err := s.engineClient(ctx)
 	if err != nil {
 		return err
 	}
@@ -1337,6 +1423,9 @@ func (s *service) CollectConfigSetEnabled(ctx context.Context, req dtos.CollectC
 	}
 	if !found {
 		return errort.NewCommonErr(errort.DefaultReqParamsError, fmt.Errorf("设备未绑定通道"))
+	}
+	if cfg.GatewayId != currentGatewayID(ctx) {
+		return errort.NewCommonErr(errort.DefaultReqParamsError, fmt.Errorf("设备未绑定到当前软网关"))
 	}
 	if cfg.Enabled == req.Enabled {
 		return nil
@@ -1364,6 +1453,7 @@ func (s *service) CollectConfigSetEnabled(ctx context.Context, req dtos.CollectC
 		}
 	}
 	cfg.ChannelId = strconv.FormatInt(binding.ChannelId, 10)
+	cfg.GatewayId = currentGatewayID(ctx)
 	cfg.Enabled = req.Enabled
 	return db.SaveCollectDeviceConfig(cfg)
 }
@@ -1585,8 +1675,12 @@ func (s *service) deleteDeviceTags(client *collectengine.Client, deviceId int64,
 func (s *service) deviceDTOs(ctx context.Context, bindings []collectengine.Device) []dtos.CollectDeviceDTO {
 	result := make([]dtos.CollectDeviceDTO, 0, len(bindings))
 	enabledByDevice := make(map[string]bool)
+	gatewayID := currentGatewayID(ctx)
 	if configs, err := s.dbClient.WithCtx(ctx).CollectDeviceConfigs(); err == nil {
 		for _, cfg := range configs {
+			if cfg.GatewayId != gatewayID {
+				continue
+			}
 			enabledByDevice[cfg.DeviceId] = cfg.Enabled
 		}
 	}

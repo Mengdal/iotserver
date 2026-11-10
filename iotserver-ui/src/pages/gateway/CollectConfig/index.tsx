@@ -131,7 +131,12 @@ const channelSummary = (channel: CollectChannel) => {
   return ''
 }
 
-const CollectConfigPage: React.FC = () => {
+interface CollectConfigPageProps {
+  /** 在网关管理的抽屉里使用时，压缩一屏高度 */
+  embedded?: boolean
+}
+
+const CollectConfigPage: React.FC<CollectConfigPageProps> = ({ embedded = false }) => {
   const [messageApi, contextHolder] = message.useMessage()
 
   const [treeWidth, setTreeWidth] = useState(() => {
@@ -412,7 +417,10 @@ const CollectConfigPage: React.FC = () => {
 
   const missingCount = config ? config.points.filter(pointMissing).length : 0
   // 数据少时也铺满一屏，避免卡片过矮显得紧凑。
-  const pageBodyMinHeight = 'max(460px, calc(100vh - 328px))'
+  // 抽屉里已经去掉了页面级面包屑/标题，留白相应减少。
+  const pageBodyMinHeight = embedded
+    ? 'max(420px, calc(100vh - 170px))'
+    : 'max(460px, calc(100vh - 328px))'
 
   const handleGenerateTemplate = async () => {
     if (!config) return

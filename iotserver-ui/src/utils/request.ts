@@ -1,5 +1,6 @@
 import axios, { AxiosRequestConfig, AxiosResponse } from 'axios'
 import { clearUser, getCurrentTenantId, getToken, isPlatformAdmin } from './auth'
+import { getCollectGatewayId } from './collectGateway'
 import { currentLocale, t } from '@/i18n'
 import { message } from 'antd'
 
@@ -30,11 +31,16 @@ http.interceptors.request.use(
     // 平台管理员切换「当前租户」后带 x-tenant-id 代管该租户（空值=平台视图，不带）。
     // 普通用户不带：后端只认 token 里的租户，前端也不该伪造。
     const tenantId = isPlatformAdmin() ? getCurrentTenantId() : ''
+    // 只有采集配置相关接口需要带上当前软网关；其他请求不受抽屉状态影响。
+    const url = config.url || ''
+    const needsCollectGateway = /^\/api\/v1\/(collect|iotp_devices)(\/|$)/.test(url)
+    const collectGatewayId = needsCollectGateway ? getCollectGatewayId() : ''
     config.headers = {
       ...config.headers,
       'x-token': getToken(),
       // Authorization: `Bearer ${getToken()}`,
       ...(tenantId ? { 'x-tenant-id': tenantId } : {}),
+      ...(collectGatewayId ? { 'x-collect-gateway': collectGatewayId } : {}),
       // 语言：后端按这个头返回对应语言的错误信息（见 iotserver/internal/pkg/i18n）
       'Accept-Language': currentLocale(),
     }
