@@ -471,6 +471,14 @@ func (c *Client) seedSystemData() error {
 		if err := seed.EnsureBuiltinDriverLibraries(tx); err != nil {
 			return err
 		}
+		// 驱动模型升级为插件模型：回填类别/运行时/架构，并允许一个驱动库多个实例
+		if err := seed.MigrateDriverPluginFields(tx); err != nil {
+			return err
+		}
+		// 内置系统组件：Mosquitto / eKuiper
+		if err := seed.EnsureSystemComponents(tx); err != nil {
+			return err
+		}
 		// 参考系统 /edge 网关的 protocol 落到 edge（历史数据回填）
 		if err := seed.MigrateEdgeGatewayProtocol(tx); err != nil {
 			return err

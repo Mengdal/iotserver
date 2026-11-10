@@ -79,6 +79,7 @@ type DeviceLibrarySearchQueryRequest struct {
 	NameAliasLike            string `form:"name_alias_like" json:"name_alias_like"`
 	DownloadStatus           string `form:"download_status" json:"download_status"`
 	DriverType               int    `form:"driver_type" json:"driver_type" binding:"omitempty,oneof=1 2"` // 驱动库类型，1：驱动，2：三方应用
+	Category                 string `form:"category" json:"category"`                                     // 插件类别：driver/system/connector
 	NoInIds                  string // 约定，没有from的为 内置查询条件
 	ImageIds                 string // 内置条件
 	NoInImageIds             string // 内置条件
@@ -104,6 +105,12 @@ type DeviceLibraryResponse struct {
 	Created         int64                               `json:"created"`
 	Language        string                              `json:"language"`
 	SupportVersions []DeviceLibrarySupportVersionSimple `json:"support_versions"` // 用于前端展示可供下载/更新的版本号 key:value == 版本号:配置文件
+	// 插件模型字段
+	Category  string `json:"category"`
+	Runtime   string `json:"runtime"`
+	Arch      string `json:"arch"`
+	Essential bool   `json:"essential"`
+	Source    string `json:"source"`
 }
 
 func DeviceLibraryResponseFromModel(dl models.DeviceLibrary) DeviceLibraryResponse {
@@ -129,6 +136,11 @@ func DeviceLibraryResponseFromModel(dl models.DeviceLibrary) DeviceLibraryRespon
 		Created:         dl.Created,
 		Language:        dl.Language,
 		SupportVersions: DeviceLibrarySupportVersionSimpleFromModel(dl.SupportVersions),
+		Category:        dl.Category,
+		Runtime:         dl.Runtime,
+		Arch:            dl.Arch,
+		Essential:       dl.Essential,
+		Source:          dl.Source,
 	}
 }
 

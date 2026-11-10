@@ -888,6 +888,14 @@ func GetEnMessages() []*i18n.Message {
 			Other: "Unregistered gateway sn={{.p1}}",
 		},
 		{
+			ID:    "实例名称已存在: {{.p1}}",
+			Other: "Instance name already exists: {{.p1}}",
+		},
+		{
+			ID:    "同名实例过多，请手动填写实例名称",
+			Other: "Too many instances share this name, please enter an instance name manually",
+		},
+		{
 			ID:    "未登记的指标：{{.p1}}",
 			Other: "Unregistered metric: {{.p1}}",
 		},

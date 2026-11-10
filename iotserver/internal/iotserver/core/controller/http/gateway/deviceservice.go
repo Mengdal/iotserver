@@ -17,6 +17,7 @@ package gateway
 import (
 	"github.com/gin-gonic/gin"
 	"iotserver/internal/dtos"
+	"iotserver/internal/models"
 	"iotserver/internal/pkg/errort"
 	"iotserver/internal/pkg/httphelper"
 )
@@ -36,6 +37,9 @@ func (ctl *controller) DeviceServicesSearch(c *gin.Context) {
 		httphelper.RenderFail(c, errort.NewCommonErr(errort.DefaultReqParamsError, err), c.Writer, lc)
 		return
 	}
+	// 原生插件实例由 /plugins/instances 管理，避免旧 WebSocket 启动路径误操作。
+	// 在查询层排除，保证分页总数和列表一致。
+	req.ExcludeRuntime = models.PluginRuntimeNative
 
 	// TODO 驱动实例搜索是否需要查询驱动库
 	dss, total, err := ctl.getDriverServiceApp().Search(c, req)
@@ -43,14 +47,14 @@ func (ctl *controller) DeviceServicesSearch(c *gin.Context) {
 		httphelper.RenderFail(c, err, c.Writer, lc)
 		return
 	}
-	data := make([]dtos.DeviceServiceResponse, len(dss))
-	for i, ds := range dss {
+	data := make([]dtos.DeviceServiceResponse, 0, len(dss))
+	for _, ds := range dss {
 		dl, err := ctl.getDriverLibApp().DriverLibById(ds.DeviceLibraryId)
 		if err != nil {
 			httphelper.RenderFail(c, err, c.Writer, lc)
 			return
 		}
-		data[i] = dtos.DeviceServiceResponseFromModel(ds, dl)
+		data = append(data, dtos.DeviceServiceResponseFromModel(ds, dl))
 	}
 
 	pageResult := httphelper.NewPageResult(data, total, req.Page, req.PageSize)

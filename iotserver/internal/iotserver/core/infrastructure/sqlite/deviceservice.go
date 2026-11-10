@@ -50,6 +50,11 @@ func deviceServicesSearch(c *Client, offset int, limit int, req dtos.DeviceServi
 		tx = tx.Where("`platform` = ?", req.Platform)
 
 	}
+	// 排除某类运行时（如 /device-servers 要隐藏 native 实例）。
+	// 放在 Count 之前，保证分页总数与列表一致。
+	if req.ExcludeRuntime != "" {
+		tx = tx.Where("COALESCE(`runtime`, '') <> ?", req.ExcludeRuntime)
+	}
 	err := tx.Count(&total).Error
 	if err != nil {
 		return []models.DeviceService{}, 0, errort.NewCommonEdgeX(errort.DefaultSystemError, "deviceServices failed query from the database", err)
@@ -61,6 +66,21 @@ func deviceServicesSearch(c *Client, offset int, limit int, req dtos.DeviceServi
 	}
 
 	return deviceServices, uint32(total), nil
+}
+
+// DeviceServiceInstanceNameExists 判断同一驱动库下是否已存在同名原生实例。
+func (c *Client) DeviceServiceInstanceNameExists(libraryId, instanceName string) (bool, error) {
+	if libraryId == "" || instanceName == "" {
+		return false, nil
+	}
+	var count int64
+	err := c.Pool.Model(&models.DeviceService{}).
+		Where("device_library_id = ? AND instance_name = ?", libraryId, instanceName).
+		Count(&count).Error
+	if err != nil {
+		return false, errort.NewCommonEdgeX(errort.DefaultSystemError, "device service name query failed", err)
+	}
+	return count > 0, nil
 }
 
 func deviceServiceIdExist(c *Client, id string) (bool, error) {

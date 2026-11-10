@@ -9,8 +9,6 @@ import ProductDetail from '@/pages/gateway/ProductManage/Detail'
 import DeviceManage from '@/pages/gateway/DeviceManage'
 import DeviceDetail from '@/pages/gateway/DeviceManage/Detail'
 import GatewayManage from '@/pages/gateway/GatewayManage'
-import GatewayDetail from '@/pages/gateway/GatewayManage/Detail'
-import CollectConfigPage from '@/pages/gateway/CollectConfig'
 import MyDrive from '@/pages/gateway/MyDrive'
 import DriveImage from '@/pages/gateway/DriveImage'
 import Dashboard from '@/pages/home/Dashboard'
@@ -95,14 +93,6 @@ const router = createBrowserRouter([
       {
         path: '/gateway/gateway/manage',
         element: <GatewayManage />,
-      },
-      {
-        path: '/gateway/gateway/detail/:id',
-        element: <GatewayDetail />,
-      },
-      {
-        path: '/gateway/collect/config',
-        element: <CollectConfigPage />,
       },
       {
         path: '/gateway/drive/image',

@@ -69,7 +69,7 @@ export function deleteDeviceLibraries (id: string) {
   })
 }
 
-export function getDriverMarket<T> (params?: { name?: string; classify_id: string }) {
+export function getDriverMarket<T> (params?: { name?: string; classify_id?: string; category?: string }) {
   return httpRequest<any, CommonResponse<TableReponseType<T>>>({ url: '/api/v1/device-libraries?isAll=true&is_internal=true', params })
 }
 

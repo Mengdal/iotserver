@@ -43,7 +43,7 @@ export interface DeviceServers {
   platform: string
 }
 
-export function getDeviceServers (params: TableRequestType) {
+export function getDeviceServers (params: TableRequestType & { name?: string }) {
   return httpRequest<any, CommonResponse<TableReponseType<DeviceServers>>>({
     url: '/api/v1/device-servers',
     params,

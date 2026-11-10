@@ -4,6 +4,7 @@ import CustomDrive from './CustomDrive'
 import DriveMarket from './DriveMarket'
 import './style.less'
 import { t } from '@/i18n'
+import { isEmbeddedDeployment, useAuth } from '@/utils/auth'
 
 export interface DriveImageProps {
 
@@ -27,6 +28,9 @@ export interface ProductType {
 // }
 
 const DriveImage: React.FC<DriveImageProps> = () => {
+  const embedded = isEmbeddedDeployment()
+  const canImage = useAuth('gateway:image:list')
+  const showCustomImage = !embedded && canImage
   return (
     <>
       <Card bodyStyle={{ padding: 0 }}>
@@ -35,15 +39,18 @@ const DriveImage: React.FC<DriveImageProps> = () => {
           type="card"
           items={[
             {
-              key: '1',
-              label: t('自定义'),
-              children: <CustomDrive></CustomDrive>,
-            },
-            {
-              key: '2',
+              key: 'market',
               label: t('驱动市场'),
               children: <DriveMarket></DriveMarket>,
             },
+            // 嵌入式部署没有 Docker，只保留驱动市场。
+            ...(showCustomImage
+              ? [{
+                key: 'custom',
+                label: t('自定义'),
+                children: <CustomDrive></CustomDrive>,
+              }]
+              : []),
           ]}
         />
       </Card>

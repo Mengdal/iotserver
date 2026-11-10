@@ -23,6 +23,8 @@ export * from './SceneLinkage'
 export * from './sysManage'
 export * from './tenant'
 export * from './gateway'
+export * from './system-components'
+export * from './plugins'
 export * from './solution'
 export * from './viz'
 

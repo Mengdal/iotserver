@@ -58,7 +58,6 @@ const menus: AppMenuItem[] = [
       { label: t('产品管理'), key: '/gateway/product/manage', perm: P.ProductList },
       { label: t('设备管理'), key: '/gateway/device/manage', perm: P.DeviceList },
       { label: t('网关管理'), key: '/gateway/gateway/manage', perm: P.GatewayList },
-      { label: t('采集配置'), key: '/gateway/collect/config', perm: P.CollectConfigList },
       { label: t('方案中心'), key: '/solution/center', perm: P.SolutionList },
     ],
   },
@@ -68,7 +67,7 @@ const menus: AppMenuItem[] = [
     key: '/drive',
     icon: <CloudServerOutlined />,
     children: [
-      { label: t('驱动镜像'), key: '/gateway/drive/image', perm: P.ImageList },
+      { label: t('驱动组件'), key: '/gateway/drive/image', perm: P.DriveList },
       { label: t('我的驱动'), key: '/gateway/my/drive', perm: P.DriveList },
     ],
   },

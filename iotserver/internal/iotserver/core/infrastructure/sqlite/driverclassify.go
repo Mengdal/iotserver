@@ -24,6 +24,8 @@ import (
 func driverClassifySearch(c *Client, offset int, limit int, req dtos.DriverClassifyQueryRequest) (dcs []models.DriverClassify, count uint32, edgeXErr error) {
 	d := models.DriverClassify{}
 	var total int64
+	// 分类按创建顺序展示：协议驱动在前，后补的「内置组件」排在后面。
+	req.OrderBy = "created:asc"
 	tx := c.Pool.Table(d.TableName())
 	tx = sqlite.BuildCommonCondition(tx, d, req.BaseSearchConditionQuery)
 	if req.Name != "" {

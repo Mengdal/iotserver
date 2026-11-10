@@ -43,6 +43,8 @@ func RegisterGateway(engine *gin.Engine, dic *di.Container) {
 	v1.GET("ws/", websocket.NewServer(dic).Handle)
 
 	v1Auth := v1.Group("", jwt.JWTAuth(false), middleware.TenantContext(), middleware.TenantExpireCheck(dic),
+		// 采集配置按软网关隔离：从 query / x-collect-gateway 读取当前网关 ID。
+		middleware.CollectGatewayContext(),
 		// 审查日志（操作日志）：只记非 GET 写操作，异步落库，不阻塞业务
 		middleware.AuditLog(dic))
 	v1Auth.PUT("auth/password", ctl.UpdatePassword)
@@ -103,28 +105,28 @@ func RegisterGateway(engine *gin.Engine, dic *di.Container) {
 		v1Auth.POST("gateway/edge/sync", ctl.Perm(middleware.PermGatewayEdit), ctl.GatewayEdgeSync)
 
 		// 设备级采集配置：点位按产品物模型生成，保存到平台；下发接口待接入。
-		v1Auth.GET("collect/config", ctl.Perm(middleware.PermCollectConfigList), ctl.CollectConfigGet)
-		v1Auth.GET("collect/config/template", ctl.Perm(middleware.PermCollectConfigList), ctl.CollectConfigTemplate)
-		v1Auth.GET("collect/config/latest", ctl.Perm(middleware.PermCollectConfigList), ctl.CollectConfigLatest)
-		v1Auth.PUT("collect/config/enabled", ctl.Perm(middleware.PermCollectConfigEdit), ctl.CollectConfigSetEnabled)
-		v1Auth.GET("collect/config/export", ctl.Perm(middleware.PermCollectConfigList), ctl.CollectConfigExport)
-		v1Auth.GET("collect/config/export-all", ctl.Perm(middleware.PermCollectConfigList), ctl.CollectConfigExportAll)
-		v1Auth.POST("collect/config/import-all/preview", ctl.Perm(middleware.PermCollectConfigEdit), ctl.CollectConfigImportAllPreview)
-		v1Auth.POST("collect/config/import-all", ctl.Perm(middleware.PermCollectConfigEdit), ctl.CollectConfigImportAll)
-		v1Auth.POST("collect/config/write", ctl.Perm(middleware.PermCollectConfigEdit), ctl.CollectWrite)
-		v1Auth.PUT("collect/config", ctl.Perm(middleware.PermCollectConfigEdit), ctl.CollectConfigSave)
+		v1Auth.GET("collect/config", ctl.Perm(middleware.PermGatewayList), ctl.CollectConfigGet)
+		v1Auth.GET("collect/config/template", ctl.Perm(middleware.PermGatewayList), ctl.CollectConfigTemplate)
+		v1Auth.GET("collect/config/latest", ctl.Perm(middleware.PermGatewayList), ctl.CollectConfigLatest)
+		v1Auth.PUT("collect/config/enabled", ctl.Perm(middleware.PermGatewayConfig), ctl.CollectConfigSetEnabled)
+		v1Auth.GET("collect/config/export", ctl.Perm(middleware.PermGatewayList), ctl.CollectConfigExport)
+		v1Auth.GET("collect/config/export-all", ctl.Perm(middleware.PermGatewayList), ctl.CollectConfigExportAll)
+		v1Auth.POST("collect/config/import-all/preview", ctl.Perm(middleware.PermGatewayConfig), ctl.CollectConfigImportAllPreview)
+		v1Auth.POST("collect/config/import-all", ctl.Perm(middleware.PermGatewayConfig), ctl.CollectConfigImportAll)
+		v1Auth.POST("collect/config/write", ctl.Perm(middleware.PermGatewayConfig), ctl.CollectWrite)
+		v1Auth.PUT("collect/config", ctl.Perm(middleware.PermGatewayConfig), ctl.CollectConfigSave)
 		// IOTP 设备绑定（新版采集引擎接口）：前端使用 /api/v1/iotp_devices。
-		v1Auth.GET("iotp_devices", ctl.Perm(middleware.PermCollectConfigList), ctl.CollectDevices)
+		v1Auth.GET("iotp_devices", ctl.Perm(middleware.PermGatewayList), ctl.CollectDevices)
 		// 旧路径保留一个版本，避免旧前端直接 404。
-		v1Auth.GET("collect/devices", ctl.Perm(middleware.PermCollectConfigList), ctl.CollectDevices)
-		v1Auth.GET("collect/overview", ctl.Perm(middleware.PermCollectConfigList), ctl.CollectOverview)
-		v1Auth.GET("collect/realtime", ctl.Perm(middleware.PermCollectConfigList), ctl.CollectRealtime)
-		v1Auth.GET("collect/channels", ctl.Perm(middleware.PermCollectConfigList), ctl.CollectChannels)
-		v1Auth.PUT("collect/channels", ctl.Perm(middleware.PermCollectConfigEdit), ctl.CollectChannelSave)
-		v1Auth.DELETE("collect/channels/:id", ctl.Perm(middleware.PermCollectConfigEdit), ctl.CollectChannelDelete)
-		v1Auth.GET("collect/channels/:id/devices", ctl.Perm(middleware.PermCollectConfigList), ctl.CollectChannelDevices)
-		v1Auth.POST("collect/channels/:id/devices", ctl.Perm(middleware.PermCollectConfigEdit), ctl.CollectChannelBindDevices)
-		v1Auth.DELETE("collect/channels/:id/devices/:deviceId", ctl.Perm(middleware.PermCollectConfigEdit), ctl.CollectChannelUnbindDevice)
+		v1Auth.GET("collect/devices", ctl.Perm(middleware.PermGatewayList), ctl.CollectDevices)
+		v1Auth.GET("collect/overview", ctl.Perm(middleware.PermGatewayList), ctl.CollectOverview)
+		v1Auth.GET("collect/realtime", ctl.Perm(middleware.PermGatewayList), ctl.CollectRealtime)
+		v1Auth.GET("collect/channels", ctl.Perm(middleware.PermGatewayList), ctl.CollectChannels)
+		v1Auth.PUT("collect/channels", ctl.Perm(middleware.PermGatewayConfig), ctl.CollectChannelSave)
+		v1Auth.DELETE("collect/channels/:id", ctl.Perm(middleware.PermGatewayConfig), ctl.CollectChannelDelete)
+		v1Auth.GET("collect/channels/:id/devices", ctl.Perm(middleware.PermGatewayList), ctl.CollectChannelDevices)
+		v1Auth.POST("collect/channels/:id/devices", ctl.Perm(middleware.PermGatewayConfig), ctl.CollectChannelBindDevices)
+		v1Auth.DELETE("collect/channels/:id/devices/:deviceId", ctl.Perm(middleware.PermGatewayConfig), ctl.CollectChannelUnbindDevice)
 	}
 	/******* 设备接入 - 方案（行业模板一键应用）*******/
 	{
@@ -160,12 +162,27 @@ func RegisterGateway(engine *gin.Engine, dic *di.Container) {
 		v1Auth.DELETE("device-libraries/:deviceLibraryId", ctl.Perm(middleware.PermDriveRemove), ctl.DeviceLibraryDelete)
 		v1Auth.PUT("device-libraries/:deviceLibraryId", ctl.Perm(middleware.PermDriveEdit), ctl.DeviceLibraryUpdate)
 		v1Auth.GET("driver-classify", ctl.Perm(middleware.PermDriveList), ctl.Perm(middleware.PermImageList), ctl.DeviceClassify)
-
+		// 内置系统组件（Mosquitto / eKuiper）：Phase 1 只提供列表与探活
+		v1Auth.GET("system-components", ctl.Perm(middleware.PermDriveList), ctl.SystemComponents)
 	}
 	/*******驱动实例 *******/
 	{
 		v1Auth.GET("device-servers", ctl.Perm(middleware.PermDriveList), ctl.DeviceServicesSearch)
 		v1Auth.PUT("device-server/:deviceServiceId", ctl.Perm(middleware.PermDriveEdit), ctl.DeviceServiceUpdate)
+	}
+
+	/******* 原生插件（Phase 2：本机进程运行时） *******/
+	{
+		v1Auth.POST("plugins/packages/upload", ctl.Perm(middleware.PermDriveAdd), ctl.PluginPackageUpload)
+		v1Auth.GET("plugins/packages", ctl.Perm(middleware.PermDriveList), ctl.PluginPackages)
+		v1Auth.DELETE("plugins/packages/:id", ctl.Perm(middleware.PermDriveRemove), ctl.PluginPackageDelete)
+		v1Auth.GET("plugins/instances", ctl.Perm(middleware.PermDriveList), ctl.PluginInstances)
+		v1Auth.POST("plugins/instances", ctl.Perm(middleware.PermDriveAdd), ctl.PluginInstanceCreate)
+		v1Auth.POST("plugins/instances/:id/start", ctl.Perm(middleware.PermDriveEdit), ctl.PluginInstanceStart)
+		v1Auth.POST("plugins/instances/:id/stop", ctl.Perm(middleware.PermDriveEdit), ctl.PluginInstanceStop)
+		v1Auth.POST("plugins/instances/:id/restart", ctl.Perm(middleware.PermDriveEdit), ctl.PluginInstanceRestart)
+		v1Auth.GET("plugins/instances/:id/logs", ctl.Perm(middleware.PermDriveList), ctl.PluginInstanceLogs)
+		v1Auth.DELETE("plugins/instances/:id", ctl.Perm(middleware.PermDriveRemove), ctl.PluginInstanceDelete)
 	}
 
 	/*******驱动市场分类 *******/

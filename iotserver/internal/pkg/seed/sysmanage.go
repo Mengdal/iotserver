@@ -202,8 +202,10 @@ func DefaultMenus() []models.Menu {
 			Sort: 2, Visible: 1, Status: 1, IsFrame: 1,
 		},
 		{
-			Id: MenuImage, ParentId: MenuDriveGroup, Name: "驱动镜像", Path: "/gateway/drive/image",
-			Icon: "cloud-server", MenuType: models.MenuTypeMenu, Perms: permissions.ImageList,
+			// 驱动组件：驱动市场、Docker 镜像（server）与内置系统组件。
+			// 入口按「驱动查看」授权；Docker 页签和接口仍单独校验 gateway:image:*。
+			Id: MenuImage, ParentId: MenuDriveGroup, Name: "驱动组件", Path: "/gateway/drive/image",
+			Icon: "cloud-server", MenuType: models.MenuTypeMenu, Perms: permissions.DriveList,
 			Sort: 1, Visible: 1, Status: 1, IsFrame: 1,
 		},
 		{
@@ -218,10 +220,11 @@ func DefaultMenus() []models.Menu {
 			Sort: 3, Visible: 1, Status: 1, IsFrame: 1,
 		},
 		{
-			// 采集配置：按设备配置采集参数，点位由产品物模型生成
+			// 采集配置入口已收敛到「网关管理 → 采集配置」抽屉，不再出现在侧边栏。
+			// 保留菜单记录（Visible=0）是为了继续承载 collect:config:* 权限码与按钮权限。
 			Id: MenuCollectConfig, ParentId: MenuGatewayId, Name: "采集配置", Path: "/gateway/collect/config",
 			Icon: "setting", MenuType: models.MenuTypeMenu, Perms: permissions.CollectConfigList,
-			Sort: 5, Visible: 1, Status: 1, IsFrame: 1,
+			Sort: 5, Visible: 0, Status: 1, IsFrame: 1,
 		},
 		{
 			// 方案中心：行业方案（物模型 + 告警预设 + 看板预设）一键生成产品与告警规则

@@ -47,11 +47,8 @@ const pageMetas: Record<string, PageMeta> = {
   '/gateway/gateway/manage': {
     describe: t('第三方工业网关的注册、MQTT 接入信息、配置下发与在线状态。'),
   },
-  '/gateway/collect/config': {
-    describe: t('用于管理采集通道、通道下的设备与设备点表；支持点位导入导出、实时监控以及设备使能控制。'),
-  },
   '/gateway/drive/image': {
-    describe: t('驱动镜像是用户编写程序最终打包成可下载的docker镜像，它是实体设备与物联网平台通讯的桥梁，所有的设备数据由驱动上报到物联网平台，所有的设备控制指令由物联网平台下发给驱动。'),
+    describe: t('驱动组件用于管理驱动市场、Docker 镜像和平台内置系统组件；嵌入式部署下自动隐藏镜像相关入口。'),
   },
   '/gateway/my/drive': {
     describe: t('我的驱动用于管理已安装到本地的设备驱动实例，支持查看驱动运行状态、配置参数与实时日志，是设备接入平台的运行载体。'),

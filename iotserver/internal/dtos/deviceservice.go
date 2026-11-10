@@ -125,6 +125,9 @@ type DeviceServiceSearchQueryRequest struct {
 	DeviceLibraryIds         string `form:"deviceLibraryIds"` // 驱动库IDs
 	Platform                 string `form:"platform"`
 	DriverType               int    `form:"driver_type" binding:"omitempty,oneof=1 2"` //驱动库类型，1：驱动，2：三方应用
+	// ExcludeRuntime 排除指定运行时（native/docker/builtin）。仅供内部调用，
+	// 例如 /device-servers 需要隐藏由 /plugins/instances 管理的原生实例。
+	ExcludeRuntime string `form:"-" json:"-"`
 }
 
 /************** Response **************/

@@ -40,6 +40,7 @@ import (
 	"iotserver/internal/iotserver/core/application/messagestore"
 	"iotserver/internal/iotserver/core/application/monitor"
 	"iotserver/internal/iotserver/core/application/persistence"
+	"iotserver/internal/iotserver/core/application/pluginapp"
 	"iotserver/internal/iotserver/core/application/productapp"
 	"iotserver/internal/iotserver/core/application/quicknavigationapp"
 	"iotserver/internal/iotserver/core/application/resourceapp"
@@ -193,6 +194,13 @@ func (b *Bootstrap) initClient(ctx context.Context, wg *sync.WaitGroup, dic *di.
 	dic.Update(di.ServiceConstructorMap{
 		container.DriverServiceAppName: func(get di.Get) interface{} {
 			return driverServiceApp
+		},
+	})
+
+	pluginApp := pluginapp.New(dic)
+	dic.Update(di.ServiceConstructorMap{
+		container.PluginAppName: func(get di.Get) interface{} {
+			return pluginApp
 		},
 	})
 

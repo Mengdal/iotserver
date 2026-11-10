@@ -81,6 +81,31 @@ func TestMigrateSystemTablesSeedsData(t *testing.T) {
 		t.Fatalf("expect %d menus, got %d", len(seed.DefaultMenus()), len(menus))
 	}
 
+	// 内置系统组件：Mosquitto / eKuiper 应随迁移种入，且标记为 system/builtin
+	var components []models.DeviceLibrary
+	if err := c.Pool.Table("device_library").
+		Where("id IN ?", []string{seed.SystemComponentMosquittoId, seed.SystemComponentEKuiperId}).
+		Order("id asc").Find(&components).Error; err != nil {
+		t.Fatalf("query system components: %v", err)
+	}
+	if len(components) != 2 {
+		t.Fatalf("expect 2 system components, got %d", len(components))
+	}
+	for _, component := range components {
+		if component.Category != models.PluginCategorySystem ||
+			component.Runtime != models.PluginRuntimeBuiltin {
+			t.Fatalf("unexpected system component: %+v", component)
+		}
+	}
+	// 旧「一个驱动库一个实例」的唯一索引应被替换为 (库, 实例名) 索引
+	if c.Pool.Migrator().HasIndex("device_service", "idx_device_service_device_library_id") {
+		t.Fatal("legacy unique index on device_library_id should be dropped")
+	}
+	if !c.Pool.Migrator().HasIndex("device_service", "uk_device_service_library_instance") &&
+		!c.Pool.Migrator().HasIndex("device_service", "idx_device_service_library_instance") {
+		t.Fatal("missing (device_library_id, instance_name) index")
+	}
+
 	users, total, err := c.SysUserSearch(0, -1, dtos.SysUserSearchRequest{IsAll: true})
 	if err != nil {
 		t.Fatalf("user search: %v", err)

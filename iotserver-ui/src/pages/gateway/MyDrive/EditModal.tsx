@@ -3,6 +3,7 @@ import React, { forwardRef, useCallback, useImperativeHandle, useState } from 'r
 import { Badge, Button, Drawer, Form, Input, message, Space, Switch } from 'antd'
 import { CloseOutlined } from '@ant-design/icons'
 import { RunStatusMap } from '@/utils/statusMap'
+import { isEmbeddedDeployment } from '@/utils/auth'
 import { editDeviceServers } from '@/api'
 import { DeviceServers } from '@/api/device-servers'
 import { t } from '@/i18n'
@@ -36,6 +37,7 @@ export const EditModal = forwardRef<EditModalRef, EditModalProps>(({ onSuccess }
   const [record, setRecord] = useState<DeviceServers>()
   const [submitting, setSubmitting] = useState<boolean>(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const embedded = isEmbeddedDeployment()
 
   useImperativeHandle(ref, () => {
     return {
@@ -120,7 +122,7 @@ export const EditModal = forwardRef<EditModalRef, EditModalProps>(({ onSuccess }
           <Input placeholder={t('请输入实例名称')} disabled></Input>
         </Form.Item>
         <Form.Item
-          label={t('镜像名称')}
+          label={embedded ? t('插件名称') : t('镜像名称')}
           name="image_name"
           validateFirst
           rules={[{ required: true, message: t('请输入镜像名称') }]}
@@ -128,7 +130,7 @@ export const EditModal = forwardRef<EditModalRef, EditModalProps>(({ onSuccess }
           <Input placeholder={t('请输入镜像名称')} disabled></Input>
         </Form.Item>
         <Form.Item
-          label={t('镜像编号')}
+          label={embedded ? t('插件编号') : t('镜像编号')}
           name="id"
         >
           <Input placeholder={t('请输入镜像编号')} disabled></Input>
@@ -155,32 +157,36 @@ export const EditModal = forwardRef<EditModalRef, EditModalProps>(({ onSuccess }
             text={RunStatusMap[record?.runStatus!]?.text}
           />
         </Form.Item>
-        <Form.Item
-          label={t('Docker启动参数')}
-          name="docker_params_switch"
-          valuePropName="checked"
-        >
-          <Switch></Switch>
-        </Form.Item>
-        <Form.Item
-          noStyle
-          shouldUpdate={(prevValues, nextValues) => {
-            return prevValues.docker_params_switch !== nextValues.docker_params_switch
-          }}
-        >
-          {({ getFieldValue }) => {
-            return getFieldValue('docker_params_switch')
-              ? (
-                <Form.Item
-                  name="docker_params"
-                  rules={[{ required: true, message: t('请输入Docker启动参数') }]}
-                >
-                  <TextArea placeholder={t('请输入Docker启动参数')}></TextArea>
-                </Form.Item>
-              )
-              : null
-          }}
-        </Form.Item>
+        {!embedded && (
+          <>
+            <Form.Item
+              label={t('Docker启动参数')}
+              name="docker_params_switch"
+              valuePropName="checked"
+            >
+              <Switch></Switch>
+            </Form.Item>
+            <Form.Item
+              noStyle
+              shouldUpdate={(prevValues, nextValues) => {
+                return prevValues.docker_params_switch !== nextValues.docker_params_switch
+              }}
+            >
+              {({ getFieldValue }) => {
+                return getFieldValue('docker_params_switch')
+                  ? (
+                    <Form.Item
+                      name="docker_params"
+                      rules={[{ required: true, message: t('请输入Docker启动参数') }]}
+                    >
+                      <TextArea placeholder={t('请输入Docker启动参数')}></TextArea>
+                    </Form.Item>
+                  )
+                  : null
+              }}
+            </Form.Item>
+          </>
+        )}
         <Form.Item
           label={t('自定义参数')}
           name="expertMode"

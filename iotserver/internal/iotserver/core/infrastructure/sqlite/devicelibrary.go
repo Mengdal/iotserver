@@ -66,12 +66,14 @@ func addDeviceLibrary(c *Client, dl models.DeviceLibrary) (models.DeviceLibrary,
 		return dl, errort.NewCommonEdgeX(errort.DefaultResourcesRepeat, fmt.Sprintf("device library id %s exists", dl.Id), edgeXErr)
 	}
 
-	// check docker config id exists
-	exists, edgeXErr = dockerConfigIdExists(c, dl.DockerConfigId)
-	if edgeXErr != nil {
-		return dl, edgeXErr
-	} else if !exists {
-		return dl, errort.NewCommonEdgeX(errort.DockerImageRepositoryNotFound, fmt.Sprintf("docker config id %s not exists", dl.Id), edgeXErr)
+	// 原生插件没有镜像仓库配置；只有 Docker 运行时才校验 docker_config。
+	if dl.DockerConfigId != "" {
+		exists, edgeXErr = dockerConfigIdExists(c, dl.DockerConfigId)
+		if edgeXErr != nil {
+			return dl, edgeXErr
+		} else if !exists {
+			return dl, errort.NewCommonEdgeX(errort.DockerImageRepositoryNotFound, fmt.Sprintf("docker config id %s not exists", dl.Id), edgeXErr)
+		}
 	}
 
 	ts := utils.MakeTimestamp()
@@ -132,6 +134,9 @@ func deviceLibrariesSearch(c *Client, offset int, limit int, req dtos.DeviceLibr
 	}
 	if req.ClassifyId != 0 {
 		tx = tx.Where("`classify_id` = ?", req.ClassifyId)
+	}
+	if req.Category != "" {
+		tx = tx.Where("`category` = ?", req.Category)
 	}
 
 	err := tx.Count(&total).Error

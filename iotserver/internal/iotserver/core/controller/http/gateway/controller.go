@@ -81,6 +81,10 @@ func (ctl *controller) getDriverServiceApp() interfaces.DriverServiceApp {
 	return container.DriverServiceAppFrom(ctl.dic.Get)
 }
 
+func (ctl *controller) getPluginApp() interfaces.PluginApp {
+	return container.PluginAppFrom(ctl.dic.Get)
+}
+
 func (ctl *controller) getSystemMonitorApp() interfaces.MonitorItf {
 	return container.MonitorAppNameFrom(ctl.dic.Get)
 }

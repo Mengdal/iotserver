@@ -21,6 +21,7 @@ import (
 	"iotserver/internal/models"
 	"iotserver/internal/pkg/constants"
 	"iotserver/internal/pkg/errort"
+	"iotserver/internal/pkg/seed"
 	"iotserver/internal/pkg/tenant"
 )
 
@@ -60,6 +61,18 @@ func (app *driverLibApp) addOrUpdateSupportVersionConfig(dl models.DeviceLibrary
 
 func (app *driverLibApp) DeviceLibrariesSearch(ctx context.Context, req dtos.DeviceLibrarySearchQueryRequest) ([]models.DeviceLibrary, uint32, error) {
 	offset, limit := req.BaseSearchConditionQuery.GetPage()
+	// category=all 用于驱动市场混排协议驱动与内置组件；
+	// 其他调用默认只查协议驱动，避免把系统组件混进驱动实例/镜像逻辑。
+	switch req.Category {
+	case "all":
+		req.Category = ""
+	case "":
+		if req.ClassifyId == seed.SystemComponentClassifyID {
+			req.Category = models.PluginCategorySystem
+		} else {
+			req.Category = models.PluginCategoryDriver
+		}
+	}
 
 	installingIds := app.manager.FilterState(constants.OperateStatusInstalling)
 	if req.DownloadStatus == constants.OperateStatusInstalling && len(installingIds) == 0 {

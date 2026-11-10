@@ -1,11 +1,12 @@
-import React, { useEffect, useState, useContext, useCallback } from 'react'
-import { Card, Tag, Typography, Space, Divider, Button, message, Tabs, Form, Input, Empty } from 'antd'
+import React, { useEffect, useRef, useState, useContext, useCallback } from 'react'
+import { Card, Tag, Typography, Space, Divider, Button, message, Form, Input, Empty } from 'antd'
+import { CloudServerOutlined, UploadOutlined } from '@ant-design/icons'
 import { WebSocketProvider, WebSocketContext } from '@/components/WebSocket'
 import { OperateStatusMap } from '@/utils/statusMap'
-import { getDriverMarket } from '@/api'
+import { getDriverMarket, uploadPluginPackage } from '@/api'
 
 import './style.less'
-import { getDriveClassify } from '@/api/device-libraries'
+import { useAuth } from '@/utils/auth'
 import { t } from '@/i18n'
 
 const { useMessage } = message
@@ -22,9 +23,20 @@ export interface DriverMarketType {
   operate_status: 'installing' | 'default' | 'installed' | 'uninstall';
   version: string;
   classify_id: string;
+  category?: string;
+  essential?: boolean;
+  runtime?: string;
+  arch?: string;
+  protocol?: string;
 }
 
-const CardItem = ({ id, params }: { id: string; params: { name?: string } }) => {
+const CardItem = ({
+  params,
+  reloadKey,
+}: {
+  params: { name?: string };
+  reloadKey: number;
+}) => {
   const [items, setItems] = useState<DriverMarketType[]>([])
   const [loading, setLoading] = useState(false)
   const [messageApi] = useMessage()
@@ -49,10 +61,13 @@ const CardItem = ({ id, params }: { id: string; params: { name?: string } }) => 
 
   const getList = (name?: string) => {
     setLoading(true)
-    getDriverMarket<DriverMarketType>({ name, classify_id: id })
+    getDriverMarket<DriverMarketType>({ name, category: 'all' })
       .then((resp) => {
         if (resp.success) {
-          setItems(resp.result.list)
+          const list = resp.result.list || []
+          // 协议驱动/原生插件在前，内置组件排在后面。
+          list.sort((a, b) => Number(a.category === 'system') - Number(b.category === 'system'))
+          setItems(list)
         }
       })
       .finally(() => {
@@ -62,25 +77,32 @@ const CardItem = ({ id, params }: { id: string; params: { name?: string } }) => 
 
   useEffect(() => {
     getList(params.name)
-  }, [params.name])
+  }, [params.name, reloadKey])
 
   return (
     <div className="drive-market p20">
       <Card loading={loading} bordered>
         <div className="responsive-layout">
           {items.map((item) => {
-            const { color, icon, text } = OperateStatusMap[item.operate_status]
-            return (
-              <Card key={item.id} className="card-item" size="small" hoverable>
-                <Tag color={color} icon={icon}>
-                  {text}
-                </Tag>
-                <div className="flex-center">
-                  <div className="logo" style={{ backgroundImage: `url(${item.icon})` }}></div>
-                </div>
-                <div className="flex justify-center title">
-                  <Typography.Title level={5}>{item.name}</Typography.Title>
-                </div>
+            const isSystem = item.category === 'system'
+            const isNative = item.runtime === 'native'
+            // 系统组件/驱动组件与协议驱动使用同一套「已下载」样式。
+            const { color, icon, text } = isSystem || isNative
+              ? OperateStatusMap.installed
+              : OperateStatusMap[item.operate_status]
+            const renderFooter = () => {
+              if (isSystem || isNative) {
+                return item.manual
+                  ? (
+                    <div className="flex justify-center">
+                      <Button type="link" onClick={() => window.open(item.manual)}>
+                        {t('手册')}
+                      </Button>
+                    </div>
+                  )
+                  : <div className="flex justify-center" />
+              }
+              return (
                 <div className="flex justify-center">
                   <Space split={<Divider type="vertical" />}>
                     <Button
@@ -130,6 +152,40 @@ const CardItem = ({ id, params }: { id: string; params: { name?: string } }) => 
                     )}
                   </Space>
                 </div>
+              )
+            }
+            return (
+              <Card key={item.id} className="card-item" size="small" hoverable>
+                <Space size={4} wrap>
+                  <Tag color={color} icon={icon}>
+                    {text}
+                  </Tag>
+                  <Tag color="default">
+                    {isSystem ? t('系统组件') : isNative ? t('驱动组件') : t('协议驱动')}
+                  </Tag>
+                  {isSystem && item.essential && <Tag color="blue">{t('必需')}</Tag>}
+                </Space>
+                <div className="flex-center">
+                  {item.icon
+                    ? <div className="logo" style={{ backgroundImage: `url(${item.icon})` }}></div>
+                    : (
+                      <div
+                        className="logo"
+                        style={{
+                          background: '#f0f5ff',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <CloudServerOutlined style={{ fontSize: 28, color: '#1677ff' }} />
+                      </div>
+                    )}
+                </div>
+                <div className="flex justify-center title">
+                  <Typography.Title level={5}>{item.name}</Typography.Title>
+                </div>
+                {renderFooter()}
               </Card>
             )
           })}
@@ -142,26 +198,13 @@ const CardItem = ({ id, params }: { id: string; params: { name?: string } }) => 
 }
 
 const DriveMarket: React.FC<DriveMarketProps> = () => {
-  const [, contextHolder] = useMessage()
+  const [messageApi, contextHolder] = useMessage()
+  const uploadRef = useRef<HTMLInputElement>(null)
+  const [uploading, setUploading] = useState(false)
+  const [reloadKey, setReloadKey] = useState(0)
+  const canUpload = useAuth('gateway:drive:add')
 
-  const [tabList, setTabList] = useState<{ id: string; name: string }[]>([])
-
-  const [activeKey, setActiveKey] = useState<string | undefined>('')
-
-  const getDriveList = async () => {
-    try {
-      const { result } = await getDriveClassify()
-      const list = (result?.list || []) as { id: string; name: string }[]
-      setTabList(list)
-      setActiveKey(list[0]?.id)
-    } catch {}
-  }
-
-  useEffect(() => {
-    getDriveList()
-  }, [])
   const [form] = Form.useForm()
-
   const [params, setParams] = useState<{ name?: string }>({})
 
   const search = () => {
@@ -172,6 +215,26 @@ const DriveMarket: React.FC<DriveMarketProps> = () => {
   const reset = () => {
     form.resetFields()
     search()
+  }
+
+  const handleUploadPackage = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+    setUploading(true)
+    try {
+      const resp = await uploadPluginPackage(file)
+      if (resp.success) {
+        messageApi.success(t('插件包安装成功'))
+        setReloadKey(key => key + 1)
+      } else {
+        messageApi.error(resp.errorMsg)
+      }
+    } catch (error: any) {
+      messageApi.error(error?.message || t('插件包安装失败'))
+    } finally {
+      setUploading(false)
+    }
   }
 
   return (
@@ -191,22 +254,22 @@ const DriveMarket: React.FC<DriveMarketProps> = () => {
             {t('重置')}
           </Button>
         </Form.Item>
+        {canUpload && (
+          <Form.Item>
+            <Button icon={<UploadOutlined />} loading={uploading} onClick={() => uploadRef.current?.click()}>
+              {t('安装插件包')}
+            </Button>
+            <input
+              ref={uploadRef}
+              type="file"
+              accept=".tar.gz,.tgz,application/gzip"
+              style={{ display: 'none' }}
+              onChange={handleUploadPackage}
+            />
+          </Form.Item>
+        )}
       </Form>
-      {/* 只有一个分类时不显示分类页签：避免出现「协议驱动」这种只有一个选项的多余 tab */}
-      {tabList.length > 1
-        ? (
-          <Tabs
-            activeKey={activeKey}
-            onChange={(e) => {
-              setActiveKey(e)
-            }}
-            destroyInactiveTabPane={true}
-            items={tabList.map((item) => ({ key: item.id, label: item.name, children: <CardItem id={item.id} params={params}></CardItem> }))}
-          />
-        )
-        : tabList.length === 1
-          ? <CardItem id={tabList[0].id} params={params} />
-          : <Empty description={t('暂无数据')} />}
+      <CardItem params={params} reloadKey={reloadKey} />
     </>
   )
 }
