@@ -43,6 +43,8 @@ type LoginResponse struct {
 	Roles       []string          `json:"roles"`
 	Permissions []string          `json:"permissions"`
 	Menus       []SysMenuResponse `json:"menus"`
+	// DeploymentMode 部署形态：server / embedded，前端据此隐藏 Docker 相关入口
+	DeploymentMode string `json:"deploymentMode"`
 }
 
 type UserResponse struct {

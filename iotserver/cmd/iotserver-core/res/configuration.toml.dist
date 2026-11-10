@@ -25,6 +25,9 @@ Host = '0.0.0.0'
 Port = 3000
 Timeout = 120
 
+[WebUI]
+BuildPath = './cmd/iotserver-ui/build'
+
 [Databases]
 [Databases.Metadata]
 Type = 'sqlite'

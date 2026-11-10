@@ -29,6 +29,10 @@ Host = '0.0.0.0'
 Port = 3000
 Timeout = 120
 
+# 前端静态资源目录。本地部署时可指向 /opt/iotserver/ui。
+[WebUI]
+BuildPath = './cmd/iotserver-ui/build'
+
 [Databases]
 [Databases.Metadata]
 Type = 'sqlite'
@@ -72,11 +76,14 @@ Password = ''
 # 订阅刷新间隔（秒）：界面上增删网关后自动重订阅，无需重启服务；<=0 用默认值 60
 ResyncIntervalSec = 60
 
-# 采集引擎（IOTP Gateway API）：采集配置「下发」时把通道/设备/点位同步过去。
-[Integrations.CollectEngine]
-Enabled = false
-BaseURL = ''
-TimeoutSec = 10
+# 部署形态：server 保留 Docker 驱动管理；embedded 以本机进程运行插件并隐藏镜像仓库。
+[Deployment]
+Mode = 'server'
+
+# 原生插件目录：Root 存放解压后的插件版本，DataDir 存放实例配置/日志/PID。
+[Plugins]
+Root = 'data/plugins'
+DataDir = 'data/plugin-data'
 
 # 调试端点（/debug/pprof）：默认关闭。
 # 开启后需携带 x-token 且账号具备 system:debug:pprof 权限（超级管理员直通）。

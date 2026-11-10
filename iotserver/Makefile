@@ -1,4 +1,4 @@
-.PHONY: help build build-linux build-iotp build-iotp-linux run start ui ui-ensure build-ui sync-ui clean test fmt generate/api docker docker-ekuiper
+.PHONY: help build build-linux build-linux-arm64 build-iotp build-iotp-linux run start ui ui-ensure build-ui sync-ui clean test fmt generate/api docker docker-ekuiper
 # 本地二进制名（go build 默认输出到当前目录）
 BIN ?= iotserver-core
 # 前端产物目录与后端托管目录
@@ -24,6 +24,7 @@ help:
 	@echo "  make run          本地编译并启动（推荐，产物为 ./$(BIN)；会自动保证前端最新）"
 	@echo "  make build        编译当前平台二进制到 ./$(BIN)"
 	@echo "  make build-linux  交叉编译 linux/amd64（需 linux C 工具链）"
+	@echo "  make build-linux-arm64 交叉/本机编译 linux/arm64（DuckDB/CGO，可用 CC_ARM64 指定交叉编译器）"
 	@echo "  make build-iotp   纯 Go 构建（不含 DuckDB，配合 Type=iotp；CGO_ENABLED=0）"
 	@echo "  make build-iotp-linux 纯 Go 交叉编译 linux/arm64（可用 TARGET_ARCH 覆盖）"
 	@echo "  make ui           构建前端并同步到 $(UI_DST)"
@@ -49,6 +50,13 @@ build: $(BIN)
 # （本机 macOS 无法直接交叉编译，建议在容器里执行：见 Dockerfile）
 build-linux:
 	CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -o $(BIN)-linux-amd64 ./cmd/iotserver-core
+
+# ARM64：DuckDB 依赖 CGO。
+#   - 在 ARM64 设备上直接执行：make build-linux-arm64
+#   - 在 x86 主机交叉编译：make build-linux-arm64 CC_ARM64=aarch64-linux-gnu-gcc
+#   - 没有 CGO 工具链：改用 make build-iotp-linux TARGET_ARCH=arm64（时序库配置为 iotp）
+build-linux-arm64:
+	CGO_ENABLED=1 GOOS=linux GOARCH=arm64 $(if $(CC_ARM64),CC=$(CC_ARM64)) go build -o $(BIN)-linux-arm64 ./cmd/iotserver-core
 
 # 纯 Go / 无 DuckDB 构建：
 #   - SQLite 使用 pure-Go 驱动（glebarez/sqlite）

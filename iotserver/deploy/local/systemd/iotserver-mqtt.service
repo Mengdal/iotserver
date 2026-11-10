@@ -1,0 +1,17 @@
+[Unit]
+Description=iotserver MQTT Broker (Mosquitto)
+Documentation=https://mosquitto.org/
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=iotserver
+Group=iotserver
+ExecStart=/opt/iotserver/bin/mosquitto -c /etc/iotserver/mosquitto.conf
+Restart=always
+RestartSec=3
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target

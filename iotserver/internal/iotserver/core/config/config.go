@@ -25,25 +25,67 @@ type ConfigurationStruct struct {
 	MessageQueue MessageQueueInfo
 	Clients      map[string]bootstrapConfig.ClientInfo
 	// Databases 按用途归属：Metadata（元数据）/ Data（时序）。
-	Databases    map[string]bootstrapConfig.Database
-	Registry     bootstrapConfig.RegistryInfo
-	Service      bootstrapConfig.ServiceInfo
-	RpcServer    bootstrapConfig.RPCServiceInfo
-	SecretStore  bootstrapConfig.SecretStoreInfo
-	WebServer    bootstrapConfig.ServiceInfo
+	Databases   map[string]bootstrapConfig.Database
+	Registry    bootstrapConfig.RegistryInfo
+	Service     bootstrapConfig.ServiceInfo
+	RpcServer   bootstrapConfig.RPCServiceInfo
+	SecretStore bootstrapConfig.SecretStoreInfo
+	WebServer   bootstrapConfig.ServiceInfo
+	// WebUI 前端静态资源目录。本地部署时指向 /opt/iotserver/ui。
+	WebUI        WebUIInfo
 	DockerManage DockerManage
 	Pprof        PprofInfo
 	Tenant       TenantInfo
+	// Deployment 部署形态：server 支持 Docker 驱动；embedded 以本机进程运行插件。
+	Deployment DeploymentInfo
+	// Plugins 原生插件安装目录与实例数据目录。
+	Plugins PluginsInfo
 	// Integrations 外部系统接入配置，按被接入方归属。
 	Integrations IntegrationsInfo
+}
+
+// WebUIInfo 前端静态资源目录。
+type WebUIInfo struct {
+	// BuildPath 前端构建产物目录，默认 ./cmd/iotserver-ui/build
+	BuildPath string
+}
+
+// WebBuildPath 返回前端静态资源目录。
+func (c ConfigurationStruct) WebBuildPath() string {
+	if path := strings.TrimSpace(c.WebUI.BuildPath); path != "" {
+		return path
+	}
+	return "./cmd/iotserver-ui/build"
+}
+
+// PluginsInfo 原生插件运行时的目录配置。
+type PluginsInfo struct {
+	// Root 插件包解压后的安装根目录，默认 data/plugins
+	Root string
+	// DataDir 插件实例的配置、日志、PID 文件目录，默认 data/plugin-data
+	DataDir string
+}
+
+// PluginRoot 返回插件安装根目录。
+func (c ConfigurationStruct) PluginRoot() string {
+	if root := strings.TrimSpace(c.Plugins.Root); root != "" {
+		return root
+	}
+	return "data/plugins"
+}
+
+// PluginDataDir 返回插件实例数据目录。
+func (c ConfigurationStruct) PluginDataDir() string {
+	if dir := strings.TrimSpace(c.Plugins.DataDir); dir != "" {
+		return dir
+	}
+	return "data/plugin-data"
 }
 
 // IntegrationsInfo 外部系统接入配置。
 type IntegrationsInfo struct {
 	// EdgeIngest 参考系统（/edge 协议）接入所用的独立 broker 配置
 	EdgeIngest EdgeIngestInfo
-	// CollectEngine 采集引擎（IOTP Gateway API）配置：通道/设备/点位下发
-	CollectEngine CollectEngineInfo
 }
 
 // EdgeIngestInfo 参考系统（iotddc / things，/edge 协议）接入的 broker 配置。
@@ -68,18 +110,6 @@ type EdgeIngestInfo struct {
 	ResyncIntervalSec int
 }
 
-// CollectEngineInfo 采集引擎（IOTP Gateway API）配置。
-//
-// 采集配置的「下发」把平台里的通道 / 设备 / 点位同步到采集引擎；
-// Enabled=false 或 BaseURL 为空时下发直接报错，保存到平台不受影响。
-type CollectEngineInfo struct {
-	Enabled bool
-	// BaseURL 采集引擎地址，形如 http://host:8081
-	BaseURL string
-	// TimeoutSec 单次 HTTP 请求超时（秒）；<=0 用 10 秒
-	TimeoutSec int
-}
-
 // PprofInfo 调试端点配置。
 // 默认关闭：/debug/pprof 会暴露 goroutine 栈、堆内存（可能含令牌/密码）与可消耗 CPU 的 profile 接口。
 // 开启后仍需 x-token 鉴权并具备 system:debug:pprof 权限（超级管理员直通）。
@@ -94,6 +124,28 @@ type TenantInfo struct {
 	//   true（上线/测试）：租户表查询在缺少租户上下文时返回空集，写入直接报错。
 	// 建议在业务接口全部完成 WithCtx 改造、隔离测试跑通后再置 true。
 	Enforce bool
+}
+
+// 部署形态。
+const (
+	DeploymentModeServer   = "server"
+	DeploymentModeEmbedded = "embedded"
+)
+
+// DeploymentInfo 部署形态与插件运行方式。
+type DeploymentInfo struct {
+	// Mode server：保留 Docker 驱动；embedded：插件以本机进程运行，隐藏镜像仓库。
+	// 为空时按 server 处理，兼容既有部署。
+	Mode string
+}
+
+// DeploymentMode 返回规范化后的部署形态。
+func (c ConfigurationStruct) DeploymentMode() string {
+	mode := strings.ToLower(strings.TrimSpace(c.Deployment.Mode))
+	if mode == DeploymentModeEmbedded {
+		return DeploymentModeEmbedded
+	}
+	return DeploymentModeServer
 }
 
 type WritableInfo struct {

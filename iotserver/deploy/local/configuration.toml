@@ -1,0 +1,83 @@
+# 本地部署配置模板（ARM64 + Mosquitto）
+#
+# 目录约定：
+#   /opt/iotserver/bin          iotserver-core
+#   /opt/iotserver/ui           前端构建产物
+#   /opt/iotserver/plugins      原生插件版本目录
+#   /var/lib/iotserver          SQLite / DuckDB / 插件实例数据
+#   /var/log/iotserver          日志
+#   /etc/iotserver              配置
+
+[Writable]
+LogLevel = 'INFO'
+LogPath = '/var/log/iotserver/iotserver-core.log'
+
+[Service]
+Host = '0.0.0.0'
+ServerBindAddr = ''
+Port = 58081
+Timeout = 45000
+# 本地部署：eKuiper 就在同一台机器上，直接回调本机。
+CallbackUrl = 'http://127.0.0.1:58081'
+CallbackToken = ''
+
+[RpcServer]
+Address = '0.0.0.0:57081'
+UseTLS = false
+CertFile = ''
+KeyFile = ''
+
+[Clients]
+[Clients.Ekuiper]
+Protocol = 'http'
+Host = '127.0.0.1'
+Port = 9081
+
+[WebServer]
+Host = '0.0.0.0'
+Port = 3000
+Timeout = 120
+
+[WebUI]
+BuildPath = '/opt/iotserver/ui'
+
+[Databases]
+[Databases.Metadata]
+Type = 'sqlite'
+DataSource = '/var/lib/iotserver/core.db?_timeout=5000'
+
+[Databases.Data]
+# 本地部署使用外部 iotp 时序库，不编译 DuckDB（见 make build-iotp-linux）。
+# Token 属于凭据，不写进模板：把本文件复制为 configuration.local.toml
+# （已被 .gitignore 忽略）再填 Token，安装脚本会优先使用 .local 版本。
+Type = 'iotp'
+BaseURL = 'http://124.223.204.174:8080'
+Token = ''
+Name = 'iotserver'
+Timeout = 10000
+
+[MessageQueue]
+Protocol = 'tcp'
+Host = '127.0.0.1'
+Port = 58090
+PublishTopicPrefix = 'eventbus/in'
+
+[Integrations.EdgeIngest]
+Broker = ''
+ControlBroker = ''
+Username = ''
+Password = ''
+ResyncIntervalSec = 60
+
+[Deployment]
+Mode = 'embedded'
+
+[Plugins]
+Root = '/opt/iotserver/plugins'
+DataDir = '/var/lib/iotserver/plugin-data'
+
+[Pprof]
+Enabled = false
+
+[Tenant]
+Enforce = false

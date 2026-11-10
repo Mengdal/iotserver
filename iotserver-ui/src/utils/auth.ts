@@ -27,6 +27,12 @@ export const getToken = () => getUser()?.token
 /** 当前登录用户信息（登录接口返回的 user 节点） */
 export const getUserInfo = () => getUser()?.user || null
 
+/** 部署形态：server（默认，支持 Docker）/ embedded（嵌入式） */
+export const getDeploymentMode = (): string => getUser()?.deploymentMode || 'server'
+
+/** 是否嵌入式部署：隐藏 Docker 镜像仓库等服务器侧入口 */
+export const isEmbeddedDeployment = (): boolean => getDeploymentMode() === 'embedded'
+
 /** 是否超级管理员 */
 export const isAdmin = (): boolean => {
   const user = getUser()

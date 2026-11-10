@@ -1,6 +1,8 @@
 # ===== 构建产物 / 二进制 =====
 /iotserver-core
 /iotserver-core-linux-amd64
+# make build-linux-arm64 / build-iotp-linux 的产物
+/iotserver-core-*
 /cmd/iotserver-core/iotserver-core
 /devseed
 # 本地编出来的联调工具二进制（源码在 tools/ 下）

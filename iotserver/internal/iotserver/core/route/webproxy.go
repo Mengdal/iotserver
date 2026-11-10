@@ -16,9 +16,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-///var/bin/cmd/iotserver-ui/build
-const WebBuildPath = "./cmd/iotserver-ui/build"
-
 // WebBootstrap contains references to dependencies required by the BootstrapHandler.
 type WebBootstrap struct {
 	router  *gin.Engine
@@ -43,7 +40,7 @@ func (b *WebBootstrap) BootstrapHandler(ctx context.Context, wg *sync.WaitGroup,
 	lc.Infof("start WebBootstrap BootstrapHandler in...")
 
 	//pwd, _ := os.Getwd()
-	LoadWebProxyRoutes(b.router, WebBuildPath, dic)
+	LoadWebProxyRoutes(b.router, configuration.WebBuildPath(), dic)
 
 	if configuration.WebServer.Host == "" || configuration.WebServer.Port == 0 {
 		lc.Errorf("WebServer Host is null OR port is 0")

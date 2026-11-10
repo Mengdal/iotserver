@@ -48,6 +48,10 @@ func New(dic *di.Container) *userApp {
 	}
 }
 
+func (uapp *userApp) deploymentMode() string {
+	return container.ConfigurationFrom(uapp.dic.Get).DeploymentMode()
+}
+
 // configInt 读取整型系统配置，缺失或非法时返回默认值
 func (uapp *userApp) configInt(key string, fallback int) int {
 	// 平台作用域：系统路径，不按租户过滤
@@ -166,13 +170,14 @@ func (uapp *userApp) UserLogin(ctx context.Context, req dtos.LoginRequest) (res 
 	uapp.saveLoginLog(ctx, user.TenantId, user.Username, models.LoginStatusSuccess, "登录成功")
 
 	res = dtos.LoginResponse{
-		User:        loginUser,
-		Token:       token,
-		ExpiresAt:   claims.StandardClaims.ExpiresAt * 1000,
-		IsInit:      true,
-		Roles:       loginUser.Roles,
-		Permissions: loginUser.Permissions,
-		Menus:       loginUser.Menus,
+		User:           loginUser,
+		Token:          token,
+		ExpiresAt:      claims.StandardClaims.ExpiresAt * 1000,
+		IsInit:         true,
+		Roles:          loginUser.Roles,
+		Permissions:    loginUser.Permissions,
+		Menus:          loginUser.Menus,
+		DeploymentMode: uapp.deploymentMode(),
 	}
 	return
 }

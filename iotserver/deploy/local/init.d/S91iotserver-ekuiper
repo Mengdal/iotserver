@@ -1,0 +1,94 @@
+#!/bin/sh
+#
+# iotserver eKuiper — Buildroot / BusyBox init
+#
+# 官方 ARM64 发行包的可执行文件是 bin/kuiperd（bin/kuiper 是命令行工具），
+# 这里兼容从源码构建出的 bin/ekuiper 命名。
+#
+[ -f /etc/iotserver/iotserver.env ] && . /etc/iotserver/iotserver.env
+RUN_USER="${RUN_USER:-iotserver}"
+
+EKUIPER_HOME=/opt/iotserver/ekuiper
+PIDFILE=/var/run/iotserver-ekuiper.pid
+NAME=iotserver-ekuiper
+
+if [ -x "$EKUIPER_HOME/bin/kuiperd" ]; then
+    DAEMON=$EKUIPER_HOME/bin/kuiperd
+elif [ -x "$EKUIPER_HOME/bin/ekuiper" ]; then
+    DAEMON=$EKUIPER_HOME/bin/ekuiper
+else
+    DAEMON=$EKUIPER_HOME/bin/kuiperd
+fi
+
+# eKuiper 以当前工作目录为根，data/ log/ etc/ 都相对它解析。
+export MQTT_SOURCE__DEFAULT__SERVER=tcp://127.0.0.1:58090
+# 2.4 默认禁止规则访问私网地址，平台回调地址是 127.0.0.1，必须放开。
+export KUIPER__BASIC__ENABLEPRIVATENET=true
+export KUIPER__BASIC__CONSOLELOG=false
+
+is_running() {
+    [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null
+}
+
+start() {
+    if is_running; then
+        echo "$NAME already running (pid $(cat "$PIDFILE"))"
+        return 0
+    fi
+    if [ ! -x "$DAEMON" ]; then
+        echo "$NAME: $DAEMON not found" >&2
+        return 1
+    fi
+    mkdir -p "$EKUIPER_HOME/data" "$EKUIPER_HOME/log"
+    start-stop-daemon -S -q -b -m -p "$PIDFILE" -c "$RUN_USER" -x /bin/sh -- \
+        -c "cd '$EKUIPER_HOME' && exec '$DAEMON'"
+    sleep 2
+    if is_running; then
+        echo "$NAME started (pid $(cat "$PIDFILE"))"
+    else
+        echo "$NAME failed to start, see $EKUIPER_HOME/log/" >&2
+        return 1
+    fi
+}
+
+stop() {
+    if ! is_running; then
+        echo "$NAME not running"
+        rm -f "$PIDFILE"
+        return 0
+    fi
+    pid=$(cat "$PIDFILE")
+    kill "$pid" 2>/dev/null
+    i=0
+    while kill -0 "$pid" 2>/dev/null && [ "$i" -lt 15 ]; do
+        sleep 1
+        i=$((i + 1))
+    done
+    kill -9 "$pid" 2>/dev/null
+    rm -f "$PIDFILE"
+    echo "$NAME stopped"
+}
+
+restart() {
+    stop
+    sleep 1
+    start
+}
+
+case "$1" in
+    start|stop|restart)
+        "$1"
+        ;;
+    status)
+        if is_running; then
+            echo "$NAME running (pid $(cat "$PIDFILE"))"
+        else
+            echo "$NAME stopped"
+            exit 1
+        fi
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|restart|status}"
+        exit 1
+        ;;
+esac

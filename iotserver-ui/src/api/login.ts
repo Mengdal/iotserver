@@ -15,6 +15,8 @@ export interface LoginResult {
   roles: string[]
   permissions: string[]
   menus: any[]
+  /** 部署形态：server / embedded */
+  deploymentMode?: 'server' | 'embedded' | string
 }
 
 export function Login (data: User) {
