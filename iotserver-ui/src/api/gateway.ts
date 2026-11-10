@@ -34,8 +34,12 @@ export interface Gateway {
   model: string
   /** 接入协议：gatewaymqtt（平台自有）/ edge（参考系统） */
   protocol?: string
-  /** 来源：local 平台自有 / things 由 things 管理 */
-  source?: 'local' | 'things' | string
+  /** 来源：local 平台自有 / things 由 things 管理 / ioserver 软网关 */
+  source?: 'local' | 'things' | 'ioserver' | string
+  /** 软网关对应的采集引擎地址 */
+  engineBaseUrl?: string
+  /** 采集引擎超时（秒） */
+  engineTimeoutSec?: number
   firmwareVersion: string
   /** 采集/上报配置（JSON 字符串） */
   config: string

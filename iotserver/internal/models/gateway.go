@@ -77,6 +77,10 @@ type Gateway struct {
 	ThingsLastError string `gorm:"column:things_last_error;type:string;size:1000;comment:最后同步错误"`
 	// Protocol 接入协议，取值见 GatewayProtocolNative / GatewayProtocolEdge
 	Protocol string `gorm:"column:protocol;type:string;size:32;default:'gatewaymqtt';comment:接入协议"`
+	// EngineBaseURL 软网关对应的采集引擎地址（source=ioserver），形如 http://host:8081
+	EngineBaseURL string `gorm:"column:engine_base_url;type:string;size:255;comment:采集引擎地址"`
+	// EngineTimeoutSec 采集引擎 HTTP 超时（秒），<=0 时按 10 秒处理
+	EngineTimeoutSec int `gorm:"column:engine_timeout_sec;type:int;comment:采集引擎超时(秒)"`
 	// AutoProvision 子设备是否随清单自动注册，取值见 GatewayAutoProvisionOn/Off
 	AutoProvision int `gorm:"column:auto_provision;type:int;default:1;comment:子设备自动注册 1开 0关"`
 	// ExcludeDeviceKeys 不注册的网关内设备标识名单（逗号分隔）。

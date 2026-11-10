@@ -1,14 +1,15 @@
 import React, { useCallback, useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import {
   Alert,
   Button,
   Card,
   Col,
   Divider,
+  Drawer,
   Empty,
   Form,
   Input,
+  InputNumber,
   Modal,
   Spin,
   Popconfirm,
@@ -45,7 +46,9 @@ import {
   GatewayMqttInfo,
   GatewayCommandType,
 } from '@/api'
+import CollectConfigPage from '@/pages/gateway/CollectConfig'
 import { useAuth } from '@/utils/auth'
+import { setCollectGatewayId } from '@/utils/collectGateway'
 import { confirmPlatformViewAdd } from '@/utils/platformViewGuard'
 import { t } from '@/i18n'
 
@@ -123,6 +126,10 @@ interface GatewayFormValues {
   name: string
   sn?: string
   source?: 'local' | 'things' | 'ioserver'
+  /** 软网关采集引擎地址 */
+  engineBaseUrl?: string
+  /** 采集引擎超时（秒） */
+  engineTimeoutSec?: number
   vendor?: string
   model?: string
   remark?: string
@@ -136,11 +143,12 @@ interface CommandFormValues {
 }
 
 const GatewayManagePage: React.FC = () => {
-  const navigate = useNavigate()
   const [messageApi, contextHolder] = useMessage()
   const [searchForm] = Form.useForm()
   const [editForm] = Form.useForm<GatewayFormValues>()
   const [commandForm] = Form.useForm<CommandFormValues>()
+  const watchedSource = Form.useWatch('source', editForm)
+  const isSoftGatewayForm = watchedSource === 'ioserver'
 
   const [loading, setLoading] = useState(false)
   const [dataSource, setDataSource] = useState<Gateway[]>([])
@@ -156,6 +164,9 @@ const GatewayManagePage: React.FC = () => {
   const [mqttInfo, setMqttInfo] = useState<GatewayMqttInfo | null>(null)
   const [mqttGatewayName, setMqttGatewayName] = useState('')
   const [passwordVisible, setPasswordVisible] = useState(false)
+
+  // 采集配置抽屉：当前正在配置的软网关
+  const [collectGateway, setCollectGateway] = useState<Gateway | null>(null)
 
   // 设备控制（参考系统 /edge 网关）
   const [controlOpen, setControlOpen] = useState(false)
@@ -207,6 +218,9 @@ const GatewayManagePage: React.FC = () => {
     loadData(1, pagination.pageSize)
   }, [])
 
+  // 离开网关管理页时清掉采集配置的网关上下文，避免影响其他采集接口。
+  useEffect(() => () => setCollectGatewayId(), [])
+
   const handleSearch = () => {
     setPagination({ ...pagination, current: 1 })
     loadData(1, pagination.pageSize)
@@ -225,7 +239,7 @@ const GatewayManagePage: React.FC = () => {
     setEditing(null)
     editForm.resetFields()
     // 轻量部署默认走本地配置的 ioserver 软网关；things 仍保留给存量接入。
-    editForm.setFieldsValue({ source: 'ioserver' })
+    editForm.setFieldsValue({ source: 'ioserver', engineTimeoutSec: 10 })
     setModalOpen(true)
   }
 
@@ -238,12 +252,24 @@ const GatewayManagePage: React.FC = () => {
       source: record.source === 'things'
         ? 'things'
         : (record.source === 'ioserver' ? 'ioserver' : 'local'),
+      engineBaseUrl: record.engineBaseUrl || '',
+      engineTimeoutSec: record.engineTimeoutSec || 10,
       vendor: record.vendor,
       model: record.model,
       remark: record.remark,
       excludeDeviceKeys: record.excludeDeviceKeys || '',
     })
     setModalOpen(true)
+  }
+
+  const openCollect = (record: Gateway) => {
+    setCollectGatewayId(record.id)
+    setCollectGateway(record)
+  }
+
+  const closeCollect = () => {
+    setCollectGateway(null)
+    setCollectGatewayId()
   }
 
   const handleSubmit = async () => {
@@ -254,6 +280,12 @@ const GatewayManagePage: React.FC = () => {
       vendor: values.vendor || '',
       model: values.model || '',
       remark: values.remark || '',
+      ...(source === 'ioserver'
+        ? {
+          engineBaseUrl: (values.engineBaseUrl || '').trim(),
+          engineTimeoutSec: values.engineTimeoutSec || 10,
+        }
+        : {}),
     }
     setSubmitting(true)
     try {
@@ -275,7 +307,8 @@ const GatewayManagePage: React.FC = () => {
       } else {
         const createPayload: Record<string, any> = {
           ...payload,
-          sn: (values.sn || '').trim(),
+          // 软网关不走 MQTT，SN 由后端自动生成
+          ...(source === 'ioserver' ? {} : { sn: (values.sn || '').trim() }),
           source,
         }
         const resp = await addGateway(createPayload)
@@ -283,8 +316,9 @@ const GatewayManagePage: React.FC = () => {
           messageApi.open({ type: 'success', content: t('新增成功') })
           setModalOpen(false)
           loadData()
-          // 接入信息（含密码）只在这次响应里返回，必须立刻提示用户保存
-          if (resp.result?.mqtt) {
+          // 接入信息（含密码）只在这次响应里返回，必须立刻提示用户保存。
+          // 软网关不使用 MQTT 接入，不弹这段信息。
+          if (source !== 'ioserver' && resp.result?.mqtt) {
             setMqttInfo(resp.result.mqtt)
             setMqttGatewayName(resp.result.name || payload.name)
             setPasswordVisible(false)
@@ -437,11 +471,7 @@ const GatewayManagePage: React.FC = () => {
       title: t('网关名称'),
       dataIndex: 'name',
       width: 180,
-      render: (value: string, record) => {
-        // 详情页是 ioserver 专用配置工程；其他来源的网关不要误入，避免触发 /stopGW。
-        if (record.source !== 'ioserver') return <span>{value || '-'}</span>
-        return <a onClick={() => navigate(`/gateway/gateway/detail/${record.id}?tab=collect`)}>{value || '-'}</a>
-      },
+      render: (value: string) => <span>{value || '-'}</span>,
     },
     { title: 'SN', dataIndex: 'sn', width: 170, render: (value: string) => <Text copyable={{ text: value }}>{value || '-'}</Text> },
     {
@@ -465,10 +495,10 @@ const GatewayManagePage: React.FC = () => {
       width: 120,
       render: (_, record) => (
         <Space direction="vertical" size={0}>
-          <Tag color={record.source === 'things' ? 'geekblue' : (record.source === 'ioserver' ? 'green' : 'default')}>
+          <Tag color="default">
             {record.source === 'things'
-              ? t('things 网关')
-              : (record.source === 'ioserver' ? t('ioserver 软网关') : t('平台直连'))}
+              ? t('云网关')
+              : (record.source === 'ioserver' ? t('软网关') : t('直连网关'))}
           </Tag>
           {/* 同步正常（synced）时不打扰用户，只提示需要处理的异常状态 */}
           {record.thingsSyncStatus && record.thingsSyncStatus !== 'local' && record.thingsSyncStatus !== 'synced' && (
@@ -510,7 +540,7 @@ const GatewayManagePage: React.FC = () => {
         <Space size={4} wrap={false} style={{ whiteSpace: 'nowrap' }}>
           {canEdit && <Button type="link" size="small" onClick={() => openEdit(record)}>{t('编辑')}</Button>}
           {canConfig && record.source === 'ioserver' && (
-            <Button type="link" size="small" onClick={() => navigate(`/gateway/gateway/detail/${record.id}?tab=collect`)}>
+            <Button type="link" size="small" onClick={() => openCollect(record)}>
               {t('采集配置')}
             </Button>
           )}
@@ -519,7 +549,7 @@ const GatewayManagePage: React.FC = () => {
               {t('设备控制')}
             </Button>
           )}
-          {canCommand && (
+          {canCommand && record.source !== 'ioserver' && (
             <Button type="link" size="small" disabled={record.status !== 1} onClick={() => openCommand(record)}>
               {t('下发命令')}
             </Button>
@@ -624,9 +654,9 @@ const GatewayManagePage: React.FC = () => {
                 <Select
                   disabled={!!editing}
                   options={[
-                    { value: 'ioserver', label: t('ioserver 软网关') },
-                    { value: 'local', label: t('平台直连') },
-                    { value: 'things', label: t('things 网关') },
+                    { value: 'ioserver', label: t('软网关') },
+                    { value: 'local', label: t('直连网关') },
+                    { value: 'things', label: t('云网关') },
                   ]}
                 />
               </Form.Item>
@@ -642,29 +672,63 @@ const GatewayManagePage: React.FC = () => {
                 <Input placeholder={t('请输入网关名称')} />
               </Form.Item>
             </Col>
-            <Col span={12}>
-              <Form.Item
-                label="SN"
-                name="sn"
-                tooltip={t('网关唯一序列号，同时作为 MQTT 客户端 ID，创建后不可修改')}
-                rules={editing ? [] : [{ required: true, message: t('请输入 SN') }]}
-              >
-                <Input placeholder={t('请输入网关 SN')} disabled={!!editing} />
-              </Form.Item>
-            </Col>
+            {isSoftGatewayForm
+              ? (
+                <Col span={12}>
+                  <Form.Item
+                    label={t('采集引擎地址')}
+                    name="engineBaseUrl"
+                    tooltip={t('软网关对应的采集引擎 API 地址，形如 http://192.168.0.74:8081')}
+                    rules={[
+                      { required: true, message: t('请输入采集引擎地址') },
+                      { type: 'url', message: t('请输入 http:// 或 https:// 开头的地址') },
+                    ]}
+                  >
+                    <Input placeholder="http://192.168.0.74:8081" />
+                  </Form.Item>
+                </Col>
+              )
+              : (
+                <Col span={12}>
+                  <Form.Item
+                    label="SN"
+                    name="sn"
+                    tooltip={t('网关唯一序列号，同时作为 MQTT 客户端 ID，创建后不可修改')}
+                    rules={editing ? [] : [{ required: true, message: t('请输入 SN') }]}
+                  >
+                    <Input placeholder={t('请输入网关 SN')} disabled={!!editing} />
+                  </Form.Item>
+                </Col>
+              )}
           </Row>
-          <Row gutter={12}>
-            <Col span={12}>
-              <Form.Item label={t('厂商')} name="vendor">
-                <Input placeholder={t('如 华为 / 有人 / 研华')} />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item label={t('型号')} name="model">
-                <Input placeholder={t('请输入型号')} />
-              </Form.Item>
-            </Col>
-          </Row>
+          {isSoftGatewayForm
+            ? (
+              <Row gutter={12}>
+                <Col span={12}>
+                  <Form.Item
+                    label={t('采集引擎超时（秒）')}
+                    name="engineTimeoutSec"
+                    initialValue={10}
+                  >
+                    <InputNumber min={1} max={300} precision={0} style={{ width: '100%' }} />
+                  </Form.Item>
+                </Col>
+              </Row>
+            )
+            : (
+              <Row gutter={12}>
+                <Col span={12}>
+                  <Form.Item label={t('厂商')} name="vendor">
+                    <Input placeholder={t('如 华为 / 有人 / 研华')} />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item label={t('型号')} name="model">
+                    <Input placeholder={t('请输入型号')} />
+                  </Form.Item>
+                </Col>
+              </Row>
+            )}
           {editing && (
             <Form.Item
               label={t('不接入的设备')}
@@ -854,6 +918,19 @@ const GatewayManagePage: React.FC = () => {
           </Form.Item>
         </Form>
       </Modal>
+
+      {/* ===== 采集配置（按软网关隔离，从右侧滑出） ===== */}
+      <Drawer
+        open={!!collectGateway}
+        title={collectGateway ? `${t('采集配置')} · ${collectGateway.name}` : t('采集配置')}
+        placement="right"
+        width="calc(100vw - 32px)"
+        destroyOnClose
+        onClose={closeCollect}
+        bodyStyle={{ padding: 0 }}
+      >
+        {collectGateway && <CollectConfigPage embedded />}
+      </Drawer>
     </Card>
   )
 }

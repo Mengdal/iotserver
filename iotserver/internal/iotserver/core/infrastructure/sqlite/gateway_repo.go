@@ -2,6 +2,7 @@ package sqlite
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -135,14 +136,16 @@ func updateGateway(c *Client, g models.Gateway) error {
 		return err
 	}
 	return c.Pool.Table(models.TableGateway).Where("id = ?", g.Id).Updates(map[string]interface{}{
-		"name":     g.Name,
-		"pk":       g.Pk,
-		"dept_id":  g.DeptId,
-		"vendor":   g.Vendor,
-		"model":    g.Model,
-		"remark":   g.Remark,
-		"modified": time.Now().UnixMilli(),
-		"created":  old.Created,
+		"name":               g.Name,
+		"pk":                 g.Pk,
+		"dept_id":            g.DeptId,
+		"vendor":             g.Vendor,
+		"model":              g.Model,
+		"remark":             g.Remark,
+		"engine_base_url":    g.EngineBaseURL,
+		"engine_timeout_sec": g.EngineTimeoutSec,
+		"modified":           time.Now().UnixMilli(),
+		"created":            old.Created,
 	}).Error
 }
 
@@ -264,6 +267,37 @@ func (c *Client) UpdateGateway(g models.Gateway) error {
 
 func (c *Client) DeleteGateway(id string) error {
 	return deleteGateway(c, id)
+}
+
+// DeleteGatewayWithCollectConfig 删除网关，并在同一事务里清理其采集通道与设备绑定。
+// 点位配置保留：设备重新绑定到其他网关后仍可复用原来的点表。
+func (c *Client) DeleteGatewayWithCollectConfig(id string) error {
+	if id == "" {
+		return errort.NewCommonErr(errort.DefaultReqParamsError, fmt.Errorf("gateway id is empty"))
+	}
+	err := c.Pool.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("gateway_id = ?", id).Delete(&models.CollectDeviceConfig{}).Error; err != nil {
+			return err
+		}
+		if err := tx.Where("gateway_id = ?", id).Delete(&models.CollectChannel{}).Error; err != nil {
+			return err
+		}
+		res := tx.Where("id = ?", id).Delete(&models.Gateway{})
+		if res.Error != nil {
+			return res.Error
+		}
+		if res.RowsAffected == 0 {
+			return gorm.ErrRecordNotFound
+		}
+		return nil
+	})
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return errort.NewCommonErr(errort.DefaultResourcesNotFound, fmt.Errorf("gateway %s not found", id))
+	}
+	if err != nil {
+		return errort.NewCommonEdgeX(errort.DefaultSystemError, "gateway delete failed", err)
+	}
+	return nil
 }
 
 func (c *Client) UpdateGatewayStatus(id string, status int, ip string, onlineAt int64) error {

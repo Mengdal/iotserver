@@ -3,6 +3,7 @@ package gatewayapp
 import (
 	"context"
 	"encoding/json"
+	"net/url"
 	"strings"
 	"time"
 
@@ -39,23 +40,25 @@ func New(dic *di.Container) interfaces.GatewayItf {
 
 func toGatewayResponse(g models.Gateway, deviceCount int64, deptNames map[string]string) dtos.GatewayResponse {
 	return dtos.GatewayResponse{
-		Id:              g.Id,
-		Name:            g.Name,
-		Sn:              g.Sn,
-		Pk:              g.Pk,
-		Protocol:        g.Protocol,
-		DeptId:          g.DeptId,
-		DeptName:        deptNames[g.DeptId],
-		Vendor:          g.Vendor,
-		Model:           g.Model,
-		FirmwareVersion: g.FirmwareVersion,
-		Config:          g.Config,
-		ConfigVersion:   g.ConfigVersion,
-		Status:          g.Status,
-		LastOnlineAt:    g.LastOnlineAt,
-		LastReportAt:    g.LastReportAt,
-		Ip:              g.Ip,
-		Remark:          g.Remark,
+		Id:               g.Id,
+		Name:             g.Name,
+		Sn:               g.Sn,
+		Pk:               g.Pk,
+		Protocol:         g.Protocol,
+		EngineBaseURL:    g.EngineBaseURL,
+		EngineTimeoutSec: g.EngineTimeoutSec,
+		DeptId:           g.DeptId,
+		DeptName:         deptNames[g.DeptId],
+		Vendor:           g.Vendor,
+		Model:            g.Model,
+		FirmwareVersion:  g.FirmwareVersion,
+		Config:           g.Config,
+		ConfigVersion:    g.ConfigVersion,
+		Status:           g.Status,
+		LastOnlineAt:     g.LastOnlineAt,
+		LastReportAt:     g.LastReportAt,
+		Ip:               g.Ip,
+		Remark:           g.Remark,
 		// 排除名单：让界面能看见/撤销「删除设备后自动排除」的结果。
 		ExcludeDeviceKeys: g.ExcludeDeviceKeys,
 		DeviceCount:       deviceCount,
@@ -83,6 +86,28 @@ func sourceOf(g models.Gateway) string {
 		return models.GatewaySourceLocal
 	}
 	return g.Source
+}
+
+// normalizeEngineConfig 校验并规范化软网关的采集引擎配置。
+// 地址必须带 http/https scheme 与主机名；超时缺省 10 秒，夹在 1~300 秒。
+func normalizeEngineConfig(baseURL string, timeoutSec int) (string, int, error) {
+	base := strings.TrimRight(strings.TrimSpace(baseURL), "/")
+	if base == "" {
+		return "", 0, errort.NewCommonErr(errort.DefaultReqParamsError,
+			errort.NewMessageErr("采集引擎地址不能为空", nil))
+	}
+	parsed, err := url.Parse(base)
+	if err != nil || parsed.Host == "" || (parsed.Scheme != "http" && parsed.Scheme != "https") {
+		return "", 0, errort.NewCommonErr(errort.DefaultReqParamsError,
+			errort.NewMessageErr("采集引擎地址格式不正确，应形如 http://host:8081", nil))
+	}
+	if timeoutSec <= 0 {
+		timeoutSec = 10
+	}
+	if timeoutSec > 300 {
+		timeoutSec = 300
+	}
+	return base, timeoutSec, nil
 }
 
 // deptNameMap 批量取组织节点名称（网关列表展示「所属」用，避免 N+1 查询）
@@ -127,8 +152,16 @@ func (app *gatewayApp) GatewayAdd(ctx context.Context, req dtos.GatewayAddReques
 	// ioserver 软网关：配置完全由本平台维护（Gateway.Config），不依赖 things。
 	// 协议默认 ioserver，便于上行接入和后续采集配置下发分流。
 	protocol := strings.TrimSpace(req.Protocol)
-	if protocol == "" && source == models.GatewaySourceIoserver {
+	engineBaseURL := ""
+	engineTimeoutSec := 0
+	if source == models.GatewaySourceIoserver {
+		// 软网关不走 MQTT，协议固定，避免请求体把它改成 /edge 等接入协议。
 		protocol = models.GatewayProtocolIoserver
+		var err error
+		engineBaseURL, engineTimeoutSec, err = normalizeEngineConfig(req.EngineBaseURL, req.EngineTimeoutSec)
+		if err != nil {
+			return dtos.GatewayResponse{}, err
+		}
 	}
 
 	// 配额校验：目标租户的网关数 + 1 是否超过 max_gateways（0=不限；平台视图不校验）
@@ -137,18 +170,25 @@ func (app *gatewayApp) GatewayAdd(ctx context.Context, req dtos.GatewayAddReques
 	}
 	sn := strings.TrimSpace(req.Sn)
 	if sn == "" {
-		return dtos.GatewayResponse{}, errort.NewCommonErr(errort.DefaultReqParamsError, errort.NewMessageErr("网关序列号不能为空", nil))
+		if source == models.GatewaySourceIoserver {
+			// 软网关不走 MQTT，SN 只作为内部唯一标识，自动生成即可。
+			sn = "soft-" + utils.RandomNum()
+		} else {
+			return dtos.GatewayResponse{}, errort.NewCommonErr(errort.DefaultReqParamsError, errort.NewMessageErr("网关序列号不能为空", nil))
+		}
 	}
 	g, err := app.dbClient.WithCtx(ctx).AddGateway(models.Gateway{
-		Name:     strings.TrimSpace(req.Name),
-		Sn:       sn,
-		Pk:       strings.TrimSpace(req.Pk),
-		Protocol: protocol,
-		Source:   source,
-		DeptId:   req.DeptId,
-		Vendor:   req.Vendor,
-		Model:    req.Model,
-		Remark:   req.Remark,
+		Name:             strings.TrimSpace(req.Name),
+		Sn:               sn,
+		Pk:               strings.TrimSpace(req.Pk),
+		Protocol:         protocol,
+		Source:           source,
+		EngineBaseURL:    engineBaseURL,
+		EngineTimeoutSec: engineTimeoutSec,
+		DeptId:           req.DeptId,
+		Vendor:           req.Vendor,
+		Model:            req.Model,
+		Remark:           req.Remark,
 	})
 	if err != nil {
 		return dtos.GatewayResponse{}, err
@@ -257,6 +297,22 @@ func (app *gatewayApp) GatewayUpdate(ctx context.Context, req dtos.GatewayUpdate
 			model = old.Model
 		}
 	}
+	// 名称是必填展示字段：部分更新（如只改排除名单）没带 name 时保留原值，
+	// 避免一次局部更新把网关名清空。
+	if name == "" {
+		name = old.Name
+	}
+	engineBaseURL := old.EngineBaseURL
+	engineTimeoutSec := old.EngineTimeoutSec
+	// 采集引擎地址只在本次提交了非空值时校验和更新：改名、改排除名单等
+	// 部分更新不带 engineBaseUrl，不能因此失败；历史迁移出的空值网关也允许先改其它字段。
+	if sourceOf(old) == models.GatewaySourceIoserver && strings.TrimSpace(req.EngineBaseURL) != "" {
+		var engineErr error
+		engineBaseURL, engineTimeoutSec, engineErr = normalizeEngineConfig(req.EngineBaseURL, req.EngineTimeoutSec)
+		if engineErr != nil {
+			return engineErr
+		}
+	}
 	// 排除名单走独立更新：UpdateGateway 只写展示字段，避免这里漏填就把它清空。
 	if req.ExcludeDeviceKeys != nil {
 		keys := models.NormalizeGatewayExcludeKeys(*req.ExcludeDeviceKeys)
@@ -270,50 +326,35 @@ func (app *gatewayApp) GatewayUpdate(ctx context.Context, req dtos.GatewayUpdate
 		}
 	}
 	return app.dbClient.WithCtx(ctx).UpdateGateway(models.Gateway{
-		Id:     req.Id,
-		Name:   name,
-		Pk:     pk,
-		DeptId: req.DeptId,
-		Vendor: req.Vendor,
-		Model:  model,
-		Remark: req.Remark,
+		Id:               req.Id,
+		Name:             name,
+		Pk:               pk,
+		DeptId:           req.DeptId,
+		Vendor:           req.Vendor,
+		Model:            model,
+		Remark:           req.Remark,
+		EngineBaseURL:    engineBaseURL,
+		EngineTimeoutSec: engineTimeoutSec,
 	})
 }
 
-// GatewayDelete 删除网关
+// GatewayDelete 删除网关（只删本地记录）
 //
-// 只删网关本身；其下设备保留但解除绑定，避免误删采集数据。
+// things 同步来的网关在这里只清理本地镜像，不调用 things 接口删除远端网关：
+// 远端网关有自己的生命周期，平台不做反向删除。下次同步时远端仍然存在的网关
+// 会被重新拉回来，这是预期行为。
+//
+// 本地删除时同时解除其下设备的采集绑定并删除该网关的通道；点位配置保留，
+// 设备重新绑定到其他网关后仍可复用原来的点表。
 func (app *gatewayApp) GatewayDelete(ctx context.Context, id string) error {
 	g, err := app.dbClient.WithCtx(ctx).GatewayById(id)
 	if err != nil {
 		return err
 	}
-	if sourceOf(g) == models.GatewaySourceThings || g.ThingsGatewayId > 0 {
-		if app.things == nil {
-			return errort.NewCommonErr(errort.AppThingsDisabled,
-				errort.NewMessageErr("things 集成未启用，无法删除 things 网关", nil))
-		}
-		tenantID := g.TenantId
-		if tenantID == "" {
-			tenantID = tenant.FromContext(ctx).TenantID
-		}
-		binding, found, bErr := app.things.GetTenantBinding(ctx, tenantID)
-		if bErr != nil {
-			return bErr
-		}
-		if !found {
-			return errort.NewCommonErr(errort.AppThingsBindingMissing,
-				errort.NewMessageErr("当前租户尚未绑定 things 项目，无法删除 things 网关", nil))
-		}
-		if g.ThingsGatewayId <= 0 {
-			return errort.NewCommonErr(errort.AppThingsBindingMissing,
-				errort.NewMessageErr("该网关缺少 things 网关 ID，请先执行对账", nil))
-		}
-		if err = app.things.DeleteGateway(ctx, binding.ThingsProjectId, g.ThingsGatewayId); err != nil {
-			return err
-		}
+	if (sourceOf(g) == models.GatewaySourceThings || g.ThingsGatewayId > 0) && app.lc != nil {
+		app.lc.Infof("删除 things 网关 %s 的本地镜像，远端网关保持不变", g.Sn)
 	}
-	return app.dbClient.WithCtx(ctx).DeleteGateway(id)
+	return app.dbClient.WithCtx(ctx).DeleteGatewayWithCollectConfig(id)
 }
 
 // GatewayById 网关详情

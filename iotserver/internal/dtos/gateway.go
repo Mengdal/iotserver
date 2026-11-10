@@ -19,18 +19,22 @@ type GatewaySearchQueryRequest struct {
 // GatewayAddRequest 新增网关
 type GatewayAddRequest struct {
 	Name string `json:"name" binding:"required"`
-	Sn   string `json:"sn" binding:"required"`
+	Sn   string `json:"sn"`
 	// Pk 外部协议的产品标识。参考系统（/edge 协议）的网关身份是 {pk}/{sn}，
 	// 平台按它拼订阅主题；留空则用 sn 顶替（实测两者取值常相同）。自有协议不用它。
 	Pk string `json:"pk"`
 	// Protocol 接入协议：gatewaymqtt（平台自有）/ edge（参考系统）
 	Protocol string `json:"protocol"`
-	// Source 来源：local / things。为空时按 local 处理（兼容旧前端）。
+	// Source 来源：local / things / ioserver。为空时按 local 处理。
 	Source string `json:"source"`
-	DeptId string `json:"deptId"`
-	Vendor string `json:"vendor"`
-	Model  string `json:"model"`
-	Remark string `json:"remark"`
+	// EngineBaseURL 软网关的采集引擎地址（source=ioserver 时必填）
+	EngineBaseURL string `json:"engineBaseUrl"`
+	// EngineTimeoutSec 采集引擎超时（秒）
+	EngineTimeoutSec int    `json:"engineTimeoutSec"`
+	DeptId           string `json:"deptId"`
+	Vendor           string `json:"vendor"`
+	Model            string `json:"model"`
+	Remark           string `json:"remark"`
 }
 
 // GatewayUpdateRequest 修改网关（SN 不可改：它同时是 MQTT clientId）
@@ -42,6 +46,9 @@ type GatewayUpdateRequest struct {
 	Vendor string `json:"vendor"`
 	Model  string `json:"model"`
 	Remark string `json:"remark"`
+	// EngineBaseURL / EngineTimeoutSec 软网关采集引擎配置
+	EngineBaseURL    string `json:"engineBaseUrl"`
+	EngineTimeoutSec int    `json:"engineTimeoutSec"`
 	// ExcludeDeviceKeys 网关内不接入的设备标识（逗号分隔）。
 	// 用指针区分「没提交」与「提交空串清空」：没提交时保持原值。
 	ExcludeDeviceKeys *string `json:"excludeDeviceKeys"`
@@ -95,9 +102,12 @@ type GatewayResponse struct {
 	Pk   string `json:"pk"`
 	// Protocol 接入协议：gatewaymqtt（平台自有）/ edge（参考系统）
 	Protocol string `json:"protocol"`
-	// Source 来源：local / things
+	// Source 来源：local / things / ioserver
 	Source string `json:"source"`
-	DeptId string `json:"deptId"`
+	// EngineBaseURL / EngineTimeoutSec 软网关采集引擎配置
+	EngineBaseURL    string `json:"engineBaseUrl"`
+	EngineTimeoutSec int    `json:"engineTimeoutSec"`
+	DeptId           string `json:"deptId"`
 	// DeptName 组织节点名称（列表展示「所属」用）
 	DeptName        string `json:"deptName"`
 	Vendor          string `json:"vendor"`

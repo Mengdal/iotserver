@@ -60,6 +60,9 @@ type DBClient interface {
 	GatewaySearch(offset int, limit int, req dtos.GatewaySearchQueryRequest) ([]models.Gateway, uint32, error)
 	UpdateGateway(g models.Gateway) error
 	DeleteGateway(id string) error
+	// DeleteGatewayWithCollectConfig 删除网关，同时清理该网关下的采集通道与设备绑定
+	// （点位配置保留，设备重新绑定后仍可复用）。
+	DeleteGatewayWithCollectConfig(id string) error
 	UpdateGatewayStatus(id string, status int, ip string, onlineAt int64) error
 	// MarkStaleGatewaysOffline 把「最后在线时间早于 beforeMs」的在线网关批量置为离线，返回影响行数
 	MarkStaleGatewaysOffline(beforeMs int64) (int64, error)
@@ -84,6 +87,8 @@ type DBClient interface {
 	CollectDeviceConfigs() ([]models.CollectDeviceConfig, error)
 	CollectDeviceConfigsByChannel(channelId string) ([]models.CollectDeviceConfig, error)
 	DeleteCollectDeviceConfig(deviceId string) error
+	// DeviceServiceInstanceNameExists 判断同一驱动库下是否已有同名实例。
+	DeviceServiceInstanceNameExists(libraryId, instanceName string) (bool, error)
 	CollectDeviceConfigByDevice(deviceId string) (models.CollectDeviceConfig, bool, error)
 	SaveCollectDeviceConfig(cfg models.CollectDeviceConfig) error
 	CollectPointConfigsByDevice(deviceId string) ([]models.CollectPointConfig, error)
