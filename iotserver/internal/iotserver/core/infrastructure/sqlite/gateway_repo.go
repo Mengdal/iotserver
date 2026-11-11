@@ -331,6 +331,55 @@ func (c *Client) GatewayDeviceCount(gatewayId string) (int64, error) {
 	return gatewayDeviceCount(c, gatewayId)
 }
 
+// AddGatewayTombstone 记录用户删除的网关；同一租户同一 SN 重复删除时更新记录。
+func (c *Client) AddGatewayTombstone(t models.GatewayTombstone) error {
+	if strings.TrimSpace(t.Sn) == "" {
+		return errort.NewCommonErr(errort.DefaultReqParamsError, fmt.Errorf("gateway sn is required"))
+	}
+	now := time.Now().UnixMilli()
+	var existing models.GatewayTombstone
+	err := c.Pool.Where("sn = ?", t.Sn).Limit(1).Find(&existing).Error
+	if err != nil {
+		return errort.NewCommonEdgeX(errort.DefaultSystemError, "gateway tombstone query failed", err)
+	}
+	if existing.Id != "" {
+		return c.Pool.Model(&models.GatewayTombstone{}).Where("id = ?", existing.Id).Updates(map[string]interface{}{
+			"things_gateway_id": t.ThingsGatewayId,
+			"deleted_at":        now,
+			"modified":          now,
+		}).Error
+	}
+	if t.Id == "" {
+		t.Id = utils.GenerateSaltKey()
+	}
+	t.Created = now
+	t.Modified = now
+	if t.DeletedAt == 0 {
+		t.DeletedAt = now
+	}
+	if err := c.Pool.Create(&t).Error; err != nil {
+		return errort.NewCommonEdgeX(errort.DefaultSystemError, "gateway tombstone creation failed", err)
+	}
+	return nil
+}
+
+// GatewayTombstones 返回当前租户作用域下的删除墓碑。
+func (c *Client) GatewayTombstones() ([]models.GatewayTombstone, error) {
+	var list []models.GatewayTombstone
+	if err := c.Pool.Order("created asc").Find(&list).Error; err != nil {
+		return nil, errort.NewCommonEdgeX(errort.DefaultSystemError, "gateway tombstone query failed", err)
+	}
+	return list, nil
+}
+
+// DeleteGatewayTombstone 清除墓碑：用户重新创建了同一 SN 的 things 网关。
+func (c *Client) DeleteGatewayTombstone(sn string) error {
+	if strings.TrimSpace(sn) == "" {
+		return nil
+	}
+	return c.Pool.Where("sn = ?", sn).Delete(&models.GatewayTombstone{}).Error
+}
+
 // markStaleGatewaysOffline 把「最后在线时间早于 beforeMs」的在线网关批量置为离线。
 //
 // last_online_at 在「数据上报」与「状态心跳」两条路上都会更新（见 gatewayingest），

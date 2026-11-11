@@ -47,14 +47,7 @@ var (
 	DocsAppName = di.TypeInstanceToName((*interfaces.DocsApp)(nil))
 )
 
-func DocsTemplateAppFrom(get di.Get) interfaces.DocsApp {
-	return get(DocsAppName).(interfaces.DocsApp)
-}
-
 var (
 	QuickNavigationAppName = di.TypeInstanceToName((*interfaces.QuickNavigation)(nil))
 )
 
-func QuickNavigationAppTemplateAppFrom(get di.Get) interfaces.QuickNavigation {
-	return get(QuickNavigationAppName).(interfaces.QuickNavigation)
-}

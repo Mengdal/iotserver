@@ -127,44 +127,6 @@ func (ctl *controller) ThingModelUnit(c *gin.Context) {
 	httphelper.ResultSuccess(pageResult, c.Writer, lc)
 }
 
-// @Tags 物模型
-// @Summary 物模型单位同步
-// @Produce json
-// @Param request query dtos.UnitTemplateSyncRequest true "参数"
-// @Router  /api/v1/thingmodel/unit-sync [post]
-// @Security ApiKeyAuth
-func (ctl *controller) ThingModelUnitSync(c *gin.Context) {
-	lc := ctl.lc
-	var req dtos.UnitTemplateSyncRequest
-	urlDecodeParam(&req, c.Request, lc)
-	total, edgeXErr := ctl.getUnitModelApp().Sync(c, "Ireland")
-	if edgeXErr != nil {
-		httphelper.RenderFail(c, edgeXErr, c.Writer, lc)
-		return
-	}
-	httphelper.ResultSuccess(total, c.Writer, lc)
-}
-
-func (ctl *controller) ThingModelDocsSync(c *gin.Context) {
-	lc := ctl.lc
-	total, edgeXErr := ctl.getDocsApp().SyncDocs(c, "Ireland")
-	if edgeXErr != nil {
-		httphelper.RenderFail(c, edgeXErr, c.Writer, lc)
-		return
-	}
-	httphelper.ResultSuccess(total, c.Writer, lc)
-}
-
-func (ctl *controller) ThingModelQuickNavigationSync(c *gin.Context) {
-	lc := ctl.lc
-	total, edgeXErr := ctl.getQuickNavigationApp().SyncQuickNavigation(c, "Ireland")
-	if edgeXErr != nil {
-		httphelper.RenderFail(c, edgeXErr, c.Writer, lc)
-		return
-	}
-	httphelper.ResultSuccess(total, c.Writer, lc)
-}
-
 //func (ctl *controller) MsgGather(c *gin.Context) {
 //	lc := ctl.lc
 //	edgeXErr := ctl.getDeviceApp().DevicesReportMsgGather(context.Background())

@@ -31,6 +31,7 @@ import (
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 
 	"iotserver/internal/dtos"
+	"iotserver/internal/iotserver/core/application/ingestcommon"
 	coreConfig "iotserver/internal/iotserver/core/config"
 	coreContainer "iotserver/internal/iotserver/core/container"
 	interfaces "iotserver/internal/iotserver/core/interface"
@@ -49,9 +50,6 @@ const (
 	// mqttClientIDPrefix 订阅参考系统上行所用的 clientId 前缀。
 	// 实际 clientId 会拼上实例后缀，避免多个平台实例连同一个 broker 时互相踢下线。
 	mqttClientIDPrefix = "iotserver-core-edge"
-	// deviceOnlineThrottle 同一设备最多多久写一次「置在线」。
-	// 网关是按包上报的，同一设备不必每包都写一次元数据库。
-	deviceOnlineThrottle = 30 * time.Second
 	// defaultResyncInterval 订阅对齐的默认间隔（配置未指定时）。
 	// 它决定「界面新增网关 → 多久开始收它的数据」。
 	defaultResyncInterval = 60 * time.Second
@@ -73,8 +71,8 @@ type Service struct {
 	gatewayItf interfaces.GatewayItf
 	mqttClient pkgMQTT.MQTTClient
 
-	onlineMu   sync.Mutex
-	onlineSeen map[string]time.Time
+	// online 设备置在线节流（同一设备 30 秒内只写一次）。
+	online ingestcommon.OnlineTracker
 
 	// typeMu / deviceTagTypes 已推断过类型的测点缓存（deviceID → code → type）
 	typeMu         sync.Mutex
@@ -676,29 +674,9 @@ func (s *Service) resolveOrProvision(ctx context.Context, g models.Gateway, r ed
 
 // markDeviceOnline 收到数据即视为设备在线（带节流，避免高频上报写爆元数据库）。
 func (s *Service) markDeviceOnline(ctx context.Context, deviceID string) {
-	if deviceID == "" {
+	if !s.online.Allow(deviceID) {
 		return
 	}
-	now := time.Now()
-	s.onlineMu.Lock()
-	if s.onlineSeen == nil {
-		s.onlineSeen = make(map[string]time.Time)
-	}
-	if last, ok := s.onlineSeen[deviceID]; ok && now.Sub(last) < deviceOnlineThrottle {
-		s.onlineMu.Unlock()
-		return
-	}
-	s.onlineSeen[deviceID] = now
-	// 防止 map 无界增长
-	if len(s.onlineSeen) > 10000 {
-		for id, t := range s.onlineSeen {
-			if now.Sub(t) >= deviceOnlineThrottle {
-				delete(s.onlineSeen, id)
-			}
-		}
-	}
-	s.onlineMu.Unlock()
-
 	if err := s.dbClient.WithCtx(ctx).DeviceOnlineById(deviceID); err != nil {
 		s.warnf("参考系统接入：标记设备在线失败 device=%s: %v", deviceID, err)
 	}

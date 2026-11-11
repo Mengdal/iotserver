@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120" role="img" aria-label="MQTT">
+  <!-- MQTT：发布/订阅语义 —— 中心节点向四周广播 -->
+  <g fill="none" stroke="#660066" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+    <!-- 广播弧 -->
+    <path d="M40 44 A26 26 0 0 1 80 44" opacity="0.35"/>
+    <path d="M31 33 A40 40 0 0 1 89 33" opacity="0.18"/>
+    <!-- 中心节点 -->
+    <circle cx="60" cy="72" r="16" fill="#660066" stroke="none"/>
+    <!-- 连接线 -->
+    <path d="M60 56 L60 34"/>
+  </g>
+  <!-- 订阅端小圆点 -->
+  <circle cx="26" cy="80" r="7" fill="#660066" opacity="0.45"/>
+  <circle cx="94" cy="80" r="7" fill="#660066" opacity="0.45"/>
+</svg>

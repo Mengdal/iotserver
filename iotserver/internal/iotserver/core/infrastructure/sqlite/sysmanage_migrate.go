@@ -87,6 +87,8 @@ func (c *Client) MigrateSystemTables() error {
 		// ===== 网关接入（第三方工业网关 MQTT 上行）=====
 		&models.Gateway{},
 		&models.GatewayIngestLog{},
+		// 用户删除过的 things 网关墓碑：对账时跳过，避免「删了又回来」
+		&models.GatewayTombstone{},
 		// 租户 ↔ things 项目绑定（平台级元数据，带 tenant_id）
 		&models.TenantThingsBinding{},
 		// 参考系统（/edge 协议）接入设备的设备级测点（无物模型时的读取侧来源）
@@ -95,6 +97,7 @@ func (c *Client) MigrateSystemTables() error {
 		&models.CollectChannel{},
 		&models.CollectDeviceConfig{},
 		&models.CollectPointConfig{},
+		&models.CollectCleanupTask{},
 		// ===== 行业方案 =====
 		&models.Solution{},
 		// ===== 画布看板（落库）=====
@@ -475,7 +478,7 @@ func (c *Client) seedSystemData() error {
 		if err := seed.MigrateDriverPluginFields(tx); err != nil {
 			return err
 		}
-		// 内置系统组件：Mosquitto / eKuiper
+		// 内置系统组件：Mosquitto / eKuiper / IotEdgeDB
 		if err := seed.EnsureSystemComponents(tx); err != nil {
 			return err
 		}

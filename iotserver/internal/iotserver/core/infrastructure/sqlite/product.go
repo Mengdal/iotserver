@@ -130,22 +130,6 @@ func productsSearch(c *Client, offset int, limit int, preload bool, req dtos.Pro
 	return products, uint32(total), nil
 }
 
-func batchUpsertProduct(c *Client, d []models.Product) (int64, error) {
-	if len(d) <= 0 {
-		return 0, nil
-	}
-	tx := c.Pool.Session(&gorm.Session{FullSaveAssociations: true}).Clauses(
-		clause.OnConflict{
-			UpdateAll: true,
-		}).CreateInBatches(d, sqlite.CreateBatchSize)
-	num := tx.RowsAffected
-	err := tx.Error
-	if err != nil {
-		return num, err
-	}
-	return num, nil
-}
-
 func batchSaveProduct(c *Client, d []models.Product) error {
 	if len(d) <= 0 {
 		return nil

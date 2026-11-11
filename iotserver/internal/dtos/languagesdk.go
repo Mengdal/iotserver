@@ -22,10 +22,6 @@ type LanguageSDK struct {
 	Description string `json:"description"`
 }
 
-type LanguageSDKSyncRequest struct {
-	VersionName string `json:"version_name"`
-}
-
 type LanguageSDKSearchQueryRequest struct {
 	BaseSearchConditionQuery `schema:",inline"`
 }

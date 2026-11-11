@@ -1,6 +1,6 @@
 package dtos
 
-// SystemComponentDTO 内置系统组件（Mosquitto / eKuiper 等）的展示信息。
+// SystemComponentDTO 内置系统组件（Mosquitto / eKuiper / IotEdgeDB 等）的展示信息。
 type SystemComponentDTO struct {
 	Id          string `json:"id"`
 	Name        string `json:"name"`

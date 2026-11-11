@@ -114,7 +114,7 @@ func TestListDevicesFiltersChannel(t *testing.T) {
 		}
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"code": 200,
-			"data": []map[string]any{{"id": 3, "channelId": 7, "iotpId": 1001}},
+			"data": []map[string]any{{"id": 3, "channelId": 7, "iotpId": 1001, "measurement": "67126069"}},
 		})
 	}))
 	defer server.Close()
@@ -123,8 +123,61 @@ func TestListDevicesFiltersChannel(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ListDevices() error = %v", err)
 	}
-	if len(devices) != 1 || devices[0].Id != 3 || devices[0].ChannelId != 7 || devices[0].IotpId != 1001 {
+	if len(devices) != 1 || devices[0].Id != 3 || devices[0].ChannelId != 7 ||
+		devices[0].IotpId != 1001 || devices[0].Measurement != "67126069" {
 		t.Fatalf("unexpected devices: %+v", devices)
+	}
+}
+
+func TestCreateDeviceSendsMeasurement(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost || r.URL.Path != "/api/v1/devices" {
+			t.Fatalf("unexpected request %s %s", r.Method, r.URL.Path)
+		}
+		if err := r.ParseMultipartForm(1 << 20); err != nil {
+			t.Fatalf("ParseMultipartForm() error = %v", err)
+		}
+		for key, want := range map[string]string{
+			"channelId": "7", "iotpId": "1001", "measurement": "67126069",
+		} {
+			if got := r.FormValue(key); got != want {
+				t.Errorf("%s = %q, want %q", key, got, want)
+			}
+		}
+		_, _ = w.Write([]byte(`{"code":200,"message":"ok","data":{"id":9,"channelId":7,"iotpId":1001,"measurement":"67126069"}}`))
+	}))
+	defer server.Close()
+
+	created, err := New(server.URL, 0).CreateDevice(7, 1001, "67126069")
+	if err != nil {
+		t.Fatalf("CreateDevice() error = %v", err)
+	}
+	if created.Id != 9 || created.Measurement != "67126069" {
+		t.Fatalf("unexpected device: %+v", created)
+	}
+}
+
+func TestUpdateDeviceSendsMeasurement(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPut || r.URL.Path != "/api/v1/devices/9" {
+			t.Fatalf("unexpected request %s %s", r.Method, r.URL.Path)
+		}
+		if err := r.ParseMultipartForm(1 << 20); err != nil {
+			t.Fatalf("ParseMultipartForm() error = %v", err)
+		}
+		for key, want := range map[string]string{
+			"channelId": "7", "iotpId": "1001", "measurement": "67126069",
+		} {
+			if got := r.FormValue(key); got != want {
+				t.Errorf("%s = %q, want %q", key, got, want)
+			}
+		}
+		_, _ = w.Write([]byte(`{"code":200,"message":"ok"}`))
+	}))
+	defer server.Close()
+
+	if err := New(server.URL, 0).UpdateDevice(9, 7, 1001, "67126069"); err != nil {
+		t.Fatalf("UpdateDevice() error = %v", err)
 	}
 }
 
@@ -227,5 +280,53 @@ func TestWriteTagUsesFormData(t *testing.T) {
 
 	if err := New(server.URL, 0).WriteTag(9, "oil_temp", "12.3"); err != nil {
 		t.Fatalf("WriteTag() error = %v", err)
+	}
+}
+
+func TestMQTTConfig(t *testing.T) {
+	var updated bool
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v1/mqtt/config" {
+			t.Fatalf("unexpected path %s", r.URL.Path)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		switch r.Method {
+		case http.MethodGet:
+			_, _ = w.Write([]byte(`{"code":200,"message":"ok","data":{"IP":"192.168.0.74","port":1883,"username":"","hasPassword":false,"clientid":"iotpGW"}}`))
+		case http.MethodPut:
+			updated = true
+			if err := r.ParseMultipartForm(1 << 20); err != nil {
+				t.Fatalf("ParseMultipartForm() error = %v", err)
+			}
+			for key, want := range map[string]string{
+				"IP": "192.168.0.74", "port": "1883", "username": "", "password": "",
+				"clientid": "1234567890",
+			} {
+				if got := r.FormValue(key); got != want {
+					t.Errorf("%s = %q, want %q", key, got, want)
+				}
+			}
+			_, _ = w.Write([]byte(`{"code":200,"message":"ok"}`))
+		}
+	}))
+	defer server.Close()
+
+	client := New(server.URL, 0)
+	cfg, err := client.GetMQTTConfig()
+	if err != nil {
+		t.Fatalf("GetMQTTConfig() error = %v", err)
+	}
+	if cfg.IP != "192.168.0.74" || cfg.Port != 1883 || cfg.ClientID != "iotpGW" {
+		t.Fatalf("unexpected config: %+v", cfg)
+	}
+	cfg.IP = "192.168.0.74"
+	cfg.ClientID = "1234567890"
+	cfg.Username = ""
+	cfg.Password = ""
+	if err := client.UpdateMQTTConfig(cfg); err != nil {
+		t.Fatalf("UpdateMQTTConfig() error = %v", err)
+	}
+	if !updated {
+		t.Fatal("UpdateMQTTConfig 未发送 PUT")
 	}
 }

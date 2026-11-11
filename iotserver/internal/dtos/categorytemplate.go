@@ -22,14 +22,6 @@ type CategoryTemplateRequest struct {
 	Scene                    string `schema:"scene"`
 }
 
-type CategoryTemplateSyncRequest struct {
-	VersionName string `json:"version_name"`
-}
-
-type ThingModelTemplateSyncRequest struct {
-	VersionName string `json:"version_name"`
-}
-
 func CategoryTemplateResponseFromModel(m models.CategoryTemplate) CategoryTemplateResponse {
 	return CategoryTemplateResponse{
 		Id:             m.Id,

@@ -8,6 +8,7 @@ import (
 
 	"iotserver/internal/dtos"
 	"iotserver/internal/tools/datadb/aggregate"
+	"iotserver/internal/tools/datadb/dbcommon"
 )
 
 // 本文件实现 DuckDB 侧的聚合查询：
@@ -93,7 +94,7 @@ func (c *Client) aggregateProperty(req dtos.ThingModelPropertyDataRequest, where
 		return buckets, len(buckets), nil
 	}
 
-	page, pageSize := normalizePage(req.Page, req.PageSize, false)
+	page, pageSize := dbcommon.NormalizePage(req.Page, req.PageSize, false)
 	pageRows, total := aggregate.Paginate(buckets, page, pageSize)
 	return pageRows, total, nil
 }

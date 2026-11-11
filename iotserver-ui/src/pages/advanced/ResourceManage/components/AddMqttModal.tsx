@@ -1,6 +1,6 @@
-import { Button, Drawer, Form, Input, message, Select, Space } from 'antd'
-import { CloseOutlined } from '@ant-design/icons'
+import { Form, Input, message, Select } from 'antd'
 import React, { forwardRef, useCallback, useImperativeHandle, useState } from 'react'
+import { FormDrawer } from '@/components/FormDrawer'
 import { addResource, editResource, MqttResource } from '@/api'
 import { t } from '@/i18n'
 
@@ -20,7 +20,6 @@ const handleChange = (value: string) => {
 export const AddMqttModal = forwardRef<AddMqttModalRef, AddMqttModalProps>(({ onFinish }, ref) => {
   const [form] = useForm()
   const [record, setRecord] = useState<MqttResource>()
-  const [submitting, setSubmitting] = useState<boolean>(false)
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false)
 
   console.log('record', record)
@@ -29,6 +28,22 @@ export const AddMqttModal = forwardRef<AddMqttModalRef, AddMqttModalProps>(({ on
     form.resetFields()
     setIsModalOpen(false)
   }, [form])
+
+  const handleSubmit = () => form.validateFields().then(values => {
+    values.type = '消息对队列MQTT'
+    const request = record?.id
+      ? editResource({ ...values, id: record.id })
+      : addResource(values)
+    return request.then(resp => {
+      if (resp.success) {
+        message.success(t(record?.id ? '修改成功' : '添加成功'))
+        handleClose()
+        onFinish()
+      } else {
+        message.error(resp.errorMsg)
+      }
+    })
+  })
 
   useImperativeHandle(ref, () => {
     return {
@@ -43,62 +58,11 @@ export const AddMqttModal = forwardRef<AddMqttModalRef, AddMqttModalProps>(({ on
   }, [form])
 
   return (
-    <Drawer
+    <FormDrawer
       title={record ? t('修改实例') : t('添加实例')}
-      placement="right"
       open={isModalOpen}
-      width={550}
-      closable={false}
-      headerStyle={{ height: 51 }}
-      destroyOnClose
-      extra={<CloseOutlined onClick={handleClose} />}
       onClose={handleClose}
-      footer={
-        <Space>
-          <Button
-            type="primary"
-            loading={submitting}
-            disabled={submitting}
-            onClick={() => {
-              form.validateFields()
-                .then(values => {
-                  values.type = '消息对队列MQTT'
-                  console.log('values', values)
-                  setSubmitting(true)
-                  if (record?.id) {
-                    values.id = record.id
-                    editResource(values)
-                      .then(resp => {
-                        if (resp.success) {
-                          message.success(t('修改成功'))
-                          handleClose()
-                          onFinish()
-                        } else {
-                          message.error(resp.errorMsg)
-                        }
-                      }).finally(() => {
-                        setSubmitting(false)
-                      })
-                  } else {
-                    addResource(values)
-                      .then(resp => {
-                        if (resp.success) {
-                          message.success(t('添加成功'))
-                          handleClose()
-                          onFinish()
-                        } else {
-                          message.error(resp.errorMsg)
-                        }
-                      }).finally(() => {
-                        setSubmitting(false)
-                      })
-                  }
-                })
-            }}
-          >{t('确定')}</Button>
-          <Button onClick={handleClose}>{t('取消')}</Button>
-        </Space>
-      }
+      onSubmit={handleSubmit}
     >
       <Form
         form={form}
@@ -184,6 +148,6 @@ export const AddMqttModal = forwardRef<AddMqttModalRef, AddMqttModalProps>(({ on
           <Input placeholder={t('请输入')}></Input>
         </Form.Item>
       </Form>
-    </Drawer>
+    </FormDrawer>
   )
 })

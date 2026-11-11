@@ -148,7 +148,7 @@ func newTestClient(f *fakeIotp, device models.Device) *Client {
 
 func TestInsertPropertyUsesProductTableAndFloatType(t *testing.T) {
 	f := newFakeIotp(t)
-	f.fields["p_67126069"] = append(baseFieldSet(), iotp.Field{Name: "temperature", Type: iotp.TypeF64})
+	f.fields["67126069"] = append(baseFieldSet(), iotp.Field{Name: "temperature", Type: iotp.TypeF64})
 	c := newTestClient(f, testDevice())
 
 	err := c.Insert(context.Background(), "81283089", map[string]interface{}{
@@ -167,7 +167,7 @@ func TestInsertPropertyUsesProductTableAndFloatType(t *testing.T) {
 	}
 	body := bodies[0]
 	for _, want := range []string{
-		`"measurement":"p_67126069"`,
+		`"measurement":"67126069"`,
 		`"device_id":81283089`, // 必须是数字，字符串会被 iotp 整条丢弃
 		`"temperature":23.0`,   // F64 列必须带小数点，否则 iotp 按整数拒绝
 		`"timestamp":1700000000000`,
@@ -194,8 +194,8 @@ func TestInsertWithoutProductUsesDefaultTable(t *testing.T) {
 		t.Fatalf("flush: %v", err)
 	}
 	bodies := f.writeBodies()
-	if len(bodies) != 1 || !strings.Contains(bodies[0], `"measurement":"p_default"`) {
-		t.Fatalf("无产品设备应写 p_default: %v", bodies)
+	if len(bodies) != 1 || !strings.Contains(bodies[0], `"measurement":"default"`) {
+		t.Fatalf("无产品设备应写 default: %v", bodies)
 	}
 }
 
@@ -224,10 +224,10 @@ func TestInsertEventUsesPrefixedFieldAndPayloadTime(t *testing.T) {
 
 func TestFlushRemediatesUnknownFieldAndRetries(t *testing.T) {
 	f := newFakeIotp(t)
-	f.fields["p_67126069"] = append(baseFieldSet(), iotp.Field{Name: "temperature", Type: iotp.TypeF64})
+	f.fields["67126069"] = append(baseFieldSet(), iotp.Field{Name: "temperature", Type: iotp.TypeF64})
 	f.writeFn = func(_ string, attempt int) string {
 		if attempt == 1 {
-			return `{"accepted_rows":0,"rejected_rows":1,"tables":{"iotserver.p_67126069":{"accepted":0,"rejected":1,"reasons":{"unknown_field":1}}}}`
+			return `{"accepted_rows":0,"rejected_rows":1,"tables":{"iotserver.67126069":{"accepted":0,"rejected":1,"reasons":{"unknown_field":1}}}}`
 		}
 		return `{"accepted_rows":1,"rejected_rows":0,"tables":{}}`
 	}
@@ -246,13 +246,13 @@ func TestFlushRemediatesUnknownFieldAndRetries(t *testing.T) {
 
 func TestFlushRetriesOnlyRejectedTables(t *testing.T) {
 	f := newFakeIotp(t)
-	f.fields["p_67126069"] = append(baseFieldSet(), iotp.Field{Name: "temperature", Type: iotp.TypeF64})
-	f.fields["p_999"] = append(baseFieldSet(), iotp.Field{Name: "temperature", Type: iotp.TypeF64})
+	f.fields["67126069"] = append(baseFieldSet(), iotp.Field{Name: "temperature", Type: iotp.TypeF64})
+	f.fields["999"] = append(baseFieldSet(), iotp.Field{Name: "temperature", Type: iotp.TypeF64})
 	f.writeFn = func(_ string, attempt int) string {
 		if attempt == 1 {
 			return `{"accepted_rows":1,"rejected_rows":1,"tables":{
-				"iotserver.p_67126069":{"accepted":0,"rejected":1,"reasons":{"unknown_field":1}},
-				"iotserver.p_999":{"accepted":1,"rejected":0,"reasons":{}}}}`
+				"iotserver.67126069":{"accepted":0,"rejected":1,"reasons":{"unknown_field":1}},
+				"iotserver.999":{"accepted":1,"rejected":0,"reasons":{}}}}`
 		}
 		return `{"accepted_rows":1,"rejected_rows":0,"tables":{}}`
 	}
@@ -281,10 +281,10 @@ func TestFlushRetriesOnlyRejectedTables(t *testing.T) {
 	}
 	// 重试只能包含被拒的表，否则已成功的行会被重复写入。
 	retry := bodies[1]
-	if !strings.Contains(retry, `"measurement":"p_67126069"`) {
+	if !strings.Contains(retry, `"measurement":"67126069"`) {
 		t.Errorf("重试报文缺少被拒表: %s", retry)
 	}
-	if strings.Contains(retry, `"measurement":"p_999"`) {
+	if strings.Contains(retry, `"measurement":"999"`) {
 		t.Errorf("重试报文不应重复已成功的表: %s", retry)
 	}
 }
@@ -293,7 +293,7 @@ func TestFlushRetriesOnlyRejectedTables(t *testing.T) {
 
 func TestGetDevicePropertyHistoryAndLatest(t *testing.T) {
 	f := newFakeIotp(t)
-	f.fields["p_67126069"] = append(baseFieldSet(), iotp.Field{Name: "temperature", Type: iotp.TypeF64})
+	f.fields["67126069"] = append(baseFieldSet(), iotp.Field{Name: "temperature", Type: iotp.TypeF64})
 	f.queryFn = func(sql string) []map[string]any {
 		if strings.Contains(sql, "count(") {
 			return []map[string]any{{"c": float64(2)}}
@@ -337,7 +337,7 @@ func TestGetDevicePropertyHistoryAndLatest(t *testing.T) {
 
 func TestAggregateProperty(t *testing.T) {
 	f := newFakeIotp(t)
-	f.fields["p_67126069"] = append(baseFieldSet(), iotp.Field{Name: "temperature", Type: iotp.TypeF64})
+	f.fields["67126069"] = append(baseFieldSet(), iotp.Field{Name: "temperature", Type: iotp.TypeF64})
 	f.queryFn = func(sql string) []map[string]any {
 		// 聚合走客户端分桶：数据层只返回原始行（iotp v1 查询白名单不支持分桶表达式）。
 		return []map[string]any{{"time": float64(1700000000000), "v": float64(23.5)}}
@@ -364,7 +364,7 @@ func TestAggregateProperty(t *testing.T) {
 
 func TestCountsAndDeviceRank(t *testing.T) {
 	f := newFakeIotp(t)
-	f.tables = []string{"p_67126069"}
+	f.tables = []string{"67126069"}
 	f.queryFn = func(sql string) []map[string]any {
 		switch {
 		case strings.Contains(sql, "GROUP BY device_id"):
@@ -395,7 +395,7 @@ func TestCountsAndDeviceRank(t *testing.T) {
 
 func TestEventQueryUsesEvtColumns(t *testing.T) {
 	f := newFakeIotp(t)
-	f.fields["p_67126069"] = append(baseFieldSet(),
+	f.fields["67126069"] = append(baseFieldSet(),
 		iotp.Field{Name: "evt_overheat", Type: iotp.TypeString})
 	f.queryFn = func(sql string) []map[string]any {
 		if strings.Contains(sql, "count(") {

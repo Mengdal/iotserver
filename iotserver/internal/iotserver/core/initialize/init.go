@@ -407,6 +407,8 @@ func (b *Bootstrap) initClient(ctx context.Context, wg *sync.WaitGroup, dic *di.
 			return iotpSync
 		},
 	})
+	// 网关/设备归属对账：启动后补一次，之后定期执行（仅 Type=iotp 时真正启用）。
+	iotpSync.Start(ctx)
 
 	// 设备级采集配置：点位按产品物模型生成；当前只保存到平台。
 	collectApp := collectapp.NewCollectApp(ctx, dic)
@@ -415,6 +417,12 @@ func (b *Bootstrap) initClient(ctx context.Context, wg *sync.WaitGroup, dic *di.
 			return collectApp
 		},
 	})
+	// 软网关/设备在线状态：以采集引擎实时点位的新鲜度为准，定期回写状态字段。
+	collectApp.StartStatusSync(ctx)
+	// 删除软网关后的采集引擎资源清理：后台重试，避免删除操作等待引擎。
+	collectApp.StartCleanupWorker(ctx)
+	// 设备级 measurement：按产品自动修正引擎里每台设备的目标 iotp 表。
+	collectApp.StartMeasurementSync(ctx)
 
 	// 网关接入服务：订阅 iot/up/+/... 接收第三方工业网关的上行数据与心跳。
 	// MQTT 连接失败不阻断启动（网关接入属于可选能力，其余功能照常可用）。

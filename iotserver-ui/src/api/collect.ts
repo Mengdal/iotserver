@@ -88,6 +88,8 @@ export interface CollectDevice {
   deviceName: string
   productId: string
   productName: string
+  /** 引擎把该设备数据写入的 iotp 表名 */
+  measurement?: string
   /** 设备级采集使能 */
   enabled: boolean
 }

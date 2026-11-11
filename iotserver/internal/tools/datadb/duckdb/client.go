@@ -18,6 +18,7 @@ import (
 	"iotserver/internal/pkg/constants"
 	"iotserver/internal/pkg/logger"
 	"iotserver/internal/pkg/tenant"
+	"iotserver/internal/tools/datadb/dbcommon"
 )
 
 // platformTenantID 平台作用域写入使用的租户标识（空串，与 pkg/tenant 的约定一致）
@@ -225,7 +226,7 @@ func (c *Client) GetDeviceProperty(req dtos.ThingModelPropertyDataRequest, devic
 	// 保证「写入后立刻查询」能读到缓冲里的数据
 	c.flushPending()
 
-	start, end := timeWindow(req.Range, req.Last)
+	start, end := dbcommon.TimeWindow(req.Range, req.Last)
 	where := "device_id = ? AND ts_ms >= ? AND ts_ms <= ?"
 	args := []interface{}{device.Id, start, end}
 	if req.Code != "" {
@@ -243,7 +244,7 @@ func (c *Client) GetDeviceProperty(req dtos.ThingModelPropertyDataRequest, devic
 		return response, 0, err
 	}
 
-	page, pageSize := normalizePage(req.Page, req.PageSize, req.IsAll)
+	page, pageSize := dbcommon.NormalizePage(req.Page, req.PageSize, req.IsAll)
 	query := fmt.Sprintf(`SELECT ts_ms, num_value, text_value FROM %s
 		WHERE %s ORDER BY ts_ms DESC LIMIT ? OFFSET ?`, tableProperty, where)
 	args = append(args, pageSize, (page-1)*pageSize)
@@ -280,7 +281,7 @@ func (c *Client) GetDeviceEvent(req dtos.ThingModelEventDataRequest, device mode
 	}
 	c.flushPending()
 
-	start, end := timeWindow(req.Range, req.Last)
+	start, end := dbcommon.TimeWindow(req.Range, req.Last)
 	where := "device_id = ? AND ts_ms >= ? AND ts_ms <= ?"
 	args := []interface{}{device.Id, start, end}
 	if req.EventCode != "" {
@@ -293,7 +294,7 @@ func (c *Client) GetDeviceEvent(req dtos.ThingModelEventDataRequest, device mode
 		return response, 0, err
 	}
 
-	page, pageSize := normalizePage(req.Page, req.PageSize, req.IsAll)
+	page, pageSize := dbcommon.NormalizePage(req.Page, req.PageSize, req.IsAll)
 	query := fmt.Sprintf(`SELECT event_code, ts_ms, payload FROM %s
 		WHERE %s ORDER BY ts_ms DESC LIMIT ? OFFSET ?`, tableEvent, where)
 	args = append(args, pageSize, (page-1)*pageSize)
@@ -327,7 +328,7 @@ func (c *Client) GetDeviceService(req dtos.ThingModelServiceDataRequest, device 
 	}
 	c.flushPending()
 
-	start, end := timeWindow(req.Range, req.Last)
+	start, end := dbcommon.TimeWindow(req.Range, req.Last)
 	where := "device_id = ? AND ts_ms >= ? AND ts_ms <= ?"
 	args := []interface{}{device.Id, start, end}
 	if req.Code != "" {
@@ -340,7 +341,7 @@ func (c *Client) GetDeviceService(req dtos.ThingModelServiceDataRequest, device 
 		return response, 0, err
 	}
 
-	page, pageSize := normalizePage(req.Page, req.PageSize, req.IsAll)
+	page, pageSize := dbcommon.NormalizePage(req.Page, req.PageSize, req.IsAll)
 	query := fmt.Sprintf(`SELECT code, ts_ms, payload FROM %s
 		WHERE %s ORDER BY ts_ms DESC LIMIT ? OFFSET ?`, tableService, where)
 	args = append(args, pageSize, (page-1)*pageSize)
@@ -370,7 +371,7 @@ func (c *Client) GetDeviceService(req dtos.ThingModelServiceDataRequest, device 
 func (c *Client) GetDevicePropertyCount(req dtos.ThingModelPropertyDataRequest) (int, error) {
 	// 与查询方法保持一致：先落盘，否则会漏计缓冲区里尚未写入的数据
 	c.flushPending()
-	start, end := timeWindow(req.Range, false)
+	start, end := dbcommon.TimeWindow(req.Range, false)
 	where := "device_id = ? AND ts_ms >= ? AND ts_ms <= ?"
 	args := []interface{}{req.DeviceId, start, end}
 	if req.Code != "" {
@@ -383,7 +384,7 @@ func (c *Client) GetDevicePropertyCount(req dtos.ThingModelPropertyDataRequest) 
 // GetDeviceEventCount 事件条数
 func (c *Client) GetDeviceEventCount(req dtos.ThingModelEventDataRequest) (int, error) {
 	c.flushPending()
-	start, end := timeWindow(req.Range, false)
+	start, end := dbcommon.TimeWindow(req.Range, false)
 	where := "device_id = ? AND ts_ms >= ? AND ts_ms <= ?"
 	args := []interface{}{req.DeviceId, start, end}
 	if req.EventCode != "" {

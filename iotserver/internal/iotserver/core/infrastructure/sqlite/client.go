@@ -205,7 +205,7 @@ func (c *Client) ProductByCloudId(id string) (product models.Product, edgeXErr e
 }
 
 func (c *Client) BatchUpsertProduct(p []models.Product) (int64, error) {
-	return batchUpsertProduct(c, p)
+	return batchUpsert(c, p)
 }
 
 func (c *Client) BatchSaveProduct(p []models.Product) error {
@@ -370,7 +370,7 @@ func (c *Client) UnitSearch(offset int, limit int, req dtos.UnitRequest) ([]mode
 }
 
 func (c *Client) BatchUpsertUnitTemplate(p []models.Unit) (int64, error) {
-	return batchUpsertUnitTemplate(c, p)
+	return batchUpsert(c, p)
 }
 
 func (c *Client) CategoryTemplateById(id string) (models.CategoryTemplate, error) {
@@ -378,7 +378,7 @@ func (c *Client) CategoryTemplateById(id string) (models.CategoryTemplate, error
 }
 
 func (c *Client) BatchUpsertCategoryTemplate(p []models.CategoryTemplate) (int64, error) {
-	return batchUpsertCategoryTemplate(c, p)
+	return batchUpsert(c, p)
 }
 
 func (c *Client) ThingModelTemplateSearch(offset int, limit int, req dtos.ThingModelTemplateRequest) ([]models.ThingModelTemplate, uint32, error) {
@@ -389,7 +389,7 @@ func (c *Client) ThingModelTemplateByCategoryKey(categoryKey string) (models.Thi
 }
 
 func (c *Client) BatchUpsertThingModelTemplate(p []models.ThingModelTemplate) (int64, error) {
-	return batchUpsertThingModelTemplate(c, p)
+	return batchUpsert(c, p)
 }
 
 func (c *Client) AddThingModelProperty(ds models.Properties) (models.Properties, error) {
@@ -553,11 +553,11 @@ func (c *Client) DocsSearch(offset int, limit int, req dtos.DocsSearchQueryReque
 }
 
 func (c *Client) BatchUpsertDocsTemplate(ds []models.Doc) (int64, error) {
-	return batchUpsertDocsTemplate(c, ds)
+	return batchUpsert(c, ds)
 }
 
 func (c *Client) BatchUpsertQuickNavigationTemplate(ds []models.QuickNavigation) (int64, error) {
-	return batchUpsertQuickNavigationTemplate(c, ds)
+	return batchUpsert(c, ds)
 }
 
 func (c *Client) DeleteQuickNavigation(id string) error {

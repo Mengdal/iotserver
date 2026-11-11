@@ -2,7 +2,9 @@ package iotpsync
 
 import (
 	"testing"
+	"time"
 
+	"iotserver/internal/models"
 	"iotserver/internal/pkg/constants"
 	"iotserver/internal/tools/iotp"
 )
@@ -42,7 +44,7 @@ func TestFieldName(t *testing.T) {
 }
 
 func TestTableName(t *testing.T) {
-	if got := iotp.TableName("81234567"); got != "p_81234567" {
+	if got := iotp.TableName("81234567"); got != "81234567" {
 		t.Fatalf("iotp.TableName = %q", got)
 	}
 }
@@ -59,5 +61,40 @@ func TestDeviceID(t *testing.T) {
 	// 派生设备保留区 [2^40, +∞) 不允许源设备使用，否则写入返回 400。
 	if first >= iotp.DerivedDeviceIDStart {
 		t.Fatalf("DeviceID hash 落在派生设备保留区: %d", first)
+	}
+}
+
+func TestGatewaySyncEnabledOnlyForIotp(t *testing.T) {
+	service := &Service{
+		enabled: true,
+		client:  iotp.New("http://127.0.0.1:1", "", "iotserver", time.Second),
+	}
+	service.dataType = "duckdb"
+	if service.GatewaySyncEnabled() {
+		t.Fatal("duckdb 不应启用网关同步")
+	}
+	service.dataType = "iotp"
+	if !service.GatewaySyncEnabled() {
+		t.Fatal("iotp 应启用网关同步")
+	}
+	service.enabled = false
+	if service.GatewaySyncEnabled() {
+		t.Fatal("未启用元数据同步时不应启用网关同步")
+	}
+}
+
+func TestGatewayKey(t *testing.T) {
+	cases := []struct {
+		gateway models.Gateway
+		want    string
+	}{
+		{models.Gateway{Sn: "soft-12345678"}, "soft-12345678"},
+		{models.Gateway{Sn: " 1234567890 "}, "1234567890"},
+		{models.Gateway{Id: "abc123"}, "gw-abc123"},
+	}
+	for _, c := range cases {
+		if got := gatewayKey(c.gateway); got != c.want {
+			t.Fatalf("gatewayKey(%+v) = %q, want %q", c.gateway, got, c.want)
+		}
 	}
 }

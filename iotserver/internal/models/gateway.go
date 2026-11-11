@@ -176,3 +176,27 @@ func (table *GatewayIngestLog) TableName() string {
 
 // TableGatewayIngestLog 网关上行日志表名
 const TableGatewayIngestLog = "gateway_ingest_log"
+
+// GatewayTombstone 网关删除墓碑。
+//
+// things 是远端权威：本地删除网关后，下一轮对账会把远端仍存在的网关重新导入。
+// 用户明确删除的网关记录在这里，对账时按 SN 跳过，保证「删了就是删了」。
+// 重新通过 things 创建同一 SN 的网关时清除墓碑。
+type GatewayTombstone struct {
+	Timestamps
+	TenantField
+	Id string `gorm:"column:id;primaryKey;type:string;size:64;comment:主键"`
+	// Sn 被删除网关的 SN（按租户作用域唯一）
+	Sn string `gorm:"column:sn;type:string;size:128;index;comment:网关序列号"`
+	// ThingsGatewayId 删除时的 things 网关 ID，便于排查
+	ThingsGatewayId int64 `gorm:"column:things_gateway_id;comment:things 网关ID"`
+	// DeletedAt 删除时间（毫秒）
+	DeletedAt int64 `gorm:"column:deleted_at;comment:删除时间"`
+}
+
+func (table *GatewayTombstone) TableName() string {
+	return TableGatewayTombstone
+}
+
+// TableGatewayTombstone 网关删除墓碑表名
+const TableGatewayTombstone = "gateway_tombstone"

@@ -1,6 +1,7 @@
-import { Button, Drawer, Form, Input, InputNumber, message, Select, Space } from 'antd'
-import { CloseOutlined, MinusCircleOutlined, PlusOutlined } from '@ant-design/icons'
+import { Button, Form, Input, InputNumber, message, Select, Space } from 'antd'
+import { MinusCircleOutlined, PlusOutlined } from '@ant-design/icons'
 import React, { forwardRef, useCallback, useImperativeHandle, useState } from 'react'
+import { FormDrawer } from '@/components/FormDrawer'
 import { addResource, editResource, HttpResource } from '@/api'
 import { t } from '@/i18n'
 
@@ -20,13 +21,33 @@ const handleChange = (value: string) => {
 export const AddHttpModal = forwardRef<AddHttpModalRef, AddHttpModalProps>(({ onFinish }, ref) => {
   const [form] = useForm()
   const [record, setRecord] = useState<HttpResource>()
-  const [submitting, setSubmitting] = useState<boolean>(false)
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false)
 
   const handleClose = useCallback(() => {
     form.resetFields()
     setIsModalOpen(false)
   }, [form])
+
+  const handleSubmit = () => form.validateFields().then(values => {
+    const headers = values.option.headers.reduce((r: { [x: string]: any }, item: { key: string | number; value: any }) => {
+      r[item.key] = item.value
+      return r
+    }, {})
+    values.option.headers = headers
+    values.type = 'HTTP推送'
+    const request = record?.id
+      ? editResource({ ...values, id: record.id })
+      : addResource(values)
+    return request.then(resp => {
+      if (resp.success) {
+        message.success(t(record?.id ? '修改成功' : '添加成功'))
+        handleClose()
+        onFinish()
+      } else {
+        message.error(resp.errorMsg)
+      }
+    })
+  })
 
   useImperativeHandle(ref, () => {
     return {
@@ -53,67 +74,11 @@ export const AddHttpModal = forwardRef<AddHttpModalRef, AddHttpModalProps>(({ on
   }, [form])
 
   return (
-    <Drawer
+    <FormDrawer
       title={record ? t('修改实例') : t('添加实例')}
-      placement="right"
       open={isModalOpen}
-      width={550}
-      closable={false}
-      headerStyle={{ height: 51 }}
-      destroyOnClose
-      extra={<CloseOutlined onClick={handleClose} />}
       onClose={handleClose}
-      footer={
-        <Space>
-          <Button
-            type="primary"
-            loading={submitting}
-            disabled={submitting}
-            onClick={() => {
-              form.validateFields()
-                .then(values => {
-                  const headers = values.option.headers.reduce((r: { [x: string]: any }, item: { key: string | number; value: any }) => {
-                    r[item.key] = item.value
-                    return r
-                  }, {})
-                  values.option.headers = headers
-                  values.type = 'HTTP推送'
-                  console.log('values', values)
-                  setSubmitting(true)
-                  if (record?.id) {
-                    values.id = record.id
-                    editResource(values)
-                      .then(resp => {
-                        if (resp.success) {
-                          message.success(t('修改成功'))
-                          handleClose()
-                          onFinish()
-                        } else {
-                          message.error(resp.errorMsg)
-                        }
-                      }).finally(() => {
-                        setSubmitting(false)
-                      })
-                  } else {
-                    addResource(values)
-                      .then(resp => {
-                        if (resp.success) {
-                          message.success(t('添加成功'))
-                          handleClose()
-                          onFinish()
-                        } else {
-                          message.error(resp.errorMsg)
-                        }
-                      }).finally(() => {
-                        setSubmitting(false)
-                      })
-                  }
-                })
-            }}
-          >{t('确定')}</Button>
-          <Button onClick={handleClose}>{t('取消')}</Button>
-        </Space>
-      }
+      onSubmit={handleSubmit}
     >
       <Form
         form={form}
@@ -238,6 +203,6 @@ export const AddHttpModal = forwardRef<AddHttpModalRef, AddHttpModalProps>(({ on
           </Form.List>
         </Form.Item>
       </Form>
-    </Drawer>
+    </FormDrawer>
   )
 })

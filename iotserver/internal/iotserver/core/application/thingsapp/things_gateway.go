@@ -80,6 +80,15 @@ func (s *service) ReconcileTenant(ctx context.Context, tenantID string) (dtos.Th
 	result.Gateways = len(remote)
 
 	tenantCtx := tenant.With(ctx, tenant.Context{TenantID: tenantID})
+	// 用户删除过的网关：远端仍然存在也不再导入，保证「删了就是删了」。
+	tombstones, err := s.dbClient.WithCtx(tenantCtx).GatewayTombstones()
+	if err != nil {
+		return result, err
+	}
+	ignoredSn := make(map[string]struct{}, len(tombstones))
+	for _, tombstone := range tombstones {
+		ignoredSn[strings.TrimSpace(tombstone.Sn)] = struct{}{}
+	}
 	local, _, err := s.dbClient.WithCtx(tenantCtx).
 		GatewaySearch(0, -1, dtos.GatewaySearchQueryRequest{})
 	if err != nil {
@@ -97,6 +106,9 @@ func (s *service) ReconcileTenant(ctx context.Context, tenantID string) (dtos.Th
 
 	seen := make(map[string]struct{}, len(remote))
 	for _, rg := range remote {
+		if _, ignored := ignoredSn[strings.TrimSpace(rg.SN)]; ignored {
+			continue
+		}
 		pk := strings.TrimSpace(rg.PK)
 		if pk == "" {
 			pk = rg.SN

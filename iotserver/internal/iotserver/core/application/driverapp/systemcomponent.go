@@ -26,8 +26,9 @@ func (app *driverLibApp) SystemComponents(ctx context.Context) ([]dtos.SystemCom
 	}
 	cfg := container.ConfigurationFrom(app.dic.Get)
 	endpoints := map[string]string{
-		seed.SystemComponentMosquittoId: componentEndpoint(cfg, true),
-		seed.SystemComponentEKuiperId:   componentEndpoint(cfg, false),
+		seed.SystemComponentMosquittoId: componentEndpoint(cfg, seed.SystemComponentMosquittoId),
+		seed.SystemComponentEKuiperId:   componentEndpoint(cfg, seed.SystemComponentEKuiperId),
+		seed.SystemComponentIotEdgeDBId: componentEndpoint(cfg, seed.SystemComponentIotEdgeDBId),
 	}
 	result := make([]dtos.SystemComponentDTO, 0, len(libraries))
 	for _, library := range libraries {
@@ -54,25 +55,31 @@ func (app *driverLibApp) SystemComponents(ctx context.Context) ([]dtos.SystemCom
 }
 
 // componentEndpoint 从平台配置读取组件实际监听地址。
-// mosquitto 使用内部消息总线配置；eKuiper 使用 Clients["Ekuiper"]。
-func componentEndpoint(cfg *config.ConfigurationStruct, mosquitto bool) string {
+// Mosquitto 使用内部消息总线配置；eKuiper 使用 Clients["Ekuiper"]；
+// IotEdgeDB 是外部时序库，使用 [Databases.Data].BaseURL。
+func componentEndpoint(cfg *config.ConfigurationStruct, componentId string) string {
 	if cfg == nil {
 		return ""
 	}
-	if mosquitto {
+	switch componentId {
+	case seed.SystemComponentMosquittoId:
 		if strings.TrimSpace(cfg.MessageQueue.Host) == "" {
 			return ""
 		}
 		return cfg.MessageQueue.URL()
+	case seed.SystemComponentEKuiperId:
+		client, ok := cfg.Clients["Ekuiper"]
+		if !ok || strings.TrimSpace(client.Host) == "" {
+			return ""
+		}
+		if address := client.Address(); address != "" {
+			return address
+		}
+		return client.Url()
+	case seed.SystemComponentIotEdgeDBId:
+		return strings.TrimSpace(cfg.GetDataDatabaseInfo().BaseURL)
 	}
-	client, ok := cfg.Clients["Ekuiper"]
-	if !ok || strings.TrimSpace(client.Host) == "" {
-		return ""
-	}
-	if address := client.Address(); address != "" {
-		return address
-	}
-	return client.Url()
+	return ""
 }
 
 // probeComponentEndpoint 只做一次短超时 TCP 探活，避免系统组件页面被远端拖住。

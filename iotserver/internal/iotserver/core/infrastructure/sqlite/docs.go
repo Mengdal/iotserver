@@ -12,8 +12,6 @@
 package sqlite
 
 import (
-	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 	"iotserver/internal/dtos"
 	"iotserver/internal/models"
 	"iotserver/internal/pkg/errort"
@@ -41,20 +39,4 @@ func docsSearch(c *Client, offset int, limit int, req dtos.DocsSearchQueryReques
 	}
 
 	return docs, uint32(total), nil
-}
-
-func batchUpsertDocsTemplate(c *Client, d []models.Doc) (int64, error) {
-	if len(d) <= 0 {
-		return 0, nil
-	}
-	tx := c.Pool.Session(&gorm.Session{FullSaveAssociations: true}).Clauses(
-		clause.OnConflict{
-			UpdateAll: true,
-		}).CreateInBatches(d, sqlite.CreateBatchSize)
-	num := tx.RowsAffected
-	err := tx.Error
-	if err != nil {
-		return num, err
-	}
-	return num, nil
 }

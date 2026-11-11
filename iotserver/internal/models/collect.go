@@ -96,3 +96,32 @@ type CollectPointConfig struct {
 func (m *CollectPointConfig) TableName() string {
 	return TableCollectPointConfig
 }
+
+// CollectCleanupTask 删除软网关后清理采集引擎资源的后台任务。
+//
+// 采集引擎写接口可能不可达/卡住，删除网关时不能同步等待；先删平台本地记录，
+// 把引擎通道/设备清理交给后台任务重试。
+type CollectCleanupTask struct {
+	Timestamps
+	TenantField
+	Id string `gorm:"column:id;primaryKey;type:string;size:64;comment:主键"`
+	// GatewayId 已删除的网关 ID（仅用于排查）
+	GatewayId string `gorm:"column:gateway_id;type:string;size:64;index;comment:网关ID"`
+	// EngineBaseURL 采集引擎地址
+	EngineBaseURL string `gorm:"column:engine_base_url;type:string;size:255;comment:采集引擎地址"`
+	// DeleteAll 为 true 时清理引擎全部通道/设备（引擎没有其它软网关共用）
+	DeleteAll bool `gorm:"column:delete_all;type:bool;comment:是否清空整个引擎"`
+	// ChannelIDs 要删除的引擎通道 ID（JSON 数组）
+	ChannelIDs string `gorm:"column:channel_ids;type:text;comment:待删除通道ID(JSON)"`
+	Attempts   int    `gorm:"column:attempts;type:int;comment:已尝试次数"`
+	LastError  string `gorm:"column:last_error;type:string;size:1000;comment:最近一次错误"`
+	// NextRetryAt 下次重试时间（毫秒）
+	NextRetryAt int64 `gorm:"column:next_retry_at;type:bigint;index;comment:下次重试时间"`
+}
+
+func (m *CollectCleanupTask) TableName() string {
+	return TableCollectCleanupTask
+}
+
+// TableCollectCleanupTask 采集引擎清理任务表名
+const TableCollectCleanupTask = "collect_cleanup_task"

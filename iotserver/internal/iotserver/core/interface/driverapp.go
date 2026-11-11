@@ -16,7 +16,7 @@ type DriverLibApp interface {
 	DriverLibById(dlId string) (models.DeviceLibrary, error)
 	GetDriverClassify(ctx context.Context, req dtos.DriverClassifyQueryRequest) ([]dtos.DriverClassifyResponse, uint32, error)
 	GetDeviceLibraryAndMirrorConfig(dlId string) (dl models.DeviceLibrary, dc models.DockerConfig, err error)
-	// SystemComponents 内置系统组件（Mosquitto / eKuiper 等）及运行状态。
+	// SystemComponents 内置系统组件（Mosquitto / eKuiper / IotEdgeDB 等）及运行状态。
 	SystemComponents(ctx context.Context) ([]dtos.SystemComponentDTO, error)
 	DriverDownConfigItf
 }

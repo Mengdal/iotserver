@@ -13,6 +13,7 @@ import (
 	"iotserver/internal/models"
 	"iotserver/internal/pkg/tenant"
 	"iotserver/internal/tools/datadb/aggregate"
+	"iotserver/internal/tools/datadb/dbcommon"
 	"iotserver/internal/tools/iotp"
 )
 
@@ -34,7 +35,7 @@ func (c *Client) GetDeviceProperty(req dtos.ThingModelPropertyDataRequest, devic
 		return response, 0, err
 	}
 	field := quoteIdent(iotp.FieldName(req.Code))
-	start, end := timeWindow(req.Range, req.Last)
+	start, end := dbcommon.TimeWindow(req.Range, req.Last)
 	where := fmt.Sprintf("device_id = %d AND time >= %d AND time <= %d AND %s IS NOT NULL",
 		target.iotpID, start, end, field)
 
@@ -46,7 +47,7 @@ func (c *Client) GetDeviceProperty(req dtos.ThingModelPropertyDataRequest, devic
 	if err != nil {
 		return response, 0, err
 	}
-	page, pageSize := normalizePage(req.Page, req.PageSize, req.IsAll)
+	page, pageSize := dbcommon.NormalizePage(req.Page, req.PageSize, req.IsAll)
 	sql := fmt.Sprintf(`SELECT time, %s AS v FROM %s WHERE %s ORDER BY time DESC LIMIT %d OFFSET %d`,
 		field, c.tableRef(target.table), where, pageSize, (page-1)*pageSize)
 	rows, err := c.queryOrEmpty(sql)
@@ -109,7 +110,7 @@ func (c *Client) aggregateProperty(target deviceTarget, field string, req dtos.T
 	if req.IsAll {
 		return buckets, len(buckets), nil
 	}
-	page, pageSize := normalizePage(req.Page, req.PageSize, false)
+	page, pageSize := dbcommon.NormalizePage(req.Page, req.PageSize, false)
 	pageRows, total := aggregate.Paginate(buckets, page, pageSize)
 	return pageRows, total, nil
 }
@@ -134,7 +135,7 @@ func (c *Client) GetDeviceEvent(req dtos.ThingModelEventDataRequest, device mode
 	if len(fields) == 0 {
 		return response, 0, nil
 	}
-	start, end := timeWindow(req.Range, req.Last)
+	start, end := dbcommon.TimeWindow(req.Range, req.Last)
 	where := fmt.Sprintf("device_id = %d AND time >= %d AND time <= %d", target.iotpID, start, end)
 	if len(fields) == 1 {
 		where += fmt.Sprintf(" AND %s IS NOT NULL", quoteIdent(fields[0]))
@@ -149,7 +150,7 @@ func (c *Client) GetDeviceEvent(req dtos.ThingModelEventDataRequest, device mode
 	if err != nil {
 		return response, 0, err
 	}
-	page, pageSize := normalizePage(req.Page, req.PageSize, req.IsAll)
+	page, pageSize := dbcommon.NormalizePage(req.Page, req.PageSize, req.IsAll)
 	sql := fmt.Sprintf(`SELECT time, %s FROM %s WHERE %s ORDER BY time DESC LIMIT %d OFFSET %d`,
 		selectFields(fields), c.tableRef(target.table), where, pageSize, (page-1)*pageSize)
 	rows, err := c.queryOrEmpty(sql)
@@ -191,7 +192,7 @@ func (c *Client) GetDeviceService(req dtos.ThingModelServiceDataRequest, device 
 	if len(fields) == 0 {
 		return response, 0, nil
 	}
-	start, end := timeWindow(req.Range, req.Last)
+	start, end := dbcommon.TimeWindow(req.Range, req.Last)
 	where := fmt.Sprintf("device_id = %d AND time >= %d AND time <= %d", target.iotpID, start, end)
 	if len(fields) == 1 {
 		where += fmt.Sprintf(" AND %s IS NOT NULL", quoteIdent(fields[0]))
@@ -206,7 +207,7 @@ func (c *Client) GetDeviceService(req dtos.ThingModelServiceDataRequest, device 
 	if err != nil {
 		return response, 0, err
 	}
-	page, pageSize := normalizePage(req.Page, req.PageSize, req.IsAll)
+	page, pageSize := dbcommon.NormalizePage(req.Page, req.PageSize, req.IsAll)
 	sql := fmt.Sprintf(`SELECT time, %s FROM %s WHERE %s ORDER BY time DESC LIMIT %d OFFSET %d`,
 		selectFields(fields), c.tableRef(target.table), where, pageSize, (page-1)*pageSize)
 	rows, err := c.queryOrEmpty(sql)
@@ -260,7 +261,7 @@ func (c *Client) GetDevicePropertyCount(req dtos.ThingModelPropertyDataRequest) 
 	if err != nil {
 		return 0, err
 	}
-	start, end := timeWindow(req.Range, req.Last)
+	start, end := dbcommon.TimeWindow(req.Range, req.Last)
 	where := fmt.Sprintf("device_id = %d AND time >= %d AND time <= %d AND %s IS NOT NULL",
 		target.iotpID, start, end, quoteIdent(iotp.FieldName(req.Code)))
 	return c.countRows(target.table, where)
@@ -279,7 +280,7 @@ func (c *Client) GetDeviceEventCount(req dtos.ThingModelEventDataRequest) (int, 
 	if err != nil || len(fields) == 0 {
 		return 0, err
 	}
-	start, end := timeWindow(req.Range, req.Last)
+	start, end := dbcommon.TimeWindow(req.Range, req.Last)
 	where := fmt.Sprintf("device_id = %d AND time >= %d AND time <= %d", target.iotpID, start, end)
 	conditions := make([]string, 0, len(fields))
 	for _, field := range fields {
@@ -455,37 +456,7 @@ func selectFields(fields []string) string {
 }
 
 // timeWindow 计算查询时间窗（毫秒），与 DuckDB 后端保持一致。
-func timeWindow(rng []int64, last bool) (start, end int64) {
-	if len(rng) == 2 {
-		if rng[0] < rng[1] {
-			return rng[0], rng[1]
-		}
-		return rng[1], rng[0]
-	}
-	now := time.Now()
-	if last {
-		return now.Add(-30*time.Minute).UnixNano() / int64(time.Millisecond), nowMillis()
-	}
-	return now.AddDate(-1, 0, 0).UnixNano() / int64(time.Millisecond), nowMillis()
-}
-
 // normalizePage 归一化分页参数；isAll 时取单页上限。
-func normalizePage(page, pageSize int, isAll bool) (int, int) {
-	if isAll {
-		return 1, maxPageSize
-	}
-	if page <= 0 {
-		page = 1
-	}
-	if pageSize <= 0 {
-		pageSize = defaultPageSize
-	}
-	if pageSize > maxPageSize {
-		pageSize = maxPageSize
-	}
-	return page, pageSize
-}
-
 // numberOf 把查询结果里的数字（JSON float64 / json.Number）转成 float64。
 func numberOf(value any) float64 {
 	switch v := value.(type) {

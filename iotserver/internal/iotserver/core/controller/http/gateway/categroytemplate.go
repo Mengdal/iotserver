@@ -41,20 +41,3 @@ func (ctl *controller) CategoryTemplateSearch(c *gin.Context) {
 	httphelper.ResultSuccess(pageResult, c.Writer, lc)
 }
 
-// @Tags 标准产品品类
-// @Summary 同步标准产品品类
-// @Produce json
-// @Param request query dtos.CategoryTemplateRequest true "参数"
-// @Router  /api/v1/category-template/sync [post]
-// @Security ApiKeyAuth
-func (ctl *controller) CategoryTemplateSync(c *gin.Context) {
-	lc := ctl.lc
-	var req dtos.CategoryTemplateSyncRequest
-	urlDecodeParam(&req, c.Request, lc)
-	_, edgeXErr := ctl.getCategoryTemplateApp().Sync(c, "Ireland")
-	if edgeXErr != nil {
-		httphelper.RenderFail(c, edgeXErr, c.Writer, lc)
-		return
-	}
-	httphelper.ResultSuccess(nil, c.Writer, lc)
-}

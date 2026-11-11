@@ -33,6 +33,8 @@ type CollectDeviceDTO struct {
 	DeviceName  string `json:"deviceName"`
 	ProductId   string `json:"productId"`
 	ProductName string `json:"productName"`
+	// Measurement 引擎把该设备数据写入的 iotp 表名
+	Measurement string `json:"measurement"`
 	Enabled     bool   `json:"enabled"`
 }
 

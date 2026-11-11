@@ -129,14 +129,6 @@ func (ctl *controller) getHomePageApp() interfaces.HomePageItf {
 	return container.HomePageAppNameFrom(ctl.dic.Get)
 }
 
-func (ctl *controller) getDocsApp() interfaces.DocsApp {
-	return container.DocsTemplateAppFrom(ctl.dic.Get)
-}
-
-func (ctl *controller) getQuickNavigationApp() interfaces.QuickNavigation {
-	return container.QuickNavigationAppTemplateAppFrom(ctl.dic.Get)
-}
-
 // Perm 生成系统管理接口的权限校验中间件
 func (ctl *controller) Perm(perms ...string) gin.HandlerFunc {
 	return middleware.PermRequired(ctl.dic, perms...)

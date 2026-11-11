@@ -80,12 +80,14 @@ var tenantScopedModels = []tableNamer{
 	&MsgGather{},
 	&Gateway{},
 	&GatewayIngestLog{},
+	&GatewayTombstone{},
 	&TenantThingsBinding{},
 	&DeviceTag{},
 	&VizBoard{},
 	&CollectChannel{},
 	&CollectDeviceConfig{},
 	&CollectPointConfig{},
+	&CollectCleanupTask{},
 }
 
 var (

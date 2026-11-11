@@ -2,7 +2,6 @@ package collectapp
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -105,7 +104,7 @@ func ensureLegacyCollectGateway(db *gorm.DB, tenantId string) (models.Gateway, e
 		Timestamps:       models.Timestamps{Created: now, Modified: now},
 		Id:               utils.RandomNum(),
 		Name:             "默认软网关",
-		Sn:               fmt.Sprintf("soft-legacy-%s-%s", tenantId, utils.RandomNum()),
+		Sn:               utils.RandomNum10(),
 		Source:           models.GatewaySourceIoserver,
 		Protocol:         models.GatewayProtocolIoserver,
 		ThingsSyncStatus: models.GatewayThingsSyncLocal,

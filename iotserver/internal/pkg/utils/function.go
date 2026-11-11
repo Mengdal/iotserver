@@ -14,7 +14,20 @@
  *******************************************************************************/
 package utils
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
+
+// FirstNonEmpty 返回第一个去掉空白后非空的字符串。
+func FirstNonEmpty(values ...string) string {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			return value
+		}
+	}
+	return ""
+}
 
 func InStringSlice(key string, keys []string) bool {
 	ok := false

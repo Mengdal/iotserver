@@ -206,3 +206,47 @@ func (c *Client) ReplaceCollectPointConfigs(deviceId string, points []models.Col
 		return tx.Create(&points).Error
 	})
 }
+
+/******************************* 采集引擎清理任务 *******************************/
+
+// AddCollectCleanupTask 新增一条引擎资源清理任务。
+func (c *Client) AddCollectCleanupTask(t models.CollectCleanupTask) error {
+	now := time.Now().UnixMilli()
+	if t.Id == "" {
+		t.Id = utils.GenerateDeviceSecret(16)
+	}
+	if t.Created == 0 {
+		t.Created = now
+	}
+	t.Modified = now
+	return c.Pool.Create(&t).Error
+}
+
+// CollectCleanupTasksDue 取到期待清理的任务。
+func (c *Client) CollectCleanupTasksDue(now int64, limit int) ([]models.CollectCleanupTask, error) {
+	if limit <= 0 {
+		limit = 10
+	}
+	var list []models.CollectCleanupTask
+	err := c.Pool.
+		Where("next_retry_at = 0 OR next_retry_at <= ?", now).
+		Order("created asc").
+		Limit(limit).
+		Find(&list).Error
+	return list, err
+}
+
+// UpdateCollectCleanupTask 更新重试次数、错误与下次重试时间。
+func (c *Client) UpdateCollectCleanupTask(t models.CollectCleanupTask) error {
+	return c.Pool.Model(&models.CollectCleanupTask{}).Where("id = ?", t.Id).Updates(map[string]interface{}{
+		"attempts":      t.Attempts,
+		"last_error":    t.LastError,
+		"next_retry_at": t.NextRetryAt,
+		"modified":      time.Now().UnixMilli(),
+	}).Error
+}
+
+// DeleteCollectCleanupTask 清理完成后删除任务。
+func (c *Client) DeleteCollectCleanupTask(id string) error {
+	return c.Pool.Where("id = ?", id).Delete(&models.CollectCleanupTask{}).Error
+}

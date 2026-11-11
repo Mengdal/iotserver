@@ -12,6 +12,7 @@ import (
 const (
 	SystemComponentMosquittoId = "sys-mosquitto"
 	SystemComponentEKuiperId   = "sys-ekuiper"
+	SystemComponentIotEdgeDBId = "sys-iotedgedb"
 )
 
 // 驱动市场分类：系统组件。
@@ -105,7 +106,7 @@ func MigrateDriverPluginFields(tx *gorm.DB) error {
 	).Error
 }
 
-// EnsureSystemComponents 种入内置系统组件（Mosquitto / eKuiper）。
+// EnsureSystemComponents 种入内置系统组件（Mosquitto / eKuiper / IotEdgeDB）。
 // 已存在时保持用户配置不变。
 func EnsureSystemComponents(tx *gorm.DB) error {
 	if !tx.Migrator().HasTable("device_library") {
@@ -133,7 +134,7 @@ func EnsureSystemComponents(tx *gorm.DB) error {
 	// 已存在的系统组件补齐分类，旧数据也能出现在市场里。
 	if err := tx.Table("device_library").
 		Where("id IN ? AND (classify_id IS NULL OR classify_id = 0)",
-			[]string{SystemComponentMosquittoId, SystemComponentEKuiperId}).
+			[]string{SystemComponentMosquittoId, SystemComponentEKuiperId, SystemComponentIotEdgeDBId}).
 		Update("classify_id", SystemComponentClassifyID).Error; err != nil {
 		return err
 	}
@@ -167,6 +168,25 @@ func EnsureSystemComponents(tx *gorm.DB) error {
 			Essential:       false,
 			Source:          "builtin",
 			DeviceMarket:    models.DeviceMarket{ClassifyId: SystemComponentClassifyID, Icon: "/assets/ekuiper.png", Manual: "https://ekuiper.org/"},
+		},
+		{
+			Id:              SystemComponentIotEdgeDBId,
+			Name:            "IotEdgeDB",
+			Description:     "外部时序数据库（IotEdgeDB），通过 [Databases.Data] 的 BaseURL 接入，负责采集数据的持久化与查询。",
+			Protocol:        "HTTP",
+			Version:         "external",
+			SupportVersions: models.SupportVersions{},
+			IsInternal:      true,
+			Category:        models.PluginCategorySystem,
+			Runtime:         models.PluginRuntimeBuiltin,
+			Arch:            "any",
+			Essential:       false,
+			Source:          "builtin",
+			DeviceMarket: models.DeviceMarket{
+				ClassifyId: SystemComponentClassifyID,
+				Icon:       "/assets/iotedgedb.png",
+				Manual:     "http://docs.lmgateway.com/",
+			},
 		},
 	}
 	for i := range components {

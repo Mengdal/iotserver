@@ -81,15 +81,19 @@ func TestMigrateSystemTablesSeedsData(t *testing.T) {
 		t.Fatalf("expect %d menus, got %d", len(seed.DefaultMenus()), len(menus))
 	}
 
-	// 内置系统组件：Mosquitto / eKuiper 应随迁移种入，且标记为 system/builtin
+	// 内置系统组件：Mosquitto / eKuiper / IotEdgeDB 应随迁移种入，且标记为 system/builtin
 	var components []models.DeviceLibrary
 	if err := c.Pool.Table("device_library").
-		Where("id IN ?", []string{seed.SystemComponentMosquittoId, seed.SystemComponentEKuiperId}).
+		Where("id IN ?", []string{
+			seed.SystemComponentMosquittoId,
+			seed.SystemComponentEKuiperId,
+			seed.SystemComponentIotEdgeDBId,
+		}).
 		Order("id asc").Find(&components).Error; err != nil {
 		t.Fatalf("query system components: %v", err)
 	}
-	if len(components) != 2 {
-		t.Fatalf("expect 2 system components, got %d", len(components))
+	if len(components) != 3 {
+		t.Fatalf("expect 3 system components, got %d", len(components))
 	}
 	for _, component := range components {
 		if component.Category != models.PluginCategorySystem ||

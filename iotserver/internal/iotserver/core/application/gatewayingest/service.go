@@ -21,13 +21,13 @@ import (
 	"fmt"
 	"iotserver/internal/pkg/errort"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/LMgateways/iotserver-driver-proto/thingmodel"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 
 	"iotserver/internal/dtos"
+	"iotserver/internal/iotserver/core/application/ingestcommon"
 	coreConfig "iotserver/internal/iotserver/core/config"
 	coreContainer "iotserver/internal/iotserver/core/container"
 	interfaces "iotserver/internal/iotserver/core/interface"
@@ -85,14 +85,9 @@ type Service struct {
 	gatewayItf interfaces.GatewayItf
 	mqttClient pkgMQTT.MQTTClient
 
-	// 设备置在线的节流状态：网关是按消息批量上报的，同一设备不必每批都写一次元数据库
-	onlineMu   sync.Mutex
-	onlineSeen map[string]time.Time
+	// online 设备置在线节流（同一设备 30 秒内只写一次）。
+	online ingestcommon.OnlineTracker
 }
-
-// deviceOnlineThrottle 同一设备最多多久写一次「置在线」。
-// 只影响 last_online_time 的精度（最多滞后这么久），不影响状态正确性。
-const deviceOnlineThrottle = 30 * time.Second
 
 // markDeviceOnline 收到数据即视为设备在线。
 //
@@ -102,29 +97,9 @@ const deviceOnlineThrottle = 30 * time.Second
 //
 // 带节流：同一设备最多每 deviceOnlineThrottle 更新一次，避免高频上报把元数据库写爆。
 func (s *Service) markDeviceOnline(ctx context.Context, deviceID string) {
-	if deviceID == "" {
+	if !s.online.Allow(deviceID) {
 		return
 	}
-	now := time.Now()
-	s.onlineMu.Lock()
-	if s.onlineSeen == nil {
-		s.onlineSeen = make(map[string]time.Time)
-	}
-	if last, ok := s.onlineSeen[deviceID]; ok && now.Sub(last) < deviceOnlineThrottle {
-		s.onlineMu.Unlock()
-		return
-	}
-	s.onlineSeen[deviceID] = now
-	// 防止 map 无界增长：条目过多时清理掉已过节的项
-	if len(s.onlineSeen) > 10000 {
-		for id, t := range s.onlineSeen {
-			if now.Sub(t) >= deviceOnlineThrottle {
-				delete(s.onlineSeen, id)
-			}
-		}
-	}
-	s.onlineMu.Unlock()
-
 	if err := s.dbClient.WithCtx(ctx).DeviceOnlineById(deviceID); err != nil && s.lc != nil {
 		s.lc.Warnf("标记设备在线失败 device=%s: %v", deviceID, err)
 	}

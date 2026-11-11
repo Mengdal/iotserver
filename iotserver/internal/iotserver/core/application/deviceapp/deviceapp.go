@@ -325,6 +325,17 @@ func (p *deviceApp) DeviceUpdate(ctx context.Context, req dtos.DeviceUpdateReque
 	if edgeXErr != nil {
 		return edgeXErr
 	}
+	// 设备名称/标签变化后同步 iotp 设备实例（注册接口已存在时会 PUT 更新）。
+	if syncer := resourceContainer.IotpSyncFrom(p.dic.Get); syncer != nil {
+		tenantID := tenant.FromContext(ctx).TenantID
+		if device.ProductId == "" {
+			syncer.DeviceCreated(device, models.Product{}, tenantID)
+		} else if product, err := p.dbClient.WithCtx(ctx).ProductById(device.ProductId); err == nil {
+			syncer.DeviceCreated(device, product, tenantID)
+		} else if p.lc != nil {
+			p.lc.Warnf("设备 %s 更新后读取产品 %s 失败，跳过 iotp 同步: %v", device.Id, device.ProductId, err)
+		}
+	}
 	go func() {
 		p.UpdateDeviceCallBack(device)
 	}()
@@ -586,6 +597,15 @@ func (p *deviceApp) DevicesImport(ctx context.Context, file *dtos.ImportFile, pr
 	total, err := p.dbClient.WithCtx(ctx).BatchUpsertDevice(devices)
 	if err != nil {
 		return 0, err
+	}
+
+	// 批量导入与单台新增保持一致：注册 iotp 设备实例（异步、失败隔离）。
+	if syncer := resourceContainer.IotpSyncFrom(p.dic.Get); syncer != nil {
+		tenantID := tenant.FromContext(ctx).TenantID
+		product := models.Product{Id: productId}
+		for _, device := range devices {
+			syncer.DeviceCreated(device, product, tenantID)
+		}
 	}
 
 	for _, device := range devices {

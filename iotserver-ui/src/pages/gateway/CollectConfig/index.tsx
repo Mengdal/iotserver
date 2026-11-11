@@ -1218,6 +1218,7 @@ const CollectConfigPage: React.FC<CollectConfigPageProps> = ({ embedded = false 
     { title: t('设备名称'), dataIndex: 'deviceName', ellipsis: true },
     { title: t('设备ID'), dataIndex: 'iotpId', width: 130, ellipsis: true },
     { title: t('产品'), dataIndex: 'productName', width: 140, ellipsis: true },
+    { title: t('目标表'), dataIndex: 'measurement', width: 140, ellipsis: true },
     {
       title: t('使能'),
       dataIndex: 'enabled',
@@ -1250,6 +1251,13 @@ const CollectConfigPage: React.FC<CollectConfigPageProps> = ({ embedded = false 
   const pickerColumns: ColumnsType<DevicesType> = [
     { title: t('设备名称'), dataIndex: 'name', ellipsis: true },
     { title: t('产品'), dataIndex: 'product_name', width: 140, ellipsis: true },
+    {
+      title: t('目标表'),
+      key: 'measurement',
+      width: 140,
+      ellipsis: true,
+      render: (_value, record) => record.product_id || 'default',
+    },
     {
       title: t('当前通道'),
       key: 'boundChannel',

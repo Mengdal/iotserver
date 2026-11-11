@@ -31,6 +31,7 @@ import (
 	"iotserver/internal/pkg/errort"
 	"iotserver/internal/pkg/logger"
 	"iotserver/internal/pkg/tenant"
+	"iotserver/internal/pkg/utils"
 	"iotserver/internal/tools/collectengine"
 	"iotserver/internal/tools/iotp"
 )
@@ -48,6 +49,9 @@ type service struct {
 
 	engineMu sync.Mutex
 	engines  map[string]*collectengine.Client
+
+	// statusFailures 记录软网关连续探测失败次数，用于状态防抖（仅状态同步协程访问）。
+	statusFailures map[string]int
 }
 
 func NewCollectApp(ctx context.Context, dic *di.Container) *service {
@@ -57,11 +61,12 @@ func NewCollectApp(ctx context.Context, dic *di.Container) *service {
 		iotpClient = iotp.New(db.BaseURL, db.Token, db.IotpDatabaseName(), db.IotpTimeout())
 	}
 	s := &service{
-		dic:        dic,
-		lc:         pkgContainer.LoggingClientFrom(dic.Get),
-		dbClient:   container.DBClientFrom(dic.Get),
-		iotpClient: iotpClient,
-		engines:    make(map[string]*collectengine.Client),
+		dic:            dic,
+		lc:             pkgContainer.LoggingClientFrom(dic.Get),
+		dbClient:       container.DBClientFrom(dic.Get),
+		iotpClient:     iotpClient,
+		engines:        make(map[string]*collectengine.Client),
+		statusFailures: make(map[string]int),
 	}
 	// 把旧版没有 gateway_id 的通道/点位迁移到默认软网关。
 	// 采集引擎地址现在只保存在网关记录上。
@@ -73,6 +78,45 @@ func NewCollectApp(ctx context.Context, dic *di.Container) *service {
 // currentGatewayID 返回当前采集配置所属的软网关 ID。
 func currentGatewayID(ctx context.Context) string {
 	return strings.TrimSpace(collectgateway.From(ctx))
+}
+
+// syncGatewayBound 把设备归属同步到 iotp（仅 Type=iotp 时生效）。
+//
+// 软网关与设备的关系只存在 collect_device_config，Device.GatewayId 为空；
+// 因此必须在采集绑定/解绑时显式维护 iotp 的设备归属。
+func (s *service) syncGatewayBound(ctx context.Context, device models.Device) {
+	if s == nil || s.dic == nil {
+		return
+	}
+	syncer := container.IotpSyncFrom(s.dic.Get)
+	if syncer == nil || !syncer.GatewaySyncEnabled() {
+		return
+	}
+	gatewayID := currentGatewayID(ctx)
+	if gatewayID == "" {
+		return
+	}
+	gateway, err := s.dbClient.WithCtx(ctx).GatewayById(gatewayID)
+	if err != nil {
+		s.lc.Warnf("读取软网关 %s 失败，跳过 iotp 归属同步: %v", gatewayID, err)
+		return
+	}
+	if gateway.Source != models.GatewaySourceIoserver {
+		return
+	}
+	syncer.DeviceGatewayBound(device, gateway.Sn)
+}
+
+// syncGatewayUnbound 清除设备在 iotp 的归属。
+func (s *service) syncGatewayUnbound(ctx context.Context, iotpDeviceID int64) {
+	if s == nil || s.dic == nil {
+		return
+	}
+	syncer := container.IotpSyncFrom(s.dic.Get)
+	if syncer == nil || !syncer.GatewaySyncEnabled() {
+		return
+	}
+	syncer.DeviceGatewayUnbound(iotpDeviceID)
 }
 
 // engineClient 按当前软网关解析采集引擎客户端。
@@ -285,22 +329,9 @@ func (s *service) CollectRealtime(ctx context.Context, channelId, deviceId, keyw
 	if err != nil {
 		return nil, err
 	}
-	records := make(map[string]collectengine.TagRealtimeRecord)
-	total := -1
-	for page := 1; page <= 20; page++ {
-		result, pageErr := client.RealtimeTagsPage(0, page, 1000)
-		if pageErr != nil {
-			return nil, pageErr
-		}
-		for _, record := range result.Items {
-			records[record.Id] = record
-		}
-		if total < 0 {
-			total = result.Total
-		}
-		if len(result.Items) == 0 || page*1000 >= total {
-			break
-		}
+	records, err := loadEngineRealtimeTags(client)
+	if err != nil {
+		return nil, err
 	}
 	kw := strings.ToLower(strings.TrimSpace(keyword))
 	db := s.dbClient.WithCtx(ctx)
@@ -634,8 +665,101 @@ func (s *service) CollectChannelDelete(ctx context.Context, id string) error {
 		if err := db.DeleteCollectDeviceConfig(cfg.DeviceId); err != nil {
 			return err
 		}
+		if deviceID, parseErr := strconv.ParseInt(cfg.DeviceId, 10, 64); parseErr == nil {
+			s.syncGatewayUnbound(ctx, deviceID)
+		}
 	}
 	return db.DeleteCollectChannel(localCollectChannelID(gatewayID, channelId))
+}
+
+// ScheduleGatewayCleanup 删除软网关时登记后台清理任务。
+//
+// 采集引擎的写接口可能卡住，删除网关不能同步等待；这里只做本地登记，
+// 由后台任务重试清理引擎通道/设备，重新添加同一引擎时不会带出旧数据。
+func (s *service) ScheduleGatewayCleanup(ctx context.Context, gatewayID string) error {
+	gatewayID = strings.TrimSpace(gatewayID)
+	if gatewayID == "" {
+		return nil
+	}
+	platformCtx := tenant.Platform(ctx)
+	db := s.dbClient.WithCtx(platformCtx)
+	gateway, err := db.GatewayById(gatewayID)
+	if err != nil {
+		return err
+	}
+	engineURL := strings.TrimRight(strings.TrimSpace(gateway.EngineBaseURL), "/")
+	if engineURL == "" {
+		return nil
+	}
+	channels, err := db.CollectChannels()
+	if err != nil {
+		return err
+	}
+	channelIDs := make([]int64, 0)
+	for _, channel := range channels {
+		if channel.GatewayId == gatewayID && channel.RemoteId > 0 {
+			channelIDs = append(channelIDs, channel.RemoteId)
+		}
+	}
+
+	// 本地通道登记可能已经丢失（例如修复前删除的网关）。
+	// 只要这个引擎没有其它软网关共用，就登记为清理整个引擎。
+	deleteAll := false
+	if len(channelIDs) == 0 {
+		shared, err := s.engineSharedByOtherGateway(db, gateway)
+		if err != nil {
+			return err
+		}
+		if shared {
+			return nil
+		}
+		deleteAll = true
+	}
+	payload, err := json.Marshal(channelIDs)
+	if err != nil {
+		return err
+	}
+	return db.AddCollectCleanupTask(models.CollectCleanupTask{
+		TenantField:   models.TenantField{TenantId: gateway.TenantId},
+		GatewayId:     gateway.Id,
+		EngineBaseURL: engineURL,
+		DeleteAll:     deleteAll,
+		ChannelIDs:    string(payload),
+	})
+}
+
+// engineSharedByOtherGateway 判断同一采集引擎是否还被其它软网关使用。
+func (s *service) engineSharedByOtherGateway(db interfaces.DBClient, gateway models.Gateway) (bool, error) {
+	engineURL := strings.TrimRight(strings.TrimSpace(gateway.EngineBaseURL), "/")
+	if engineURL == "" {
+		return true, nil
+	}
+	return s.engineSharedByOtherGatewayID(db, engineURL, gateway.Id)
+}
+
+// engineSharedByOtherGatewayID 判断引擎是否已被另一台软网关占用。
+// 清理任务执行前也要调用：任务排队期间引擎可能被新网关接管。
+func (s *service) engineSharedByOtherGatewayID(db interfaces.DBClient, engineURL, excludeGatewayID string) (bool, error) {
+	engineURL = strings.TrimRight(strings.TrimSpace(engineURL), "/")
+	if engineURL == "" {
+		return true, nil
+	}
+	gateways, _, err := db.GatewaySearch(0, -1, dtos.GatewaySearchQueryRequest{
+		BaseSearchConditionQuery: dtos.BaseSearchConditionQuery{IsAll: true},
+		Source:                   models.GatewaySourceIoserver,
+	})
+	if err != nil {
+		return false, err
+	}
+	for _, item := range gateways {
+		if item.Id == excludeGatewayID {
+			continue
+		}
+		if strings.TrimRight(strings.TrimSpace(item.EngineBaseURL), "/") == engineURL {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 /******************************* IOTP 设备绑定 *******************************/
@@ -729,6 +853,7 @@ func (s *service) CollectChannelBindDevices(ctx context.Context, channelId strin
 		}
 		iotpId := iotp.DeviceID(device.Id)
 		iotpKey := strconv.FormatInt(iotpId, 10)
+		measurement := iotp.DeviceTable(device.ProductId)
 		existingCfg, hadCfg, err := db.CollectDeviceConfigByDevice(iotpKey)
 		if err != nil {
 			return err
@@ -747,6 +872,7 @@ func (s *service) CollectChannelBindDevices(ctx context.Context, channelId strin
 
 		existingBindings := make([]collectengine.Device, 0, 1)
 		boundDeviceId := int64(0)
+		boundMeasurement := ""
 		for _, binding := range bindings {
 			if binding.IotpId != iotpId {
 				continue
@@ -754,6 +880,7 @@ func (s *service) CollectChannelBindDevices(ctx context.Context, channelId strin
 			existingBindings = append(existingBindings, binding)
 			if binding.ChannelId == id {
 				boundDeviceId = binding.Id
+				boundMeasurement = binding.Measurement
 			}
 		}
 		hadOldBinding := len(existingBindings) > 0
@@ -774,6 +901,12 @@ func (s *service) CollectChannelBindDevices(ctx context.Context, channelId strin
 				}
 				bindings = removeDevice(bindings, binding.Id)
 			}
+			// measurement 可能来自旧版本（例如 cpu），按设备产品修正。
+			if strings.TrimSpace(boundMeasurement) != measurement {
+				if err := client.UpdateDevice(boundDeviceId, id, iotpId, measurement); err != nil {
+					return err
+				}
+			}
 			if err := db.SaveCollectDeviceConfig(models.CollectDeviceConfig{
 				DeviceId:  iotpKey,
 				ChannelId: strconv.FormatInt(id, 10),
@@ -783,6 +916,7 @@ func (s *service) CollectChannelBindDevices(ctx context.Context, channelId strin
 			}); err != nil {
 				return err
 			}
+			s.syncGatewayBound(ctx, device)
 			// 重新绑定（例如引擎数据被清理）时，把本地点位补回引擎。
 			points, err := db.CollectPointConfigsByDevice(iotpKey)
 			if err != nil {
@@ -820,7 +954,7 @@ func (s *service) CollectChannelBindDevices(ctx context.Context, channelId strin
 				bindings = removeDevice(bindings, binding.Id)
 			}
 		}
-		created, err := client.CreateDevice(id, iotpId)
+		created, err := client.CreateDevice(id, iotpId, measurement)
 		if err != nil {
 			return err
 		}
@@ -840,7 +974,9 @@ func (s *service) CollectChannelBindDevices(ctx context.Context, channelId strin
 		if engineDeviceId == 0 {
 			return errort.NewCommonErr(errort.DefaultSystemError, fmt.Errorf("采集引擎未返回设备 ID"))
 		}
-		bindings = append(bindings, collectengine.Device{Id: engineDeviceId, ChannelId: id, IotpId: iotpId})
+		bindings = append(bindings, collectengine.Device{
+			Id: engineDeviceId, ChannelId: id, IotpId: iotpId, Measurement: measurement,
+		})
 		if err := db.SaveCollectDeviceConfig(models.CollectDeviceConfig{
 			DeviceId:  iotpKey,
 			ChannelId: strconv.FormatInt(id, 10),
@@ -850,6 +986,7 @@ func (s *service) CollectChannelBindDevices(ctx context.Context, channelId strin
 		}); err != nil {
 			return err
 		}
+		s.syncGatewayBound(ctx, device)
 
 		points, err := db.CollectPointConfigsByDevice(iotpKey)
 		if err != nil {
@@ -923,7 +1060,11 @@ func (s *service) CollectChannelUnbindDevice(ctx context.Context, channelId, dev
 	if err := db.ReplaceCollectPointConfigs(iotpKey, nil); err != nil {
 		return err
 	}
-	return db.DeleteCollectDeviceConfig(iotpKey)
+	if err := db.DeleteCollectDeviceConfig(iotpKey); err != nil {
+		return err
+	}
+	s.syncGatewayUnbound(ctx, iotpId)
+	return nil
 }
 
 /******************************* 设备点表 *******************************/
@@ -990,7 +1131,7 @@ func (s *service) CollectConfigGet(ctx context.Context, deviceId string) (dtos.C
 			TagId:      property.Code,
 			Address:    "",
 			DataType:   templateDataType(property.TypeSpec.Type),
-			AccessMode: firstNonEmpty(property.AccessMode, "R"),
+			AccessMode: utils.FirstNonEmpty(property.AccessMode, "R"),
 			Multiplier: 1,
 			Offset:     0,
 			Storage:    true,
@@ -1034,7 +1175,7 @@ func (s *service) CollectConfigTemplate(ctx context.Context, deviceId string) ([
 			TagId:      property.Code,
 			Address:    "",
 			DataType:   templateDataType(property.TypeSpec.Type),
-			AccessMode: firstNonEmpty(property.AccessMode, "R"),
+			AccessMode: utils.FirstNonEmpty(property.AccessMode, "R"),
 			Multiplier: 1,
 			Offset:     0,
 			Storage:    true,
@@ -1321,7 +1462,7 @@ func (s *service) CollectConfigSave(ctx context.Context, req dtos.CollectConfigS
 		if dataType == "" {
 			return errort.NewCommonErr(errort.DefaultReqParamsError, fmt.Errorf("第 %d 行（%s）数据类型不能为空", index+1, tagId))
 		}
-		accessMode := firstNonEmpty(strings.ToUpper(strings.TrimSpace(point.AccessMode)), "R")
+		accessMode := utils.FirstNonEmpty(strings.ToUpper(strings.TrimSpace(point.AccessMode)), "R")
 		switch accessMode {
 		case "R", "W", "RW":
 		default:
@@ -1379,6 +1520,9 @@ func (s *service) CollectConfigSave(ctx context.Context, req dtos.CollectConfigS
 		Remark:    remark,
 	}); err != nil {
 		return err
+	}
+	if local, _ := s.resolveIotpDevice(ctx, req.DeviceId); local.Id != "" {
+		s.syncGatewayBound(ctx, local)
 	}
 	if err := db.ReplaceCollectPointConfigs(iotpKey, points); err != nil {
 		return err
@@ -1528,7 +1672,7 @@ func (s *service) syncDeviceTags(client *collectengine.Client, db pointRemoteUpd
 			TagCode:     point.TagId,
 			Address:     point.Address,
 			DataType:    point.DataType,
-			ReadWrite:   firstNonEmpty(point.AccessMode, "R"),
+			ReadWrite:   utils.FirstNonEmpty(point.AccessMode, "R"),
 			ScaleOffset: scaleOffset(point.Multiplier, point.Offset),
 			Storage:     point.Storage,
 		}
@@ -1672,6 +1816,8 @@ func (s *service) deleteDeviceTags(client *collectengine.Client, deviceId int64,
 
 /******************************* 映射与工具 *******************************/
 
+// measurementForDevice 设备数据在 iotp 里的目标表：
+// 有产品用产品表名，无产品用兜底表。与 iotpsync 的选表规则保持一致。
 func (s *service) deviceDTOs(ctx context.Context, bindings []collectengine.Device) []dtos.CollectDeviceDTO {
 	result := make([]dtos.CollectDeviceDTO, 0, len(bindings))
 	enabledByDevice := make(map[string]bool)
@@ -1701,6 +1847,7 @@ func (s *service) deviceDTOs(ctx context.Context, bindings []collectengine.Devic
 			DeviceName:  name,
 			ProductId:   local.ProductId,
 			ProductName: product.Name,
+			Measurement: binding.Measurement,
 			Enabled:     enabled,
 		})
 	}
@@ -1766,7 +1913,7 @@ func localPointDTO(point models.CollectPointConfig, index int) dtos.CollectPoint
 		TagId:      point.TagId,
 		Address:    point.Address,
 		DataType:   normalizeDataType(point.DataType),
-		AccessMode: firstNonEmpty(point.AccessMode, "R"),
+		AccessMode: utils.FirstNonEmpty(point.AccessMode, "R"),
 		Multiplier: point.Multiplier,
 		Offset:     point.Offset,
 		Storage:    point.Storage,
@@ -1890,13 +2037,4 @@ func normalizeDataType(value string) string {
 		return "double"
 	}
 	return strings.TrimSpace(value)
-}
-
-func firstNonEmpty(values ...string) string {
-	for _, value := range values {
-		if strings.TrimSpace(value) != "" {
-			return value
-		}
-	}
-	return ""
 }

@@ -9,6 +9,7 @@ import (
 
 	"iotserver/internal/dtos"
 	"iotserver/internal/pkg/errort"
+	"iotserver/internal/pkg/utils"
 )
 
 const (
@@ -333,7 +334,7 @@ func (s *service) CollectConfigExportAll(ctx context.Context, channelId string) 
 					TagId:      point.TagId,
 					Address:    point.Address,
 					DataType:   normalizeDataType(point.DataType),
-					AccessMode: firstNonEmpty(point.AccessMode, "R"),
+					AccessMode: utils.FirstNonEmpty(point.AccessMode, "R"),
 					Multiplier: point.Multiplier,
 					Offset:     point.Offset,
 					Storage:    point.Storage,

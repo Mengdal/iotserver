@@ -1,17 +1,13 @@
 package gateway
 
 import (
-	"fmt"
 	"github.com/gin-gonic/gin"
 
 	"github.com/gorilla/schema"
 	"iotserver/internal/dtos"
 	"iotserver/internal/pkg/errort"
-	"iotserver/internal/pkg/httphelper"
 	"iotserver/internal/pkg/logger"
 	"net/http"
-	"net/http/httputil"
-	"net/url"
 )
 
 const (
@@ -64,24 +60,9 @@ func urlDecodeParam(obj interface{}, r *http.Request, lc logger.LoggingClient) {
 	}
 }
 
-func (ctl *controller) ProxyAgentServer(c *gin.Context) {
-	proxy := ctl.cfg.Clients["Agent"]
-	ctl.lc.Infof("agentProxy: %v", proxy)
-	ctl.ServeHTTP(c, fmt.Sprintf("http://%v:%v", proxy.Host, proxy.Port))
-}
-
 //func (ctl *controller) ProxySharpServer(c *gin.Context) {
 //	proxy := ctl.cfg.Clients["Sharp"]
 //	ctl.lc.Infof("sharpProxy: %v", proxy)
 //	ctl.ServeHTTP(c, fmt.Sprintf("http://%v:%v", proxy.Host, proxy.Port))
 //}
 
-func (ctl *controller) ServeHTTP(c *gin.Context, URL string) {
-	parseRootUrl, err := url.Parse(URL)
-	if err != nil {
-		httphelper.RenderFail(c, errort.NewCommonErr(errort.DefaultReqParamsError, err), c.Writer, ctl.lc)
-		return
-	}
-	proxy := httputil.NewSingleHostReverseProxy(parseRootUrl)
-	proxy.ServeHTTP(c.Writer, c.Request)
-}

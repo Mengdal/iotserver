@@ -9,11 +9,19 @@ import (
 )
 
 // DefaultTable 无产品设备（网关子设备等）统一写入的兜底表。
-const DefaultTable = "p_default"
+const DefaultTable = "default"
 
-// TableName 产品表名：p_<产品ID>。
+// TableName 产品表名：直接使用产品 ID，不再加 p_ 前缀。
 func TableName(productID string) string {
-	return "p_" + FieldName(productID)
+	return FieldName(productID)
+}
+
+// DeviceTable 设备应写入的表：有产品用产品表，无产品设备落到 default。
+func DeviceTable(productID string) string {
+	if strings.TrimSpace(productID) != "" {
+		return TableName(productID)
+	}
+	return DefaultTable
 }
 
 // FieldName 把物模型 code 转成 iotp 合法字段名：

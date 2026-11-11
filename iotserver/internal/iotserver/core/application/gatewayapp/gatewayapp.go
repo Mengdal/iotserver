@@ -3,7 +3,10 @@ package gatewayapp
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"net"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -18,7 +21,9 @@ import (
 	"iotserver/internal/pkg/logger"
 	"iotserver/internal/pkg/tenant"
 	"iotserver/internal/pkg/utils"
+	"iotserver/internal/tools/collectengine"
 	"iotserver/internal/tools/gatewaymqtt"
+	"iotserver/internal/tools/iotp"
 )
 
 type gatewayApp struct {
@@ -110,6 +115,55 @@ func normalizeEngineConfig(baseURL string, timeoutSec int) (string, int, error) 
 	return base, timeoutSec, nil
 }
 
+// configureEngineMQTT 把软网关的 MQTT 订阅参数写入采集引擎。
+//
+// 引擎由自己订阅 MQTT 并写入 iotp：IP 使用网关配置的地址（EngineBaseURL 的主机），
+// clientid 使用网关 SN；username/password 不使用，传空清空。
+// 端口沿用引擎当前值；写入哪张 iotp 表由每台设备自己的 measurement 决定。
+func (app *gatewayApp) configureEngineMQTT(gateway models.Gateway) error {
+	baseURL := strings.TrimSpace(gateway.EngineBaseURL)
+	if baseURL == "" {
+		return nil
+	}
+	parsed, err := url.Parse(baseURL)
+	if err != nil || strings.TrimSpace(parsed.Hostname()) == "" {
+		return fmt.Errorf("采集引擎地址格式不正确: %s", baseURL)
+	}
+	host := parsed.Hostname()
+	if net.ParseIP(host) == nil {
+		ips, lookupErr := net.LookupHost(host)
+		if lookupErr != nil {
+			return fmt.Errorf("解析采集引擎主机 %s 失败: %w", host, lookupErr)
+		}
+		for _, ip := range ips {
+			if net.ParseIP(ip) != nil {
+				host = ip
+				break
+			}
+		}
+	}
+	timeoutSec := gateway.EngineTimeoutSec
+	if timeoutSec <= 0 {
+		timeoutSec = 10
+	}
+	client := collectengine.New(baseURL, time.Duration(timeoutSec)*time.Second)
+	config, err := client.GetMQTTConfig()
+	if err != nil {
+		return fmt.Errorf("读取采集引擎 MQTT 配置失败: %w", err)
+	}
+	config.IP = host
+	config.ClientID = strings.TrimSpace(gateway.Sn)
+	config.Username = ""
+	config.Password = ""
+	if strings.TrimSpace(config.ClientID) == "" {
+		return fmt.Errorf("网关 SN 为空，无法设置 MQTT clientid")
+	}
+	if err := client.UpdateMQTTConfig(config); err != nil {
+		return fmt.Errorf("更新采集引擎 MQTT 配置失败: %w", err)
+	}
+	return nil
+}
+
 // deptNameMap 批量取组织节点名称（网关列表展示「所属」用，避免 N+1 查询）
 func (app *gatewayApp) deptNameMap(ctx context.Context) map[string]string {
 	depts, _, err := app.dbClient.WithCtx(ctx).SysDeptSearch(0, -1, dtos.SysDeptSearchRequest{IsAll: true})
@@ -171,8 +225,8 @@ func (app *gatewayApp) GatewayAdd(ctx context.Context, req dtos.GatewayAddReques
 	sn := strings.TrimSpace(req.Sn)
 	if sn == "" {
 		if source == models.GatewaySourceIoserver {
-			// 软网关不走 MQTT，SN 只作为内部唯一标识，自动生成即可。
-			sn = "soft-" + utils.RandomNum()
+			// 软网关不走 MQTT，SN 只作为内部唯一标识，自动生成 10 位数字。
+			sn = utils.RandomNum10()
 		} else {
 			return dtos.GatewayResponse{}, errort.NewCommonErr(errort.DefaultReqParamsError, errort.NewMessageErr("网关序列号不能为空", nil))
 		}
@@ -196,6 +250,18 @@ func (app *gatewayApp) GatewayAdd(ctx context.Context, req dtos.GatewayAddReques
 	res := toGatewayResponse(g, 0, map[string]string{})
 	// 密钥只在创建时返回一次，供网关侧配置
 	res.Mqtt = app.mqttInfo(g)
+	// 软网关：更新采集引擎的 MQTT 订阅参数（IP=网关地址，clientid=SN）。
+	if source == models.GatewaySourceIoserver {
+		if err := app.configureEngineMQTT(g); err != nil && app.lc != nil {
+			app.lc.Warnf("软网关 %s 更新采集引擎 MQTT 配置失败: %v", g.Sn, err)
+		}
+	}
+	// 软网关同步到 iotp（异步、失败隔离）：声明网关，随后设备绑定时盖章。
+	if source == models.GatewaySourceIoserver {
+		if syncer := container.IotpSyncFrom(app.dic.Get); syncer != nil {
+			syncer.GatewayCreated(g)
+		}
+	}
 	return res, nil
 }
 
@@ -265,6 +331,10 @@ func (app *gatewayApp) gatewayAddThings(ctx context.Context, req dtos.GatewayAdd
 		}
 		return dtos.GatewayResponse{}, err
 	}
+	// 用户重新创建了同一 SN 的 things 网关：清除此前的删除墓碑。
+	if err := app.dbClient.WithCtx(ctx).DeleteGatewayTombstone(g.Sn); err != nil && app.lc != nil {
+		app.lc.Warnf("清除网关 %s 的删除墓碑失败: %v", g.Sn, err)
+	}
 	return toGatewayResponse(g, 0, map[string]string{}), nil
 }
 
@@ -325,7 +395,7 @@ func (app *gatewayApp) GatewayUpdate(ctx context.Context, req dtos.GatewayUpdate
 			return err
 		}
 	}
-	return app.dbClient.WithCtx(ctx).UpdateGateway(models.Gateway{
+	updated := models.Gateway{
 		Id:               req.Id,
 		Name:             name,
 		Pk:               pk,
@@ -335,7 +405,19 @@ func (app *gatewayApp) GatewayUpdate(ctx context.Context, req dtos.GatewayUpdate
 		Remark:           req.Remark,
 		EngineBaseURL:    engineBaseURL,
 		EngineTimeoutSec: engineTimeoutSec,
-	})
+	}
+	if err := app.dbClient.WithCtx(ctx).UpdateGateway(updated); err != nil {
+		return err
+	}
+	if sourceOf(old) == models.GatewaySourceIoserver {
+		config := old
+		config.EngineBaseURL = engineBaseURL
+		config.EngineTimeoutSec = engineTimeoutSec
+		if err := app.configureEngineMQTT(config); err != nil && app.lc != nil {
+			app.lc.Warnf("软网关 %s 更新采集引擎 MQTT 配置失败: %v", old.Sn, err)
+		}
+	}
+	return nil
 }
 
 // GatewayDelete 删除网关（只删本地记录）
@@ -354,7 +436,140 @@ func (app *gatewayApp) GatewayDelete(ctx context.Context, id string) error {
 	if (sourceOf(g) == models.GatewaySourceThings || g.ThingsGatewayId > 0) && app.lc != nil {
 		app.lc.Infof("删除 things 网关 %s 的本地镜像，远端网关保持不变", g.Sn)
 	}
-	return app.dbClient.WithCtx(ctx).DeleteGatewayWithCollectConfig(id)
+	// 删除前记录该网关下已绑定的设备，用于删除后清理 iotp 归属。
+	deviceIDs := make([]int64, 0)
+	if sourceOf(g) == models.GatewaySourceIoserver {
+		if configs, listErr := app.dbClient.WithCtx(ctx).CollectDeviceConfigs(); listErr != nil {
+			app.lc.Warnf("删除软网关 %s 前读取采集绑定失败（将跳过 iotp 清章）: %v", g.Sn, listErr)
+		} else {
+			for _, cfg := range configs {
+				if cfg.GatewayId != id {
+					continue
+				}
+				if deviceID, parseErr := strconv.ParseInt(strings.TrimSpace(cfg.DeviceId), 10, 64); parseErr == nil && deviceID > 0 {
+					deviceIDs = append(deviceIDs, deviceID)
+				}
+			}
+		}
+	}
+	// 先删网关下挂的设备，再删网关；有告警规则引用时中止，避免留下孤儿设备。
+	if err := app.deleteGatewayDevices(ctx, id); err != nil {
+		return err
+	}
+	// 软网关还要登记采集引擎清理任务，否则重新添加同一引擎会带出旧数据。
+	// 只做本地登记，不在这里等待引擎响应。
+	if sourceOf(g) == models.GatewaySourceIoserver {
+		if collectApp := container.CollectConfigFrom(app.dic.Get); collectApp != nil {
+			if err := collectApp.ScheduleGatewayCleanup(ctx, id); err != nil && app.lc != nil {
+				app.lc.Warnf("登记软网关 %s 的采集引擎清理任务失败: %v", g.Sn, err)
+			}
+		}
+	}
+	if err := app.dbClient.WithCtx(ctx).DeleteGatewayWithCollectConfig(id); err != nil {
+		return err
+	}
+	if sourceOf(g) == models.GatewaySourceIoserver {
+		if syncer := container.IotpSyncFrom(app.dic.Get); syncer != nil {
+			syncer.GatewayDeleted(g, deviceIDs)
+		}
+	}
+	// things 远端仍是权威：只删本地镜像的话，下一轮对账会把网关重新导入。
+	// 记录删除墓碑，对账时按 SN 跳过，保证「删了就是删了」。
+	if sourceOf(g) == models.GatewaySourceThings || g.ThingsGatewayId > 0 {
+		tenantID := g.TenantId
+		if tenantID == "" {
+			tenantID = tenant.FromContext(ctx).TenantID
+		}
+		tombstone := models.GatewayTombstone{
+			TenantField:     models.TenantField{TenantId: tenantID},
+			Sn:              g.Sn,
+			ThingsGatewayId: g.ThingsGatewayId,
+		}
+		if err := app.dbClient.WithCtx(ctx).AddGatewayTombstone(tombstone); err != nil {
+			if app.lc != nil {
+				app.lc.Warnf("记录网关 %s 的删除墓碑失败，下一轮 things 对账可能重新导入: %v", g.Sn, err)
+			}
+		}
+	}
+	return nil
+}
+
+// deleteGatewayDevices 删除网关下挂的设备（Device.GatewayId = 网关 ID）。
+//
+// 软网关的设备关系在 collect_device_config，Device.GatewayId 为空，因此这里不会删除
+// 手工创建、仅绑定到软网关的设备；它们只解除采集绑定，仍可复用于其他网关。
+//
+// 删除前先检查告警规则引用：任一设备被规则引用时整体中止，不删网关，
+// 避免“设备删了一半、网关还在”的中间状态。
+func (app *gatewayApp) deleteGatewayDevices(ctx context.Context, gatewayID string) error {
+	db := app.dbClient.WithCtx(ctx)
+	all, _, err := db.DevicesSearch(0, -1, dtos.DeviceSearchQueryRequest{
+		BaseSearchConditionQuery: dtos.BaseSearchConditionQuery{IsAll: true},
+	})
+	if err != nil {
+		return err
+	}
+	// 软网关的设备关系在 collect_device_config（Device.GatewayId 为空），
+	// 因此除了 Device.GatewayId，还要按采集绑定把设备一并纳入删除范围。
+	configs, err := db.CollectDeviceConfigs()
+	if err != nil {
+		return err
+	}
+	configByIotpID := make(map[int64]string)
+	pointKeys := make([]string, 0)
+	for _, cfg := range configs {
+		if cfg.GatewayId != gatewayID {
+			continue
+		}
+		pointKeys = append(pointKeys, cfg.DeviceId)
+		if deviceID, parseErr := strconv.ParseInt(strings.TrimSpace(cfg.DeviceId), 10, 64); parseErr == nil && deviceID > 0 {
+			configByIotpID[deviceID] = cfg.DeviceId
+		}
+	}
+
+	targets := make([]models.Device, 0)
+	seen := make(map[string]struct{})
+	for _, device := range all {
+		_, boundByCollect := configByIotpID[iotp.DeviceID(device.Id)]
+		if device.GatewayId != gatewayID && !boundByCollect {
+			continue
+		}
+		if _, ok := seen[device.Id]; ok {
+			continue
+		}
+		seen[device.Id] = struct{}{}
+		targets = append(targets, device)
+	}
+	if len(targets) == 0 && len(pointKeys) == 0 {
+		return nil
+	}
+
+	alertApp := container.AlertRuleAppNameFrom(app.dic.Get)
+	blocked := make([]string, 0)
+	for _, device := range targets {
+		if err := alertApp.CheckRuleByDeviceId(ctx, device.Id); err != nil {
+			blocked = append(blocked, device.Name)
+		}
+	}
+	if len(blocked) > 0 {
+		return errort.NewCommonErr(errort.DefaultReqParamsError,
+			errort.NewMessageErr("网关下的设备仍被告警规则引用，请先删除相关规则：{{.p1}}",
+				map[string]interface{}{"p1": strings.Join(blocked, "、")}))
+	}
+
+	deviceApp := container.DeviceItfFrom(app.dic.Get)
+	for _, device := range targets {
+		if err := deviceApp.DeleteDeviceById(ctx, device.Id); err != nil {
+			return err
+		}
+	}
+	// 设备删除不会自动清理采集点表，这里按采集绑定一并清掉。
+	for _, key := range pointKeys {
+		if err := db.ReplaceCollectPointConfigs(key, nil); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // GatewayById 网关详情
@@ -364,8 +579,7 @@ func (app *gatewayApp) GatewayById(ctx context.Context, id string) (dtos.Gateway
 	if err != nil {
 		return dtos.GatewayResponse{}, err
 	}
-	count, _ := db.GatewayDeviceCount(id)
-	return toGatewayResponse(g, count, app.deptNameMap(ctx)), nil
+	return toGatewayResponse(g, app.gatewayDeviceCount(db, g, nil), app.deptNameMap(ctx)), nil
 }
 
 // GatewaySearch 网关列表
@@ -377,12 +591,41 @@ func (app *gatewayApp) GatewaySearch(ctx context.Context, req dtos.GatewaySearch
 		return nil, 0, err
 	}
 	deptNames := app.deptNameMap(ctx)
+	collectCounts, _ := collectDeviceCounts(db)
 	out := make([]dtos.GatewayResponse, len(list))
 	for i, g := range list {
-		count, _ := db.GatewayDeviceCount(g.Id)
-		out[i] = toGatewayResponse(g, count, deptNames)
+		out[i] = toGatewayResponse(g, app.gatewayDeviceCount(db, g, collectCounts), deptNames)
 	}
 	return out, total, nil
+}
+
+// gatewayDeviceCount 统计网关下的设备数。
+//
+// 直连/云网关的设备关系在 device.gateway_id；软网关的关系在 collect_device_config。
+// 后者由采集绑定写入，Device.GatewayId 为空，不能复用 GatewayDeviceCount。
+func (app *gatewayApp) gatewayDeviceCount(db interfaces.DBClient, g models.Gateway, collectCounts map[string]int64) int64 {
+	if sourceOf(g) == models.GatewaySourceIoserver {
+		if collectCounts == nil {
+			collectCounts, _ = collectDeviceCounts(db)
+		}
+		return collectCounts[g.Id]
+	}
+	count, _ := db.GatewayDeviceCount(g.Id)
+	return count
+}
+
+func collectDeviceCounts(db interfaces.DBClient) (map[string]int64, error) {
+	configs, err := db.CollectDeviceConfigs()
+	if err != nil {
+		return nil, err
+	}
+	counts := make(map[string]int64, len(configs))
+	for _, cfg := range configs {
+		if cfg.GatewayId != "" {
+			counts[cfg.GatewayId]++
+		}
+	}
+	return counts, nil
 }
 
 // GatewayPushConfig 下发采集/上报配置

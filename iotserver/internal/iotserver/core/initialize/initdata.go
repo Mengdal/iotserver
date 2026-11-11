@@ -23,7 +23,6 @@ import (
 	"iotserver/internal/pkg/di"
 	"iotserver/internal/pkg/logger"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -76,38 +75,3 @@ func initEkuiperStreams(dic *di.Container, lc logger.LoggingClient, configuratio
 	}
 }
 
-func DownloadEkuiperKafkaPlug(wg *sync.WaitGroup, dic *di.Container, lc logger.LoggingClient) {
-	defer wg.Done()
-	req := HttpRequest.NewRequest()
-	kafkaPlug := make(map[string]string)
-	kafkaPlug["name"] = "kafka"
-	kafkaPlug["file"] = "https://packages.emqx.net/kuiper-plugins/1.10.0/debian/sinks/kafka_amd64.zip"
-	b, _ := json.Marshal(kafkaPlug)
-	resp, err := req.Post("http://ekuiper:9081/plugins/sinks", b)
-	if err != nil {
-		lc.Errorf("down ekuiper kafka plug failed error:%+v", err.Error())
-	}
-	if resp.StatusCode() == 201 {
-		body, err := resp.Body()
-		if err != nil {
-			lc.Errorf("down ekuiper kafka plug failed error:%+v", err.Error())
-			return
-		}
-		if strings.Contains(string(body), "created") {
-			lc.Infof("down ekuiper kafka plug success")
-			return
-		}
-	} else if resp.StatusCode() == 400 {
-		body, err := resp.Body()
-		if err != nil {
-			lc.Errorf("down ekuiper kafka plug failed error:%+v", err.Error())
-			return
-		}
-		if strings.Contains(string(body), "duplicate") {
-			lc.Infof("down ekuiper kafka plug success")
-			return
-		}
-	} else {
-		lc.Errorf("down ekuiper kafka plug failed resp code:%+v", resp.StatusCode())
-	}
-}

@@ -131,7 +131,16 @@ func EnsureBuiltinDriverLibraries(tx *gorm.DB) error {
 		repo := strings.ToLower(libs[i].Name)
 		libs[i].ClassifyId = 1
 		libs[i].Manual = "https://github.com/LMgateways/iotserver-" + repo + "-driver#readme"
-		libs[i].Icon = "https://raw.githubusercontent.com/LMgateways/iotserver-" + repo + "-driver/main/docs/icon.svg"
+		// 图标随前端一起发布，避免离线/内网环境访问 GitHub raw 失败。
+		libs[i].Icon = "/assets/" + repo + "-driver.svg"
+	}
+	// 存量内置驱动的图标仍指向 GitHub raw，升级时改成本地静态资源。
+	for _, lib := range libs {
+		if err := tx.Table("device_library").
+			Where("id = ? AND icon LIKE ?", lib.Id, "https://raw.githubusercontent.com/%").
+			Update("icon", lib.Icon).Error; err != nil {
+			return err
+		}
 	}
 	for _, lib := range libs {
 		var count int64

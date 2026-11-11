@@ -62,25 +62,6 @@ func (ctl *controller) DeviceServicesSearch(c *gin.Context) {
 }
 
 // @Tags    驱动实例管理
-// @Summary 删除驱动实例（废弃，已经改为websockert形式)
-// @Produce json
-// @Param   deviceServiceId path     string true "驱动实例 ID"
-// @Success 200             {object} httphelper.CommonResponse
-// @Router  /api/v1/device_server/:deviceServiceId [delete]
-func (ctl *controller) DeviceServiceDelete(c *gin.Context) {
-	lc := ctl.lc
-	id := c.Param(UrlParamDeviceServiceId)
-
-	err := ctl.getDriverServiceApp().Del(c, id)
-	//edgeXErr := gatewayapp.DeviceServiceDelete(c, id)
-	if err != nil {
-		httphelper.RenderFail(c, err, c.Writer, lc)
-		return
-	}
-	httphelper.ResultSuccess(nil, c.Writer, lc)
-}
-
-// @Tags    驱动实例管理
 // @Summary 编辑驱动实例
 // @Produce json
 // @Param  request body dtos.DeviceServiceUpdateRequest true "参数"

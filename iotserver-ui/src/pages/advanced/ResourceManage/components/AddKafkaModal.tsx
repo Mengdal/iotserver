@@ -1,7 +1,7 @@
-import { Button, Drawer, Form, Input, message, Select, Space } from 'antd'
-import { CloseOutlined } from '@ant-design/icons'
+import { Form, Input, message, Select } from 'antd'
 import React, { forwardRef, useCallback, useImperativeHandle, useState } from 'react'
 import { addResource, editResource, KafkaResource } from '@/api'
+import { FormDrawer } from '@/components/FormDrawer'
 import { t } from '@/i18n'
 
 const { useForm } = Form
@@ -16,13 +16,28 @@ export interface AddKafkaModalRef {
 export const AddKafkaModal = forwardRef<AddKafkaModalRef, AddKafkaModalProps>(({ onFinish }, ref) => {
   const [form] = useForm()
   const [record, setRecord] = useState<KafkaResource>()
-  const [submitting, setSubmitting] = useState<boolean>(false)
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false)
 
   const handleClose = useCallback(() => {
     form.resetFields()
     setIsModalOpen(false)
   }, [form])
+
+  const handleSubmit = () => form.validateFields().then(values => {
+    values.type = '消息队列Kafka'
+    const request = record?.id
+      ? editResource({ ...values, id: record.id })
+      : addResource(values)
+    return request.then(resp => {
+      if (resp.success) {
+        message.success(t(record?.id ? '修改成功' : '添加成功'))
+        handleClose()
+        onFinish()
+      } else {
+        message.error(resp.errorMsg)
+      }
+    })
+  })
 
   useImperativeHandle(ref, () => {
     return {
@@ -37,62 +52,11 @@ export const AddKafkaModal = forwardRef<AddKafkaModalRef, AddKafkaModalProps>(({
   }, [form])
 
   return (
-    <Drawer
+    <FormDrawer
       title={record ? t('修改实例') : t('添加实例')}
-      placement="right"
       open={isModalOpen}
-      width={550}
-      closable={false}
-      headerStyle={{ height: 51 }}
-      destroyOnClose
-      extra={<CloseOutlined onClick={handleClose} />}
       onClose={handleClose}
-      footer={
-        <Space>
-          <Button
-            type="primary"
-            loading={submitting}
-            disabled={submitting}
-            onClick={() => {
-              form.validateFields()
-                .then(values => {
-                  console.log('values', values)
-                  values.type = '消息队列Kafka'
-                  setSubmitting(true)
-                  if (record?.id) {
-                    values.id = record.id
-                    editResource(values)
-                      .then(resp => {
-                        if (resp.success) {
-                          message.success(t('修改成功'))
-                          handleClose()
-                          onFinish()
-                        } else {
-                          message.error(resp.errorMsg)
-                        }
-                      }).finally(() => {
-                        setSubmitting(false)
-                      })
-                  } else {
-                    addResource(values)
-                      .then(resp => {
-                        if (resp.success) {
-                          message.success(t('添加成功'))
-                          handleClose()
-                          onFinish()
-                        } else {
-                          message.error(resp.errorMsg)
-                        }
-                      }).finally(() => {
-                        setSubmitting(false)
-                      })
-                  }
-                })
-            }}
-          >{t('确定')}</Button>
-          <Button onClick={handleClose}>{t('取消')}</Button>
-        </Space>
-      }
+      onSubmit={handleSubmit}
     >
       <Form
         form={form}
@@ -169,6 +133,6 @@ export const AddKafkaModal = forwardRef<AddKafkaModalRef, AddKafkaModalProps>(({
           }}
         </Form.Item>
       </Form>
-    </Drawer>
+    </FormDrawer>
   )
 })

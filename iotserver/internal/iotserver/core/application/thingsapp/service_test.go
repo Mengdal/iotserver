@@ -152,6 +152,28 @@ func TestThingsServiceProjectGatewayFlow(t *testing.T) {
 		t.Fatalf("things gateway must not store secret")
 	}
 
+	// 删除本地镜像并记录墓碑：远端仍然存在，但对账不应再导入。
+	if err := c.WithCtx(tenantCtx).DeleteGateway(list[0].Id); err != nil {
+		t.Fatalf("delete local gateway: %v", err)
+	}
+	if err := c.WithCtx(tenantCtx).AddGatewayTombstone(models.GatewayTombstone{
+		TenantField:     models.TenantField{TenantId: "tenant-a"},
+		Sn:              "SN-1",
+		ThingsGatewayId: 9001,
+	}); err != nil {
+		t.Fatalf("add tombstone: %v", err)
+	}
+	if _, err := svc.ReconcileTenant(ctx, "tenant-a"); err != nil {
+		t.Fatalf("reconcile after tombstone: %v", err)
+	}
+	list, _, err = c.WithCtx(tenantCtx).GatewaySearch(0, -1, dtos.GatewaySearchQueryRequest{})
+	if err != nil {
+		t.Fatalf("search gateways after tombstone: %v", err)
+	}
+	if len(list) != 0 {
+		t.Fatalf("tombstoned gateway must not be re-imported: %+v", list)
+	}
+
 	if err := svc.DeleteGateway(ctx, 101, 9001); err != nil {
 		t.Fatalf("delete gateway: %v", err)
 	}

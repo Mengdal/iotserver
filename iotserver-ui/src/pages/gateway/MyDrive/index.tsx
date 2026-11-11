@@ -279,7 +279,7 @@ const MyDrive: React.FC = () => {
       title: t('版本'),
       dataIndex: 'version',
       width: 100,
-      render: (value: string) => (value === 'builtin' ? t('内置') : (value || '-')),
+      render: (value: string) => (value === 'builtin' ? t('内置') : value === 'external' ? t('外部') : (value || '-')),
     },
     {
       title: t('状态'),

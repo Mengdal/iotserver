@@ -12,8 +12,6 @@
 package sqlite
 
 import (
-	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 	"iotserver/internal/dtos"
 	"iotserver/internal/models"
 	"iotserver/internal/pkg/errort"
@@ -41,22 +39,6 @@ func quickNavigationSearch(c *Client, offset int, limit int, req dtos.QuickNavig
 	}
 
 	return quickNavigation, uint32(total), nil
-}
-
-func batchUpsertQuickNavigationTemplate(c *Client, d []models.QuickNavigation) (int64, error) {
-	if len(d) <= 0 {
-		return 0, nil
-	}
-	tx := c.Pool.Session(&gorm.Session{FullSaveAssociations: true}).Clauses(
-		clause.OnConflict{
-			UpdateAll: true,
-		}).CreateInBatches(d, sqlite.CreateBatchSize)
-	num := tx.RowsAffected
-	err := tx.Error
-	if err != nil {
-		return num, err
-	}
-	return num, nil
 }
 
 func deleteQuickNavigation(c *Client, id string) error {

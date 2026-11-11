@@ -25,6 +25,9 @@ type CollectConfigItf interface {
 	CollectChannels(ctx context.Context) ([]dtos.CollectChannelDTO, error)
 	CollectChannelSave(ctx context.Context, req dtos.CollectChannelSaveRequest) (dtos.CollectChannelDTO, error)
 	CollectChannelDelete(ctx context.Context, id string) error
+	// ScheduleGatewayCleanup 删除软网关时登记后台清理任务：
+	// 清理采集引擎中该网关的通道与设备绑定，避免重新添加同一引擎后出现旧数据。
+	ScheduleGatewayCleanup(ctx context.Context, gatewayID string) error
 
 	CollectDevices(ctx context.Context) ([]dtos.CollectDeviceDTO, error)
 	CollectChannelDevices(ctx context.Context, channelId string) ([]dtos.CollectDeviceDTO, error)

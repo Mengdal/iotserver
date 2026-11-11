@@ -49,6 +49,8 @@ DataSource = 'iotserver/db-data/duckdb/core-data.duckdb'
 # Token = ''
 # Name = 'iotserver'
 # Timeout = 10000      # 毫秒
+# 令牌权限：设备注册、网关声明与归属同步都走 /api/v1/meta/*，需要 admin 权限；
+# 仅设备数据写入需要 write db:<库>。软网关的设备归属只在 Type='iotp' 时同步。
 
 # 调试端点 /debug/pprof：默认关闭（暴露协程栈/堆内存）。开启后需 x-token + system:debug:pprof 权限。
 [Pprof]

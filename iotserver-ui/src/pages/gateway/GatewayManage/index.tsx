@@ -556,7 +556,7 @@ const GatewayManagePage: React.FC = () => {
           )}
           {canRemove && (
             <Popconfirm
-              title={t('确认删除该网关？删除后该网关的设备绑定关系不会级联清除。')}
+              title={t('确认删除该网关？网关下的设备和采集通道会被一并删除（被告警规则引用的设备会阻止删除）。')}
               onConfirm={() => handleDelete(record.id)}
               okText={t('确定')}
               cancelText={t('取消')}

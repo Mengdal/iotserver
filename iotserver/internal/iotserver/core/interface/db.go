@@ -73,6 +73,12 @@ type DBClient interface {
 	GatewayIngestLogExists(gatewayId string, seq int64) (bool, error)
 	AddGatewayIngestLog(log models.GatewayIngestLog) error
 	GatewayDeviceCount(gatewayId string) (int64, error)
+	// AddGatewayTombstone 记录用户删除的 things 网关，对账时按 SN 跳过。
+	AddGatewayTombstone(t models.GatewayTombstone) error
+	// GatewayTombstones 当前租户的删除墓碑。
+	GatewayTombstones() ([]models.GatewayTombstone, error)
+	// DeleteGatewayTombstone 清除墓碑（重新创建同一 SN 的 things 网关时）。
+	DeleteGatewayTombstone(sn string) error
 	GatewayByThingsID(thingsGatewayId int64) (models.Gateway, error)
 	// UpdateGatewayThingsSync 用 things 展示字段刷新本地镜像，不覆盖数据面状态
 	UpdateGatewayThingsSync(g models.Gateway) error
@@ -92,6 +98,11 @@ type DBClient interface {
 	CollectDeviceConfigByDevice(deviceId string) (models.CollectDeviceConfig, bool, error)
 	SaveCollectDeviceConfig(cfg models.CollectDeviceConfig) error
 	CollectPointConfigsByDevice(deviceId string) ([]models.CollectPointConfig, error)
+	// 删除软网关后的采集引擎资源清理任务
+	AddCollectCleanupTask(t models.CollectCleanupTask) error
+	CollectCleanupTasksDue(now int64, limit int) ([]models.CollectCleanupTask, error)
+	UpdateCollectCleanupTask(t models.CollectCleanupTask) error
+	DeleteCollectCleanupTask(id string) error
 	CollectPointConfigsAll() ([]models.CollectPointConfig, error)
 	CollectPointCounts() (map[string]int64, error)
 	ReplaceCollectPointConfigs(deviceId string, points []models.CollectPointConfig) error

@@ -146,37 +146,7 @@ func unmarshalInto(payload string, target interface{}) {
 
 // timeWindow 计算查询时间窗（毫秒）。
 // range 有两个元素时取区间；否则 last 时取最近 30 分钟；都没有时给近 1 年的默认范围。
-func timeWindow(rng []int64, last bool) (start, end int64) {
-	if len(rng) == 2 {
-		if rng[0] < rng[1] {
-			return rng[0], rng[1]
-		}
-		return rng[1], rng[0]
-	}
-	now := time.Now()
-	if last {
-		return now.Add(-30*time.Minute).UnixNano() / int64(time.Millisecond), nowMillis()
-	}
-	return now.AddDate(-1, 0, 0).UnixNano() / int64(time.Millisecond), nowMillis()
-}
-
 // normalizePage 归一化分页参数；isAll 时取单页上限
-func normalizePage(page, pageSize int, isAll bool) (int, int) {
-	if isAll {
-		return 1, maxPageSize
-	}
-	if page <= 0 {
-		page = 1
-	}
-	if pageSize <= 0 {
-		pageSize = defaultPageSize
-	}
-	if pageSize > maxPageSize {
-		pageSize = maxPageSize
-	}
-	return page, pageSize
-}
-
 // quote 生成 SQL 字符串字面量（转义单引号），用于目录路径等不能参数化的位置
 func quote(s string) string {
 	return "'" + strings.ReplaceAll(s, "'", "''") + "'"

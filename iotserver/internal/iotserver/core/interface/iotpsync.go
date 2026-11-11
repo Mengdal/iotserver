@@ -19,4 +19,20 @@ type IotpSyncItf interface {
 	DeviceCreated(device models.Device, product models.Product, tenantID string)
 	// DeviceDeleted 设备删除：删除 iotp 设备实例（历史数据保留）。
 	DeviceDeleted(device models.Device)
+
+	// GatewaySyncEnabled 网关归属同步是否启用。
+	//
+	// 与 Enabled() 不同：只有时序后端真正是 iotp（[Databases.Data].Type='iotp'）
+	// 时才启用。DuckDB 后端下网关/设备归属只存在平台元数据库，不需要同步。
+	GatewaySyncEnabled() bool
+	// GatewayCreated 软网关创建：在 iotp 声明网关。
+	GatewayCreated(gateway models.Gateway)
+	// GatewayDeleted 软网关删除：清理设备归属并删除 iotp 网关声明。
+	GatewayDeleted(gateway models.Gateway, deviceIDs []int64)
+	// DeviceGatewayBound 设备绑定到软网关：确保设备实例存在并设置归属。
+	DeviceGatewayBound(device models.Device, gatewaySn string)
+	// DeviceGatewayUnbound 设备从软网关解绑：清除 iotp 设备归属。
+	DeviceGatewayUnbound(iotpDeviceID int64)
+	// ReconcileGateways 启动/定期对账：补齐缺失的网关声明与设备归属。
+	ReconcileGateways()
 }

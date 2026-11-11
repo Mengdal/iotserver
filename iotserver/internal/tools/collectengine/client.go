@@ -13,6 +13,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"iotserver/internal/pkg/utils"
 )
 
 // Channel 采集通道。
@@ -29,10 +31,12 @@ type Channel struct {
 }
 
 // Device 通道下的设备；id 是引擎自增设备 ID，iotpId 对应平台设备。
+// Measurement 是该设备的 MQTT 实时数据写入的 iotp 表名。
 type Device struct {
-	Id        int64 `json:"id"`
-	ChannelId int64 `json:"channelId"`
-	IotpId    int64 `json:"iotpId"`
+	Id          int64  `json:"id"`
+	ChannelId   int64  `json:"channelId"`
+	IotpId      int64  `json:"iotpId"`
+	Measurement string `json:"measurement"`
 }
 
 // Tag 设备点位；deviceId 是引擎自增设备 ID。
@@ -174,14 +178,25 @@ func (c *Client) ListDevices(channelId int64) ([]Device, error) {
 	return result, err
 }
 
-func (c *Client) CreateDevice(channelId, iotpId int64) (Device, error) {
+func (c *Client) CreateDevice(channelId, iotpId int64, measurement string) (Device, error) {
 	var result Device
 	form := map[string]string{
-		"channelId": strconv.FormatInt(channelId, 10),
-		"iotpId":    strconv.FormatInt(iotpId, 10),
+		"channelId":   strconv.FormatInt(channelId, 10),
+		"iotpId":      strconv.FormatInt(iotpId, 10),
+		"measurement": measurement,
 	}
 	err := c.postForm("/api/v1/devices", form, &result)
 	return result, err
+}
+
+// UpdateDevice 修改设备归属通道或 measurement。
+func (c *Client) UpdateDevice(id, channelId, iotpId int64, measurement string) error {
+	form := map[string]string{
+		"channelId":   strconv.FormatInt(channelId, 10),
+		"iotpId":      strconv.FormatInt(iotpId, 10),
+		"measurement": measurement,
+	}
+	return c.putForm(fmt.Sprintf("/api/v1/devices/%d", id), form, nil)
 }
 
 func (c *Client) DeleteDevice(id int64) error {
@@ -241,6 +256,49 @@ func (c *Client) UpdateTag(id int64, tag Tag) (Tag, error) {
 
 func (c *Client) DeleteTag(id int64) error {
 	return c.delete(fmt.Sprintf("/api/v1/tags/%d", id))
+}
+
+// ClearTags 清空采集引擎中的所有点位。
+//
+// 引擎的「清空所有点位」接口通常比删除设备/通道更快，也不会被通道连接锁阻塞。
+// 仅在引擎没有其它软网关共用时使用。
+func (c *Client) ClearTags() error {
+	return c.delete("/api/v1/tags")
+}
+
+/******************************* MQTT 配置 *******************************/
+
+// MQTTConfig 采集引擎的 MQTT 订阅配置。
+//
+// 设备要写入哪张 iotp 表现在由每台设备自己的 measurement 决定，不在这里配置。
+type MQTTConfig struct {
+	IP          string `json:"IP"`
+	Port        int    `json:"port"`
+	Username    string `json:"username"`
+	Password    string `json:"-"`
+	HasPassword bool   `json:"hasPassword"`
+	ClientID    string `json:"clientid"`
+}
+
+// GetMQTTConfig 读取采集引擎当前的 MQTT 配置。
+func (c *Client) GetMQTTConfig() (MQTTConfig, error) {
+	var result MQTTConfig
+	err := c.get("/api/v1/mqtt/config", &result)
+	return result, err
+}
+
+// UpdateMQTTConfig 更新采集引擎的 MQTT 配置。
+//
+// clientid 同时决定引擎订阅的三个主题；username/password 传空表示清空。
+func (c *Client) UpdateMQTTConfig(config MQTTConfig) error {
+	form := map[string]string{
+		"IP":       config.IP,
+		"port":     strconv.Itoa(config.Port),
+		"username": config.Username,
+		"password": config.Password,
+		"clientid": config.ClientID,
+	}
+	return c.putForm("/api/v1/mqtt/config", form, nil)
 }
 
 func tagForm(tag Tag) map[string]string {
@@ -321,7 +379,7 @@ func (c *Client) do(req *http.Request, out any) error {
 		return fmt.Errorf("采集引擎响应不是合法 JSON（http %d）: %s", resp.StatusCode, truncate(string(body), 200))
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return &APIError{Code: resp.StatusCode, Message: firstNonEmpty(wrapper.Message, resp.Status)}
+		return &APIError{Code: resp.StatusCode, Message: utils.FirstNonEmpty(wrapper.Message, resp.Status)}
 	}
 	if wrapper.Code != 0 && wrapper.Code != http.StatusOK {
 		return &APIError{Code: wrapper.Code, Message: wrapper.Message}
@@ -343,13 +401,4 @@ func truncate(value string, limit int) string {
 		return value
 	}
 	return value[:limit] + "..."
-}
-
-func firstNonEmpty(values ...string) string {
-	for _, value := range values {
-		if strings.TrimSpace(value) != "" {
-			return value
-		}
-	}
-	return ""
 }

@@ -264,21 +264,24 @@ func checkNotifyParam(notify []dtos.Notify) error {
 	return nil
 }
 
-func checkSpecsTypeBoolParam(req dtos.SubRule) error {
-	var decideCondition string
-	if v, ok := req.Option["decide_condition"]; ok {
-		decideCondition = v
-	} else {
-		return errort.NewCommonEdgeX(errort.DefaultReqParamsError, "update rule decide_condition is required", nil)
+// decideConditionParts 解析 update rule 的 decide_condition（操作符 值）。
+func decideConditionParts(req dtos.SubRule) ([]string, error) {
+	decideCondition, ok := req.Option["decide_condition"]
+	if !ok {
+		return nil, errort.NewCommonEdgeX(errort.DefaultReqParamsError, "update rule decide_condition is required", nil)
 	}
-
 	st := strings.Split(decideCondition, " ")
 	if len(st) != 2 {
-		return errort.NewCommonEdgeX(errort.DefaultReqParamsError, "update rule decide_condition verify failed", nil)
+		return nil, errort.NewCommonEdgeX(errort.DefaultReqParamsError, "update rule decide_condition verify failed", nil)
 	}
-	//if st[0] != "==" {
-	//	return errort.NewCommonEdgeX(errort.DefaultReqParamsError, "update rule decide_condition verify failed", nil)
-	//}
+	return st, nil
+}
+
+func checkSpecsTypeBoolParam(req dtos.SubRule) error {
+	st, err := decideConditionParts(req)
+	if err != nil {
+		return err
+	}
 	if !(st[1] == "true" || st[1] == "false") {
 		return errort.NewCommonEdgeX(errort.DefaultReqParamsError, "update rule decide_condition verify failed", nil)
 	}
@@ -286,20 +289,10 @@ func checkSpecsTypeBoolParam(req dtos.SubRule) error {
 }
 
 func checkSpecsTypeEnumParam(req dtos.SubRule) error {
-	var decideCondition string
-	if v, ok := req.Option["decide_condition"]; ok {
-		decideCondition = v
-	} else {
-		return errort.NewCommonEdgeX(errort.DefaultReqParamsError, "update rule decide_condition is required", nil)
+	st, err := decideConditionParts(req)
+	if err != nil {
+		return err
 	}
-
-	st := strings.Split(decideCondition, " ")
-	if len(st) != 2 {
-		return errort.NewCommonEdgeX(errort.DefaultReqParamsError, "update rule decide_condition verify failed", nil)
-	}
-	//if st[0] != "==" {
-	//	return errort.NewCommonEdgeX(errort.DefaultReqParamsError, "update rule decide_condition verify failed", nil)
-	//}
 	if st[0] == "" {
 		return errort.NewCommonEdgeX(errort.DefaultReqParamsError, "update rule decide_condition verify failed", nil)
 	}
@@ -307,20 +300,10 @@ func checkSpecsTypeEnumParam(req dtos.SubRule) error {
 }
 
 func checkSpecsTypeTextParam(req dtos.SubRule) error {
-	var decideCondition string
-	if v, ok := req.Option["decide_condition"]; ok {
-		decideCondition = v
-	} else {
-		return errort.NewCommonEdgeX(errort.DefaultReqParamsError, "update rule decide_condition is required", nil)
+	st, err := decideConditionParts(req)
+	if err != nil {
+		return err
 	}
-
-	st := strings.Split(decideCondition, " ")
-	if len(st) != 2 {
-		return errort.NewCommonEdgeX(errort.DefaultReqParamsError, "update rule decide_condition verify failed", nil)
-	}
-	//if st[0] != "==" {
-	//	return errort.NewCommonEdgeX(errort.DefaultReqParamsError, "update rule decide_condition verify failed", nil)
-	//}
 	if st[1] == "" {
 		return errort.NewCommonEdgeX(errort.DefaultReqParamsError, "update rule decide_condition verify failed", nil)
 	}
@@ -866,7 +849,7 @@ func (p alertApp) AddAlert(ctx context.Context, req map[string]interface{}) erro
 		content := buildAlertContent(alertRule, device, product, lang)
 		switch notify.Name {
 		case constants.Email, constants.TwilioEmail:
-			recipients := firstNonEmpty(notify.Option["email"], notify.Option["recipient"])
+			recipients := utils.FirstNonEmpty(notify.Option["email"], notify.Option["recipient"])
 			if strings.TrimSpace(recipients) == "" {
 				p.lc.Warnf("alert %s: email recipient is empty", alertRule.Id)
 				continue
@@ -888,7 +871,7 @@ func (p alertApp) AddAlert(ctx context.Context, req map[string]interface{}) erro
 				}(emailCfg, recipients, content.Subject, content.Body)
 			}
 		case constants.SMS:
-			phone := firstNonEmpty(notify.Option["phoneNumber"], notify.Option["phone"])
+			phone := utils.FirstNonEmpty(notify.Option["phoneNumber"], notify.Option["phone"])
 			if strings.TrimSpace(phone) == "" {
 				p.lc.Warnf("alert %s: sms phone number is empty", alertRule.Id)
 				continue
@@ -901,7 +884,7 @@ func (p alertApp) AddAlert(ctx context.Context, req map[string]interface{}) erro
 				}
 			}(twilioCfg, phone, content.Body)
 		case constants.WhatsApp:
-			phone := firstNonEmpty(notify.Option["phoneNumber"], notify.Option["phone"])
+			phone := utils.FirstNonEmpty(notify.Option["phoneNumber"], notify.Option["phone"])
 			if strings.TrimSpace(phone) == "" {
 				p.lc.Warnf("alert %s: whatsapp phone number is empty", alertRule.Id)
 				continue
@@ -1037,15 +1020,6 @@ func alertCondition(rule models.AlertRule, product models.Product) string {
 	default:
 		return ""
 	}
-}
-
-func firstNonEmpty(values ...string) string {
-	for _, value := range values {
-		if strings.TrimSpace(value) != "" {
-			return value
-		}
-	}
-	return ""
 }
 
 // loadEmailConfig 读取平台级 SMTP 配置。配置缺失时返回零值，发送端会记录错误而不会阻塞告警入库。

@@ -162,7 +162,7 @@ func RegisterGateway(engine *gin.Engine, dic *di.Container) {
 		v1Auth.DELETE("device-libraries/:deviceLibraryId", ctl.Perm(middleware.PermDriveRemove), ctl.DeviceLibraryDelete)
 		v1Auth.PUT("device-libraries/:deviceLibraryId", ctl.Perm(middleware.PermDriveEdit), ctl.DeviceLibraryUpdate)
 		v1Auth.GET("driver-classify", ctl.Perm(middleware.PermDriveList), ctl.Perm(middleware.PermImageList), ctl.DeviceClassify)
-		// 内置系统组件（Mosquitto / eKuiper）：Phase 1 只提供列表与探活
+		// 内置系统组件（Mosquitto / eKuiper / IotEdgeDB）：Phase 1 只提供列表与探活
 		v1Auth.GET("system-components", ctl.Perm(middleware.PermDriveList), ctl.SystemComponents)
 	}
 	/*******驱动实例 *******/

@@ -22,6 +22,13 @@ func RandomNum() string {
 	return fmt.Sprintf("%08v", rand2.Int31n(100000000))
 }
 
+// RandomNum10 返回 10 位数字 ID（首位非 0）。
+//
+// 软网关 SN 使用这个格式：它同时会作为 iotp 的网关键，纯数字更便于核对。
+func RandomNum10() string {
+	return fmt.Sprintf("%010d", 1_000_000_000+rand2.Int63n(9_000_000_000))
+}
+
 const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 const (
 	letterIdxBits = 6                    // 6 bits to represent a letter index

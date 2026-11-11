@@ -54,17 +54,3 @@ func (ctl *controller) LanguageSdkSearch(c *gin.Context) {
 	httphelper.ResultSuccess(responseData, c.Writer, lc)
 }
 
-func (ctl *controller) LanguageSdkSync(c *gin.Context) {
-	lc := ctl.lc
-	var req dtos.LanguageSDKSyncRequest
-	if err := c.ShouldBind(&req); err != nil {
-		httphelper.RenderFail(c, errort.NewCommonErr(errort.DefaultReqParamsError, err), c.Writer, lc)
-		return
-	}
-	edgeXErr := ctl.getLanguageApp().Sync(c, req.VersionName)
-	if edgeXErr != nil {
-		httphelper.RenderFail(c, edgeXErr, c.Writer, lc)
-		return
-	}
-	httphelper.ResultSuccess(nil, c.Writer, lc)
-}

@@ -59,20 +59,3 @@ func (ctl *controller) ThingModelTemplateByCategoryKey(c *gin.Context) {
 	httphelper.ResultSuccess(data, c.Writer, lc)
 }
 
-// @Tags 物模型模版
-// @Summary 同步物模型
-// @Produce json
-// @Param request query dtos.CategoryTemplateRequest true "参数"
-// @Router  /api/v1/thingmodel-template/sync [post]
-// @Security ApiKeyAuth
-func (ctl *controller) ThingModelTemplateSync(c *gin.Context) {
-	lc := ctl.lc
-	var req dtos.ThingModelTemplateSyncRequest
-	urlDecodeParam(&req, c.Request, lc)
-	_, edgeXErr := ctl.getThingModelTemplateApp().Sync(c, "Ireland")
-	if edgeXErr != nil {
-		httphelper.RenderFail(c, edgeXErr, c.Writer, lc)
-		return
-	}
-	httphelper.ResultSuccess(nil, c.Writer, lc)
-}
