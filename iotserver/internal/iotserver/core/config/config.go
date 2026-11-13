@@ -42,6 +42,21 @@ type ConfigurationStruct struct {
 	Plugins PluginsInfo
 	// Integrations 外部系统接入配置，按被接入方归属。
 	Integrations IntegrationsInfo
+	// ComponentLogs 系统组件日志源；不配置时使用内置默认路径。
+	ComponentLogs ComponentLogsInfo
+}
+
+// ComponentLogsInfo 系统组件日志文件配置。
+type ComponentLogsInfo struct {
+	Sources []ComponentLogSource
+}
+
+// ComponentLogSource 一个系统组件的日志文件来源。
+// Path 为空表示显式禁用该组件的日志入口。
+type ComponentLogSource struct {
+	Id   string
+	Name string
+	Path string
 }
 
 // WebUIInfo 前端静态资源目录。

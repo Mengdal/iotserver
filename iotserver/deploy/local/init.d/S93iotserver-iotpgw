@@ -1,0 +1,133 @@
+#!/bin/sh
+#
+# iotpGW — Buildroot / BusyBox init
+#
+# iotpGW 是独立的 Beego 进程，默认只把日志写到 stdout。
+# 这个脚本负责两件事：
+#   1. 把 stdout/stderr 追加到固定日志文件，供平台「组件日志」读取；
+#   2. 在没有 logrotate 的 BusyBox 环境里做简单的按大小轮转。
+#
+# iotpGW 安装目录默认 /opt/iotpgw，可用 IOTPGW_HOME 覆盖。
+[ -f /etc/iotserver/iotserver.env ] && . /etc/iotserver/iotserver.env
+RUN_USER="${RUN_USER:-iotserver}"
+
+IOTPGW_HOME="${IOTPGW_HOME:-/opt/iotpgw}"
+DAEMON="$IOTPGW_HOME/gw"
+LOG="${IOTPGW_LOG:-/var/log/iotserver/iotpgw.log}"
+LOG_MAX_BYTES="${IOTPGW_LOG_MAX_BYTES:-10485760}"
+LOG_KEEP="${IOTPGW_LOG_KEEP:-7}"
+PIDFILE=/var/run/iotserver-iotpgw.pid
+ROTATE_PIDFILE=/var/run/iotserver-iotpgw-rotate.pid
+NAME=iotserver-iotpgw
+
+is_running() {
+    [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null
+}
+
+rotate_log() {
+    [ -f "$LOG" ] || return 0
+    size=$(wc -c < "$LOG" 2>/dev/null || echo 0)
+    [ "$size" -le "$LOG_MAX_BYTES" ] && return 0
+
+    i="$LOG_KEEP"
+    while [ "$i" -gt 1 ]; do
+        prev=$((i - 1))
+        [ -f "$LOG.$prev" ] && mv -f "$LOG.$prev" "$LOG.$i"
+        i="$prev"
+    done
+    # 进程以 >> 打开日志，持有同一个 inode；copytruncate 后下一次写入从新 EOF 开始。
+    cp -f "$LOG" "$LOG.1" 2>/dev/null && : > "$LOG"
+    chown "$RUN_USER:$RUN_USER" "$LOG" 2>/dev/null || true
+}
+
+start_rotate() {
+    # 有 logrotate 且已安装 iotserver 配置时交给系统定时任务，
+    # 避免两套轮转同时改同一个文件。
+    if command -v logrotate >/dev/null 2>&1 && [ -f /etc/logrotate.d/iotserver ]; then
+        return 0
+    fi
+    (
+        while is_running; do
+            sleep 60
+            rotate_log
+        done
+    ) &
+    echo $! > "$ROTATE_PIDFILE"
+}
+
+stop_rotate() {
+    if [ -f "$ROTATE_PIDFILE" ]; then
+        kill "$(cat "$ROTATE_PIDFILE")" 2>/dev/null
+        rm -f "$ROTATE_PIDFILE"
+    fi
+}
+
+start() {
+    if is_running; then
+        echo "$NAME already running (pid $(cat "$PIDFILE"))"
+        return 0
+    fi
+    if [ ! -x "$DAEMON" ]; then
+        echo "$NAME: $DAEMON not found" >&2
+        return 1
+    fi
+    mkdir -p "$(dirname "$LOG")"
+    touch "$LOG"
+    chown "$RUN_USER:$RUN_USER" "$LOG" 2>/dev/null || true
+    rotate_log
+
+    # Beego 默认从工作目录的 conf/app.conf 读取配置。
+    start-stop-daemon -S -q -b -m -p "$PIDFILE" -c "$RUN_USER" -x /bin/sh -- \
+        -c "cd '$IOTPGW_HOME' && exec '$DAEMON' >> '$LOG' 2>&1"
+    sleep 1
+    if is_running; then
+        start_rotate
+        echo "$NAME started (pid $(cat "$PIDFILE"))"
+    else
+        echo "$NAME failed to start, see $LOG" >&2
+        return 1
+    fi
+}
+
+stop() {
+    stop_rotate
+    if ! is_running; then
+        echo "$NAME not running"
+        rm -f "$PIDFILE"
+        return 0
+    fi
+    pid=$(cat "$PIDFILE")
+    kill "$pid" 2>/dev/null
+    i=0
+    while kill -0 "$pid" 2>/dev/null && [ "$i" -lt 15 ]; do
+        sleep 1
+        i=$((i + 1))
+    done
+    kill -9 "$pid" 2>/dev/null
+    rm -f "$PIDFILE"
+    echo "$NAME stopped"
+}
+
+restart() {
+    stop
+    sleep 1
+    start
+}
+
+case "$1" in
+    start|stop|restart)
+        "$1"
+        ;;
+    status)
+        if is_running; then
+            echo "$NAME running (pid $(cat "$PIDFILE"))"
+        else
+            echo "$NAME stopped"
+            exit 1
+        fi
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|restart|status}"
+        exit 1
+        ;;
+esac

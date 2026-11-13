@@ -81,3 +81,24 @@ Enabled = false
 
 [Tenant]
 Enforce = false
+
+[ComponentLogs]
+# 系统组件日志文件。不配置时使用内置默认路径：
+#   Mosquitto /var/log/iotserver/mosquitto.log
+#   eKuiper   /opt/iotserver/ekuiper/log/stream.log
+#   iotpGW    /var/log/iotserver/iotpgw.log
+# Path 留空可禁用该组件的日志入口；远程组件的日志文件不在本机，配置了也读不到。
+[[ComponentLogs.Sources]]
+Id = 'sys-mosquitto'
+Name = 'Mosquitto'
+Path = '/var/log/iotserver/mosquitto.log'
+
+[[ComponentLogs.Sources]]
+Id = 'sys-ekuiper'
+Name = 'eKuiper'
+Path = '/opt/iotserver/ekuiper/log/stream.log'
+
+[[ComponentLogs.Sources]]
+Id = 'sys-iotpgw'
+Name = 'iotpGW'
+Path = '/var/log/iotserver/iotpgw.log'

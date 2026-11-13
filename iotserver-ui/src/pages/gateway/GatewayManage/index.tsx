@@ -239,7 +239,12 @@ const GatewayManagePage: React.FC = () => {
     setEditing(null)
     editForm.resetFields()
     // 轻量部署默认走本地配置的 ioserver 软网关；things 仍保留给存量接入。
-    editForm.setFieldsValue({ source: 'ioserver', engineTimeoutSec: 10 })
+    // 采集引擎默认同机部署地址，远程引擎可在表单里直接改。
+    editForm.setFieldsValue({
+      source: 'ioserver',
+      engineBaseUrl: 'http://127.0.0.1:8081',
+      engineTimeoutSec: 10,
+    })
     setModalOpen(true)
   }
 

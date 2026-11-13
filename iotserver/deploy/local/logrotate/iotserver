@@ -1,0 +1,21 @@
+# iotserver 组件日志轮转
+#
+# 安装：
+#   cp deploy/local/logrotate/iotserver /etc/logrotate.d/iotserver
+#
+# iotserver-core 自身使用 zap + lumberjack（10MB × 3 份 × 7 天），
+# 这里只处理没有内置轮转的组件。
+#
+# copytruncate：适用于进程一直持有日志文件句柄、不支持重新打开日志的组件。
+# 轮转瞬间可能丢极少量的行，但不需要重启组件。
+/var/log/iotserver/mosquitto.log
+/var/log/iotserver/iotpgw.log
+/opt/iotserver/ekuiper/log/*.log {
+    daily
+    maxsize 10M
+    rotate 7
+    compress
+    missingok
+    notifempty
+    copytruncate
+}

@@ -3,6 +3,7 @@ import { Form, Drawer, Input, Radio, Typography, Select, message, Button, Space 
 import { CloseOutlined } from '@ant-design/icons'
 import { CategorySelect, CategoryPresetOption } from './CategorySelect'
 import { addProduct } from '@/api'
+import { productRelease } from '@/api/devices'
 import { StandardFuncModal, StandardFuncModalRef } from './StandardFuncModal'
 import { t } from '@/i18n'
 
@@ -90,9 +91,23 @@ export const AddModal = forwardRef<AddModalRef, AddModalProps>(({ onFinish }, re
 
                   setSubmitting(true)
                   addProduct(values)
-                    .then(resp => {
+                    .then(async resp => {
                       if (resp.success) {
-                        message.success(t('添加成功'))
+                        // 创建后自动发布；发布失败时保留草稿，列表里仍可手动发布。
+                        if (resp.result) {
+                          try {
+                            const releaseResp = await productRelease(resp.result)
+                            if (releaseResp.success) {
+                              message.success(t('添加成功'))
+                            } else {
+                              message.warning(t('产品已创建，但自动发布失败，请在列表中手动发布'))
+                            }
+                          } catch {
+                            message.warning(t('产品已创建，但自动发布失败，请在列表中手动发布'))
+                          }
+                        } else {
+                          message.success(t('添加成功'))
+                        }
                         handleClose()
                         onFinish()
                       } else {

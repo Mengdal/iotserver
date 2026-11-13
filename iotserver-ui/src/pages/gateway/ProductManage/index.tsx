@@ -4,9 +4,12 @@ import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { Table, Card, Form, Input, Select, Button, Space, message, Typography, Popconfirm } from 'antd'
 import { PlusOutlined, ReloadOutlined, CheckCircleFilled, MinusCircleFilled } from '@ant-design/icons'
 import { getProductList, deleteProduct, useGetIotPlatform } from '@/api'
+import { productRelease, productUnrelease } from '@/api/devices'
 import { useTableRequest } from '@/hooks'
 import { AddModal, AddModalRef } from './AddModal'
 import { confirmPlatformViewAdd } from '@/utils/platformViewGuard'
+import { useAuth } from '@/utils/auth'
+import { ProductEdit } from '@/routes/permissions'
 import { ProductType } from '@/api/product'
 import { t, tt } from '@/i18n'
 
@@ -58,6 +61,18 @@ const ProductManage: React.FC<ProductManageProps> = () => {
   })
 
   const { data: iotPlatformOptions } = useGetIotPlatform()
+  const canEdit = useAuth(ProductEdit)
+
+  const togglePublish = async (record: ProductType) => {
+    const releasing = record.status !== '已发布'
+    const resp = releasing ? await productRelease(record.id) : await productUnrelease(record.id)
+    if (resp.success) {
+      messageApi.open({ type: 'success', content: releasing ? t('发布成功') : t('取消发布成功') })
+      reload()
+    } else {
+      messageApi.open({ type: 'error', content: resp.errorMsg })
+    }
+  }
 
   return (
     <>
@@ -166,6 +181,16 @@ const ProductManage: React.FC<ProductManageProps> = () => {
                         navigate(`/gateway/device/manage/${record?.id}`)
                       }}
                     >{t('管理设备')}</Typography.Link>
+                    {canEdit && (
+                      <Popconfirm
+                        title={record.status === '已发布' ? t('是否确认取消发布？') : t('是否确认发布？')}
+                        okText={t('确定')}
+                        cancelText={t('取消')}
+                        onConfirm={() => togglePublish(record)}
+                      >
+                        <Typography.Link>{record.status === '已发布' ? t('取消发布') : t('发布')}</Typography.Link>
+                      </Popconfirm>
+                    )}
                     <Popconfirm
                       title={t('此操作将永久删除该条记录, 是否继续?')}
                       okText={t('确定')}

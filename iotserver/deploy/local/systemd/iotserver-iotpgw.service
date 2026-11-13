@@ -1,0 +1,21 @@
+[Unit]
+Description=iotpGW collection engine
+Documentation=https://github.com/LMgateways
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=iotserver
+Group=iotserver
+WorkingDirectory=/opt/iotpgw
+# Beego 默认从工作目录的 conf/app.conf 读取配置。
+# 用 shell 包一层是为了把 stdout/stderr 落到固定文件；
+# 轮转交给 /etc/logrotate.d/iotserver（见 deploy/local/logrotate/iotserver）。
+ExecStart=/bin/sh -c 'exec /opt/iotpgw/gw >> /var/log/iotserver/iotpgw.log 2>&1'
+Restart=always
+RestartSec=3
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target

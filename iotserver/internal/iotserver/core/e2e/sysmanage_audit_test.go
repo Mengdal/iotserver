@@ -139,8 +139,13 @@ func TestAuditLogOperationRecordForProductAdd(t *testing.T) {
 		"data_format":          "1",
 	})
 	w := doRequest(env.engine, http.MethodPost, "/api/v1/product", env.token, body)
-	if resp := parseResponse(t, w); !resp.Success {
+	resp := parseResponse(t, w)
+	if !resp.Success {
 		t.Fatalf("新增产品失败: %v", resp.ErrorMsg)
+	}
+	// 前端依赖返回的产品 ID 在创建后立即发布。
+	if productId, _ := resp.Result.(string); productId == "" {
+		t.Fatal("新增产品应返回产品 ID")
 	}
 	env.auditApp.Flush()
 

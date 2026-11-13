@@ -116,12 +116,13 @@ func (ctl *controller) ProductAdd(c *gin.Context) {
 		httphelper.RenderFail(c, errort.NewCommonErr(errort.DefaultReqParamsError, err), c.Writer, lc)
 		return
 	}
-	_, edgeXErr := ctl.getProductApp().AddProduct(c, req)
+	productId, edgeXErr := ctl.getProductApp().AddProduct(c, req)
 	if edgeXErr != nil {
 		httphelper.RenderFail(c, edgeXErr, c.Writer, lc)
 		return
 	}
-	httphelper.ResultSuccess(nil, c.Writer, lc)
+	// 返回产品 ID，前端创建后据此自动发布。
+	httphelper.ResultSuccess(productId, c.Writer, lc)
 }
 
 // @Tags 产品管理

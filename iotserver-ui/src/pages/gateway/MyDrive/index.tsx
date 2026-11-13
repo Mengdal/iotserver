@@ -4,7 +4,6 @@ import {
   Badge,
   Button,
   Card,
-  Drawer,
   Dropdown,
   Form,
   Input,
@@ -28,6 +27,7 @@ import {
   getPluginInstanceLogs,
   getPluginInstances,
   getPluginPackages,
+  getSystemComponentLogs,
   getSystemComponents,
   PluginInstance,
   PluginPackage,
@@ -37,6 +37,7 @@ import {
   stopPluginInstance,
 } from '@/api'
 import LogModal, { LogModalRef } from './LogModal'
+import TailLogModal, { TailLogModalRef } from './TailLogModal'
 import { EditModal, EditModalRef } from './EditModal'
 import { DeviceServers } from '@/api/device-servers'
 import { useAuth } from '@/utils/auth'
@@ -80,6 +81,7 @@ const NATIVE_STATUS: Record<string, { text: string, status: 'success' | 'default
 const MyDrive: React.FC = () => {
   const { ws } = useContext(WebSocketContext)
   const logModalRef = useRef<LogModalRef>(null)
+  const tailLogModalRef = useRef<TailLogModalRef>(null)
   const editModalRef = useRef<EditModalRef>(null)
   const [form] = Form.useForm()
   const [createForm] = Form.useForm<CreateFormValues>()
@@ -97,12 +99,6 @@ const MyDrive: React.FC = () => {
 
   const [createOpen, setCreateOpen] = useState(false)
   const [creating, setCreating] = useState(false)
-
-  const [logOpen, setLogOpen] = useState(false)
-  const [logTitle, setLogTitle] = useState('')
-  const [logInstanceId, setLogInstanceId] = useState('')
-  const [logLines, setLogLines] = useState<string[]>([])
-  const [logLoading, setLogLoading] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -162,26 +158,30 @@ const MyDrive: React.FC = () => {
     }
   }
 
-  const refreshLogs = useCallback(async (id: string) => {
-    setLogLoading(true)
-    try {
-      const resp = await getPluginInstanceLogs(id, 300)
-      if (resp.success) {
-        setLogLines(resp.result?.lines || [])
-      } else {
-        message.error(resp.errorMsg)
-      }
-    } finally {
-      setLogLoading(false)
-    }
-  }, [])
+  const openPluginLogs = (record: PluginInstance) => {
+    tailLogModalRef.current?.open({
+      title: `${t('日志')} · ${record.name}`,
+      load: async () => {
+        const resp = await getPluginInstanceLogs(record.id, 300)
+        if (!resp.success) throw new Error(resp.errorMsg)
+        return { lines: resp.result?.lines || [], exists: true, path: '' }
+      },
+    })
+  }
 
-  const openNativeLogs = (record: PluginInstance) => {
-    setLogInstanceId(record.id)
-    setLogTitle(`${t('日志')} · ${record.name}`)
-    setLogLines([])
-    setLogOpen(true)
-    refreshLogs(record.id)
+  const openSystemLogs = (record: SystemComponent) => {
+    tailLogModalRef.current?.open({
+      title: `${t('日志')} · ${record.name}`,
+      load: async () => {
+        const resp = await getSystemComponentLogs(record.id, 300)
+        if (!resp.success) throw new Error(resp.errorMsg)
+        return {
+          lines: resp.result?.lines || [],
+          exists: resp.result?.exists ?? false,
+          path: resp.result?.path || record.logPath || '',
+        }
+      },
+    })
   }
 
   const handleCreate = async () => {
@@ -346,7 +346,7 @@ const MyDrive: React.FC = () => {
                   {t('重启')}
                 </Button>
               )}
-              <Button type="link" size="small" onClick={() => openNativeLogs(item)}>{t('日志')}</Button>
+              <Button type="link" size="small" onClick={() => openPluginLogs(item)}>{t('日志')}</Button>
               {canRemove && (
                 <Popconfirm
                   title={t('确认删除该插件实例？')}
@@ -361,7 +361,13 @@ const MyDrive: React.FC = () => {
           )
         }
         if (record.kind === 'system') {
-          return <Text type="secondary">-</Text>
+          const item = record.system!
+          if (!item.logConfigured) return <Text type="secondary">-</Text>
+          return (
+            <Button type="link" size="small" onClick={() => openSystemLogs(item)}>
+              {t('日志')}
+            </Button>
+          )
         }
 
         const docker = record.docker!
@@ -415,6 +421,7 @@ const MyDrive: React.FC = () => {
   return (
     <>
       <LogModal ref={logModalRef} />
+      <TailLogModal ref={tailLogModalRef} />
       <EditModal ref={editModalRef} onSuccess={load} />
       <Card className="m20" size="small">
         <Form layout="inline" form={form}>
@@ -498,30 +505,6 @@ const MyDrive: React.FC = () => {
         </Form>
       </Modal>
 
-      <Drawer
-        open={logOpen}
-        title={logTitle}
-        width={760}
-        onClose={() => setLogOpen(false)}
-        extra={<Button size="small" icon={<ReloadOutlined />} loading={logLoading} onClick={() => refreshLogs(logInstanceId)}>{t('刷新')}</Button>}
-      >
-        <pre style={{
-          margin: 0,
-          padding: 12,
-          background: '#0f172a',
-          color: '#d7e1ee',
-          borderRadius: 6,
-          fontSize: 12,
-          lineHeight: 1.6,
-          minHeight: 240,
-          maxHeight: 'calc(100vh - 180px)',
-          overflow: 'auto',
-          whiteSpace: 'pre-wrap',
-          wordBreak: 'break-all',
-        }}>
-          {logLines.length > 0 ? logLines.join('\n') : t('暂无日志')}
-        </pre>
-      </Drawer>
     </>
   )
 }

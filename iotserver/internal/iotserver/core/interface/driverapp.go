@@ -18,6 +18,8 @@ type DriverLibApp interface {
 	GetDeviceLibraryAndMirrorConfig(dlId string) (dl models.DeviceLibrary, dc models.DockerConfig, err error)
 	// SystemComponents 内置系统组件（Mosquitto / eKuiper / IotEdgeDB 等）及运行状态。
 	SystemComponents(ctx context.Context) ([]dtos.SystemComponentDTO, error)
+	// ComponentLogs 读取系统组件配置的日志文件尾部。
+	ComponentLogs(ctx context.Context, id string, tail int) (dtos.SystemComponentLogsDTO, error)
 	DriverDownConfigItf
 }
 type DriverDownConfigItf interface {

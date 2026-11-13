@@ -291,6 +291,43 @@ tail -f /var/log/iotserver/mosquitto.log
 tail -f /opt/iotserver/ekuiper/log/stream.log
 ```
 
+平台「驱动管理 → 驱动实例」里的系统组件行有「日志」入口，读取的是
+`configuration.toml` 的 `[ComponentLogs]` 配置路径：
+
+```toml
+[[ComponentLogs.Sources]]
+Id = 'sys-mosquitto'
+Path = '/var/log/iotserver/mosquitto.log'
+```
+
+iotpGW 默认只输出到 stdout，启动脚本会把它重定向到
+`/var/log/iotserver/iotpgw.log`：
+
+```bash
+# Buildroot / BusyBox
+cp deploy/local/init.d/S93iotserver-iotpgw /etc/init.d/
+/etc/init.d/S93iotserver-iotpgw start
+
+# systemd
+cp deploy/local/systemd/iotserver-iotpgw.service /etc/systemd/system/
+systemctl enable --now iotserver-iotpgw
+```
+
+默认安装目录是 `/opt/iotpgw`（包内是 `gw` 二进制 + `conf/app.conf`），
+可用 `IOTPGW_HOME` 覆盖。
+
+轮转：
+
+- 如果系统有 logrotate 并安装了 `/etc/logrotate.d/iotserver`，启动脚本不再做轮转；
+- 否则脚本自带按大小轮转，默认 10MB × 7 份，可用
+  `IOTPGW_LOG_MAX_BYTES` / `IOTPGW_LOG_KEEP` 调整。
+
+安装 logrotate 配置：
+
+```bash
+cp deploy/local/logrotate/iotserver /etc/logrotate.d/iotserver
+```
+
 ## 5. 网关接入
 
 默认 Mosquitto 只监听回环，供平台内部总线和 eKuiper 使用：

@@ -18,8 +18,9 @@ type AddProductParams = {
   description: string
 }
 
-export function addProduct<T> (data: AddProductParams) {
-  return httpRequest<any, CommonResponse<TableReponseType<T>>, AddProductParams>({
+export function addProduct (data: AddProductParams) {
+  // 后端返回新建产品 ID，创建成功后前端立即调用发布接口。
+  return httpRequest<any, CommonResponse<string>, AddProductParams>({
     url: '/api/v1/product',
     method: 'post',
     data,
