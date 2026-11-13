@@ -29,6 +29,8 @@ func (app *driverLibApp) SystemComponents(ctx context.Context) ([]dtos.SystemCom
 		seed.SystemComponentMosquittoId: componentEndpoint(cfg, seed.SystemComponentMosquittoId),
 		seed.SystemComponentEKuiperId:   componentEndpoint(cfg, seed.SystemComponentEKuiperId),
 		seed.SystemComponentIotEdgeDBId: componentEndpoint(cfg, seed.SystemComponentIotEdgeDBId),
+		// iotpGW 的地址来自软网关记录（每个软网关可以接不同的采集引擎）。
+		seed.SystemComponentIotpGWId: app.softGatewayEngineEndpoint(ctx),
 	}
 	result := make([]dtos.SystemComponentDTO, 0, len(libraries))
 	for _, library := range libraries {
@@ -78,6 +80,24 @@ func componentEndpoint(cfg *config.ConfigurationStruct, componentId string) stri
 		return client.Url()
 	case seed.SystemComponentIotEdgeDBId:
 		return strings.TrimSpace(cfg.GetDataDatabaseInfo().BaseURL)
+	}
+	return ""
+}
+
+// softGatewayEngineEndpoint 取任一软网关的采集引擎地址。
+// 系统组件页只需要一个可展示/探活的地址；没有配置软网关时返回空，状态显示 unknown。
+func (app *driverLibApp) softGatewayEngineEndpoint(ctx context.Context) string {
+	gateways, _, err := app.dbClient.WithCtx(ctx).GatewaySearch(0, -1, dtos.GatewaySearchQueryRequest{
+		BaseSearchConditionQuery: dtos.BaseSearchConditionQuery{IsAll: true},
+		Source:                   models.GatewaySourceIoserver,
+	})
+	if err != nil {
+		return ""
+	}
+	for _, gateway := range gateways {
+		if endpoint := strings.TrimRight(strings.TrimSpace(gateway.EngineBaseURL), "/"); endpoint != "" {
+			return endpoint
+		}
 	}
 	return ""
 }

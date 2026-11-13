@@ -263,7 +263,7 @@ func TestAuditLogTenantIsolation(t *testing.T) {
 
 	// 租户A 产生一条操作记录
 	roleBody, _ := json.Marshal(dtos.SysRoleAddRequest{
-		Name: "审查日志角色A", RoleKey: "audit_a_role", Status: 1, DataScope: "1",
+		Name: "审查日志角色A", Status: intPtr(1), DataScope: "1",
 	})
 	if resp := parseResponse(t, doRequest(env.engine, http.MethodPost, "/api/v1/role", tokenA, roleBody)); !resp.Success {
 		t.Fatalf("租户A建角色失败: %v", resp.ErrorMsg)

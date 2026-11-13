@@ -79,17 +79,28 @@
   width: 100%;
   text-align: center;
 }
+// 登录页顶部品牌：Logo 与系统名称并排，且高度相同
+.login-content__brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 48px 40px 0;
+  font-size: 20px;
+}
+
 // 系统配置里的 Logo（未配置时不渲染）
 .login-content__logo {
-  width: 88px;
-  height: 88px;
+  width: auto;
+  height: 1em;
+  max-width: 100px;
   object-fit: contain;
-  margin: 48px 0 0 40px;
+  margin: 0;
   display: block;
 }
 
 .login-content__left .login-content__leftTitle {
-  margin-top: 16px;
+  margin: 0;
+  line-height: 1;
 }
 
 // 上传了自定义背景图时铺满整个左侧区块

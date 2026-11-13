@@ -227,7 +227,7 @@ const SysDeptPage: React.FC = () => {
         <Space size={4} wrap={false} style={{ whiteSpace: 'nowrap' }}>
           {canAdd && <Button type="link" size="small" onClick={() => openAdd(record.id)}>{t('新增下级')}</Button>}
           {canEdit && <Button type="link" size="small" onClick={() => openEdit(record)}>{t('编辑')}</Button>}
-          {canRemove && (
+          {canRemove && !record.builtin && (
             <Popconfirm title={t('确认删除该部门？')} onConfirm={() => handleDelete(record.id)} okText={t('确定')} cancelText={t('取消')}>
               <Button type="link" size="small" danger>{t('删除')}</Button>
             </Popconfirm>

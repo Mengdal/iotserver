@@ -39,6 +39,8 @@ import (
 	"iotserver/internal/pkg/di"
 	"iotserver/internal/pkg/httphelper"
 	"iotserver/internal/pkg/logger"
+	"iotserver/internal/pkg/seed"
+	"iotserver/internal/pkg/tenant"
 	"iotserver/internal/tools/streamclient"
 )
 
@@ -237,7 +239,7 @@ func TestSysUserCrudFlow(t *testing.T) {
 	env := setupTestEnv(t)
 
 	// 创建角色
-	roleBody, _ := json.Marshal(dtos.SysRoleAddRequest{Name: "测试角色", RoleKey: "tester", Status: 1, DataScope: "1"})
+	roleBody, _ := json.Marshal(dtos.SysRoleAddRequest{Name: "测试角色", Status: intPtr(1), DataScope: "1"})
 	w := doRequest(env.engine, http.MethodPost, "/api/v1/role", env.token, roleBody)
 	if resp := parseResponse(t, w); !resp.Success {
 		t.Fatalf("add role failed: %v", resp.ErrorMsg)
@@ -257,7 +259,7 @@ func TestSysUserCrudFlow(t *testing.T) {
 	var roleId string
 	for _, item := range roles {
 		role := item.(map[string]interface{})
-		if role["roleKey"] == "tester" {
+		if role["name"] == "测试角色" {
 			roleId, _ = role["id"].(string)
 		}
 	}
@@ -482,7 +484,7 @@ func TestNonAdminMenusIncludeParentDirs(t *testing.T) {
 
 	// 只把子菜单授权给角色（模拟漏勾父目录的历史数据）
 	roleBody, _ := json.Marshal(dtos.SysRoleAddRequest{
-		Name: "父目录补全角色", RoleKey: "parentfill", Sort: 9, DataScope: "1", Status: 1,
+		Name: "父目录补全角色", Sort: 9, DataScope: "1", Status: intPtr(1),
 		MenuIds: []string{userMenu["id"].(string)},
 	})
 	w = doRequest(env.engine, http.MethodPost, "/api/v1/role", env.token, roleBody)
@@ -498,7 +500,7 @@ func TestNonAdminMenusIncludeParentDirs(t *testing.T) {
 	var roleId string
 	for _, it := range resp.Result.(map[string]interface{})["list"].([]interface{}) {
 		role := it.(map[string]interface{})
-		if role["roleKey"] == "parentfill" {
+		if role["name"] == "父目录补全角色" {
 			roleId = role["id"].(string)
 		}
 	}
@@ -547,39 +549,242 @@ func TestNonAdminMenusIncludeParentDirs(t *testing.T) {
 	}
 }
 
-// 权限字符（role_key）只在同一租户内唯一：同租户重复要被拒绝，不同租户可重复。
+// 角色名称只在同一租户内唯一：同租户重复要被拒绝，不同租户可重复。
 //
 // 背景：角色是租户隔离表，但"平台视图"下 GORM 插件不过滤，
 // 若用 WithCtx 直接查重会跨租户误判，因此实现里显式带上 tenant_id。
-func TestSysRoleKeyUniquePerTenant(t *testing.T) {
+func TestSysRoleNameUniquePerTenant(t *testing.T) {
 	env := setupTestEnv(t)
 
-	bodyFirst, _ := json.Marshal(dtos.SysRoleAddRequest{Name: "运维同名", RoleKey: "ops_same", Status: 1, DataScope: "1"})
-	bodyDup, _ := json.Marshal(dtos.SysRoleAddRequest{Name: "运维同名2", RoleKey: "ops_same", Status: 1, DataScope: "1"})
+	bodyFirst, _ := json.Marshal(dtos.SysRoleAddRequest{Name: "运维同名", Status: intPtr(1), DataScope: "1"})
+	bodyDup, _ := json.Marshal(dtos.SysRoleAddRequest{Name: "运维同名", Status: intPtr(1), DataScope: "1"})
 
 	// 平台级角色
 	if resp := parseResponse(t, doRequest(env.engine, http.MethodPost, "/api/v1/role", env.token, bodyFirst)); !resp.Success {
 		t.Fatalf("平台建角色失败: %v", resp.ErrorMsg)
 	}
-	// 平台内重复权限字符 → 拒绝
+	// 平台内重复角色名 → 拒绝
 	if resp := parseResponse(t, doRequest(env.engine, http.MethodPost, "/api/v1/role", env.token, bodyDup)); resp.Success {
-		t.Fatal("同一租户内重复的权限字符应被拒绝")
+		t.Fatal("同一租户内重复的角色名称应被拒绝")
 	}
 
-	// 租户A：与平台同名同权限字符也要能建（不同租户互不影响）
+	// 租户A：与平台同名也要能建（不同租户互不影响）
 	_, userA := seedTenant(t, env, "rolekeya")
 	tokenA := loginAs(t, env, userA, tenantTestPassword)
 	if resp := parseResponse(t, doRequest(env.engine, http.MethodPost, "/api/v1/role", tokenA, bodyFirst)); !resp.Success {
-		t.Fatalf("租户A建同名同权限字符角色应成功: %v", resp.ErrorMsg)
+		t.Fatalf("租户A建同名角色应成功: %v", resp.ErrorMsg)
 	}
 	if resp := parseResponse(t, doRequest(env.engine, http.MethodPost, "/api/v1/role", tokenA, bodyDup)); resp.Success {
-		t.Fatal("租户A内重复的权限字符应被拒绝")
+		t.Fatal("租户A内重复的角色名称应被拒绝")
 	}
 
-	// 租户B：同样可以建（两个租户各自有一份 ops_same）
+	// 租户B：同样可以建（两个租户各自有一份同名角色）
 	_, userB := seedTenant(t, env, "rolekeyb")
 	tokenB := loginAs(t, env, userB, tenantTestPassword)
 	if resp := parseResponse(t, doRequest(env.engine, http.MethodPost, "/api/v1/role", tokenB, bodyFirst)); !resp.Success {
-		t.Fatalf("租户B建同名同权限字符角色应成功: %v", resp.ErrorMsg)
+		t.Fatalf("租户B建同名角色应成功: %v", resp.ErrorMsg)
+	}
+}
+
+// 内置角色：租户侧不可修改；平台管理员修改后同步到所有租户。
+func TestSysRoleCreateStatusSemantics(t *testing.T) {
+	env := setupTestEnv(t)
+
+	// 显式 status=0：应创建为停用角色。
+	disabledBody, _ := json.Marshal(dtos.SysRoleAddRequest{Name: "显式停用角色", Status: intPtr(0), DataScope: "1"})
+	if resp := parseResponse(t, doRequest(env.engine, http.MethodPost, "/api/v1/role", env.token, disabledBody)); !resp.Success {
+		t.Fatalf("add disabled role failed: %v", resp.ErrorMsg)
+	}
+
+	// 未传 status：默认启用。
+	defaultBody, _ := json.Marshal(map[string]interface{}{"name": "默认启用角色", "dataScope": "1"})
+	if resp := parseResponse(t, doRequest(env.engine, http.MethodPost, "/api/v1/role", env.token, defaultBody)); !resp.Success {
+		t.Fatalf("add default role failed: %v", resp.ErrorMsg)
+	}
+
+	w := doRequest(env.engine, http.MethodGet, "/api/v1/role?page=1&pageSize=50", env.token, nil)
+	resp := parseResponse(t, w)
+	if !resp.Success {
+		t.Fatalf("role list failed: %v", resp.ErrorMsg)
+	}
+	page := resp.Result.(map[string]interface{})
+	rows := page["list"].([]interface{})
+	statuses := map[string]float64{}
+	for _, item := range rows {
+		row := item.(map[string]interface{})
+		name, _ := row["name"].(string)
+		status, _ := row["status"].(float64)
+		statuses[name] = status
+	}
+	if statuses["显式停用角色"] != 0 {
+		t.Fatalf("显式 status=0 应保持停用，实际 %v", statuses["显式停用角色"])
+	}
+	if statuses["默认启用角色"] != 1 {
+		t.Fatalf("未传 status 应默认启用，实际 %v", statuses["默认启用角色"])
+	}
+}
+
+func TestGlobalBuiltinRolesShared(t *testing.T) {
+	env := setupTestEnv(t)
+	tenantA, userA := seedTenant(t, env, "global_a")
+	tenantB, _ := seedTenant(t, env, "global_b")
+	roleItems := func(respBody []byte) []map[string]interface{} {
+		var page struct {
+			Result struct {
+				List []map[string]interface{} `json:"list"`
+			} `json:"result"`
+		}
+		if err := json.Unmarshal(respBody, &page); err != nil {
+			t.Fatalf("decode role list: %v", err)
+		}
+		return page.Result.List
+	}
+	roleIDs := func(items []map[string]interface{}) map[string]bool {
+		ids := make(map[string]bool, len(items))
+		for _, item := range items {
+			id, _ := item["id"].(string)
+			ids[id] = true
+		}
+		return ids
+	}
+	roleAllItems := func(respBody []byte) []map[string]interface{} {
+		var resp struct {
+			Result []map[string]interface{} `json:"result"`
+		}
+		if err := json.Unmarshal(respBody, &resp); err != nil {
+			t.Fatalf("decode role all: %v", err)
+		}
+		return resp.Result
+	}
+
+	// 平台视图：三个全局内置角色，各一份。
+	platformIDs := roleIDs(roleItems(doRequest(env.engine, http.MethodGet, "/api/v1/role?page=1&pageSize=100", env.token, nil).Body.Bytes()))
+	for _, id := range []string{seed.RoleAdminId, seed.RoleTenantAdminTemplateId, seed.RoleTenantUserTemplateId} {
+		if !platformIDs[id] {
+			t.Fatalf("平台视图缺少全局内置角色 %s", id)
+		}
+	}
+	// 租户视图：全局管理员/普通用户可见，超级管理员不可见。
+	tenantAIDs := roleIDs(roleItems(doRequestWithTenant(env.engine, http.MethodGet,
+		"/api/v1/role?page=1&pageSize=100", env.token, tenantA.Id, nil).Body.Bytes()))
+	if !tenantAIDs[seed.RoleTenantAdminTemplateId] || !tenantAIDs[seed.RoleTenantUserTemplateId] {
+		t.Fatal("租户视图应包含全局管理员/普通用户角色")
+	}
+	if tenantAIDs[seed.RoleAdminId] {
+		t.Fatal("租户视图不应出现全局超级管理员")
+	}
+
+	// 可分配角色：平台只给平台角色，租户给全局管理员/普通用户。
+	platformAll := roleAllItems(doRequest(env.engine, http.MethodGet, "/api/v1/role/all", env.token, nil).Body.Bytes())
+	if roleIDs(platformAll)[seed.RoleTenantUserTemplateId] || roleIDs(platformAll)[seed.RoleTenantAdminTemplateId] {
+		t.Fatal("平台账号分配下拉不应出现租户内置角色")
+	}
+	tenantAll := roleAllItems(doRequestWithTenant(env.engine, http.MethodGet, "/api/v1/role/all", env.token, tenantB.Id, nil).Body.Bytes())
+	if !roleIDs(tenantAll)[seed.RoleTenantUserTemplateId] || !roleIDs(tenantAll)[seed.RoleTenantAdminTemplateId] {
+		t.Fatal("租户分配下拉应包含全局管理员/普通用户")
+	}
+
+	// 租户管理员不能修改全局内置角色。
+	tokenA := loginAs(t, env, userA, tenantTestPassword)
+	tenantEdit, _ := json.Marshal(dtos.SysRoleUpdateRequest{
+		Id: seed.RoleTenantUserTemplateId, Name: seed.RoleTenantUserName, Sort: 5, DataScope: "1", Status: 1,
+		Remark: "tenant edit", MenuIds: []string{seed.MenuHomeId},
+	})
+	if resp := parseResponse(t, doRequest(env.engine, http.MethodPut, "/api/v1/role", tokenA, tenantEdit)); resp.Success {
+		t.Fatal("租户管理员不应能修改全局内置角色")
+	}
+
+	// 平台管理员修改全局内置角色：所有租户读到的都是同一条记录。
+	platformEdit, _ := json.Marshal(dtos.SysRoleUpdateRequest{
+		Id: seed.RoleTenantUserTemplateId, Name: seed.RoleTenantUserName, Sort: 9, DataScope: "1", Status: 1,
+		Remark: "global edit", MenuIds: []string{seed.MenuHomeId},
+	})
+	if resp := parseResponse(t, doRequest(env.engine, http.MethodPut, "/api/v1/role", env.token, platformEdit)); !resp.Success {
+		t.Fatalf("平台管理员修改全局内置角色失败: %v", resp.ErrorMsg)
+	}
+	detail := parseResponse(t, doRequestWithTenant(env.engine, http.MethodGet,
+		"/api/v1/role/"+seed.RoleTenantUserTemplateId, env.token, tenantB.Id, nil))
+	if !detail.Success {
+		t.Fatalf("租户 B 读取全局角色失败: %v", detail.ErrorMsg)
+	}
+	got := detail.Result.(map[string]interface{})
+	if got["sort"].(float64) != 9 || got["remark"] != "global edit" {
+		t.Fatalf("全局角色修改未生效: %v", got)
+	}
+	menus, err := env.client.WithCtx(tenant.Platform(context.Background())).GetRoleMenuIds(seed.RoleTenantUserTemplateId)
+	if err != nil {
+		t.Fatalf("get global role menus: %v", err)
+	}
+	if len(menus) != 1 || menus[0] != seed.MenuHomeId {
+		t.Fatalf("全局角色菜单未更新: %v", menus)
+	}
+
+	// 内置角色名称不允许修改，也不允许删除。
+	renameBody, _ := json.Marshal(dtos.SysRoleUpdateRequest{
+		Id: seed.RoleTenantUserTemplateId, Name: "改名角色", Sort: 9, DataScope: "1", Status: 1,
+		MenuIds: []string{seed.MenuHomeId},
+	})
+	if resp := parseResponse(t, doRequest(env.engine, http.MethodPut, "/api/v1/role", env.token, renameBody)); resp.Success {
+		t.Fatal("全局内置角色名称不应允许修改")
+	}
+	deleteBody, _ := json.Marshal(dtos.SysRoleIdsRequest{Ids: []string{seed.RoleTenantUserTemplateId}})
+	if resp := parseResponse(t, doRequest(env.engine, http.MethodDelete, "/api/v1/role", env.token, deleteBody)); resp.Success {
+		t.Fatal("全局内置角色不应允许删除")
+	}
+
+	// 租户用户可绑定全局普通用户角色；平台账号不可以。
+	tenantUserBody, _ := json.Marshal(dtos.SysUserAddRequest{
+		Username: "global_tenant_user", Password: "tenant123", Nickname: "全局普通用户",
+		Status: 1, RoleIds: []string{seed.RoleTenantUserTemplateId},
+	})
+	if resp := parseResponse(t, doRequestWithTenant(env.engine, http.MethodPost, "/api/v1/sys-user", env.token, tenantB.Id, tenantUserBody)); !resp.Success {
+		t.Fatalf("租户用户绑定全局角色失败: %v", resp.ErrorMsg)
+	}
+	// 绑定全局普通用户角色的租户用户能正常登录并拿到全局角色菜单。
+	tenantUserToken := loginAs(t, env, "global_tenant_user", "tenant123")
+	info := parseResponse(t, doRequest(env.engine, http.MethodGet, "/api/v1/user/getinfo", tenantUserToken, nil))
+	if !info.Success {
+		t.Fatalf("全局普通用户登录失败: %v", info.ErrorMsg)
+	}
+	infoResult := info.Result.(map[string]interface{})
+	if infoResult["admin"] == true {
+		t.Fatal("全局普通用户不应被识别为管理员")
+	}
+	perms, _ := infoResult["permissions"].([]interface{})
+	hasHome := false
+	for _, p := range perms {
+		if p == "home:view" {
+			hasHome = true
+		}
+	}
+	if !hasHome {
+		t.Fatalf("全局普通用户应拥有 home:view 权限，实际 %v", perms)
+	}
+	platformUserBody, _ := json.Marshal(dtos.SysUserAddRequest{
+		Username: "global_platform_user", Password: "tenant123", Nickname: "平台用户",
+		Status: 1, RoleIds: []string{seed.RoleTenantUserTemplateId},
+	})
+	if resp := parseResponse(t, doRequest(env.engine, http.MethodPost, "/api/v1/sys-user", env.token, platformUserBody)); resp.Success {
+		t.Fatal("平台账号不应能绑定租户内置角色")
+	}
+
+	// 自定义角色不能使用内置角色保留名称。
+	reservedBody, _ := json.Marshal(dtos.SysRoleAddRequest{Name: seed.RoleTenantAdminName, Status: intPtr(1), DataScope: "1"})
+	if resp := parseResponse(t, doRequestWithTenant(env.engine, http.MethodPost, "/api/v1/role", env.token, tenantA.Id, reservedBody)); resp.Success {
+		t.Fatal("自定义角色不应允许使用内置角色名称")
+	}
+}
+
+func intPtr(v int) *int { return &v }
+
+func TestDeptRootDeleteRejectedWithMessage(t *testing.T) {
+	env := setupTestEnv(t)
+	body, _ := json.Marshal(dtos.SysDeptIdsRequest{Ids: []string{seed.DeptRootId}})
+	resp := parseResponse(t, doRequest(env.engine, http.MethodDelete, "/api/v1/dept", env.token, body))
+	if resp.Success {
+		t.Fatal("平台根部门不应允许删除")
+	}
+	if resp.ErrorCode != 21724 {
+		t.Fatalf("根部门删除应返回 21724，实际 %d (%s)", resp.ErrorCode, resp.ErrorMsg)
 	}
 }

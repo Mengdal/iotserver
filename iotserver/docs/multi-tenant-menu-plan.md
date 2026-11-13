@@ -203,7 +203,9 @@ sys_menu.tenant_id = 'X'  → 租户 X 的自定义菜单
 
 ## 7. 已完成（不在本次规划内）
 
-- **权限字符（`role_key`）同租户内唯一**：应用层按"目标租户"显式查重 + 数据库唯一索引 `uk_sys_role_tenant_key(tenant_id, role_key)` + 前端提示；e2e `TestSysRoleKeyUniquePerTenant` 覆盖（同租户重复拒绝、跨租户可重复）。
+- **角色名称同租户内唯一**：应用层按"目标租户"显式查重 + 数据库唯一索引 `uk_sys_role_tenant_name(tenant_id, name)`；e2e `TestSysRoleNameUniquePerTenant` 覆盖（同租户重复拒绝、跨租户可重复）。
+- **角色权限字符（`role_key`）已移除**：权限完全由角色授权的菜单决定；管理员身份改用 `sys_role.is_admin=1` 标记，历史 `role_key='admin'` 在启动迁移中回填后删除该列。
+- **内置角色全局共享**：超级管理员 / 管理员 / 普通用户是 `tenant_id=''` 的全局角色，所有租户共用同一行；租户自建角色仍按租户隔离。历史“每租户一份”的内置角色由启动迁移合并到全局角色，名称保留为内置名称的自建角色需要先改名。
 - 多租户基座：`tenant` 模型/组织树/行级隔离（GORM 插件 + `WithCtx`）、平台管理员代管、隔离矩阵测试。
 
 ---

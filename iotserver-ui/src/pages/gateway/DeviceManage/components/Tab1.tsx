@@ -31,6 +31,8 @@ export const DetailTab1: React.FC<DetailTab1Props> = () => {
   const [searchParams] = useSearchParams()
   const timer = useRef<ReturnType<typeof setInterval>>()
   const tab1ModalRef = useRef<Tab1ModalRef>(null)
+  // 数据定位带的 code 只自动打开一次；实时刷新会反复执行 load，不能每次都重开弹窗。
+  const autoOpenedRef = useRef('')
 
   const [lists, setLists] = useState<DeviceProperty[]>([])
   const [checked, setChecked] = useState<boolean>(readAutoRefresh)
@@ -51,11 +53,13 @@ export const DetailTab1: React.FC<DetailTab1Props> = () => {
         setLists(rows)
 
         const code = searchParams.get('code')
-        console.log('code', code)
         if (code) {
+          const autoOpenKey = `${params.id}:${code}`
           const item = rows.find((item) => item.code === code)
-          console.log('item', item, tab1ModalRef.current?.open)
-          item && setTimeout(() => tab1ModalRef.current?.open(item), 0)
+          if (item && autoOpenedRef.current !== autoOpenKey) {
+            autoOpenedRef.current = autoOpenKey
+            setTimeout(() => tab1ModalRef.current?.open(item), 0)
+          }
         }
       }
     })

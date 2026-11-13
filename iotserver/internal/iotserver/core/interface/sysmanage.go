@@ -29,11 +29,10 @@ type SysRoleDB interface {
 	AddSysRole(r models.Role) (models.Role, error)
 	SysRoleById(id string) (models.Role, error)
 	SysRoleByName(name string) (models.Role, error)
-	// SysRoleByNameInTenant / SysRoleByKeyInTenant 显式按租户查重。
+	// SysRoleByNameInTenant 显式按租户查重。
 	// 说明：角色是租户隔离表，但"平台视图"下（Platform 作用域）插件不过滤，
 	// 用 WithCtx 查重会跨租户误判，因此这里显式带上 tenant_id（tenantId="" 表示平台级角色）。
 	SysRoleByNameInTenant(name, tenantId string) (models.Role, error)
-	SysRoleByKeyInTenant(roleKey, tenantId string) (models.Role, error)
 	UpdateSysRole(r models.Role) error
 	DeleteSysRoleByIds(ids []string) error
 	SysRoleSearch(offset, limit int, req dtos.SysRoleSearchRequest) ([]models.Role, uint32, error)

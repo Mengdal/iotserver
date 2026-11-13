@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import {
+  Alert,
   Button,
   Card,
   Drawer,
@@ -28,7 +29,7 @@ import {
   SysRole,
   SysMenu,
 } from '@/api'
-import { useAuth } from '@/utils/auth'
+import { isPlatformAdmin, useAuth } from '@/utils/auth'
 import { currentLocale, t, tt } from '@/i18n'
 
 const { useMessage } = message
@@ -96,6 +97,9 @@ const SysRolePage: React.FC = () => {
   const canAdd = useAuth('system:role:add')
   const canEdit = useAuth('system:role:edit')
   const canRemove = useAuth('system:role:remove')
+  const platformAdmin = isPlatformAdmin()
+  // 内置角色由平台统一维护：租户侧只读，平台管理员可改并同步到所有租户。
+  const canManageBuiltin = platformAdmin
 
   const loadData = useCallback(async (page = pagination.current, pageSize = pagination.pageSize) => {
     try {
@@ -141,7 +145,6 @@ const SysRolePage: React.FC = () => {
     editForm.resetFields()
     editForm.setFieldsValue({
       name: record.name,
-      roleKey: record.roleKey,
       sort: record.sort,
       dataScope: record.dataScope,
       status: record.status,
@@ -215,7 +218,6 @@ const SysRolePage: React.FC = () => {
 
   const columns: ColumnsType<SysRole> = [
     { title: t('角色名称'), dataIndex: 'name', width: 180, render: (value: string) => tt(value) },
-    { title: t('权限字符'), dataIndex: 'roleKey', width: 160, render: (value: string) => <Tag color="blue">{value}</Tag> },
     { title: t('显示顺序'), dataIndex: 'sort', width: 100 },
     {
       title: t('数据范围'),
@@ -243,9 +245,13 @@ const SysRolePage: React.FC = () => {
       fixed: 'right',
       render: (_, record) => (
         <Space size={4} wrap={false} style={{ whiteSpace: 'nowrap' }}>
-          {canEdit && <Button type="link" size="small" onClick={() => openEdit(record)}>{t('编辑')}</Button>}
-          {canEdit && <Button type="link" size="small" onClick={() => openMenus(record)}>{t('菜单权限')}</Button>}
-          {canRemove && record.roleKey !== 'admin' && (
+          {canEdit && (!record.builtinKey || canManageBuiltin) && (
+            <Button type="link" size="small" onClick={() => openEdit(record)}>{t('编辑')}</Button>
+          )}
+          {canEdit && (!record.builtinKey || canManageBuiltin) && (
+            <Button type="link" size="small" onClick={() => openMenus(record)}>{t('菜单权限')}</Button>
+          )}
+          {canRemove && record.isAdmin !== 1 && !record.builtinKey && (
             <Popconfirm title={t('确认删除该角色？')} onConfirm={() => handleDelete([record.id])} okText={t('确定')} cancelText={t('取消')}>
               <Button type="link" size="small" danger>{t('删除')}</Button>
             </Popconfirm>
@@ -261,9 +267,6 @@ const SysRolePage: React.FC = () => {
       <Form form={form} layout="inline" style={{ marginBottom: 16, rowGap: 8 }}>
         <Form.Item name="nameLike" label={t('角色名称')}>
           <Input placeholder={t('请输入角色名称')} allowClear style={{ width: 180 }} />
-        </Form.Item>
-        <Form.Item name="roleKey" label={t('权限字符')}>
-          <Input placeholder={t('请输入权限字符')} allowClear style={{ width: 180 }} />
         </Form.Item>
         <Form.Item name="status" label={t('状态')}>
           <Select placeholder={t('全部')} allowClear style={{ width: 120 }}>
@@ -323,7 +326,7 @@ const SysRolePage: React.FC = () => {
         rowSelection={{
           selectedRowKeys,
           onChange: keys => setSelectedRowKeys(keys),
-          getCheckboxProps: record => ({ disabled: record.roleKey === 'admin' }),
+          getCheckboxProps: record => ({ disabled: record.isAdmin === 1 || !!record.builtinKey }),
         }}
         pagination={{
           size: 'small',
@@ -354,19 +357,21 @@ const SysRolePage: React.FC = () => {
         }
       >
         <Form form={editForm} layout="vertical">
-          <Form.Item label={t('角色名称')} name="name" rules={[{ required: true, message: t('请输入角色名称') }]}>
-            <Input placeholder={t('请输入角色名称')} />
-          </Form.Item>
+          {editing?.builtinKey && (
+            <Alert
+              type="warning"
+              showIcon
+              style={{ marginBottom: 16 }}
+              message={t('内置角色为全局角色，修改后立即对所有租户生效')}
+            />
+          )}
           <Form.Item
-            label={t('权限字符')}
-            name="roleKey"
-            extra={t('同一租户内不可重复（不同租户可以同名）；填 admin 表示该租户的超级管理员：菜单全给、权限拉满，且不可停用/删除')}
-            rules={[
-              { required: true, message: t('请输入权限字符') },
-              { pattern: /^[A-Za-z0-9_:.-]+$/, message: t('只能包含字母、数字与 _ : . -') },
-            ]}
+            label={t('角色名称')}
+            name="name"
+            rules={[{ required: true, message: t('请输入角色名称') }]}
+            extra={editing?.builtinKey ? t('内置角色名称不可修改') : undefined}
           >
-            <Input placeholder={t('例如 operator')} />
+            <Input placeholder={t('请输入角色名称')} disabled={!!editing?.builtinKey} />
           </Form.Item>
           <Form.Item label={t('显示顺序')} name="sort">
             <InputNumber min={0} style={{ width: '100%' }} />

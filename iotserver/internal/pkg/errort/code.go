@@ -47,6 +47,8 @@ const (
 	AppMenuHasTenantChildren uint32 = 21714
 	// AppTenantDisabled 租户已停用：登录与请求中间件都会拦截
 	AppTenantDisabled uint32 = 21715
+	// AppDeptRootNotAllowOperate 根部门（组织树根节点）不允许删除
+	AppDeptRootNotAllowOperate uint32 = 21724
 	// things 集成
 	AppThingsDisabled        uint32 = 21716 // things 未启用
 	AppThingsNotConfigured   uint32 = 21717 // things 配置不完整

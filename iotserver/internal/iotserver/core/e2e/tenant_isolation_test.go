@@ -13,6 +13,7 @@ import (
 
 	"iotserver/internal/dtos"
 	"iotserver/internal/models"
+	"iotserver/internal/pkg/seed"
 	"iotserver/internal/pkg/tenant"
 	tenantplugin "iotserver/internal/tools/sqldb/tenant"
 )
@@ -51,15 +52,9 @@ func seedTenant(t *testing.T, env *testEnv, code string) (models.Tenant, string)
 		t.Fatalf("create tenant %s: %v", code, err)
 	}
 
-	// 租户内的管理员角色：role_key=admin 让它拥有租户内全部权限，
-	// 但它不属于平台（tenant_id 非空），因此不会被当成平台管理员。
+	// 租户管理员直接绑定全局「管理员」内置角色；全局角色 is_admin=1，
+	// 但用户属于租户，因此不会被当成平台管理员。
 	tctx := tenant.With(pctx, tenant.Context{TenantID: tc.Id})
-	role, err := env.client.WithCtx(tctx).AddSysRole(models.Role{
-		Name: "管理员-" + code, RoleKey: "admin", DataScope: models.DataScopeAll, Status: 1,
-	})
-	if err != nil {
-		t.Fatalf("create role for %s: %v", code, err)
-	}
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(tenantTestPassword), bcrypt.DefaultCost)
 	if err != nil {
@@ -74,7 +69,7 @@ func seedTenant(t *testing.T, env *testEnv, code string) (models.Tenant, string)
 	if err != nil {
 		t.Fatalf("create user for %s: %v", code, err)
 	}
-	if err = env.client.WithCtx(tctx).SetUserRoles(user.Id, []string{role.Id}); err != nil {
+	if err = env.client.WithCtx(tctx).SetUserRoles(user.Id, []string{seed.RoleTenantAdminTemplateId}); err != nil {
 		t.Fatalf("bind role for %s: %v", code, err)
 	}
 	return tc, username

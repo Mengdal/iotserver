@@ -152,6 +152,10 @@ func GetEnMessages() []*i18n.Message {
 			Other: `{{.info}}`,
 		},
 		{
+			ID:    "21724",
+			Other: `Root departments cannot be deleted.`,
+		},
+		{
 			ID:    "22101",
 			Other: `Connection refused. Make sure the cloud service is running.`,
 		},

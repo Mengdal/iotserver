@@ -71,10 +71,12 @@ export default function login () {
             ? { backgroundImage: `url(${site.loginBackground})` }
             : undefined}
         >
-          {/* 未上传 logo 时回退到系统默认 */}
-          <img className="login-content__logo" src={brandAssets.loginLogo} alt={site.name} />
-          <div className="login-content__leftTitle">
-            {site.name || t('iotserver 物联网平台')}
+          {/* 未上传 logo 时回退到系统默认；系统名称与 logo 并排显示 */}
+          <div className="login-content__brand">
+            <img className="login-content__logo" src={brandAssets.loginLogo} alt={site.name} />
+            <div className="login-content__leftTitle">
+              {site.name || t('iotserver 物联网平台')}
+            </div>
           </div>
         </div>
         {initInfo.data?.isInit

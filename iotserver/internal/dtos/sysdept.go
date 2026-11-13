@@ -48,8 +48,10 @@ type SysDeptIdsRequest struct {
 
 // SysDeptResponse 部门信息
 type SysDeptResponse struct {
-	Id        string            `json:"id"`
-	ParentId  string            `json:"parentId"`
+	Id       string `json:"id"`
+	ParentId string `json:"parentId"`
+	// Builtin 平台内置根部门：允许编辑，但不允许删除
+	Builtin   bool              `json:"builtin"`
 	Ancestors string            `json:"ancestors"`
 	Name      string            `json:"name"`
 	DeptType  int               `json:"deptType"`

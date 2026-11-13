@@ -115,9 +115,9 @@ func alertListLastSend(c *Client, alertRuleId string) (alertList models.AlertLis
 
 func alertListSearch(c *Client, offset int, limit int, req dtos.AlertSearchQueryRequest) (alertRules []dtos.AlertSearchQueryResponse, count uint32, edgeXErr error) {
 	var total int64
-	dp := models.AlertList{}
-	tx := c.Pool.Table(dp.TableName()).Select("alert_list.id,alert_list.status," +
-		"alert_rule.name,alert_list.alert_result,alert_rule.alert_level,alert_list.trigger_time,alert_list.treated_time,alert_list.message,alert_list.is_send").Joins("left join alert_rule on alert_list.alert_rule_id = alert_rule.id")
+	tx := c.Pool.Model(&models.AlertList{}).Select("alert_list.id,alert_list.status," +
+		"alert_rule.name,alert_list.alert_result,alert_rule.alert_level,alert_list.trigger_time,alert_list.treated_time,alert_list.message,alert_list.is_send").
+		Joins("left join alert_rule on alert_list.alert_rule_id = alert_rule.id AND alert_rule.tenant_id = alert_list.tenant_id")
 	//tx = sqlite.BuildCommonCondition(tx, dp, req.BaseSearchConditionQuery)
 	if req.Name != "" {
 		tx = tx.Where("alert_rule.name LIKE ?", sqlite.MakeLikeParams(req.Name))
@@ -138,7 +138,8 @@ func alertListSearch(c *Client, offset int, limit int, req dtos.AlertSearchQuery
 		return []dtos.AlertSearchQueryResponse{}, 0, errort.NewCommonEdgeX(errort.DefaultSystemError, "alert list failed query from the database", edgeXErr)
 	}
 	tx.Order("alert_list.created desc")
-	edgeXErr = tx.Offset(offset).Limit(limit).Scan(&alertRules).Error
+	// 用 Find 而不是 Scan：Scan 不会触发生成租户过滤条件的 GORM Query 回调。
+	edgeXErr = tx.Offset(offset).Limit(limit).Find(&alertRules).Error
 	if edgeXErr != nil {
 		return []dtos.AlertSearchQueryResponse{}, 0, errort.NewCommonEdgeX(errort.DefaultSystemError, "alert list failed query from the database", edgeXErr)
 	}
@@ -181,19 +182,16 @@ func alertRuleStop(c *Client, id string) error {
 // SELECT AVG(age) as avgage FROM `users` GROUP BY `name` HAVING AVG(age) > (SELECT AVG(age) FROM `users` WHERE name LIKE "name%")
 
 func alertPlate(c *Client, beforeTime int64) (plate []dtos.AlertPlateQueryResponse, err error) {
-	d := models.AlertList{}
+	// 不能用 Raw SQL：租户插件只会给 GORM 构建的查询追加 alert_list.tenant_id，
+	// Raw 会跨租户统计。join 同时要求告警规则与告警记录属于同一租户。
+	// 用 Model 而不是 Table，确保租户插件能拿到 schema 并追加过滤条件。
+	tx := c.Pool.Model(&models.AlertList{}).
+		Select("count(alert_list.id) AS count, alert_rule.alert_level").
+		Joins("JOIN alert_rule ON alert_list.alert_rule_id = alert_rule.id AND alert_rule.tenant_id = alert_list.tenant_id")
 	if beforeTime > 0 {
-		err = c.Pool.Table(d.TableName()).Raw(
-			"SELECT count(alert_list.id) AS count,alert_rule.alert_level FROM alert_list "+
-				"JOIN alert_rule on alert_list.alert_rule_id = alert_rule.id and alert_list.created > (?) "+
-				"GROUP BY alert_rule.alert_level", beforeTime).Scan(&plate).Error
-	} else {
-		err = c.Pool.Table(d.TableName()).Raw(
-			"SELECT count(alert_list.id) AS count,alert_rule.alert_level FROM alert_list " +
-				"JOIN alert_rule on alert_list.alert_rule_id = alert_rule.id" +
-				"GROUP BY alert_rule.alert_level").Scan(&plate).Error
+		tx = tx.Where("alert_list.created > ?", beforeTime)
 	}
-
+	err = tx.Group("alert_rule.alert_level").Find(&plate).Error
 	return
 }
 

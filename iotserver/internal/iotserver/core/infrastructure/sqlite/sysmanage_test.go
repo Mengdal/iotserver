@@ -1,6 +1,7 @@
 package sqlite
 
 import (
+	"context"
 	"path/filepath"
 	"testing"
 
@@ -9,6 +10,7 @@ import (
 	"iotserver/internal/models"
 	"iotserver/internal/pkg/permissions"
 	"iotserver/internal/pkg/seed"
+	"iotserver/internal/pkg/tenant"
 )
 
 func newTestClient(t *testing.T) *Client {
@@ -88,12 +90,13 @@ func TestMigrateSystemTablesSeedsData(t *testing.T) {
 			seed.SystemComponentMosquittoId,
 			seed.SystemComponentEKuiperId,
 			seed.SystemComponentIotEdgeDBId,
+			seed.SystemComponentIotpGWId,
 		}).
 		Order("id asc").Find(&components).Error; err != nil {
 		t.Fatalf("query system components: %v", err)
 	}
-	if len(components) != 3 {
-		t.Fatalf("expect 3 system components, got %d", len(components))
+	if len(components) != 4 {
+		t.Fatalf("expect 4 system components, got %d", len(components))
 	}
 	for _, component := range components {
 		if component.Category != models.PluginCategorySystem ||
@@ -244,13 +247,31 @@ func TestSysMenuTenantScope(t *testing.T) {
 	}
 }
 
+func TestAddSysRoleKeepsExplicitDisabledStatus(t *testing.T) {
+	c := newTestClient(t)
+	if err := c.MigrateSystemTables(); err != nil {
+		t.Fatalf("migrate: %v", err)
+	}
+	role, err := c.AddSysRole(models.Role{Name: "停用自定义角色", Status: 0, DataScope: models.DataScopeAll})
+	if err != nil {
+		t.Fatalf("add role: %v", err)
+	}
+	got, err := c.SysRoleById(role.Id)
+	if err != nil {
+		t.Fatalf("get role: %v", err)
+	}
+	if got.Status != 0 {
+		t.Fatalf("显式 status=0 应保持停用，实际 %d", got.Status)
+	}
+}
+
 func TestSysUserRoleCRUD(t *testing.T) {
 	c := newTestClient(t)
 	if err := c.MigrateSystemTables(); err != nil {
 		t.Fatalf("migrate: %v", err)
 	}
 
-	role, err := c.AddSysRole(models.Role{Name: "运营", RoleKey: "operator", Status: 1, DataScope: models.DataScopeAll})
+	role, err := c.AddSysRole(models.Role{Name: "运营", Status: 1, DataScope: models.DataScopeAll})
 	if err != nil {
 		t.Fatalf("add role: %v", err)
 	}
@@ -420,5 +441,117 @@ func TestMigrateLegacyLoginLogTable(t *testing.T) {
 		if !c.Pool.Migrator().HasIndex(models.TableAuditLog, name) {
 			t.Fatalf("缺少索引 %s", name)
 		}
+	}
+}
+
+func TestMigrateRoleAdminFlag(t *testing.T) {
+	c := newTestClient(t)
+	if err := c.MigrateSystemTables(); err != nil {
+		t.Fatalf("migrate: %v", err)
+	}
+
+	// 模拟旧版本数据库：role_key 列存在、旧的唯一索引存在，内置超管尚未标记 is_admin。
+	if err := c.Pool.Exec("ALTER TABLE sys_role ADD COLUMN role_key text").Error; err != nil {
+		t.Fatalf("add legacy role_key: %v", err)
+	}
+	if err := c.Pool.Exec("UPDATE sys_role SET role_key = 'admin', is_admin = 0 WHERE id = ?",
+		seed.RoleAdminId).Error; err != nil {
+		t.Fatalf("seed legacy role_key: %v", err)
+	}
+	if err := c.Pool.Exec("CREATE UNIQUE INDEX uk_sys_role_tenant_key ON sys_role(tenant_id, role_key)").Error; err != nil {
+		t.Fatalf("create legacy index: %v", err)
+	}
+
+	if err := c.migrateRoleAdminFlag(); err != nil {
+		t.Fatalf("migrateRoleAdminFlag: %v", err)
+	}
+	if c.Pool.Migrator().HasColumn(models.TableRole, "role_key") {
+		t.Fatal("迁移后应删除 role_key 列")
+	}
+	if c.Pool.Migrator().HasIndex(models.TableRole, "uk_sys_role_tenant_key") {
+		t.Fatal("迁移后应删除旧的 role_key 唯一索引")
+	}
+	// 迁移只删列，不应破坏角色名唯一索引。
+	if !c.Pool.Migrator().HasIndex(models.TableRole, "uk_sys_role_tenant_name") {
+		t.Fatal("角色名唯一索引丢失")
+	}
+	role, err := c.SysRoleById(seed.RoleAdminId)
+	if err != nil {
+		t.Fatalf("query admin role: %v", err)
+	}
+	if role.IsAdmin != 1 {
+		t.Fatalf("role_key=admin 应回填 is_admin=1，实际 %d", role.IsAdmin)
+	}
+
+	// 幂等：列已删除后再执行不应报错。
+	if err := c.migrateRoleAdminFlag(); err != nil {
+		t.Fatalf("migrateRoleAdminFlag 重复执行: %v", err)
+	}
+}
+
+func TestMigrateTenantBuiltinRolesToGlobal(t *testing.T) {
+	c := newTestClient(t)
+	if err := c.MigrateSystemTables(); err != nil {
+		t.Fatalf("migrate: %v", err)
+	}
+	pctx := tenant.Platform(context.Background())
+	tc, err := c.WithCtx(pctx).AddTenant(models.Tenant{Code: "global_roles", Name: "全局角色租户"})
+	if err != nil {
+		t.Fatalf("add tenant: %v", err)
+	}
+	tctx := tenant.With(pctx, tenant.Context{TenantID: tc.Id})
+
+	userCopy, err := c.WithCtx(tctx).AddSysRole(models.Role{
+		Id: "tenant_" + tc.Id + "_user", Name: seed.RoleTenantUserName,
+		BuiltinKey: seed.BuiltinTenantUser, DataScope: models.DataScopeAll, Status: 1,
+	})
+	if err != nil {
+		t.Fatalf("add user role copy: %v", err)
+	}
+	adminCopy, err := c.WithCtx(tctx).AddSysRole(models.Role{
+		Id: "tenant_" + tc.Id + "_admin", Name: seed.RoleTenantAdminName,
+		BuiltinKey: seed.BuiltinTenantAdmin, IsAdmin: 1, DataScope: models.DataScopeAll, Status: 1,
+	})
+	if err != nil {
+		t.Fatalf("add admin role copy: %v", err)
+	}
+	custom, err := c.WithCtx(tctx).AddSysRole(models.Role{
+		Name: "租户自定义角色", DataScope: models.DataScopeAll, Status: 1,
+	})
+	if err != nil {
+		t.Fatalf("add custom role: %v", err)
+	}
+	user, err := c.WithCtx(tctx).AddSysUser(models.User{Username: "migrate_user", Password: "x", Status: 1})
+	if err != nil {
+		t.Fatalf("add user: %v", err)
+	}
+	if err = c.WithCtx(tctx).SetUserRoles(user.Id, []string{userCopy.Id}); err != nil {
+		t.Fatalf("bind user role: %v", err)
+	}
+
+	if err = c.migrateTenantBuiltinRolesToGlobal(); err != nil {
+		t.Fatalf("migrate builtin roles: %v", err)
+	}
+	// 租户副本已删除，用户绑定改到全局角色。
+	if _, err = c.WithCtx(pctx).SysRoleById(userCopy.Id); err == nil {
+		t.Fatal("租户普通用户副本应已删除")
+	}
+	if _, err = c.WithCtx(pctx).SysRoleById(adminCopy.Id); err == nil {
+		t.Fatal("租户管理员副本应已删除")
+	}
+	roleIds, err := c.WithCtx(pctx).GetUserRoleIds(user.Id)
+	if err != nil {
+		t.Fatalf("get user roles: %v", err)
+	}
+	if len(roleIds) != 1 || roleIds[0] != seed.RoleTenantUserTemplateId {
+		t.Fatalf("用户应绑定到全局普通用户角色，实际 %v", roleIds)
+	}
+	// 自定义角色不受影响。
+	if _, err = c.WithCtx(pctx).SysRoleById(custom.Id); err != nil {
+		t.Fatalf("自定义角色应保留: %v", err)
+	}
+	// 幂等。
+	if err = c.migrateTenantBuiltinRolesToGlobal(); err != nil {
+		t.Fatalf("migrate again: %v", err)
 	}
 }

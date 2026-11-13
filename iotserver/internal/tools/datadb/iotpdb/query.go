@@ -37,7 +37,7 @@ func (c *Client) GetDeviceProperty(req dtos.ThingModelPropertyDataRequest, devic
 	field := quoteIdent(iotp.FieldName(req.Code))
 	start, end := dbcommon.TimeWindow(req.Range, req.Last)
 	where := fmt.Sprintf("device_id = %d AND time >= %d AND time <= %d AND %s IS NOT NULL",
-		target.iotpID, start, end, field)
+		target.iotpID, iotp.MillisToNanos(start), iotp.MillisToNanos(end), field)
 
 	if req.AggInterval > 0 {
 		return c.aggregateProperty(target, field, req, start, end)
@@ -57,7 +57,7 @@ func (c *Client) GetDeviceProperty(req dtos.ThingModelPropertyDataRequest, devic
 	for _, row := range rows {
 		response = append(response, dtos.ReportData{
 			Value: restoreValue(row["v"]),
-			Time:  int64(numberOf(row["time"])),
+			Time:  iotp.NanosToMillis(int64(numberOf(row["time"]))),
 		})
 	}
 	return response, count, nil
@@ -83,7 +83,7 @@ func (c *Client) aggregateProperty(target deviceTarget, field string, req dtos.T
 	sql := fmt.Sprintf(`SELECT time, %s AS v FROM %s
 		WHERE device_id = %d AND time >= %d AND time <= %d AND %s IS NOT NULL
 		ORDER BY time DESC LIMIT %d`,
-		field, c.tableRef(target.table), target.iotpID, start, end, field, maxRawRows)
+		field, c.tableRef(target.table), target.iotpID, iotp.MillisToNanos(start), iotp.MillisToNanos(end), field, maxRawRows)
 
 	ctx, cancel := context.WithTimeout(context.Background(), readTimeout)
 	defer cancel()
@@ -103,7 +103,7 @@ func (c *Client) aggregateProperty(target deviceTarget, field string, req dtos.T
 	for _, row := range result.Rows {
 		raw = append(raw, dtos.ReportData{
 			Value: restoreValue(row["v"]),
-			Time:  int64(numberOf(row["time"])),
+			Time:  iotp.NanosToMillis(int64(numberOf(row["time"]))),
 		})
 	}
 	buckets := aggregate.Bucketize(raw, req.AggInterval, method)
@@ -136,7 +136,7 @@ func (c *Client) GetDeviceEvent(req dtos.ThingModelEventDataRequest, device mode
 		return response, 0, nil
 	}
 	start, end := dbcommon.TimeWindow(req.Range, req.Last)
-	where := fmt.Sprintf("device_id = %d AND time >= %d AND time <= %d", target.iotpID, start, end)
+	where := fmt.Sprintf("device_id = %d AND time >= %d AND time <= %d", target.iotpID, iotp.MillisToNanos(start), iotp.MillisToNanos(end))
 	if len(fields) == 1 {
 		where += fmt.Sprintf(" AND %s IS NOT NULL", quoteIdent(fields[0]))
 	} else {
@@ -158,7 +158,7 @@ func (c *Client) GetDeviceEvent(req dtos.ThingModelEventDataRequest, device mode
 		return response, count, err
 	}
 	for _, row := range rows {
-		ts := int64(numberOf(row["time"]))
+		ts := iotp.NanosToMillis(int64(numberOf(row["time"])))
 		for _, field := range fields {
 			raw, ok := row[field].(string)
 			if !ok || raw == "" {
@@ -193,7 +193,7 @@ func (c *Client) GetDeviceService(req dtos.ThingModelServiceDataRequest, device 
 		return response, 0, nil
 	}
 	start, end := dbcommon.TimeWindow(req.Range, req.Last)
-	where := fmt.Sprintf("device_id = %d AND time >= %d AND time <= %d", target.iotpID, start, end)
+	where := fmt.Sprintf("device_id = %d AND time >= %d AND time <= %d", target.iotpID, iotp.MillisToNanos(start), iotp.MillisToNanos(end))
 	if len(fields) == 1 {
 		where += fmt.Sprintf(" AND %s IS NOT NULL", quoteIdent(fields[0]))
 	} else {
@@ -215,7 +215,7 @@ func (c *Client) GetDeviceService(req dtos.ThingModelServiceDataRequest, device 
 		return response, count, err
 	}
 	for _, row := range rows {
-		ts := int64(numberOf(row["time"]))
+		ts := iotp.NanosToMillis(int64(numberOf(row["time"])))
 		for _, field := range fields {
 			raw, ok := row[field].(string)
 			if !ok || raw == "" {
@@ -263,7 +263,7 @@ func (c *Client) GetDevicePropertyCount(req dtos.ThingModelPropertyDataRequest) 
 	}
 	start, end := dbcommon.TimeWindow(req.Range, req.Last)
 	where := fmt.Sprintf("device_id = %d AND time >= %d AND time <= %d AND %s IS NOT NULL",
-		target.iotpID, start, end, quoteIdent(iotp.FieldName(req.Code)))
+		target.iotpID, iotp.MillisToNanos(start), iotp.MillisToNanos(end), quoteIdent(iotp.FieldName(req.Code)))
 	return c.countRows(target.table, where)
 }
 
@@ -281,7 +281,7 @@ func (c *Client) GetDeviceEventCount(req dtos.ThingModelEventDataRequest) (int, 
 		return 0, err
 	}
 	start, end := dbcommon.TimeWindow(req.Range, req.Last)
-	where := fmt.Sprintf("device_id = %d AND time >= %d AND time <= %d", target.iotpID, start, end)
+	where := fmt.Sprintf("device_id = %d AND time >= %d AND time <= %d", target.iotpID, iotp.MillisToNanos(start), iotp.MillisToNanos(end))
 	conditions := make([]string, 0, len(fields))
 	for _, field := range fields {
 		conditions = append(conditions, fmt.Sprintf("%s IS NOT NULL", quoteIdent(field)))
@@ -296,7 +296,7 @@ func (c *Client) GetDeviceMsgCountByGiveTime(deviceId string, startTime, endTime
 	if err != nil {
 		return 0, err
 	}
-	where := fmt.Sprintf("device_id = %d AND time >= %d AND time <= %d", target.iotpID, startTime, endTime)
+	where := fmt.Sprintf("device_id = %d AND time >= %d AND time <= %d", target.iotpID, iotp.MillisToNanos(startTime), iotp.MillisToNanos(endTime))
 	return c.countRows(target.table, where)
 }
 
@@ -308,7 +308,7 @@ func (c *Client) CountAllMsgByTimeRange(tenantID string, startTime, endTime int6
 	}
 	total := 0
 	for _, table := range tables {
-		where := fmt.Sprintf("time >= %d AND time <= %d", startTime, endTime)
+		where := fmt.Sprintf("time >= %d AND time <= %d", iotp.MillisToNanos(startTime), iotp.MillisToNanos(endTime))
 		if tenantID != "" {
 			where += " AND " + quoteIdent("tenant_id") + " = " + quoteString(tenantID)
 		}
@@ -336,7 +336,7 @@ func (c *Client) CountMsgGroupByDevice(tenantID string, startTime, endTime int64
 		return result, err
 	}
 	for _, table := range tables {
-		where := fmt.Sprintf("time >= %d AND time <= %d", startTime, endTime)
+		where := fmt.Sprintf("time >= %d AND time <= %d", iotp.MillisToNanos(startTime), iotp.MillisToNanos(endTime))
 		if tenantID != "" {
 			where += " AND " + quoteIdent("tenant_id") + " = " + quoteString(tenantID)
 		}

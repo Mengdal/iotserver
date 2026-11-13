@@ -272,12 +272,12 @@ func TestMenuTenantA3CustomMenuOnlyVisibleToGrantedTenantRole(t *testing.T) {
 
 	// 租户A：建角色（只授权该自建菜单）+ 用户，登录后应能看到
 	roleBody, _ := json.Marshal(dtos.SysRoleAddRequest{
-		Name: "A3运维", RoleKey: "a3_ops", DataScope: "1", Status: 1, MenuIds: []string{menuId},
+		Name: "A3运维", DataScope: "1", Status: intPtr(1), MenuIds: []string{menuId},
 	})
 	if resp := parseResponse(t, doRequest(env.engine, http.MethodPost, "/api/v1/role", tokenA, roleBody)); !resp.Success {
 		t.Fatalf("租户A建角色失败: %v", resp.ErrorMsg)
 	}
-	roleId := mtFindRoleIdByKey(t, env, tokenA, "a3_ops")
+	roleId := mtFindRoleIdByName(t, env, tokenA, "A3运维")
 	userBody, _ := json.Marshal(dtos.SysUserAddRequest{
 		Username: "a3ops", Password: "a3pass123", Nickname: "A3运维", Status: 1, RoleIds: []string{roleId},
 	})
@@ -289,11 +289,11 @@ func TestMenuTenantA3CustomMenuOnlyVisibleToGrantedTenantRole(t *testing.T) {
 	}
 
 	// 未授权该菜单的另一个用户（租户A内）看不到
-	roleBody2, _ := json.Marshal(dtos.SysRoleAddRequest{Name: "A3空角色", RoleKey: "a3_none", DataScope: "1", Status: 1})
+	roleBody2, _ := json.Marshal(dtos.SysRoleAddRequest{Name: "A3空角色", DataScope: "1", Status: intPtr(1)})
 	if resp := parseResponse(t, doRequest(env.engine, http.MethodPost, "/api/v1/role", tokenA, roleBody2)); !resp.Success {
 		t.Fatalf("租户A建空角色失败: %v", resp.ErrorMsg)
 	}
-	roleId2 := mtFindRoleIdByKey(t, env, tokenA, "a3_none")
+	roleId2 := mtFindRoleIdByName(t, env, tokenA, "A3空角色")
 	userBody2, _ := json.Marshal(dtos.SysUserAddRequest{
 		Username: "a3none", Password: "a3pass123", Nickname: "A3未授权", Status: 1, RoleIds: []string{roleId2},
 	})
@@ -314,7 +314,7 @@ func TestMenuTenantA3CustomMenuOnlyVisibleToGrantedTenantRole(t *testing.T) {
 	}
 }
 
-func mtFindRoleIdByKey(t *testing.T, env *testEnv, token, roleKey string) string {
+func mtFindRoleIdByName(t *testing.T, env *testEnv, token, name string) string {
 	t.Helper()
 	w := doRequest(env.engine, http.MethodGet, "/api/v1/role?page=1&pageSize=100", token, nil)
 	resp := parseResponse(t, w)
@@ -325,12 +325,12 @@ func mtFindRoleIdByKey(t *testing.T, env *testEnv, token, roleKey string) string
 	list, _ := page["list"].([]interface{})
 	for _, it := range list {
 		role, _ := it.(map[string]interface{})
-		if role["roleKey"] == roleKey {
+		if role["name"] == name {
 			id, _ := role["id"].(string)
 			return id
 		}
 	}
-	t.Fatalf("角色 %s 未找到", roleKey)
+	t.Fatalf("角色 %s 未找到", name)
 	return ""
 }
 
@@ -514,7 +514,7 @@ func TestMenuTenantA8PlatformResetTenantCustomization(t *testing.T) {
 		t.Fatalf("租户A建自建菜单失败: %s", msg)
 	}
 	roleBody, _ := json.Marshal(dtos.SysRoleAddRequest{
-		Name: "A8角色", RoleKey: "a8_role", DataScope: "1", Status: 1, MenuIds: []string{menuId},
+		Name: "A8角色", DataScope: "1", Status: intPtr(1), MenuIds: []string{menuId},
 	})
 	if resp := parseResponse(t, doRequest(env.engine, http.MethodPost, "/api/v1/role", tokenA, roleBody)); !resp.Success {
 		t.Fatalf("租户A建角色失败: %v", resp.ErrorMsg)
