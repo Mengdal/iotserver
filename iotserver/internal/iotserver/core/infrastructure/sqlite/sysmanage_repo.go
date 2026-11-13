@@ -22,6 +22,7 @@ import (
 	"iotserver/internal/dtos"
 	"iotserver/internal/models"
 	"iotserver/internal/pkg/errort"
+	"iotserver/internal/pkg/seed"
 	"iotserver/internal/pkg/utils"
 )
 
@@ -208,20 +209,33 @@ func addSysRole(c *Client, r models.Role) (models.Role, error) {
 	if len(r.Id) == 0 {
 		r.Id = utils.RandomNum()
 	}
-	if r.Status == 0 {
-		r.Status = 1
-	}
 	if r.DataScope == "" {
 		r.DataScope = models.DataScopeAll
 	}
 	var count int64
-	if err := c.Pool.Table(models.TableRole).Where("name = ?", r.Name).Count(&count).Error; err != nil {
+	if err := c.Pool.Table(models.TableRole).
+		Where("name = ? AND tenant_id = ?", r.Name, r.TenantId).Count(&count).Error; err != nil {
 		return r, errort.NewCommonEdgeX(errort.DefaultSystemError, "role query failed", err)
 	}
 	if count > 0 {
 		return r, errort.NewCommonEdgeX(errort.DefaultNameRepeat, fmt.Sprintf("role %s exists", r.Name), nil)
 	}
-	if err := c.Pool.Table(r.TableName()).Create(&r).Error; err != nil {
+	// Status 带 gorm default:1，GORM 会把零值当成“未设置”写入默认值；
+	// 显式创建停用角色时需要在同一事务里回写。
+	explicitDisabled := r.Status == 0
+	err := c.Pool.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Table(r.TableName()).Create(&r).Error; err != nil {
+			return err
+		}
+		if explicitDisabled {
+			if err := tx.Table(r.TableName()).Where("id = ?", r.Id).Update("status", 0).Error; err != nil {
+				return err
+			}
+			r.Status = 0
+		}
+		return nil
+	})
+	if err != nil {
 		return r, errort.NewCommonEdgeX(errort.DefaultSystemError, "role creation failed", err)
 	}
 	return r, nil
@@ -239,7 +253,7 @@ func sysRoleById(c *Client, id string) (models.Role, error) {
 	return r, nil
 }
 
-// sysRoleByNameInTenant / sysRoleByKeyInTenant 显式按租户查重：
+// sysRoleByNameInTenant 显式按租户查重：
 // 平台视图下 GORM 租户插件不过滤，用 WithCtx 会跨租户误判，这里直接带上 tenant_id。
 func sysRoleByNameInTenant(c *Client, name, tenantId string) (models.Role, error) {
 	var r models.Role
@@ -248,19 +262,6 @@ func sysRoleByNameInTenant(c *Client, name, tenantId string) (models.Role, error
 		if err == gorm.ErrRecordNotFound {
 			return r, errort.NewCommonEdgeX(errort.DefaultResourcesNotFound,
 				fmt.Sprintf("role %s not found in tenant %q", name, tenantId), err)
-		}
-		return r, errort.NewCommonEdgeX(errort.DefaultSystemError, "role query failed", err)
-	}
-	return r, nil
-}
-
-func sysRoleByKeyInTenant(c *Client, roleKey, tenantId string) (models.Role, error) {
-	var r models.Role
-	err := c.Pool.Table(r.TableName()).Where("role_key = ? AND tenant_id = ?", roleKey, tenantId).First(&r).Error
-	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return r, errort.NewCommonEdgeX(errort.DefaultResourcesNotFound,
-				fmt.Sprintf("role key %s not found in tenant %q", roleKey, tenantId), err)
 		}
 		return r, errort.NewCommonEdgeX(errort.DefaultSystemError, "role query failed", err)
 	}
@@ -309,8 +310,23 @@ func sysRoleSearch(c *Client, offset, limit int, req dtos.SysRoleSearchRequest) 
 	if req.NameLike != "" {
 		tx = tx.Where("name LIKE ?", "%"+req.NameLike+"%")
 	}
-	if req.RoleKey != "" {
-		tx = tx.Where("role_key = ?", req.RoleKey)
+	if req.Assignable {
+		// 用户表单的角色下拉：平台视图只给平台角色；租户视图给
+		// 「本租户自建角色 + 全局管理员/普通用户」。
+		if req.ScopeTenantId == "" {
+			tx = tx.Where("tenant_id = '' AND (builtin_key = '' OR builtin_key = ?)",
+				seed.BuiltinSuperAdmin)
+		} else {
+			tx = tx.Where("(tenant_id = ? OR (tenant_id = '' AND builtin_key IN (?, ?)))",
+				req.ScopeTenantId, seed.BuiltinTenantAdmin, seed.BuiltinTenantUser)
+		}
+	} else if req.FilterTenant {
+		if req.IncludeGlobalBuiltin && req.ScopeTenantId != "" {
+			tx = tx.Where("(tenant_id = ? OR (tenant_id = '' AND builtin_key IN (?, ?)))",
+				req.ScopeTenantId, seed.BuiltinTenantAdmin, seed.BuiltinTenantUser)
+		} else {
+			tx = tx.Where("tenant_id = ?", req.ScopeTenantId)
+		}
 	}
 	if req.Status != "" {
 		tx = tx.Where("status = ?", req.Status)
@@ -423,14 +439,20 @@ func roleMenusByUserId(c *Client, userId, tenantId string) ([]models.Menu, error
 	var list []models.Menu
 	// 菜单不是行级隔离表（未登记进 tenantScopedModels），原生 SQL 又绕过 GORM 插件，
 	// 所以作用域条件必须手写在这里：平台视图只看 ''，租户视图看 '' + 本租户。
+	roleCond := "AND r.tenant_id = '' AND COALESCE(r.builtin_key, '') NOT IN (?, ?)"
 	tenantCond := "AND m.tenant_id = ''"
-	args := []interface{}{userId}
+	args := []interface{}{userId, seed.BuiltinTenantAdmin, seed.BuiltinTenantUser}
 	if tenantId != "" {
+		roleCond = "AND (r.tenant_id = ? OR (r.tenant_id = '' AND r.builtin_key IN (?, ?)))"
 		tenantCond = "AND m.tenant_id IN ('', ?)"
-		args = append(args, tenantId)
+		args = []interface{}{userId, tenantId, seed.BuiltinTenantAdmin, seed.BuiltinTenantUser, tenantId}
 	}
-	sql := fmt.Sprintf("SELECT DISTINCT m.* FROM %s m INNER JOIN %s rm ON rm.menu_id = m.id INNER JOIN %s ur ON ur.role_id = rm.role_id WHERE ur.user_id = ? AND m.status = 1 %s ORDER BY m.sort ASC",
-		models.TableMenu, models.TableRoleMenu, models.TableUserRole, tenantCond)
+	sql := fmt.Sprintf("SELECT DISTINCT m.* FROM %s m "+
+		"INNER JOIN %s rm ON rm.menu_id = m.id "+
+		"INNER JOIN %s ur ON ur.role_id = rm.role_id "+
+		"INNER JOIN %s r ON r.id = rm.role_id "+
+		"WHERE ur.user_id = ? AND m.status = 1 %s %s ORDER BY m.sort ASC",
+		models.TableMenu, models.TableRoleMenu, models.TableUserRole, models.TableRole, roleCond, tenantCond)
 	if err := c.Pool.Raw(sql, args...).Scan(&list).Error; err != nil {
 		return nil, errort.NewCommonEdgeX(errort.DefaultSystemError, "menu query failed", err)
 	}

@@ -128,10 +128,21 @@ func (c *Client) Database() string {
 }
 
 // Realtime 查询设备所有测量字段的最新值。
+// iotp 返回的 time/updated_at 是纳秒，这里统一转换为平台使用的毫秒。
 func (c *Client) Realtime(ctx context.Context, deviceID int64) (RealtimeDevice, error) {
 	var result RealtimeDevice
 	err := c.do(ctx, http.MethodGet, fmt.Sprintf("/api/v1/realtime/%d", deviceID), nil, &result)
-	return result, err
+	if err != nil {
+		return result, err
+	}
+	for i := range result.Fields {
+		result.Fields[i].Time = NanosToMillis(result.Fields[i].Time)
+	}
+	if result.UpdatedAt != nil {
+		updatedAt := NanosToMillis(*result.UpdatedAt)
+		result.UpdatedAt = &updatedAt
+	}
+	return result, nil
 }
 
 func (c *Client) do(ctx context.Context, method, path string, body any, out any) error {

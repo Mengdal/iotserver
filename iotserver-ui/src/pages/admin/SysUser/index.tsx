@@ -28,11 +28,13 @@ import {
   changeSysUserStatus,
   getAllSysRoles,
   getSysDeptTree,
+  getTenants,
   SysUser,
   SysRole,
   SysDept,
+  Tenant,
 } from '@/api'
-import { useAuth } from '@/utils/auth'
+import { getCurrentTenantId, isPlatformAdmin, useAuth } from '@/utils/auth'
 import { t, tt } from '@/i18n'
 
 const { useMessage } = message
@@ -67,6 +69,9 @@ const SysUserPage: React.FC = () => {
   const [roles, setRoles] = useState<SysRole[]>([])
   const [deptTree, setDeptTree] = useState<DeptTreeNode[]>([])
   const [deptTreeData, setDeptTreeData] = useState<SysDept[]>([])
+  // 平台视图新增用户时先选租户，再加载该租户的角色/部门；不选 = 平台账号。
+  const [tenants, setTenants] = useState<Tenant[]>([])
+  const platformView = isPlatformAdmin() && !getCurrentTenantId()
 
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<SysUser | null>(null)
@@ -96,8 +101,11 @@ const SysUserPage: React.FC = () => {
     }
   }, [form, pagination.current, pagination.pageSize])
 
-  const loadOptions = useCallback(async () => {
-    const [roleResp, deptResp] = await Promise.all([getAllSysRoles(), getSysDeptTree({ isAll: true })])
+  const loadOptions = useCallback(async (tenantId?: string) => {
+    const [roleResp, deptResp] = await Promise.all([
+      getAllSysRoles(tenantId),
+      getSysDeptTree({ isAll: true }, tenantId),
+    ])
     if (roleResp.success) setRoles(roleResp.result || [])
     if (deptResp.success) {
       setDeptTreeData(deptResp.result || [])
@@ -105,9 +113,17 @@ const SysUserPage: React.FC = () => {
     }
   }, [])
 
+  const loadTenantOptions = useCallback(async () => {
+    if (!platformView) return
+    // status=-1 表示不过滤；不传会被后端按 status=0 过滤成空列表。
+    const resp = await getTenants({ page: 1, pageSize: 1000, status: -1 })
+    if (resp.success) setTenants(resp.result.list || [])
+  }, [platformView])
+
   useEffect(() => {
     loadData(1, pagination.pageSize)
-    loadOptions()
+    loadTenantOptions()
+    loadOptions(undefined)
   }, [])
 
   const handleSearch = () => {
@@ -125,6 +141,7 @@ const SysUserPage: React.FC = () => {
     setEditing(null)
     editForm.resetFields()
     editForm.setFieldsValue({ status: 1, roleIds: [] })
+    loadOptions(undefined)
     setModalOpen(true)
   }
 
@@ -140,14 +157,26 @@ const SysUserPage: React.FC = () => {
       remark: record.remark,
       roleIds: record.roleIds || [],
     })
+    // 平台视图编辑租户用户时，角色/部门选项要按该用户所属租户加载。
+    loadOptions(platformView ? record.tenantId : undefined)
     setModalOpen(true)
+  }
+
+  const handleTenantChange = (tenantId?: string) => {
+    editForm.setFieldsValue({ roleIds: [], deptId: undefined })
+    loadOptions(tenantId)
   }
 
   const handleSubmit = async () => {
     const values = await editForm.validateFields()
-    const resp = editing
-      ? await updateSysUser({ ...values, id: editing.id })
-      : await addSysUser(values)
+    let resp
+    if (editing) {
+      resp = await updateSysUser({ ...values, id: editing.id })
+    } else {
+      // tenantId 只用于选择目标租户，不作为请求体字段。
+      const { tenantId, ...userData } = values
+      resp = await addSysUser(userData, tenantId)
+    }
     if (resp.success) {
       messageApi.open({ type: 'success', content: editing ? t('修改成功') : t('新增成功') })
       setModalOpen(false)
@@ -203,8 +232,22 @@ const SysUserPage: React.FC = () => {
     return map
   }, [deptTreeData])
 
+  const tenantNameMap = useMemo(() => {
+    const map: Record<string, string> = {}
+    tenants.forEach(item => { map[item.id] = item.name })
+    return map
+  }, [tenants])
+
   const columns: ColumnsType<SysUser> = [
     { title: t('账号'), dataIndex: 'username', width: 140 },
+    ...(platformView
+      ? [{
+        title: t('所属租户'),
+        dataIndex: 'tenantId',
+        width: 160,
+        render: (value: string) => (value ? (tenantNameMap[value] || value) : t('平台账号')),
+      } as ColumnsType<SysUser>[number]]
+      : []),
     { title: t('昵称'), dataIndex: 'nickname', width: 140 },
     {
       title: t('部门'),
@@ -384,6 +427,20 @@ const SysUserPage: React.FC = () => {
               rules={[{ required: true, message: t('请输入密码') }, { min: 6, message: t('密码长度不能少于 6 位') }]}
             >
               <Input.Password placeholder={t('请输入密码')} />
+            </Form.Item>
+          )}
+          {!editing && platformView && (
+            <Form.Item
+              label={t('所属租户')}
+              name="tenantId"
+              extra={t('不选择则创建平台账号；选择租户后可按该租户分配角色和部门')}
+            >
+              <Select
+                allowClear
+                placeholder={t('平台账号（不属于租户）')}
+                onChange={handleTenantChange}
+                options={tenants.map(item => ({ value: item.id, label: item.name }))}
+              />
             </Form.Item>
           )}
           <Form.Item label={t('昵称')} name="nickname" rules={[{ required: true, message: t('请输入昵称') }]}>

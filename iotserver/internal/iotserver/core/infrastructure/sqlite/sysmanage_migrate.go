@@ -108,6 +108,12 @@ func (c *Client) MigrateSystemTables() error {
 	if err := c.migrateTenantColumns(); err != nil {
 		return err
 	}
+	if err := c.migrateRoleAdminFlag(); err != nil {
+		return err
+	}
+	if err := c.migrateRoleBuiltinKey(); err != nil {
+		return err
+	}
 	if err := c.migrateAuditLogColumns(); err != nil {
 		return err
 	}
@@ -117,7 +123,11 @@ func (c *Client) MigrateSystemTables() error {
 	if err := c.ensurePartialUniqueIndexes(); err != nil {
 		return err
 	}
-	return c.seedSystemData()
+	if err := c.seedSystemData(); err != nil {
+		return err
+	}
+	// 把历史“每租户一份”的内置角色迁移为全局共享角色。
+	return c.migrateTenantBuiltinRolesToGlobal()
 }
 
 // ensurePartialUniqueIndexes 建「只对部分行成立」的唯一索引。
@@ -188,14 +198,6 @@ func (c *Client) migrateTenantColumns() error {
 		}
 	}
 
-	// 权限字符同样只在租户内唯一（不同租户可以都有 admin / factory_ops）
-	if !c.Pool.Migrator().HasIndex("sys_role", "uk_sys_role_tenant_key") {
-		stmt := "CREATE UNIQUE INDEX uk_sys_role_tenant_key ON sys_role(tenant_id, role_key)"
-		if err := c.Pool.Exec(stmt).Error; err != nil {
-			c.loggingClient.Warnf("create unique index uk_sys_role_tenant_key failed: %v", err)
-		}
-	}
-
 	// 菜单归属列：历史菜单全部属于平台（tenant_id=''），回填后才能按「全局 + 租户」过滤。
 	// sys_menu 没有登记进 tenantScopedModels，所以上面的统一 backfill 不会覆盖它。
 	if c.Pool.Migrator().HasTable(models.TableMenu) {
@@ -216,6 +218,80 @@ func (c *Client) migrateTenantColumns() error {
 		stmt := "CREATE UNIQUE INDEX uk_tenant_menu_pref ON tenant_menu_pref(tenant_id, menu_id)"
 		if err := c.Pool.Exec(stmt).Error; err != nil {
 			c.loggingClient.Warnf("create unique index uk_tenant_menu_pref failed: %v", err)
+		}
+	}
+	return nil
+}
+
+// migrateRoleAdminFlag 把历史上的 role_key='admin' 迁移为 is_admin=1，然后删除权限字符列。
+//
+// 背景：旧版本用 role_key 既做角色编码又用来判定超级管理员；现在权限完全由菜单决定，
+// 管理员身份改为 is_admin 标记。迁移必须先回填再删列，且整个过程幂等：
+//   - 新库没有 role_key 列，直接跳过；
+//   - 老库第一次启动回填并删列，之后再启动就没有 role_key 列了。
+func (c *Client) migrateRoleAdminFlag() error {
+	if !c.Pool.Migrator().HasTable(models.TableRole) {
+		return nil
+	}
+	if !c.Pool.Migrator().HasColumn(models.TableRole, "role_key") {
+		return nil
+	}
+	if err := c.Pool.Exec(
+		"UPDATE sys_role SET is_admin = 1 WHERE role_key = 'admin'").Error; err != nil {
+		return fmt.Errorf("backfill sys_role.is_admin failed: %w", err)
+	}
+	if c.Pool.Migrator().HasIndex(models.TableRole, "uk_sys_role_tenant_key") {
+		if err := c.Pool.Exec("DROP INDEX IF EXISTS uk_sys_role_tenant_key").Error; err != nil {
+			c.loggingClient.Warnf("drop legacy index uk_sys_role_tenant_key failed: %v", err)
+		}
+	}
+	// 直接走 SQLite 的 DROP COLUMN：GORM 的 DropColumn 会重建表并丢掉其他索引
+	// （如 uk_sys_role_tenant_name），这里只删列，保留现有索引。
+	if err := c.Pool.Exec("ALTER TABLE sys_role DROP COLUMN role_key").Error; err != nil {
+		c.loggingClient.Warnf("drop legacy sys_role.role_key failed（列保留但代码不再使用）: %v", err)
+	}
+	return nil
+}
+
+// migrateRoleBuiltinKey 回填历史内置角色的标识：
+//   - 平台内置超管 → super_admin；
+//   - 租户内 is_admin=1 的「管理员」或固定 ID 的管理员副本 → tenant_admin；
+//   - 固定 ID 的「普通用户」副本 → tenant_user。
+//
+// 只回填空值，不覆盖已有标识。普通用户只认 seed 生成的固定 ID 前缀，
+// 避免把租户自建的「普通用户」角色误标为全局内置角色。
+func (c *Client) migrateRoleBuiltinKey() error {
+	if !c.Pool.Migrator().HasTable(models.TableRole) ||
+		!c.Pool.Migrator().HasColumn(models.TableRole, "builtin_key") {
+		return nil
+	}
+	updates := []struct {
+		key  string
+		sql  string
+		args []interface{}
+	}{
+		{
+			key:  seed.BuiltinSuperAdmin,
+			sql:  "UPDATE sys_role SET builtin_key = ? WHERE id = ? AND (builtin_key IS NULL OR builtin_key = '')",
+			args: []interface{}{seed.BuiltinSuperAdmin, seed.RoleAdminId},
+		},
+		{
+			key: seed.BuiltinTenantAdmin,
+			sql: "UPDATE sys_role SET builtin_key = ? WHERE tenant_id <> ''" +
+				" AND (id LIKE 'tenant_%_admin' OR (is_admin = 1 AND name = ?))" +
+				" AND (builtin_key IS NULL OR builtin_key = '')",
+			args: []interface{}{seed.BuiltinTenantAdmin, seed.RoleTenantAdminName},
+		},
+		{
+			key: seed.BuiltinTenantUser,
+			sql: "UPDATE sys_role SET builtin_key = ? WHERE tenant_id <> '' AND id LIKE 'tenant_%_user'" +
+				" AND (builtin_key IS NULL OR builtin_key = '')",
+			args: []interface{}{seed.BuiltinTenantUser},
+		},
+	}
+	for _, u := range updates {
+		if err := c.Pool.Exec(u.sql, u.args...).Error; err != nil {
+			return fmt.Errorf("backfill sys_role.builtin_key (%s) failed: %w", u.key, err)
 		}
 	}
 	return nil
@@ -381,18 +457,36 @@ func (c *Client) seedSystemData() error {
 		}
 
 		/******* 角色 *******/
+		createdRoles := make(map[string]bool)
 		for _, role := range seed.DefaultRoles() {
 			var count int64
 			if err := tx.Table("sys_role").Where("id = ?", role.Id).Count(&count).Error; err != nil {
 				return err
 			}
 			if count > 0 {
+				// 全局内置角色的名称/身份/说明跟随代码更新；自定义角色不动。
+				if role.BuiltinKey != "" {
+					if err := tx.Table("sys_role").Where("id = ?", role.Id).
+						Updates(map[string]interface{}{
+							"builtin_key": role.BuiltinKey,
+							"is_admin":    role.IsAdmin,
+							"remark":      role.Remark,
+						}).Error; err != nil {
+						return err
+					}
+				}
 				continue
 			}
 			role.Timestamps = models.Timestamps{Created: now, Modified: now}
 			if err := tx.Table("sys_role").Create(&role).Error; err != nil {
 				return err
 			}
+			createdRoles[role.Id] = true
+		}
+		// 内置超管角色必须始终保留管理员标记：历史数据回填或人工误改都以这里为准。
+		if err := tx.Table("sys_role").Where("id = ?", seed.RoleAdminId).
+			Update("is_admin", 1).Error; err != nil {
+			return err
 		}
 
 		/******* 超管角色绑定全部菜单（只绑平台菜单，租户自建菜单由租户自己授权） *******/
@@ -412,6 +506,23 @@ func (c *Client) seedSystemData() error {
 			if err := tx.Table("sys_role_menu").
 				Create(&models.RoleMenu{RoleId: seed.RoleAdminId, MenuId: menuId}).Error; err != nil {
 				return err
+			}
+		}
+
+		/******* 租户内置角色模板绑定默认菜单（只在模板首次创建时写入，避免覆盖平台管理员的调整） *******/
+		templateMenus := map[string][]string{
+			seed.RoleTenantAdminTemplateId: seed.TenantAdminMenuIds(seed.DefaultMenus()),
+			seed.RoleTenantUserTemplateId:  seed.TenantUserMenuIds(),
+		}
+		for roleId, ids := range templateMenus {
+			if !createdRoles[roleId] {
+				continue
+			}
+			for _, menuId := range ids {
+				if err := tx.Table("sys_role_menu").
+					Create(&models.RoleMenu{RoleId: roleId, MenuId: menuId}).Error; err != nil {
+					return err
+				}
 			}
 		}
 
@@ -581,6 +692,79 @@ func (c *Client) seedSystemData() error {
 	}
 	// 内置工业方案：幂等写入（品类模板 + 物模型模板 + 方案包）
 	return c.seedSolutions()
+}
+
+// migrateTenantBuiltinRolesToGlobal 把历史“每租户一份”的内置角色迁移为
+// 全局共享角色：用户绑定改到全局角色 ID，删除租户副本及其菜单授权。
+func (c *Client) migrateTenantBuiltinRolesToGlobal() error {
+	pctx := tenant.Platform(context.Background())
+	return c.Pool.WithContext(pctx).Transaction(func(db *gorm.DB) error {
+		// 新模型下内置名称是保留名称；存量租户自建角色如果重名，要求先人工改名，
+		// 不能静默把用户角色改成全局角色。
+		var conflicts []models.Role
+		if err := db.Table(models.TableRole).
+			Where("tenant_id <> '' AND COALESCE(builtin_key, '') = '' AND name IN ?",
+				[]string{"超级管理员", seed.RoleTenantAdminName, seed.RoleTenantUserName}).
+			Find(&conflicts).Error; err != nil {
+			return fmt.Errorf("check reserved role names failed: %w", err)
+		}
+		if len(conflicts) > 0 {
+			names := make([]string, 0, len(conflicts))
+			for _, r := range conflicts {
+				names = append(names, fmt.Sprintf("%s/%s", r.TenantId, r.Name))
+			}
+			return fmt.Errorf("存在与内置角色重名的租户自建角色，请先改名后再升级: %s", strings.Join(names, ", "))
+		}
+
+		globalIDs := map[string]string{
+			seed.BuiltinTenantAdmin: seed.RoleTenantAdminTemplateId,
+			seed.BuiltinTenantUser:  seed.RoleTenantUserTemplateId,
+		}
+		for key, id := range globalIDs {
+			var count int64
+			if err := db.Table(models.TableRole).
+				Where("id = ? AND tenant_id = ''", id).Count(&count).Error; err != nil {
+				return fmt.Errorf("check global role %s failed: %w", key, err)
+			}
+			if count == 0 {
+				return fmt.Errorf("global builtin role %s (%s) is missing", key, id)
+			}
+		}
+
+		var copies []models.Role
+		if err := db.Table(models.TableRole).
+			Where("tenant_id <> '' AND builtin_key IN ?", []string{seed.BuiltinTenantAdmin, seed.BuiltinTenantUser}).
+			Find(&copies).Error; err != nil {
+			return fmt.Errorf("query tenant builtin roles failed: %w", err)
+		}
+		for _, copy := range copies {
+			globalID, ok := globalIDs[copy.BuiltinKey]
+			if !ok {
+				continue
+			}
+			var moved int64
+			_ = db.Table(models.TableUserRole).Where("role_id = ?", copy.Id).Count(&moved).Error
+			if err := db.Exec(fmt.Sprintf(
+				"INSERT OR IGNORE INTO %s(user_id, role_id) SELECT user_id, ? FROM %s WHERE role_id = ?",
+				models.TableUserRole, models.TableUserRole), globalID, copy.Id).Error; err != nil {
+				return fmt.Errorf("migrate role bindings of %s failed: %w", copy.Id, err)
+			}
+			if err := db.Exec(fmt.Sprintf("DELETE FROM %s WHERE role_id = ?", models.TableUserRole), copy.Id).Error; err != nil {
+				return fmt.Errorf("delete old role bindings of %s failed: %w", copy.Id, err)
+			}
+			if err := db.Exec(fmt.Sprintf("DELETE FROM %s WHERE role_id = ?", models.TableRoleMenu), copy.Id).Error; err != nil {
+				return fmt.Errorf("delete old role menus of %s failed: %w", copy.Id, err)
+			}
+			if err := db.Exec(fmt.Sprintf("DELETE FROM %s WHERE id = ?", models.TableRole), copy.Id).Error; err != nil {
+				return fmt.Errorf("delete old tenant role %s failed: %w", copy.Id, err)
+			}
+			if c.loggingClient != nil {
+				c.loggingClient.Infof("内置角色全局化: 租户 %s 的角色 %s 迁移 %d 个用户绑定到全局角色 %s",
+					copy.TenantId, copy.Name, moved, globalID)
+			}
+		}
+		return nil
+	})
 }
 
 // seedSolutions 写入内置工业方案（内置行业模板）。

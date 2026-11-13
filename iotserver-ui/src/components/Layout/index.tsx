@@ -334,9 +334,9 @@ const MainLayout: React.FC = () => {
             <img
               src={brandAssets.logo}
               alt=""
-              style={{ height: 26, maxWidth: 120, objectFit: 'contain' }}
+              style={{ height: 14, maxWidth: 80, objectFit: 'contain' }}
             />
-            <div style={{ fontSize: '14px', fontWeight: 600 }}>
+            <div style={{ fontSize: '14px', fontWeight: 600, lineHeight: '14px' }}>
               {site.name || 'iotserver'}
             </div>
           </div>

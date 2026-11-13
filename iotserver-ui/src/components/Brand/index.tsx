@@ -2,14 +2,15 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 import { getSiteInfo, SiteInfo } from '@/api'
 
 /** 系统默认素材：未上传时回退到这些内置资源 */
-import defaultLogo from '@/assets/images/logo-hex.svg'
+import defaultLogo from '@/assets/images/logo-lm.png'
+import defaultLoginLogo from '@/assets/images/logo-lm-square.png'
 import defaultLoginBackground from '@/assets/images/background.png'
 import { t } from '@/i18n'
 const DEFAULT_LOGO = defaultLogo as string
 const DEFAULT_LOGIN_BACKGROUND = defaultLoginBackground as string
-const DEFAULT_FAVICON = '/favicon.ico'
-// 登录页与顶栏用同一个矢量 Logo（六边形环，任意尺寸都清晰）
-const DEFAULT_LOGIN_LOGO = DEFAULT_LOGO
+const DEFAULT_FAVICON = '/favicon.png'
+// 顶栏用横版 LM，登录页用方形 LM
+const DEFAULT_LOGIN_LOGO = defaultLoginLogo as string
 
 const DEFAULT_SITE: SiteInfo = {
   name: t('iotserver 物联网平台'),

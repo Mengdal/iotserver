@@ -208,8 +208,9 @@ func (uapp *userApp) buildLoginUser(ctx context.Context, user models.User, lang 
 		TenantId:    user.TenantId,
 	}
 
-	// 角色/权限查询按传入 ctx 的作用域执行：登录时是平台作用域，个人中心时是用户所属租户
-	db := uapp.dbClient.WithCtx(ctx)
+	// 角色/权限查询：角色表同时存全局内置角色和租户角色，统一用平台作用域
+	// 读取后按用户租户过滤；菜单查询仍按目标租户作用域。
+	db := uapp.dbClient.WithCtx(tenant.Platform(ctx))
 
 	roleIds, err := db.GetUserRoleIds(user.Id)
 	if err != nil {
@@ -217,7 +218,7 @@ func (uapp *userApp) buildLoginUser(ctx context.Context, user models.User, lang 
 	}
 	result.RoleIds = roleIds
 
-	roles, err := db.SysRolesByIds(roleIds)
+	roles, err := uapp.rolesForUser(user)
 	if err != nil {
 		return result, err
 	}
@@ -225,8 +226,9 @@ func (uapp *userApp) buildLoginUser(ctx context.Context, user models.User, lang 
 	admin := false
 	scope := ""
 	for _, r := range roles {
-		result.Roles = append(result.Roles, r.RoleKey)
-		if r.RoleKey == seed.RoleAdminKey {
+		// roles 是展示用字段：角色权限字符已移除，返回角色名称更可读。
+		result.Roles = append(result.Roles, r.Name)
+		if r.IsAdmin == 1 {
 			admin = true
 		}
 		scope = widestDataScope(scope, r.DataScope)
@@ -324,7 +326,7 @@ func (uapp *userApp) menusOfUser(userId, tenantId string, admin bool) ([]models.
 
 // IsAdminUsername 判断用户名是否为**平台**超级管理员。
 //
-// 重要：租户内的同名 admin 角色不算平台管理员 —— 平台管理员必须不属于任何租户
+// 重要：租户内的管理员角色（is_admin=1）不算平台管理员 —— 平台管理员必须不属于任何租户
 // （user.tenant_id 为空）。否则租户管理员会拿到「权限直通」，从而访问平台级接口
 // （如租户管理），造成越权。
 func (uapp *userApp) IsAdminUsername(username string) bool {
@@ -340,13 +342,13 @@ func (uapp *userApp) IsAdminUsername(username string) bool {
 	if user.TenantId != "" {
 		return false
 	}
-	return uapp.hasAdminRole(sysDb, user.Id)
+	return uapp.hasAdminRole(user)
 }
 
 // PermissionsByUsername 获取用户权限标识集合。
 //
 // 与 buildLoginUser 保持一致：
-//   - 拥有内置 admin 角色的用户在该租户内拥有全部租户级权限（租户管理员）；
+//   - 拥有管理员角色（is_admin=1）的用户在该租户内拥有全部租户级权限（租户管理员）；
 //   - 平台级菜单（platform_only=1，如租户管理）只对平台管理员生效，租户用户一律过滤掉。
 func (uapp *userApp) PermissionsByUsername(username string) ([]string, error) {
 	sysDb := uapp.dbClient.WithCtx(tenant.Platform(context.Background()))
@@ -354,7 +356,7 @@ func (uapp *userApp) PermissionsByUsername(username string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	menus, err := uapp.menusOfUser(user.Id, user.TenantId, uapp.hasAdminRole(sysDb, user.Id))
+	menus, err := uapp.menusOfUser(user.Id, user.TenantId, uapp.hasAdminRole(user))
 	if err != nil {
 		return nil, err
 	}
@@ -364,24 +366,20 @@ func (uapp *userApp) PermissionsByUsername(username string) ([]string, error) {
 	return collectPerms(menus), nil
 }
 
-// hasAdminRole 判断用户是否拥有内置 admin 角色（租户内的 admin 同样算，代表该租户的管理员）
-func (uapp *userApp) hasAdminRole(db interfaces.DBClient, userId string) bool {
-	adminRole, _ := uapp.roleInfo(db, userId)
+// hasAdminRole 判断用户是否拥有管理员角色（is_admin=1；租户内的管理员同样算，代表该租户的管理员）
+func (uapp *userApp) hasAdminRole(user models.User) bool {
+	adminRole, _ := uapp.roleInfo(user)
 	return adminRole
 }
 
-// roleInfo 汇总用户的角色信息：是否内置 admin 角色 + 最宽数据范围
-func (uapp *userApp) roleInfo(db interfaces.DBClient, userId string) (adminRole bool, scope string) {
-	roleIds, err := db.GetUserRoleIds(userId)
-	if err != nil {
-		return false, ""
-	}
-	roles, err := db.SysRolesByIds(roleIds)
+// roleInfo 汇总用户的角色信息：是否管理员角色 + 最宽数据范围
+func (uapp *userApp) roleInfo(user models.User) (adminRole bool, scope string) {
+	roles, err := uapp.rolesForUser(user)
 	if err != nil {
 		return false, ""
 	}
 	for _, r := range roles {
-		if r.RoleKey == seed.RoleAdminKey {
+		if r.IsAdmin == 1 {
 			adminRole = true
 		}
 		scope = widestDataScope(scope, r.DataScope)
@@ -607,7 +605,7 @@ func (uapp *userApp) CreateTokenDetail(userName string) (*dtos.TokenDetail, erro
 	userID = parseClaimUserId(user.Id)
 	tenantId = user.TenantId
 	deptId = user.DeptId
-	adminRole, scope := uapp.roleInfo(sysDb, user.Id)
+	adminRole, scope := uapp.roleInfo(user)
 	dataScope = scope
 	platformAdmin = adminRole && user.TenantId == ""
 	// OpenAPI 登录与刷新 token 都要遵守租户停用/到期规则

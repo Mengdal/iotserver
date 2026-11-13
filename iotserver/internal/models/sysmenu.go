@@ -24,8 +24,10 @@ type Menu struct {
 	MenuType  string `gorm:"column:menu_type;type:string;size:8;default:C;comment:菜单类型 M目录 C菜单 F按钮 L链接"`
 	Perms     string `gorm:"column:perms;type:string;size:255;comment:权限标识"`
 	Sort      int    `gorm:"column:sort;type:int;default:0;comment:显示顺序"`
-	Visible   int    `gorm:"column:visible;type:int;default:1;comment:是否显示 1显示 0隐藏"`
-	Status    int    `gorm:"column:status;type:int;default:1;comment:状态 1正常 0停用"`
+	// Visible/Status 不能写 default 标签：GORM 会把 0 当成未设置而写入默认值，
+	// 导致 Visible=0 的隐藏菜单（如采集配置）被存成 1。
+	Visible int `gorm:"column:visible;type:int;comment:是否显示 1显示 0隐藏"`
+	Status  int `gorm:"column:status;type:int;comment:状态 1正常 0停用"`
 	// IsFrame 1=内链（不是外链） 0=外链。不能写 default:1——GORM 会把 0 当未设置
 	// 而改用默认值，外链类型将永远存不进去。
 	IsFrame int `gorm:"column:is_frame;type:int;comment:是否外链 1否 0是"`

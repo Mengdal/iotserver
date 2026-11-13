@@ -151,6 +151,10 @@ func GetZhMessages() []*i18n.Message {
 			ID:    "21714",
 			Other: `{{.info}}`,
 		},
+		{
+			ID:    "21724",
+			Other: `根部门不允许删除`,
+		},
 
 		// 驱动库
 		{

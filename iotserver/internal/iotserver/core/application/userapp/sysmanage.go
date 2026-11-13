@@ -47,11 +47,14 @@ func (uapp *userApp) SysUserAdd(ctx context.Context, req dtos.SysUserAddRequest)
 	if err := uapp.validatePassword(req.Password); err != nil {
 		return err
 	}
-	if _, err := uapp.dbClient.WithCtx(ctx).GetUserByUserName(req.Username); err == nil {
+	target := targetTenant(ctx)
+	userDB := uapp.dbClient.WithCtx(tenantContext(ctx, target))
+	// 账号名登录时全局唯一，查重不受租户过滤影响。
+	if _, err := uapp.platformDB(ctx).GetUserByUserName(req.Username); err == nil {
 		return errort.NewCommonEdgeX(errort.DefaultNameRepeat, fmt.Sprintf("username %s exists", req.Username), nil)
 	}
 	if req.DeptId != "" {
-		if _, err := uapp.dbClient.WithCtx(ctx).SysDeptById(req.DeptId); err != nil {
+		if _, err := userDB.SysDeptById(req.DeptId); err != nil {
 			return err
 		}
 	}
@@ -75,15 +78,15 @@ func (uapp *userApp) SysUserAdd(ctx context.Context, req dtos.SysUserAddRequest)
 	if user.Nickname == "" {
 		user.Nickname = user.Username
 	}
-	created, err := uapp.dbClient.WithCtx(ctx).AddSysUser(user)
+	created, err := userDB.AddSysUser(user)
 	if err != nil {
 		return err
 	}
 	if len(req.RoleIds) > 0 {
-		if err = uapp.checkRolesExist(req.RoleIds); err != nil {
+		if err = uapp.checkRolesAssignable(ctx, target, req.RoleIds); err != nil {
 			return err
 		}
-		if err = uapp.dbClient.WithCtx(ctx).SetUserRoles(created.Id, req.RoleIds); err != nil {
+		if err = uapp.platformDB(ctx).SetUserRoles(created.Id, req.RoleIds); err != nil {
 			return err
 		}
 	}
@@ -101,13 +104,14 @@ func (uapp *userApp) SysUserUpdate(ctx context.Context, req dtos.SysUserUpdateRe
 			return errort.NewCommonErr(errort.AppAdminNotAllowOperate, fmt.Errorf("admin account can not be disabled"))
 		}
 	}
+	userDB := uapp.dbClient.WithCtx(tenantContext(ctx, user.TenantId))
 	if req.DeptId != "" {
-		if _, err = uapp.dbClient.WithCtx(ctx).SysDeptById(req.DeptId); err != nil {
+		if _, err = userDB.SysDeptById(req.DeptId); err != nil {
 			return err
 		}
 	}
 	if len(req.RoleIds) > 0 {
-		if err = uapp.checkRolesExist(req.RoleIds); err != nil {
+		if err = uapp.checkRolesAssignable(ctx, user.TenantId, req.RoleIds); err != nil {
 			return err
 		}
 	}
@@ -118,10 +122,10 @@ func (uapp *userApp) SysUserUpdate(ctx context.Context, req dtos.SysUserUpdateRe
 	user.Status = req.Status
 	user.Remark = req.Remark
 	user.Modified = nowMilli()
-	if err = uapp.dbClient.WithCtx(ctx).UpdateSysUser(user); err != nil {
+	if err = userDB.UpdateSysUser(user); err != nil {
 		return err
 	}
-	return uapp.dbClient.WithCtx(ctx).SetUserRoles(user.Id, req.RoleIds)
+	return uapp.platformDB(ctx).SetUserRoles(user.Id, req.RoleIds)
 }
 
 func (uapp *userApp) SysUserDelete(ctx context.Context, ids []string) error {
@@ -183,126 +187,147 @@ func (uapp *userApp) SysUserChangeStatus(ctx context.Context, id string, status 
 	return uapp.dbClient.WithCtx(ctx).UpdateSysUser(user)
 }
 
-func (uapp *userApp) checkRolesExist(roleIds []string) error {
-	if len(roleIds) == 0 {
-		return nil
-	}
-	// 平台作用域：系统路径，不按租户过滤
-	roles, err := uapp.dbClient.WithCtx(tenant.Platform(context.Background())).SysRolesByIds(roleIds)
-	if err != nil {
-		return err
-	}
-	if len(roles) != len(dedupStrings(roleIds)) {
-		return errort.NewCommonEdgeX(errort.DefaultResourcesNotFound, "some roles not found", nil)
-	}
-	return nil
-}
-
 /******************************* 角色管理 *******************************/
 
 func (uapp *userApp) SysRoleSearch(ctx context.Context, req dtos.SysRoleSearchRequest) ([]dtos.SysRoleResponse, uint32, error) {
+	// 角色列表只展示当前作用域：
+	//   平台视图 → 平台角色（全局内置 + 平台自建）
+	//   租户视图 → 本租户自建角色 + 全局管理员/普通用户
+	target := targetTenant(ctx)
+	req.FilterTenant = true
+	req.ScopeTenantId = target
+	req.IncludeGlobalBuiltin = target != ""
 	offset, limit := pageParams(req.Page, req.PageSize, req.IsAll)
-	list, total, err := uapp.dbClient.WithCtx(ctx).SysRoleSearch(offset, limit, req)
+	db := uapp.platformDB(ctx)
+	list, total, err := db.SysRoleSearch(offset, limit, req)
 	if err != nil {
 		return nil, 0, err
 	}
 	result := make([]dtos.SysRoleResponse, 0, len(list))
 	for _, item := range list {
-		menuIds, _ := uapp.dbClient.WithCtx(ctx).GetRoleMenuIds(item.Id)
+		menuIds, _ := db.GetRoleMenuIds(item.Id)
 		result = append(result, toRoleResponse(item, menuIds))
 	}
 	return result, total, nil
 }
 
 func (uapp *userApp) SysRoleById(ctx context.Context, id string) (dtos.SysRoleResponse, error) {
-	role, err := uapp.dbClient.WithCtx(ctx).SysRoleById(id)
+	role, err := uapp.loadVisibleRole(ctx, id)
 	if err != nil {
 		return dtos.SysRoleResponse{}, err
 	}
-	menuIds, _ := uapp.dbClient.WithCtx(ctx).GetRoleMenuIds(id)
+	menuIds, _ := uapp.platformDB(ctx).GetRoleMenuIds(id)
 	return toRoleResponse(role, menuIds), nil
 }
 
 func (uapp *userApp) SysRoleAdd(ctx context.Context, req dtos.SysRoleAddRequest) error {
-	// 角色按租户隔离：查重必须限定在"这个角色将要归属的租户"内。
-	// 平台视图下插件不过滤，所以显式带 tenant_id，避免与别的租户的角色误判重复。
-	tenantId := tenant.FromContext(ctx).TenantID
-	roleKey := strings.TrimSpace(req.RoleKey)
-	if roleKey == "" {
-		return errort.NewCommonEdgeX(errort.DefaultReqParamsError, "roleKey is required", nil)
-	}
-	if _, err := uapp.dbClient.WithCtx(ctx).SysRoleByNameInTenant(req.Name, tenantId); err == nil {
+	target := targetTenant(ctx)
+	if isReservedRoleName(req.Name) {
 		return errort.NewCommonEdgeX(errort.DefaultNameRepeat,
-			fmt.Sprintf("角色名称 %s 在该租户下已存在", req.Name), nil)
+			fmt.Sprintf("角色名称 %s 是内置角色保留名称", req.Name), nil)
 	}
-	if _, err := uapp.dbClient.WithCtx(ctx).SysRoleByKeyInTenant(roleKey, tenantId); err == nil {
+	// 查重限定在角色将要归属的作用域内。
+	if _, err := uapp.platformDB(ctx).SysRoleByNameInTenant(req.Name, target); err == nil {
 		return errort.NewCommonEdgeX(errort.DefaultNameRepeat,
-			fmt.Sprintf("权限字符 %s 在该租户下已存在", roleKey), nil)
+			fmt.Sprintf("角色名称 %s 在该作用域下已存在", req.Name), nil)
+	}
+	// 未传 status 时默认启用；显式传 0 表示创建为停用角色。
+	status := 1
+	if req.Status != nil {
+		status = *req.Status
 	}
 	role := models.Role{
-		Id:         utils.GenUUID(),
-		Name:       req.Name,
-		RoleKey:    strings.TrimSpace(req.RoleKey),
-		Sort:       req.Sort,
-		DataScope:  req.DataScope,
-		Status:     req.Status,
-		Remark:     req.Remark,
-		Timestamps: models.Timestamps{Created: nowMilli(), Modified: nowMilli()},
+		// 管理员角色是全局内置的，接口不允许新建管理员角色。
+		Id:          utils.GenUUID(),
+		TenantField: models.TenantField{TenantId: target},
+		Name:        req.Name,
+		IsAdmin:     0,
+		Sort:        req.Sort,
+		DataScope:   req.DataScope,
+		Status:      status,
+		Remark:      req.Remark,
+		Timestamps:  models.Timestamps{Created: nowMilli(), Modified: nowMilli()},
 	}
 	if role.DataScope == "" {
 		role.DataScope = models.DataScopeAll
 	}
-	created, err := uapp.dbClient.WithCtx(ctx).AddSysRole(role)
+	db := uapp.platformDB(ctx)
+	created, err := db.AddSysRole(role)
 	if err != nil {
 		return err
 	}
 	if len(req.MenuIds) > 0 {
-		if err = uapp.checkMenusExist(ctx, req.MenuIds); err != nil {
+		if err = uapp.checkMenusExistInTenant(ctx, target, req.MenuIds); err != nil {
 			return err
 		}
-		return uapp.dbClient.WithCtx(ctx).SetRoleMenus(created.Id, req.MenuIds)
+		return db.SetRoleMenus(created.Id, req.MenuIds)
 	}
 	return nil
 }
 
 func (uapp *userApp) SysRoleUpdate(ctx context.Context, req dtos.SysRoleUpdateRequest) error {
-	role, err := uapp.dbClient.WithCtx(ctx).SysRoleById(req.Id)
+	role, err := uapp.loadVisibleRole(ctx, req.Id)
 	if err != nil {
 		return err
 	}
-	if role.RoleKey == seed.RoleAdminKey && req.Status == 0 {
+	if role.BuiltinKey != "" {
+		// 全局内置角色由平台统一维护：租户侧只能看，名称也不允许改。
+		if err = requirePlatformForBuiltin(ctx, role); err != nil {
+			return err
+		}
+		if req.Name != role.Name {
+			return errort.NewCommonErr(errort.AppAdminNotAllowOperate,
+				fmt.Errorf("builtin role name can not be changed"))
+		}
+	} else if isReservedRoleName(req.Name) {
+		return errort.NewCommonEdgeX(errort.DefaultNameRepeat,
+			fmt.Sprintf("角色名称 %s 是内置角色保留名称", req.Name), nil)
+	}
+	if role.IsAdmin == 1 && req.Status == 0 {
 		return errort.NewCommonErr(errort.AppAdminNotAllowOperate, fmt.Errorf("admin role can not be disabled"))
 	}
-	updateTenantId := tenant.FromContext(ctx).TenantID
-	updateRoleKey := strings.TrimSpace(req.RoleKey)
-	if updateRoleKey == "" {
-		return errort.NewCommonEdgeX(errort.DefaultReqParamsError, "roleKey is required", nil)
-	}
-	if exist, eErr := uapp.dbClient.WithCtx(ctx).SysRoleByNameInTenant(req.Name, updateTenantId); eErr == nil && exist.Id != req.Id {
+	// 查重按角色自身所属作用域：平台管理员在平台视图编辑租户角色时，ctx 的
+	// TenantID 是空串，不能拿它去做跨租户查重。
+	if exist, eErr := uapp.platformDB(ctx).SysRoleByNameInTenant(req.Name, role.TenantId); eErr == nil && exist.Id != req.Id {
 		return errort.NewCommonEdgeX(errort.DefaultNameRepeat,
-			fmt.Sprintf("角色名称 %s 在该租户下已存在", req.Name), nil)
-	}
-	if exist, eErr := uapp.dbClient.WithCtx(ctx).SysRoleByKeyInTenant(updateRoleKey, updateTenantId); eErr == nil && exist.Id != req.Id {
-		return errort.NewCommonEdgeX(errort.DefaultNameRepeat,
-			fmt.Sprintf("权限字符 %s 在该租户下已存在", updateRoleKey), nil)
+			fmt.Sprintf("角色名称 %s 在该作用域下已存在", req.Name), nil)
 	}
 
 	if len(req.MenuIds) > 0 {
-		if err = uapp.checkMenusExist(ctx, req.MenuIds); err != nil {
+		if err = uapp.checkMenusExistInTenant(ctx, role.TenantId, req.MenuIds); err != nil {
 			return err
 		}
 	}
 	role.Name = req.Name
-	role.RoleKey = strings.TrimSpace(req.RoleKey)
+	// IsAdmin / TenantId / BuiltinKey 不在编辑接口暴露，角色身份保持不变。
 	role.Sort = req.Sort
 	role.DataScope = req.DataScope
 	role.Status = req.Status
 	role.Remark = req.Remark
 	role.Modified = nowMilli()
-	if err = uapp.dbClient.WithCtx(ctx).UpdateSysRole(role); err != nil {
+	db := uapp.platformDB(ctx)
+	if err = db.UpdateSysRole(role); err != nil {
 		return err
 	}
-	return uapp.dbClient.WithCtx(ctx).SetRoleMenus(role.Id, req.MenuIds)
+	// MenuIds 为 nil 表示调用方只改角色字段，不动菜单授权。
+	if req.MenuIds == nil {
+		return nil
+	}
+	return db.SetRoleMenus(role.Id, req.MenuIds)
+}
+
+// requirePlatformForBuiltin 全局内置角色只允许平台管理员修改。
+func requirePlatformForBuiltin(ctx context.Context, role models.Role) error {
+	if role.BuiltinKey == "" || tenant.FromContext(ctx).IsPlatformAdmin {
+		return nil
+	}
+	return errort.NewCommonErr(errort.AppAdminNotAllowOperate,
+		fmt.Errorf("builtin role can only be managed by platform admin"))
+}
+
+// isTenantBuiltin 是否为租户可见的全局内置角色（管理员 / 普通用户）。
+func isTenantBuiltin(key string) bool {
+	return key == seed.BuiltinTenantAdmin || key == seed.BuiltinTenantUser
 }
 
 func (uapp *userApp) SysRoleDelete(ctx context.Context, ids []string) error {
@@ -310,17 +335,17 @@ func (uapp *userApp) SysRoleDelete(ctx context.Context, ids []string) error {
 		return errort.NewCommonErr(errort.DefaultReqParamsError, fmt.Errorf("ids is empty"))
 	}
 	for _, id := range ids {
-		if id == seed.RoleAdminId {
-			return errort.NewCommonErr(errort.AppAdminNotAllowOperate, fmt.Errorf("admin role can not be deleted"))
-		}
-		role, err := uapp.dbClient.WithCtx(ctx).SysRoleById(id)
+		role, err := uapp.loadVisibleRole(ctx, id)
 		if err != nil {
 			return err
 		}
-		if role.RoleKey == seed.RoleAdminKey {
+		if role.BuiltinKey != "" {
+			return errort.NewCommonErr(errort.AppAdminNotAllowOperate, fmt.Errorf("builtin role can not be deleted"))
+		}
+		if role.IsAdmin == 1 {
 			return errort.NewCommonErr(errort.AppAdminNotAllowOperate, fmt.Errorf("admin role can not be deleted"))
 		}
-		userIds, err := uapp.dbClient.WithCtx(ctx).SysUserIdsByRoleId(id)
+		userIds, err := uapp.platformDB(ctx).SysUserIdsByRoleId(id)
 		if err != nil {
 			return err
 		}
@@ -328,45 +353,47 @@ func (uapp *userApp) SysRoleDelete(ctx context.Context, ids []string) error {
 			return errort.NewCommonEdgeX(errort.AppRoleInUse, fmt.Sprintf("role %s is assigned to users", role.Name), nil)
 		}
 	}
-	if err := uapp.dbClient.WithCtx(ctx).DeleteUserRolesByRoleIds(ids); err != nil {
+	db := uapp.platformDB(ctx)
+	if err := db.DeleteUserRolesByRoleIds(ids); err != nil {
 		return err
 	}
-	if err := uapp.dbClient.WithCtx(ctx).DeleteRoleMenusByRoleIds(ids); err != nil {
+	if err := db.DeleteRoleMenusByRoleIds(ids); err != nil {
 		return err
 	}
-	return uapp.dbClient.WithCtx(ctx).DeleteSysRoleByIds(ids)
+	return db.DeleteSysRoleByIds(ids)
 }
 
 func (uapp *userApp) SysRoleAll(ctx context.Context) ([]dtos.SysRoleResponse, error) {
-	list, err := uapp.dbClient.WithCtx(ctx).SysRoleAll()
+	// 用户表单的角色下拉：只返回当前作用域可分配的角色。
+	req := dtos.SysRoleSearchRequest{IsAll: true, Assignable: true}
+	list, _, err := uapp.SysRoleSearch(ctx, req)
 	if err != nil {
 		return nil, err
 	}
-	result := make([]dtos.SysRoleResponse, 0, len(list))
-	for _, item := range list {
-		menuIds, _ := uapp.dbClient.WithCtx(ctx).GetRoleMenuIds(item.Id)
-		result = append(result, toRoleResponse(item, menuIds))
-	}
-	return result, nil
+	return list, nil
 }
 
 func (uapp *userApp) SysRoleMenus(ctx context.Context, roleId string) ([]string, error) {
-	if _, err := uapp.dbClient.WithCtx(ctx).SysRoleById(roleId); err != nil {
+	if _, err := uapp.loadVisibleRole(ctx, roleId); err != nil {
 		return nil, err
 	}
-	return uapp.dbClient.WithCtx(ctx).GetRoleMenuIds(roleId)
+	return uapp.platformDB(ctx).GetRoleMenuIds(roleId)
 }
 
 func (uapp *userApp) SysRoleSetMenus(ctx context.Context, req dtos.SysRoleMenuRequest) error {
-	if _, err := uapp.dbClient.WithCtx(ctx).SysRoleById(req.RoleId); err != nil {
+	role, err := uapp.loadVisibleRole(ctx, req.RoleId)
+	if err != nil {
+		return err
+	}
+	if err = requirePlatformForBuiltin(ctx, role); err != nil {
 		return err
 	}
 	if len(req.MenuIds) > 0 {
-		if err := uapp.checkMenusExist(ctx, req.MenuIds); err != nil {
+		if err = uapp.checkMenusExistInTenant(ctx, role.TenantId, req.MenuIds); err != nil {
 			return err
 		}
 	}
-	return uapp.dbClient.WithCtx(ctx).SetRoleMenus(req.RoleId, req.MenuIds)
+	return uapp.platformDB(ctx).SetRoleMenus(role.Id, req.MenuIds)
 }
 
 /******************************* 菜单管理 *******************************/
@@ -560,7 +587,7 @@ func (uapp *userApp) MenuRoutesByUsername(username string) ([]dtos.SysMenuRespon
 		return nil, err
 	}
 	// 与 buildLoginUser 用同一套判定：租户内的 admin 角色同样是该租户的管理员
-	admin := uapp.hasAdminRole(sysDb, user.Id)
+	admin := uapp.hasAdminRole(user)
 	menus, err := uapp.menusOfUser(user.Id, user.TenantId, admin)
 	if err != nil {
 		return nil, err
@@ -700,6 +727,13 @@ func (uapp *userApp) menuDescendants(rootId, tenantId string) ([]string, error) 
 // checkMenusExist 校验角色要授权的菜单都在当前作用域内：
 // 可以是平台菜单或本租户自建菜单，但不能是其他租户的菜单。
 func (uapp *userApp) checkMenusExist(ctx context.Context, menuIds []string) error {
+	return uapp.checkMenusExistInTenant(ctx, targetTenant(ctx), menuIds)
+}
+
+// checkMenusExistInTenant 按指定租户校验菜单作用域。
+// 编辑角色时用角色自身的 tenant_id：平台管理员在平台视图编辑租户角色时，
+// ctx 的目标租户是空串，不能拿它来判断菜单是否属于该租户。
+func (uapp *userApp) checkMenusExistInTenant(ctx context.Context, tenantId string, menuIds []string) error {
 	menus, err := uapp.dbClient.WithCtx(ctx).SysMenusByIds(menuIds)
 	if err != nil {
 		return err
@@ -707,9 +741,8 @@ func (uapp *userApp) checkMenusExist(ctx context.Context, menuIds []string) erro
 	if len(menus) != len(dedupStrings(menuIds)) {
 		return errort.NewCommonEdgeX(errort.DefaultResourcesNotFound, "some menus not found", nil)
 	}
-	target := targetTenant(ctx)
 	for _, m := range menus {
-		if !menuInScope(m, target) {
+		if !menuInScope(m, tenantId) {
 			return errort.NewCommonErr(errort.AppPermissionDenied,
 				errort.NewMessageErr("菜单 {{.p1}} 不属于当前作用域，不能授权", map[string]interface{}{"p1": m.Id}))
 		}
@@ -922,8 +955,10 @@ func (uapp *userApp) SysDeptDelete(ctx context.Context, ids []string) error {
 		return errort.NewCommonErr(errort.DefaultReqParamsError, fmt.Errorf("ids is empty"))
 	}
 	for _, id := range ids {
+		// 平台根部门是内置组织树根节点，不允许删除；普通顶级部门不受影响。
 		if id == seed.DeptRootId {
-			return errort.NewCommonErr(errort.AppAdminNotAllowOperate, fmt.Errorf("root dept can not be deleted"))
+			return errort.NewCommonErr(errort.AppDeptRootNotAllowOperate,
+				fmt.Errorf("root dept can not be deleted"))
 		}
 	}
 	childCount, err := uapp.dbClient.WithCtx(ctx).SysDeptCountByParentIds(ids)

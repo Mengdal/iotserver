@@ -319,6 +319,11 @@ func TestGetDevicePropertyHistoryAndLatest(t *testing.T) {
 	if !strings.Contains(f.queries[1], "ORDER BY time DESC") {
 		t.Errorf("历史查询 SQL 未按时间倒序: %s", f.queries[1])
 	}
+	// iotp 的 time 列是纳秒，查询时间窗必须按纳秒下发。
+	if !strings.Contains(f.queries[1], "time >= 1600000000000000000") ||
+		!strings.Contains(f.queries[1], "time <= 1800000000000000000") {
+		t.Errorf("时间窗未转换为纳秒: %s", f.queries[1])
+	}
 
 	// Last=true 表示最近 30 分钟窗口
 	_, _, err = c.GetDeviceProperty(dtos.ThingModelPropertyDataRequest{

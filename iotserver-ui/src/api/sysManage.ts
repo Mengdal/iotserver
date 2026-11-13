@@ -5,6 +5,8 @@ import { CommonResponse, TableReponseType } from '@/types'
 
 export interface SysUser {
   id: string
+  /** 所属租户；空串 = 平台账号 */
+  tenantId?: string
   username: string
   nickname: string
   email: string
@@ -24,7 +26,10 @@ export interface SysUser {
 export interface SysRole {
   id: string
   name: string
-  roleKey: string
+  /** 1 = 管理员角色：菜单全给、接口鉴权放行 */
+  isAdmin: number
+  /** 内置角色标识；非空表示由平台统一维护，租户不能修改 */
+  builtinKey?: string
   sort: number
   dataScope: string
   status: number
@@ -69,6 +74,8 @@ export interface TenantMenuPref {
 export interface SysDept {
   id: string
   parentId: string
+  /** 平台内置根部门：不可删除 */
+  builtin?: boolean
   ancestors: string
   name: string
   /** 节点类型 1公司 2工厂 3车间 4产线 */
@@ -154,11 +161,13 @@ export function getSysUsers<T = TableReponseType<SysUser>> (params?: Record<stri
   })
 }
 
-export function addSysUser<T = void> (data: Record<string, any>) {
+export function addSysUser<T = void> (data: Record<string, any>, tenantId?: string) {
   return httpRequest<any, CommonResponse<T>>({
     url: '/api/v1/sys-user',
     method: 'post',
     data,
+    // 平台视图可指定用户归属租户；租户视图不传，使用当前租户。
+    headers: tenantId ? { 'x-tenant-id': tenantId } : undefined,
   })
 }
 
@@ -204,10 +213,11 @@ export function getSysRoles<T = TableReponseType<SysRole>> (params?: Record<stri
   })
 }
 
-export function getAllSysRoles<T = SysRole[]> () {
+export function getAllSysRoles<T = SysRole[]> (tenantId?: string) {
   return httpRequest<any, CommonResponse<T>>({
     url: '/api/v1/role/all',
     method: 'get',
+    headers: tenantId ? { 'x-tenant-id': tenantId } : undefined,
   })
 }
 
@@ -318,11 +328,12 @@ export function resetSysMenuTenant<T = void> (tenantId: string) {
   })
 }
 
-export function getSysDeptTree<T = SysDept[]> (params?: Record<string, any>) {
+export function getSysDeptTree<T = SysDept[]> (params?: Record<string, any>, tenantId?: string) {
   return httpRequest<any, CommonResponse<T>>({
     url: '/api/v1/dept-tree',
     method: 'get',
     params,
+    headers: tenantId ? { 'x-tenant-id': tenantId } : undefined,
   })
 }
 

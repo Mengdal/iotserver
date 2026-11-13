@@ -95,3 +95,21 @@ func TestAPIError(t *testing.T) {
 		t.Fatalf("expected conflict, got %v", err)
 	}
 }
+
+func TestTimeUnitConversion(t *testing.T) {
+	const millis = int64(1794448335000)
+	if got := MillisToNanos(millis); got != millis*1_000_000 {
+		t.Fatalf("MillisToNanos(%d) = %d", millis, got)
+	}
+	cases := map[int64]int64{
+		millis:             millis, // 毫秒
+		millis * 1_000:     millis, // 微秒
+		millis * 1_000_000: millis, // 纳秒
+		millis / 1_000:     millis, // 秒
+	}
+	for in, want := range cases {
+		if got := NanosToMillis(in); got != want {
+			t.Fatalf("NanosToMillis(%d) = %d, want %d", in, got, want)
+		}
+	}
+}

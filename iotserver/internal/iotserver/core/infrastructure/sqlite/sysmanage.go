@@ -91,10 +91,6 @@ func (c *Client) SysRoleByNameInTenant(name, tenantId string) (models.Role, erro
 	return sysRoleByNameInTenant(c, name, tenantId)
 }
 
-func (c *Client) SysRoleByKeyInTenant(roleKey, tenantId string) (models.Role, error) {
-	return sysRoleByKeyInTenant(c, roleKey, tenantId)
-}
-
 func (c *Client) SysRoleByName(name string) (models.Role, error) {
 	return sysRoleByName(c, name)
 }

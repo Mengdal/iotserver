@@ -8,6 +8,7 @@ import (
 
 	"iotserver/internal/dtos"
 	"iotserver/internal/models"
+	"iotserver/internal/pkg/seed"
 	"iotserver/internal/pkg/tenant"
 	"iotserver/internal/tools/things"
 )
@@ -21,6 +22,7 @@ func nowMilli() int64 {
 func (uapp *userApp) toSysUserResponse(u models.User) dtos.SysUserResponse {
 	res := dtos.SysUserResponse{
 		Id:        u.Id,
+		TenantId:  u.TenantId,
 		Username:  u.Username,
 		Nickname:  u.Nickname,
 		Email:     u.Email,
@@ -42,13 +44,11 @@ func (uapp *userApp) toSysUserResponse(u models.User) dtos.SysUserResponse {
 	}
 	if roleIds, err := uapp.dbClient.WithCtx(tenant.Platform(context.Background())).GetUserRoleIds(u.Id); err == nil {
 		res.RoleIds = roleIds
-		if len(roleIds) > 0 {
-			if roles, rErr := uapp.dbClient.WithCtx(tenant.Platform(context.Background())).SysRolesByIds(roleIds); rErr == nil {
-				for _, r := range roles {
-					res.RoleNames = append(res.RoleNames, r.Name)
-					if r.RoleKey == "admin" {
-						res.Admin = true
-					}
+		if roles, rErr := uapp.rolesForUser(u); rErr == nil {
+			for _, r := range roles {
+				res.RoleNames = append(res.RoleNames, r.Name)
+				if r.IsAdmin == 1 {
+					res.Admin = true
 				}
 			}
 		}
@@ -61,16 +61,17 @@ func toRoleResponse(r models.Role, menuIds []string) dtos.SysRoleResponse {
 		menuIds = []string{}
 	}
 	return dtos.SysRoleResponse{
-		Id:        r.Id,
-		Name:      r.Name,
-		RoleKey:   r.RoleKey,
-		Sort:      r.Sort,
-		DataScope: r.DataScope,
-		Status:    r.Status,
-		Remark:    r.Remark,
-		MenuIds:   menuIds,
-		Created:   r.Created,
-		Modified:  r.Modified,
+		Id:         r.Id,
+		Name:       r.Name,
+		IsAdmin:    r.IsAdmin,
+		BuiltinKey: r.BuiltinKey,
+		Sort:       r.Sort,
+		DataScope:  r.DataScope,
+		Status:     r.Status,
+		Remark:     r.Remark,
+		MenuIds:    menuIds,
+		Created:    r.Created,
+		Modified:   r.Modified,
 	}
 }
 
@@ -101,6 +102,7 @@ func toDeptResponse(d models.Dept) dtos.SysDeptResponse {
 	return dtos.SysDeptResponse{
 		Id:        d.Id,
 		ParentId:  d.ParentId,
+		Builtin:   d.Id == seed.DeptRootId,
 		Ancestors: d.Ancestors,
 		Name:      d.Name,
 		DeptType:  normalizeDeptType(d.DeptType),

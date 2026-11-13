@@ -58,6 +58,7 @@ type SysUserRegisterRequest struct {
 // SysUserResponse 用户信息
 type SysUserResponse struct {
 	Id        string   `json:"id"`
+	TenantId  string   `json:"tenantId"`
 	Username  string   `json:"username"`
 	Nickname  string   `json:"nickname"`
 	Email     string   `json:"email"`

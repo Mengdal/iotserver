@@ -13,6 +13,7 @@ const (
 	SystemComponentMosquittoId = "sys-mosquitto"
 	SystemComponentEKuiperId   = "sys-ekuiper"
 	SystemComponentIotEdgeDBId = "sys-iotedgedb"
+	SystemComponentIotpGWId    = "sys-iotpgw"
 )
 
 // 驱动市场分类：系统组件。
@@ -134,7 +135,7 @@ func EnsureSystemComponents(tx *gorm.DB) error {
 	// 已存在的系统组件补齐分类，旧数据也能出现在市场里。
 	if err := tx.Table("device_library").
 		Where("id IN ? AND (classify_id IS NULL OR classify_id = 0)",
-			[]string{SystemComponentMosquittoId, SystemComponentEKuiperId, SystemComponentIotEdgeDBId}).
+			[]string{SystemComponentMosquittoId, SystemComponentEKuiperId, SystemComponentIotEdgeDBId, SystemComponentIotpGWId}).
 		Update("classify_id", SystemComponentClassifyID).Error; err != nil {
 		return err
 	}
@@ -187,6 +188,21 @@ func EnsureSystemComponents(tx *gorm.DB) error {
 				Icon:       "/assets/iotedgedb.png",
 				Manual:     "http://docs.lmgateway.com/",
 			},
+		},
+		{
+			Id:              SystemComponentIotpGWId,
+			Name:            "iotpGW",
+			Description:     "软网关采集引擎，负责通道、设备与点位的采集，并把数据写入 iotp 时序库。",
+			Protocol:        "HTTP",
+			Version:         "builtin",
+			SupportVersions: models.SupportVersions{},
+			IsInternal:      true,
+			Category:        models.PluginCategorySystem,
+			Runtime:         models.PluginRuntimeBuiltin,
+			Arch:            "any",
+			Essential:       false,
+			Source:          "builtin",
+			DeviceMarket:    models.DeviceMarket{ClassifyId: SystemComponentClassifyID, Icon: "/assets/iotpgw.png"},
 		},
 	}
 	for i := range components {

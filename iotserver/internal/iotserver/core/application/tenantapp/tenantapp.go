@@ -230,8 +230,11 @@ func (app *tenantApp) TenantDelete(ctx context.Context, id string) error {
 		return err
 	}
 	if bound {
-		if err = app.things.DeleteProject(ctx, binding.ThingsProjectId); err != nil {
-			return err
+		// things 是外部系统：凭据失效、网络不可达或项目已被外部删除时，
+		// 不能因此阻塞本地租户删除。删除本地绑定记录即可，外部清理失败只记日志。
+		if delErr := app.things.DeleteProject(ctx, binding.ThingsProjectId); delErr != nil && app.lc != nil {
+			app.lc.Warnf("删除租户 %s 的 things 项目 %d 失败，继续删除本地租户: %v",
+				id, binding.ThingsProjectId, delErr)
 		}
 	}
 	if err = app.dbClient.WithCtx(ctx).DeleteTenant(id); err != nil {
@@ -249,6 +252,22 @@ func (app *tenantApp) TenantDelete(ctx context.Context, id string) error {
 	// 菜单定制数据清理失败不回滚删除：菜单定制属于展示层数据，缺失不影响主体删除
 	if err = app.dbClient.WithCtx(ctx).CleanupTenantMenuRecords(id); err != nil && app.lc != nil {
 		app.lc.Warnf("删除租户 %s 后清理菜单定制数据失败: %v", id, err)
+	}
+	// 租户自建角色随租户删除；全局内置角色不在这里清理。
+	if roles, rErr := db.SysRoleAll(); rErr == nil && len(roles) > 0 {
+		roleIDs := make([]string, 0, len(roles))
+		for _, r := range roles {
+			roleIDs = append(roleIDs, r.Id)
+		}
+		if err = db.DeleteUserRolesByRoleIds(roleIDs); err != nil && app.lc != nil {
+			app.lc.Warnf("删除租户 %s 后清理角色绑定失败: %v", id, err)
+		}
+		if err = db.DeleteRoleMenusByRoleIds(roleIDs); err != nil && app.lc != nil {
+			app.lc.Warnf("删除租户 %s 后清理角色菜单失败: %v", id, err)
+		}
+		if err = db.DeleteSysRoleByIds(roleIDs); err != nil && app.lc != nil {
+			app.lc.Warnf("删除租户 %s 后清理角色失败: %v", id, err)
+		}
 	}
 	return nil
 }

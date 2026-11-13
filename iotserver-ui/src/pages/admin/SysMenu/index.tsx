@@ -501,12 +501,16 @@ const SysMenuPage: React.FC = () => {
         message={scopeText}
       />
 
-      <Tabs
-        activeKey={activeTab}
-        onChange={key => setActiveTab(key as TabKey)}
-        items={tabItems}
-        style={{ marginBottom: 8 }}
-      />
+      {/* 平台视图只有平台菜单一个作用域，不需要页签；租户视图才需要在
+          「本租户自定义菜单」和「平台菜单」之间切换。 */}
+      {tenantView && (
+        <Tabs
+          activeKey={activeTab}
+          onChange={key => setActiveTab(key as TabKey)}
+          items={tabItems}
+          style={{ marginBottom: 8 }}
+        />
+      )}
 
       <Form
         form={searchForm}

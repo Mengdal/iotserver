@@ -44,8 +44,21 @@ const (
 
 // 内置角色
 const (
-	RoleAdminId  = "8000000000000000001"
-	RoleAdminKey = "admin"
+	RoleAdminId = "8000000000000000001"
+	// 平台级内置角色模板：平台视图只显示这一份，修改后同步到所有租户。
+	RoleTenantAdminTemplateId = "8000000000000000002"
+	RoleTenantUserTemplateId  = "8000000000000000003"
+
+	// 租户内置角色名称：每个租户创建时自动生成，也可在启动时补齐。
+	RoleTenantAdminName = "管理员"
+	RoleTenantUserName  = "普通用户"
+)
+
+// 内置角色标识：内置角色不允许租户修改；平台管理员修改后同步到所有租户。
+const (
+	BuiltinSuperAdmin  = "super_admin"
+	BuiltinTenantAdmin = "tenant_admin"
+	BuiltinTenantUser  = "tenant_user"
 )
 
 // 平台级菜单（platform_only=1，不下发给租户用户）
@@ -389,7 +402,7 @@ func DefaultDepts() []models.Dept {
 			Id:        DeptRootId,
 			ParentId:  "0",
 			Ancestors: "0",
-			Name:      "iotserver",
+			Name:      "平台总部",
 			Sort:      1,
 			Leader:    AdminName,
 			Status:    1,
@@ -397,19 +410,96 @@ func DefaultDepts() []models.Dept {
 	}
 }
 
-// DefaultRoles 默认角色
+// DefaultRoles 平台默认角色。
+//
+// 除了平台超级管理员，还包含两份「租户内置角色模板」：平台视图显示它们，
+// 平台管理员修改后由 SysRoleUpdate 同步到所有租户的同名内置角色。
 func DefaultRoles() []models.Role {
 	return []models.Role{
 		{
-			Id:        RoleAdminId,
-			Name:      "超级管理员",
-			RoleKey:   RoleAdminKey,
-			Sort:      1,
-			DataScope: models.DataScopeAll,
-			Status:    1,
-			Remark:    "拥有全部权限",
+			Id:         RoleAdminId,
+			Name:       "超级管理员",
+			IsAdmin:    1,
+			BuiltinKey: BuiltinSuperAdmin,
+			Sort:       1,
+			DataScope:  models.DataScopeAll,
+			Status:     1,
+			Remark:     "平台管理员，可管理租户，拥有平台全部权限",
+		},
+		{
+			Id:         RoleTenantAdminTemplateId,
+			Name:       RoleTenantAdminName,
+			IsAdmin:    1,
+			BuiltinKey: BuiltinTenantAdmin,
+			Sort:       2,
+			DataScope:  models.DataScopeAll,
+			Status:     1,
+			Remark:     "全局租户管理员角色：拥有本租户全部权限，可管理本租户用户；所有租户共用",
+		},
+		{
+			Id:         RoleTenantUserTemplateId,
+			Name:       RoleTenantUserName,
+			IsAdmin:    0,
+			BuiltinKey: BuiltinTenantUser,
+			Sort:       3,
+			DataScope:  models.DataScopeAll,
+			Status:     1,
+			Remark:     "全局普通用户角色：可查看首页、设备、数据看板和历史数据；所有租户共用",
 		},
 	}
+}
+
+// TenantUserMenuIds 普通用户的基础菜单与只读按钮权限：
+// 首页、设备查看、历史查询、数据看板、告警中心和文档。
+//
+// 菜单本身只带 list 权限；详情请求还需要各模块的 query 权限，因此这里从默认菜单里
+// 把这些按钮菜单一起挑出来，保证普通用户能打开详情，但不能新增/修改/删除。
+func TenantUserMenuIds() []string {
+	base := map[string]struct{}{
+		MenuHomeId:        {},
+		MenuGatewayId:     {},
+		MenuProduct:       {},
+		MenuDevice:        {},
+		MenuGatewayManage: {},
+		MenuDataId:        {},
+		MenuDataHistory:   {},
+		MenuVizGroupId:    {},
+		MenuVizId:         {},
+		MenuMonitorId:     {},
+		MenuAlarm:         {},
+		MenuDocsId:        {},
+	}
+	readPerms := map[string]struct{}{
+		permissions.ProductQuery: {},
+		permissions.DeviceQuery:  {},
+		permissions.GatewayQuery: {},
+		permissions.AlertQuery:   {},
+	}
+	ids := make([]string, 0, len(base)+len(readPerms))
+	for _, m := range DefaultMenus() {
+		if _, ok := base[m.Id]; ok {
+			ids = append(ids, m.Id)
+			continue
+		}
+		if _, ok := readPerms[m.Perms]; ok {
+			ids = append(ids, m.Id)
+		}
+	}
+	return ids
+}
+
+// TenantAdminMenuIds 管理员角色展示用的菜单集合：
+// 租户可见的全部菜单（排除平台专属菜单）。管理员本身有权限直通，这里写入
+// 角色-菜单关联只是为了让「菜单权限」抽屉能正确显示已授权范围。
+func TenantAdminMenuIds(menus []models.Menu) []string {
+	ids := make([]string, 0, len(menus))
+	for _, m := range menus {
+		if m.PlatformOnly == 1 {
+			continue
+		}
+		ids = append(ids, m.Id)
+	}
+	return ids
 }
 
 // 系统配置默认项

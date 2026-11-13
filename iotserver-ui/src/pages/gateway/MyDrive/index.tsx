@@ -270,9 +270,14 @@ const MyDrive: React.FC = () => {
       dataIndex: 'kind',
       width: 110,
       render: (value: DriverKind) => {
-        if (value === 'native') return <Tag color="blue">{t('驱动组件')}</Tag>
-        if (value === 'system') return <Tag color="purple">{t('系统组件')}</Tag>
-        return <Tag color="default">Docker</Tag>
+        // 与驱动市场的类型标签保持一致：协议驱动 / 驱动组件 / 系统组件，
+        // 不再把 Docker 当作类型名称展示。
+        const label = value === 'system'
+          ? t('系统组件')
+          : value === 'native'
+            ? t('驱动组件')
+            : t('协议驱动')
+        return <Tag color="default">{label}</Tag>
       },
     },
     {

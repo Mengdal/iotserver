@@ -742,6 +742,21 @@ func (p alertApp) AddAlert(ctx context.Context, req map[string]interface{}) erro
 		return errort.NewCommonErr(errort.DefaultReqParamsError, errors.New(""))
 	}
 
+	// 告警由 eKuiper 回调触发，请求本身没有租户上下文。先用平台作用域按 rule_id
+	// 定位规则（规则 ID 全局唯一），再从规则反查租户；设备/产品必须在同一租户下
+	// 读取，避免用别的租户的设备数据生成告警。
+	alertRule, err := p.dbClient.WithCtx(tenant.Platform(ctx)).AlertRuleById(coverRuleId)
+	if err != nil {
+		return err
+	}
+	if alertRule.TenantId != "" {
+		ctx = tenant.With(ctx, tenant.Context{TenantID: alertRule.TenantId})
+	}
+	// 历史数据或外部改动可能留下没有子规则的规则，回调里不能直接取 SubRule[0]。
+	if len(alertRule.SubRule) == 0 {
+		return errort.NewCommonErr(errort.AlertRuleParamsError,
+			fmt.Errorf("alertRule id(%s) subrule is null", alertRule.Id))
+	}
 	device, err := p.dbClient.WithCtx(ctx).DeviceById(coverDeviceId)
 	if err != nil {
 		return err
@@ -749,15 +764,6 @@ func (p alertApp) AddAlert(ctx context.Context, req map[string]interface{}) erro
 	product, err := p.dbClient.WithCtx(ctx).ProductById(device.ProductId)
 	if err != nil {
 		return err
-	}
-	alertRule, err := p.dbClient.WithCtx(ctx).AlertRuleById(coverRuleId)
-	if err != nil {
-		return err
-	}
-	// 告警由 eKuiper 回调触发，请求本身没有租户上下文：从告警规则反查租户，
-	// 后续写入都落到该租户下，否则租户在「告警中心」看不到自己的告警。
-	if alertRule.TenantId != "" {
-		ctx = tenant.With(ctx, tenant.Context{TenantID: alertRule.TenantId})
 	}
 
 	alertResult := make(map[string]interface{})
