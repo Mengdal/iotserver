@@ -112,3 +112,10 @@ Path = '/opt/iotserver/ekuiper/log/stream.log'
 Id = 'sys-iotpgw'
 Name = 'iotpGW'
 Path = '/var/log/iotserver/iotpgw.log'
+
+# IotEdgeDB 是外部服务，默认不提供日志入口。
+# 如果 iotp 与 iotserver 同机，或日志目录已挂载到本机，可启用：
+# [[ComponentLogs.Sources]]
+# Id = 'sys-iotedgedb'
+# Name = 'IotEdgeDB'
+# Path = '/var/log/iotp/iotp.log'

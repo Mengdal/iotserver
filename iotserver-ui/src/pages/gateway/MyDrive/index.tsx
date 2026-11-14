@@ -15,6 +15,7 @@ import {
   Switch,
   Table,
   Tag,
+  Tooltip,
   Typography,
 } from 'antd'
 import { DownOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons'
@@ -362,7 +363,15 @@ const MyDrive: React.FC = () => {
         }
         if (record.kind === 'system') {
           const item = record.system!
-          if (!item.logConfigured) return <Text type="secondary">-</Text>
+          if (!item.logConfigured) {
+            return (
+              <Tooltip title={t('外部服务，未配置本机日志文件；可在 [ComponentLogs] 中配置路径')}>
+                <span>
+                  <Button type="link" size="small" disabled>{t('日志')}</Button>
+                </span>
+              </Tooltip>
+            )
+          }
           return (
             <Button type="link" size="small" onClick={() => openSystemLogs(item)}>
               {t('日志')}

@@ -300,6 +300,16 @@ Id = 'sys-mosquitto'
 Path = '/var/log/iotserver/mosquitto.log'
 ```
 
+IotEdgeDB 是外部时序库，默认不显示日志入口。如果 iotp 与 iotserver 同机，
+或日志目录已挂载到本机，增加 `Id = 'sys-iotedgedb'` 的日志源即可启用：
+
+```toml
+[[ComponentLogs.Sources]]
+Id = 'sys-iotedgedb'
+Name = 'IotEdgeDB'
+Path = '/var/log/iotp/iotp.log'
+```
+
 iotpGW 默认只输出到 stdout，启动脚本会把它重定向到
 `/var/log/iotserver/iotpgw.log`：
 
@@ -381,7 +391,8 @@ ReloadCommand = '/etc/init.d/S93iotserver-iotpgw restart'
 DriverABI = ''              # 留空不校验
 ```
 
-- 在“驱动组件 → 驱动市场 → 安装 .so 驱动”上传，只接受与平台架构一致的 `.so`
+- 在“驱动组件 → 驱动市场 → 安装驱动包”上传，平台按文件类型自动分流：
+  `.so` 安装到 iotpGW，`.tar.gz` / `.tgz` 按原生插件包安装
 - 平台校验文件名、架构、ABI、SHA256 后直接写入 `DriverDir`（iotserver 与 iotpGW 同机）
 - 替换前备份旧文件，替换后执行 `ReloadCommand`；失败自动回滚
 - 同一个 `.so` 文件名只允许一条记录，升级前先卸载

@@ -10,7 +10,8 @@ Phase 1（同机直接写目录）已实现：
 
 - 后端：`driverapp/soinstaller.go`、`driverapp/sodriver.go`
 - 接口：`POST/GET/DELETE /api/v1/drivers/so`
-- 前端：驱动市场“安装 .so 驱动”、`iotpgw-so` 卡片状态与卸载
+- 前端：驱动市场统一“安装驱动包”入口，按文件类型自动分流 `.so` / 原生插件包；
+  `iotpgw-so` 卡片状态与卸载
 - 配置：`[CollectEngine] DriverDir / BackupDir / ReloadMode / ReloadCommand / DriverABI`
 - 校验：文件名、架构、ABI、SHA256、100MB 上限、同名文件去重
 - 安装：`.staging` 临时文件 → 备份旧文件 → 原子替换 → reload；失败回滚

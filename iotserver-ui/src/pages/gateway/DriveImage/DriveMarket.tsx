@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useContext, useCallback } from 'react'
-import { Card, Tag, Typography, Space, Divider, Button, message, Form, Input, Empty, Modal, Popconfirm, Upload } from 'antd'
-import { CheckCircleOutlined, ClockCircleOutlined, CloudServerOutlined, UploadOutlined } from '@ant-design/icons'
+import { Card, Tag, Typography, Space, Divider, Button, message, Form, Input, Empty, Popconfirm } from 'antd'
+import { CloudServerOutlined, UploadOutlined } from '@ant-design/icons'
 import { WebSocketProvider, WebSocketContext } from '@/components/WebSocket'
 import { OperateStatusMap } from '@/utils/statusMap'
 import { deleteSODriver, getDriverMarket, uploadPluginPackage, uploadSODriver } from '@/api'
@@ -91,12 +91,10 @@ const CardItem = ({
             const isSystem = item.category === 'system'
             const isNative = item.runtime === 'native'
             const isSO = item.runtime === 'iotpgw-so'
-            // 系统组件/驱动组件/原生 .so 驱动不使用“下载镜像”的状态文案。
-            const statusMeta = isSO
-              ? (item.operate_status === 'installed'
-                ? { color: 'success', icon: <CheckCircleOutlined />, text: t('已安装') }
-                : { color: 'default', icon: <ClockCircleOutlined />, text: t('未安装') })
-              : (isSystem || isNative ? OperateStatusMap.installed : OperateStatusMap[item.operate_status])
+            // 系统组件/驱动组件使用已下载状态；.so 驱动与协议驱动保持一致。
+            const statusMeta = isSystem || isNative
+              ? OperateStatusMap.installed
+              : OperateStatusMap[item.operate_status]
             const { color, icon, text } = statusMeta
             const handleDeleteSO = async (id: string) => {
               const resp = await deleteSODriver(id)
@@ -201,7 +199,7 @@ const CardItem = ({
                     {text}
                   </Tag>
                   <Tag color="default">
-                    {isSystem ? t('系统组件') : isNative ? t('驱动组件') : isSO ? t('驱动库') : t('协议驱动')}
+                    {isSystem ? t('系统组件') : isNative ? t('驱动组件') : t('协议驱动')}
                   </Tag>
                   {isSystem && item.essential && <Tag color="blue">{t('必需')}</Tag>}
                 </Space>
@@ -245,11 +243,6 @@ const DriveMarket: React.FC<DriveMarketProps> = () => {
   const canUpload = useAuth('gateway:drive:add')
   const embedded = isEmbeddedDeployment()
 
-  const [soOpen, setSoOpen] = useState(false)
-  const [soUploading, setSoUploading] = useState(false)
-  const [soFile, setSoFile] = useState<File | null>(null)
-  const [soForm] = Form.useForm()
-
   const [form] = Form.useForm()
   const [params, setParams] = useState<{ name?: string }>({})
 
@@ -263,53 +256,31 @@ const DriveMarket: React.FC<DriveMarketProps> = () => {
     search()
   }
 
-  const handleUploadPackage = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  // 同一个入口根据文件类型分流：.so 走 iotpGW 驱动安装，其余按原生插件包安装。
+  const handleUploadFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     event.target.value = ''
     if (!file) return
-    setUploading(true)
-    try {
-      const resp = await uploadPluginPackage(file)
-      if (resp.success) {
-        messageApi.success(t('插件包安装成功'))
-        setReloadKey(key => key + 1)
-      } else {
-        messageApi.error(resp.errorMsg)
-      }
-    } catch (error: any) {
-      messageApi.error(error?.message || t('插件包安装失败'))
-    } finally {
-      setUploading(false)
-    }
-  }
-
-  const openSO = () => {
-    soForm.resetFields()
-    soForm.setFieldsValue({ version: '1.0.0' })
-    setSoFile(null)
-    setSoOpen(true)
-  }
-
-  const handleUploadSO = async () => {
-    const values = await soForm.validateFields()
-    if (!soFile) {
-      messageApi.error(t('请选择 .so 驱动文件'))
+    const isSO = /\.so$/i.test(file.name)
+    if (isSO && !embedded) {
+      messageApi.error(t('只有嵌入式部署支持安装 .so 驱动'))
       return
     }
-    setSoUploading(true)
+    setUploading(true)
     try {
-      const resp = await uploadSODriver(soFile, values)
+      const resp = isSO
+        ? await uploadSODriver(file, {})
+        : await uploadPluginPackage(file)
       if (resp.success) {
-        messageApi.success(t('驱动安装成功'))
-        setSoOpen(false)
+        messageApi.success(isSO ? t('驱动安装成功') : t('插件包安装成功'))
         setReloadKey(key => key + 1)
       } else {
         messageApi.error(resp.errorMsg)
       }
     } catch (error: any) {
-      messageApi.error(error?.message || t('驱动安装失败'))
+      messageApi.error(error?.message || (isSO ? t('驱动安装失败') : t('插件包安装失败')))
     } finally {
-      setSoUploading(false)
+      setUploading(false)
     }
   }
 
@@ -333,71 +304,19 @@ const DriveMarket: React.FC<DriveMarketProps> = () => {
         {canUpload && (
           <Form.Item>
             <Button icon={<UploadOutlined />} loading={uploading} onClick={() => uploadRef.current?.click()}>
-              {t('安装插件包')}
+              {t('安装驱动包')}
             </Button>
             <input
               ref={uploadRef}
               type="file"
-              accept=".tar.gz,.tgz,application/gzip"
+              accept={embedded ? '.so,.tar.gz,.tgz,application/gzip' : '.tar.gz,.tgz,application/gzip'}
               style={{ display: 'none' }}
-              onChange={handleUploadPackage}
+              onChange={handleUploadFile}
             />
-          </Form.Item>
-        )}
-        {canUpload && embedded && (
-          <Form.Item>
-            <Button icon={<UploadOutlined />} onClick={openSO}>
-              {t('安装 .so 驱动')}
-            </Button>
           </Form.Item>
         )}
       </Form>
       <CardItem params={params} reloadKey={reloadKey} />
-
-      <Modal
-        open={soOpen}
-        title={t('安装 .so 驱动')}
-        destroyOnClose
-        okText={t('确定')}
-        cancelText={t('取消')}
-        confirmLoading={soUploading}
-        onOk={handleUploadSO}
-        onCancel={() => setSoOpen(false)}
-      >
-        <Form form={soForm} layout="vertical" initialValues={{ version: '1.0.0' }}>
-          <Form.Item label={t('驱动名称')} name="name" extra={t('留空时使用文件名')}>
-            <Input placeholder={t('驱动名称')} />
-          </Form.Item>
-          <Form.Item label={t('版本')} name="version">
-            <Input placeholder="1.0.0" />
-          </Form.Item>
-          <Form.Item label={t('协议')} name="protocol">
-            <Input placeholder={t('如 Modbus TCP')} />
-          </Form.Item>
-          <Form.Item label={t('架构')} name="arch" extra={t('留空按当前平台架构')}>
-            <Input placeholder="arm64" />
-          </Form.Item>
-          <Form.Item label="ABI" name="abi">
-            <Input placeholder={t('留空不校验')} />
-          </Form.Item>
-          <Form.Item label={t('说明')} name="description">
-            <Input.TextArea rows={2} />
-          </Form.Item>
-          <Form.Item label={t('驱动文件')} required>
-            <Upload
-              accept=".so"
-              maxCount={1}
-              beforeUpload={(file) => {
-                setSoFile(file as File)
-                return false
-              }}
-              onRemove={() => setSoFile(null)}
-            >
-              <Button icon={<UploadOutlined />}>{t('选择 .so 文件')}</Button>
-            </Upload>
-          </Form.Item>
-        </Form>
-      </Modal>
     </>
   )
 }
