@@ -1,7 +1,7 @@
 {
   "files": {
     "main.css": "/static/css/main.742a7262.css",
-    "main.js": "/static/js/main.73b57195.js",
+    "main.js": "/static/js/main.81698a1f.js",
     "static/css/467.a338a87c.chunk.css": "/static/css/467.a338a87c.chunk.css",
     "static/js/467.8b90dd76.chunk.js": "/static/js/467.8b90dd76.chunk.js",
     "static/js/342.235d7c46.chunk.js": "/static/js/342.235d7c46.chunk.js",
@@ -15,12 +15,11 @@
     "static/media/head-bg.8b029587.png": "/static/media/head-bg.8b029587.60f3a93d8a581efd4c49.png",
     "static/media/logo-lm.png": "/static/media/logo-lm.1c7bfe7274f33c40fa6f.png",
     "static/media/codicon.ttf": "/static/media/codicon.b797181c93b3755f4fa1.ttf",
-    "static/media/logo-lm-square.png": "/static/media/logo-lm-square.bf3bfb12aaa50b1904f0.png",
     "static/media/default.32752796.png": "/static/media/default.32752796.9e3b4c5313ccb5060485.png",
     "static/media/background.png": "/static/media/background.8ed5e5404edf817e15f5.png",
     "index.html": "/index.html",
     "main.742a7262.css.map": "/static/css/main.742a7262.css.map",
-    "main.73b57195.js.map": "/static/js/main.73b57195.js.map",
+    "main.81698a1f.js.map": "/static/js/main.81698a1f.js.map",
     "467.a338a87c.chunk.css.map": "/static/css/467.a338a87c.chunk.css.map",
     "467.8b90dd76.chunk.js.map": "/static/js/467.8b90dd76.chunk.js.map",
     "342.235d7c46.chunk.js.map": "/static/js/342.235d7c46.chunk.js.map",
@@ -31,6 +30,6 @@
   },
   "entrypoints": [
     "static/css/main.742a7262.css",
-    "static/js/main.73b57195.js"
+    "static/js/main.81698a1f.js"
   ]
 }

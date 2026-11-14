@@ -75,7 +75,7 @@ export default function login () {
           <div className="login-content__brand">
             <img className="login-content__logo" src={brandAssets.loginLogo} alt={site.name} />
             <div className="login-content__leftTitle">
-              {site.name || t('iotserver 物联网平台')}
+              {site.name || 'Iot Platform'}
             </div>
           </div>
         </div>

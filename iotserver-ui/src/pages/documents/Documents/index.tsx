@@ -95,14 +95,14 @@ const STEPS = [
   { title: t('配置监控'), description: t('设置告警规则、场景联动与可视化看板，持续观察设备运行情况。') },
 ]
 
-// 系统设置里未改动时的默认系统名称；此时标题只显示品牌名
-const DEFAULT_SITE_NAME = 'iotserver 物联网平台'
+// 未配置系统名称时使用的默认品牌名
+const DEFAULT_SITE_NAME = 'Iot Platform'
 
 const Documents: React.FC = () => {
   const { site } = useBrand()
   // 标题直接用用户配置的系统名称
   const siteName = (site.name || '').trim()
-  const title = !siteName || siteName === DEFAULT_SITE_NAME ? 'iotserver' : siteName
+  const title = siteName || DEFAULT_SITE_NAME
 
   return (
     <div className="product-intro">

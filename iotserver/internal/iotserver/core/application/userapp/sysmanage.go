@@ -1223,9 +1223,9 @@ func dedupStrings(items []string) []string {
 // SiteInfo 站点品牌信息（登录页免鉴权使用）
 func (uapp *userApp) SiteInfo(ctx context.Context) (dtos.SiteInfoResponse, error) {
 	res := dtos.SiteInfoResponse{
-		Name:            "iotserver 物联网平台",
+		Name:            "Iot Platform",
 		Description:     "iotserver 物联网平台",
-		Copyright:       "© iotserver",
+		Copyright:       "Copyright © 2026 LMGateway",
 		Logo:            "",
 		Favicon:         "",
 		LoginBackground: "",

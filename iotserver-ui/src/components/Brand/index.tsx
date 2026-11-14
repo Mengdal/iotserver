@@ -3,17 +3,16 @@ import { getSiteInfo, SiteInfo } from '@/api'
 
 /** 系统默认素材：未上传时回退到这些内置资源 */
 import defaultLogo from '@/assets/images/logo-lm.png'
-import defaultLoginLogo from '@/assets/images/logo-lm-square.png'
 import defaultLoginBackground from '@/assets/images/background.png'
 import { t } from '@/i18n'
 const DEFAULT_LOGO = defaultLogo as string
 const DEFAULT_LOGIN_BACKGROUND = defaultLoginBackground as string
 const DEFAULT_FAVICON = '/favicon.png'
-// 顶栏用横版 LM，登录页用方形 LM
-const DEFAULT_LOGIN_LOGO = defaultLoginLogo as string
+// 顶栏与登录页统一用横版 LM
+const DEFAULT_LOGIN_LOGO = DEFAULT_LOGO
 
 const DEFAULT_SITE: SiteInfo = {
-  name: t('iotserver 物联网平台'),
+  name: 'Iot Platform',
   logo: '',
   favicon: '',
   loginBackground: '',
