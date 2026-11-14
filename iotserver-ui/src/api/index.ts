@@ -25,6 +25,7 @@ export * from './tenant'
 export * from './gateway'
 export * from './system-components'
 export * from './plugins'
+export * from './so-drivers'
 export * from './solution'
 export * from './viz'
 

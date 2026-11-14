@@ -17,7 +17,7 @@ const DEFAULT_SITE: SiteInfo = {
   logo: '',
   favicon: '',
   loginBackground: '',
-  copyright: '© iotserver',
+  copyright: 'Copyright © 2026 LMGateway',
   description: t('iotserver 物联网平台'),
 }
 

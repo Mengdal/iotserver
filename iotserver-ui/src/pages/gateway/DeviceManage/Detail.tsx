@@ -81,7 +81,7 @@ export const DeviceDetail:React.FC<DeviceDetailProps> = () => {
             <Text style={{ fontSize: 17 }} copyable>{detail?.name || t('设备详情')}</Text>
           </div>
         }
-        describe={t('设备详情提供设备基础信息及物模型相关数据（包括设备属性功能记录、事件记录及服务调用记录）查询。')}
+        describe={t('查看设备基础信息，以及属性、事件和服务调用记录。')}
         background={require('@/assets/images/head-bg.8b029587.png')}
         breadcrumb={[
           { label: t('设备管理'), to: '/gateway/device/manage' },

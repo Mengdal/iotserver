@@ -312,6 +312,10 @@ func (p *productApp) OpenApiUpdateProduct(ctx context.Context, req dtos.OpenApiU
 	if err != nil {
 		return err
 	}
+	// 产品名称存在 product_id 字段的 attrs 里，改名后同步刷新。
+	if syncer := resourceContainer.IotpSyncFrom(p.dic.Get); syncer != nil {
+		syncer.ProductUpdated(product, tenant.FromContext(ctx).TenantID)
+	}
 	go func() {
 		p.UpdateProductCallBack(product)
 	}()

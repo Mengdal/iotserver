@@ -30,6 +30,7 @@ type driverLibApp struct {
 
 	manager DeviceLibraryManager
 	market  *driverMarket // Refactor: interface
+	so      *soInstaller
 }
 
 func NewDriverApp(ctx context.Context, dic *di.Container) interfaces.DriverLibApp {
@@ -44,6 +45,7 @@ func newDriverLibApp(dic *di.Container) *driverLibApp {
 	}
 	app.manager = newDriverLibManager(dic, app)
 	app.market = newDriverMarket(dic, app)
+	app.so = newSOInstaller(container.ConfigurationFrom(dic.Get), app.lc)
 	return app
 }
 

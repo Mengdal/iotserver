@@ -2,6 +2,8 @@ package interfaces
 
 import (
 	"context"
+	"io"
+
 	"iotserver/internal/dtos"
 	"iotserver/internal/models"
 )
@@ -20,6 +22,12 @@ type DriverLibApp interface {
 	SystemComponents(ctx context.Context) ([]dtos.SystemComponentDTO, error)
 	// ComponentLogs 读取系统组件配置的日志文件尾部。
 	ComponentLogs(ctx context.Context, id string, tail int) (dtos.SystemComponentLogsDTO, error)
+	// UploadSODriver 保存并安装嵌入式 iotpGW 的 .so 驱动。
+	UploadSODriver(ctx context.Context, req dtos.SODriverUploadRequest, reader io.Reader) (dtos.SODriverDTO, error)
+	// ListSODrivers 已登记的 iotpGW .so 驱动及安装状态。
+	ListSODrivers(ctx context.Context) ([]dtos.SODriverDTO, error)
+	// DeleteSODriver 卸载并删除 iotpGW .so 驱动。
+	DeleteSODriver(ctx context.Context, id string) error
 	DriverDownConfigItf
 }
 type DriverDownConfigItf interface {

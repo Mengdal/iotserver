@@ -225,7 +225,7 @@ const SysSetPage: React.FC = () => {
     <Alert
       type="info"
       showIcon
-      message={t('系统配置为平台级（全局唯一），品牌、登录页与安全策略保存后对所有租户统一生效；租户级参数（如数据保留天数）请在「租户管理」中配置。')}
+      message={t('系统配置为平台级，品牌、登录页和安全策略保存后对所有租户生效；数据保留天数等租户级参数请到「租户管理」配置。')}
       style={{ marginBottom: 16 }}
     />
   )

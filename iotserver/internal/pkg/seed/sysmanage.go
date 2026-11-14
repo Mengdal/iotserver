@@ -519,7 +519,7 @@ type ConfigItem struct {
 func DefaultConfigs() []ConfigItem {
 	return []ConfigItem{
 		{"platform.name", "系统名称", "iotserver 物联网平台", "brand", "string", 1},
-		{"platform.copyright", "版权信息", "© iotserver", "brand", "string", 2},
+		{"platform.copyright", "版权信息", "Copyright © 2026 LMGateway", "brand", "string", 2},
 		{"platform.logo", "系统 Logo", "", "brand", "image", 3},
 		{"platform.favicon", "浏览器标签", "", "brand", "image", 4},
 		{"platform.loginBackground", "登录页背景图", "", "brand", "image", 5},

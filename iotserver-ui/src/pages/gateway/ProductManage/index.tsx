@@ -147,10 +147,30 @@ const ProductManage: React.FC<ProductManageProps> = () => {
               title: t('状态'),
               key: 'status',
               dataIndex: 'status',
-              render: (value) => {
-                if (value === '未发布') return <Space><MinusCircleFilled style={{ color: '#87909d' }} />{t('未发布')}</Space>
-                if (value === '已发布') return <Space><CheckCircleFilled style={{ color: '#55af70' }} />{t('已发布')}</Space>
-                return '-'
+              render: (value, record) => {
+                const published = value === '已发布'
+                const statusNode = value === '未发布'
+                  ? <Space><MinusCircleFilled style={{ color: '#87909d' }} />{t('未发布')}</Space>
+                  : value === '已发布'
+                    ? <Space><CheckCircleFilled style={{ color: '#55af70' }} />{t('已发布')}</Space>
+                    : <>-</>
+                if (!canEdit || (value !== '未发布' && value !== '已发布')) return statusNode
+                return (
+                  <Popconfirm
+                    title={published ? t('是否确认取消发布？') : t('是否确认发布？')}
+                    okText={t('确定')}
+                    cancelText={t('取消')}
+                    onConfirm={() => togglePublish(record)}
+                  >
+                    <Button
+                      type="text"
+                      size="small"
+                      style={{ padding: 0, height: 'auto', color: 'inherit' }}
+                    >
+                      {statusNode}
+                    </Button>
+                  </Popconfirm>
+                )
               },
               // render (value, record) {
               //   return (
@@ -181,16 +201,6 @@ const ProductManage: React.FC<ProductManageProps> = () => {
                         navigate(`/gateway/device/manage/${record?.id}`)
                       }}
                     >{t('管理设备')}</Typography.Link>
-                    {canEdit && (
-                      <Popconfirm
-                        title={record.status === '已发布' ? t('是否确认取消发布？') : t('是否确认发布？')}
-                        okText={t('确定')}
-                        cancelText={t('取消')}
-                        onConfirm={() => togglePublish(record)}
-                      >
-                        <Typography.Link>{record.status === '已发布' ? t('取消发布') : t('发布')}</Typography.Link>
-                      </Popconfirm>
-                    )}
                     <Popconfirm
                       title={t('此操作将永久删除该条记录, 是否继续?')}
                       okText={t('确定')}

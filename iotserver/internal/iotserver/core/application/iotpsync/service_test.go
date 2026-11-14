@@ -9,6 +9,21 @@ import (
 	"iotserver/internal/tools/iotp"
 )
 
+func TestBaseFieldsWithProductName(t *testing.T) {
+	fields := baseFieldsWithProductName(iotp.BaseFields(), "  注塑机  ")
+	for _, field := range fields {
+		if field.Name != "product_id" {
+			continue
+		}
+		attrs, ok := field.Attrs.(map[string]any)
+		if !ok || attrs[productNameAttrKey] != "注塑机" {
+			t.Fatalf("product_id attrs = %#v", field.Attrs)
+		}
+		return
+	}
+	t.Fatal("product_id field not found")
+}
+
 func TestFieldType(t *testing.T) {
 	cases := map[constants.SpecsType]string{
 		constants.SpecsTypeInt:    iotp.TypeI64,

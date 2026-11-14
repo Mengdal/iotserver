@@ -39,7 +39,7 @@ const LinkageLog: React.FC<LinkageLogProps> = () => {
       <AdvanceBreadcrumb
         hasBack
         title={t('联动日志')}
-        describe={t('平台提供场景日志功能，可以通过场景联动日志查看场景触发时间、服务调用结果。')}
+        describe={t('查看场景触发时间与服务调用结果。')}
         breadcrumb={[
           { label: t('场景联动'), to: '/advanced/scene/linkage' },
           { label: t('联动日志'), to: '' },

@@ -138,6 +138,17 @@ func deviceLibrariesSearch(c *Client, offset int, limit int, req dtos.DeviceLibr
 	if req.Category != "" {
 		tx = tx.Where("`category` = ?", req.Category)
 	}
+	if req.ExcludeRuntime != "" {
+		// 存量驱动的 runtime 可能为空，按模型默认值 docker 处理。
+		if req.ExcludeRuntime == models.PluginRuntimeDocker {
+			tx = tx.Where("COALESCE(NULLIF(`runtime`, ''), ?) <> ?", models.PluginRuntimeDocker, req.ExcludeRuntime)
+		} else {
+			tx = tx.Where("COALESCE(`runtime`, '') <> ?", req.ExcludeRuntime)
+		}
+	}
+	if req.Runtime != "" {
+		tx = tx.Where("`runtime` = ?", req.Runtime)
+	}
 
 	err := tx.Count(&total).Error
 	if err != nil {

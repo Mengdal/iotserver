@@ -33,7 +33,7 @@ import * as P from '@/routes/permissions'
 import { t } from '@/i18n'
 
 const { RangePicker } = DatePicker
-const { Text, Title } = Typography
+const { Text } = Typography
 const { useMessage } = message
 
 /** 单行查询条件：产品 → 设备 → 参数 */
@@ -356,12 +356,6 @@ const HistoryQueryPage: React.FC = () => {
   return (
     <Card className="admin-page">
       {contextHolder}
-      <Title level={5} style={{ marginBottom: 4 }}>{t('历史查询')}</Title>
-      <Text type="secondary">
-        {t('历史查询功能支持单个设备属性查询，同时也支持多设备不同属性查询用作对比，结果以折线图和表格的形式展示，并且支持导出。')}
-      </Text>
-      <div style={{ height: 16 }} />
-
       <Form form={form} layout="vertical">
         {/* 时间范围与操作按钮同一行 */}
         <Space align="end" size={12} wrap style={{ marginBottom: 12 }}>

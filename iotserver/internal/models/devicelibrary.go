@@ -17,6 +17,8 @@ const (
 	PluginRuntimeNative  = "native"
 	PluginRuntimeDocker  = "docker"
 	PluginRuntimeBuiltin = "builtin"
+	// PluginRuntimeIotpGW 嵌入式 iotpGW 的 .so 驱动库。
+	PluginRuntimeIotpGW = "iotpgw-so"
 )
 
 // 驱动库 / 插件包。

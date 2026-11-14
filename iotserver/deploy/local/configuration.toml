@@ -82,6 +82,16 @@ Enabled = false
 [Tenant]
 Enforce = false
 
+[CollectEngine]
+# 嵌入式部署：iotpGW 的 .so 驱动安装位置。
+DriverDir = '/opt/iotpgw/drivers'
+BackupDir = '/var/lib/iotserver/driver-backups'
+# none=只替换文件；command=执行下面的重启命令；api=预留远程接口。
+ReloadMode = 'command'
+ReloadCommand = '/etc/init.d/S93iotserver-iotpgw restart'
+# 可选：当前 iotpGW 期望的驱动 ABI，非空时会校验安装包。
+DriverABI = ''
+
 [ComponentLogs]
 # 系统组件日志文件。不配置时使用内置默认路径：
 #   Mosquitto /var/log/iotserver/mosquitto.log

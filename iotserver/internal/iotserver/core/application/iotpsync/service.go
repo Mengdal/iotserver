@@ -90,6 +90,16 @@ func (s *Service) ProductCreated(product models.Product, tenantID string) {
 	})
 }
 
+// ProductUpdated 产品资料更新后刷新表字段元数据（product_id 字段的 product_name）。
+func (s *Service) ProductUpdated(product models.Product, tenantID string) {
+	if !s.Enabled() {
+		return
+	}
+	go s.run("product-update:"+product.Id, func(ctx context.Context) error {
+		return s.syncProduct(ctx, product, tenantID)
+	})
+}
+
 // PropertyChanged 物模型属性新增/修改后同步字段。
 func (s *Service) PropertyChanged(productID string, property models.Properties, tenantID string) {
 	if !s.Enabled() || strings.TrimSpace(productID) == "" {
@@ -119,7 +129,7 @@ func (s *Service) changeField(productID, fieldName string) {
 		if err := s.client.EnsureDatabase(ctx); err != nil {
 			return err
 		}
-		if err := s.client.EnsureTable(ctx, table, iotp.BaseFields()); err != nil {
+		if err := s.client.EnsureTable(ctx, table, baseFieldsWithProductName(iotp.BaseFields(), s.productNameByID(ctx, productID))); err != nil {
 			return err
 		}
 		return s.client.AddField(ctx, table, iotp.Field{Name: fieldName, Type: iotp.TypeString})
@@ -519,7 +529,7 @@ func (s *Service) runWithTimeout(what string, timeout time.Duration, fn func(con
 
 func (s *Service) syncProduct(ctx context.Context, product models.Product, tenantID string) error {
 	table := iotp.TableName(product.Id)
-	fields := iotp.BaseFields()
+	fields := baseFieldsWithProductName(iotp.BaseFields(), s.productName(ctx, product))
 	for _, property := range product.Properties {
 		fields = append(fields, propertyField(property))
 	}
@@ -540,7 +550,7 @@ func (s *Service) syncProperty(ctx context.Context, productID string, property m
 	if err := s.client.EnsureDatabase(ctx); err != nil {
 		return err
 	}
-	if err := s.client.EnsureTable(ctx, table, iotp.BaseFields()); err != nil {
+	if err := s.client.EnsureTable(ctx, table, baseFieldsWithProductName(iotp.BaseFields(), s.productNameByID(ctx, productID))); err != nil {
 		return err
 	}
 	return s.client.AddField(ctx, table, propertyField(property))
@@ -577,7 +587,7 @@ func (s *Service) ensureDeviceWithProduct(ctx context.Context, device models.Dev
 	if err := s.client.EnsureDatabase(ctx); err != nil {
 		return err
 	}
-	if err := s.client.EnsureTable(ctx, table, iotp.BaseFields()); err != nil {
+	if err := s.client.EnsureTable(ctx, table, baseFieldsWithProductName(iotp.BaseFields(), s.productName(ctx, product))); err != nil {
 		return err
 	}
 
@@ -612,16 +622,50 @@ func (s *Service) ensureDeviceWithProduct(ctx context.Context, device models.Dev
 		"device_key": deviceKey,
 		"dept_id":    device.DeptId,
 	}
-	attrs := map[string]any{
-		"name":      device.Name,
-		"productId": device.ProductId,
-	}
 	return s.client.RegisterDevice(ctx, table, iotp.Device{
 		DeviceID: deviceID,
 		Name:     device.Name,
 		Tags:     tags,
-		Attrs:    attrs,
 	})
+}
+
+// productNameAttrKey 写在 product_id 字段 attrs 上的产品名称键。
+const productNameAttrKey = "product_name"
+
+// baseFieldsWithProductName 给 product_id 标签字段补充产品名称元数据。
+// 产品名称放在字段 attrs 上，每张产品表一份，不往每台设备实例的 attrs 里复制。
+func baseFieldsWithProductName(fields []iotp.Field, productName string) []iotp.Field {
+	name := strings.TrimSpace(productName)
+	for i := range fields {
+		if fields[i].Name != "product_id" {
+			continue
+		}
+		if name == "" {
+			fields[i].Attrs = nil
+		} else {
+			fields[i].Attrs = map[string]any{productNameAttrKey: name}
+		}
+	}
+	return fields
+}
+
+// productName 取产品名称；物模型增量回调只带 Id 时回查平台元数据。
+func (s *Service) productName(ctx context.Context, product models.Product) string {
+	if name := strings.TrimSpace(product.Name); name != "" {
+		return name
+	}
+	return s.productNameByID(ctx, product.Id)
+}
+
+func (s *Service) productNameByID(ctx context.Context, productID string) string {
+	if s.dbClient == nil || strings.TrimSpace(productID) == "" {
+		return ""
+	}
+	product, err := s.dbClient.WithCtx(tenant.Platform(ctx)).ProductById(productID)
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(product.Name)
 }
 
 func propertyField(property models.Properties) iotp.Field {

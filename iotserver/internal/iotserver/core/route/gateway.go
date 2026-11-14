@@ -165,6 +165,10 @@ func RegisterGateway(engine *gin.Engine, dic *di.Container) {
 		// 内置系统组件（Mosquitto / eKuiper / IotEdgeDB）：Phase 1 只提供列表与探活
 		v1Auth.GET("system-components", ctl.Perm(middleware.PermDriveList), ctl.SystemComponents)
 		v1Auth.GET("system-components/:id/logs", ctl.Perm(middleware.PermDriveList), ctl.SystemComponentLogs)
+		// 嵌入式 iotpGW .so 驱动安装；server 模式由应用层拒绝。
+		v1Auth.POST("drivers/so", ctl.Perm(middleware.PermDriveAdd), ctl.UploadSODriver)
+		v1Auth.GET("drivers/so", ctl.Perm(middleware.PermDriveList), ctl.ListSODrivers)
+		v1Auth.DELETE("drivers/so/:id", ctl.Perm(middleware.PermDriveRemove), ctl.DeleteSODriver)
 	}
 	/*******驱动实例 *******/
 	{

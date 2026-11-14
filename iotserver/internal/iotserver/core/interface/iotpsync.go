@@ -9,6 +9,8 @@ type IotpSyncItf interface {
 	Enabled() bool
 	// ProductCreated 产品创建/发布：建库建表、同步基础标签与物模型字段。
 	ProductCreated(product models.Product, tenantID string)
+	// ProductUpdated 产品资料更新：刷新表字段元数据（product_id 字段的 product_name）。
+	ProductUpdated(product models.Product, tenantID string)
 	// PropertyChanged 物模型属性新增/修改：同步字段。
 	PropertyChanged(productID string, property models.Properties, tenantID string)
 	// EventChanged 物模型事件新增/修改：同步 evt_ 字段。

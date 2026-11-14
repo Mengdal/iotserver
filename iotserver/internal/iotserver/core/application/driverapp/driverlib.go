@@ -18,6 +18,8 @@ import (
 	"context"
 	"fmt"
 	"iotserver/internal/dtos"
+	"iotserver/internal/iotserver/core/config"
+	"iotserver/internal/iotserver/core/container"
 	"iotserver/internal/models"
 	"iotserver/internal/pkg/constants"
 	"iotserver/internal/pkg/errort"
@@ -61,6 +63,14 @@ func (app *driverLibApp) addOrUpdateSupportVersionConfig(dl models.DeviceLibrary
 
 func (app *driverLibApp) DeviceLibrariesSearch(ctx context.Context, req dtos.DeviceLibrarySearchQueryRequest) ([]models.DeviceLibrary, uint32, error) {
 	offset, limit := req.BaseSearchConditionQuery.GetPage()
+	// 驱动市场按部署形态隔离运行时：embedded 隐藏 Docker，server 隐藏 iotpGW .so。
+	if req.IsInternal == "true" {
+		if container.ConfigurationFrom(app.dic.Get).DeploymentMode() == config.DeploymentModeEmbedded {
+			req.ExcludeRuntime = models.PluginRuntimeDocker
+		} else {
+			req.ExcludeRuntime = models.PluginRuntimeIotpGW
+		}
+	}
 	// category=all 用于驱动市场混排协议驱动与内置组件；
 	// 其他调用默认只查协议驱动，避免把系统组件混进驱动实例/镜像逻辑。
 	switch req.Category {
@@ -103,6 +113,14 @@ func (app *driverLibApp) DeviceLibrariesSearch(ctx context.Context, req dtos.Dev
 
 	// 设置驱动库状态
 	for i, dl := range deviceLibraries {
+		if dl.Runtime == models.PluginRuntimeIotpGW {
+			if app.so != nil && app.so.installed(dl) {
+				deviceLibraries[i].OperateStatus = constants.OperateStatusInstalled
+			} else {
+				deviceLibraries[i].OperateStatus = constants.OperateStatusDefault
+			}
+			continue
+		}
 		stats := app.manager.GetState(dl.Id)
 		if stats == constants.OperateStatusInstalling {
 			deviceLibraries[i].OperateStatus = constants.OperateStatusInstalling

@@ -80,9 +80,13 @@ type DeviceLibrarySearchQueryRequest struct {
 	DownloadStatus           string `form:"download_status" json:"download_status"`
 	DriverType               int    `form:"driver_type" json:"driver_type" binding:"omitempty,oneof=1 2"` // 驱动库类型，1：驱动，2：三方应用
 	Category                 string `form:"category" json:"category"`                                     // 插件类别：driver/system/connector
-	NoInIds                  string // 约定，没有from的为 内置查询条件
-	ImageIds                 string // 内置条件
-	NoInImageIds             string // 内置条件
+	// ExcludeRuntime 排除指定运行时（embedded 驱动市场隐藏 Docker 驱动）。仅供内部调用。
+	ExcludeRuntime string `form:"-" json:"-" schema:"-"`
+	// Runtime 只查指定运行时（例如 iotpgw-so）。仅供内部调用。
+	Runtime      string `form:"-" json:"-" schema:"-"`
+	NoInIds      string // 约定，没有from的为 内置查询条件
+	ImageIds     string // 内置条件
+	NoInImageIds string // 内置条件
 }
 
 type DeviceLibraryResponse struct {

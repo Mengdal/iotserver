@@ -76,7 +76,7 @@ const ProductDetail = () => {
       <AdvanceBreadcrumb
         hasBack
         title={t('产品管理')}
-        describe={t('产品物模型是对同一类设备的数字化抽象描述，描述该类设备是什么，能做什么，能对外提供哪些服务，它包括属性、事件、服务三种功能类型。')}
+        describe={t('维护产品基础信息与物模型（属性、事件、服务）。')}
         background={require('@/assets/images/head-bg.8b029587.png')}
       />
       <Card className="product-info">

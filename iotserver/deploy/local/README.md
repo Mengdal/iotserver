@@ -370,6 +370,30 @@ iot/up/{sn}/offline   遗嘱
 - 版本目录 `/opt/iotserver/plugins`
 - 实例数据 `/var/lib/iotserver/plugin-data`
 
+iotpGW `.so` 驱动（仅嵌入式部署）：
+
+```toml
+[CollectEngine]
+DriverDir = '/opt/iotpgw/drivers'
+BackupDir = '/var/lib/iotserver/driver-backups'
+ReloadMode = 'command'
+ReloadCommand = '/etc/init.d/S93iotserver-iotpgw restart'
+DriverABI = ''              # 留空不校验
+```
+
+- 在“驱动组件 → 驱动市场 → 安装 .so 驱动”上传，只接受与平台架构一致的 `.so`
+- 平台校验文件名、架构、ABI、SHA256 后直接写入 `DriverDir`（iotserver 与 iotpGW 同机）
+- 替换前备份旧文件，替换后执行 `ReloadCommand`；失败自动回滚
+- 同一个 `.so` 文件名只允许一条记录，升级前先卸载
+- 运行用户需要对 `DriverDir` 和 `BackupDir` 有写权限：
+
+```bash
+chown -R iotserver:iotserver /opt/iotpgw/drivers /var/lib/iotserver/driver-backups
+```
+
+如果运行用户没有重启 iotpGW 的权限，可给 `ReloadCommand` 配 sudoers 白名单脚本，
+或把 `ReloadMode` 设为 `none`，由部署流程统一重启。
+
 串口驱动需要访问 tty 设备：
 
 - systemd：在 `iotserver-core.service` 加 `SupplementaryGroups=dialout`

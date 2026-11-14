@@ -44,6 +44,22 @@ type ConfigurationStruct struct {
 	Integrations IntegrationsInfo
 	// ComponentLogs 系统组件日志源；不配置时使用内置默认路径。
 	ComponentLogs ComponentLogsInfo
+	// CollectEngine 嵌入式部署时 iotpGW 驱动库安装配置。
+	CollectEngine CollectEngineInfo
+}
+
+// CollectEngineInfo 嵌入式部署时 iotpGW 的 .so 驱动安装配置。
+type CollectEngineInfo struct {
+	// DriverDir iotpGW 的 drivers 目录，例如 /opt/iotpgw/drivers。
+	DriverDir string
+	// BackupDir 安装/升级前的驱动备份目录；为空时使用插件数据目录下的 driver-backups。
+	BackupDir string
+	// ReloadMode 安装后的生效方式：none / command / api。
+	ReloadMode string
+	// ReloadCommand ReloadMode=command 时执行的本机命令。
+	ReloadCommand string
+	// DriverABI 可选：当前 iotpGW 期望的 ABI，非空时安装包 ABI 必须一致。
+	DriverABI string
 }
 
 // ComponentLogsInfo 系统组件日志文件配置。

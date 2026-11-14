@@ -155,7 +155,7 @@ const RuleDetail = () => {
             />
           </div>
         }
-        describe={t('告警规则详情提供基础信息、告警规则管理等功能。')}
+        describe={t('查看规则基础信息并管理告警规则。')}
         breadcrumb={[
           { label: t('告警中心'), to: '/monitor/alarmCenter/list' },
           { label: t('规则详情 [ {{p1}} ]', { p1: ruleInfo?.name || '' }), to: '' },
