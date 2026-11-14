@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 func TestTailReturnsLastLines(t *testing.T) {
@@ -40,6 +41,54 @@ func TestTailEmptyFile(t *testing.T) {
 	}
 	if len(lines) != 0 {
 		t.Fatalf("expect empty, got %#v", lines)
+	}
+}
+
+func TestResolvePlainPath(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "component.log")
+	if got := Resolve(path); got != path {
+		t.Fatalf("expect plain path unchanged, got %q", got)
+	}
+}
+
+func TestResolveGlobPicksNewest(t *testing.T) {
+	dir := t.TempDir()
+	older := filepath.Join(dir, "iotp.log.2026-11-13")
+	newer := filepath.Join(dir, "iotp.log.2026-11-14")
+	if err := os.WriteFile(older, []byte("old\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(newer, []byte("new\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	now := time.Now()
+	if err := os.Chtimes(older, now.Add(-2*time.Hour), now.Add(-2*time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chtimes(newer, now.Add(-time.Hour), now.Add(-time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+
+	pattern := filepath.Join(dir, "iotp.log.*")
+	if got := Resolve(pattern); got != newer {
+		t.Fatalf("expect newest %q, got %q", newer, got)
+	}
+	lines, err := Tail(pattern, 10)
+	if err != nil {
+		t.Fatalf("tail: %v", err)
+	}
+	if len(lines) != 1 || lines[0] != "new" {
+		t.Fatalf("unexpected lines: %#v", lines)
+	}
+	info := Stat(pattern)
+	if !info.Exists || info.Path != newer {
+		t.Fatalf("unexpected info: %+v", info)
+	}
+}
+
+func TestResolveNoMatch(t *testing.T) {
+	if got := Resolve(filepath.Join(t.TempDir(), "iotp.log.*")); got != "" {
+		t.Fatalf("expect empty, got %q", got)
 	}
 }
 

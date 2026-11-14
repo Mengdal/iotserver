@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -31,17 +32,47 @@ type Info struct {
 	Exists   bool
 }
 
+// Resolve 返回日志源当前对应的实际文件。
+//
+// 配置里可以写通配符（如 /home/iotp/logs/iotp.log.*），此时取修改时间最新的
+// 普通文件；没有匹配时返回空字符串。不含通配符的路径原样返回。
+func Resolve(pattern string) string {
+	pattern = strings.TrimSpace(pattern)
+	if pattern == "" || !strings.ContainsAny(pattern, "*?[") {
+		return pattern
+	}
+	matches, err := filepath.Glob(pattern)
+	if err != nil {
+		return ""
+	}
+	newest := ""
+	var newestMod int64 = -1
+	for _, match := range matches {
+		stat, err := os.Stat(match)
+		if err != nil || stat.IsDir() {
+			continue
+		}
+		mod := stat.ModTime().UnixNano()
+		if newest == "" || mod > newestMod || (mod == newestMod && match > newest) {
+			newest, newestMod = match, mod
+		}
+	}
+	return newest
+}
+
 // Stat 返回日志文件状态；不存在时 Exists=false，不返回错误。
 func Stat(path string) Info {
 	path = strings.TrimSpace(path)
 	info := Info{Path: path}
-	if path == "" {
+	resolved := Resolve(path)
+	if resolved == "" {
 		return info
 	}
-	stat, err := os.Stat(path)
+	stat, err := os.Stat(resolved)
 	if err != nil {
 		return info
 	}
+	info.Path = resolved
 	info.Exists = true
 	info.Size = stat.Size()
 	info.Modified = stat.ModTime().UnixMilli()
@@ -50,7 +81,7 @@ func Stat(path string) Info {
 
 // Tail 返回文件末尾最多 maxLines 行。
 func Tail(path string, maxLines int) ([]string, error) {
-	path = strings.TrimSpace(path)
+	path = Resolve(path)
 	if path == "" {
 		return nil, ErrNotFound
 	}

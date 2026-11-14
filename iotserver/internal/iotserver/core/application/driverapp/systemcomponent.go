@@ -41,6 +41,14 @@ func (app *driverLibApp) SystemComponents(ctx context.Context) ([]dtos.SystemCom
 	for _, library := range libraries {
 		endpoint := endpoints[library.Id]
 		logSource, hasLog := logSources[library.Id]
+		logPath := ""
+		if hasLog {
+			// 按天轮转的日志（如 iotp.log.*）展示当前实际读取的文件。
+			logPath = logtail.Resolve(logSource.Path)
+			if logPath == "" {
+				logPath = logSource.Path
+			}
+		}
 		result = append(result, dtos.SystemComponentDTO{
 			Id:            library.Id,
 			Name:          library.Name,
@@ -51,7 +59,7 @@ func (app *driverLibApp) SystemComponents(ctx context.Context) ([]dtos.SystemCom
 			Endpoint:      endpoint,
 			Status:        probeComponentEndpoint(endpoint),
 			LogConfigured: hasLog,
-			LogPath:       logSource.Path,
+			LogPath:       logPath,
 			Updated:       library.Modified,
 		})
 	}
@@ -116,7 +124,7 @@ func (app *driverLibApp) ComponentLogs(ctx context.Context, id string, tail int)
 	info := logtail.Stat(source.Path)
 	result := dtos.SystemComponentLogsDTO{
 		ComponentId: id,
-		Path:        source.Path,
+		Path:        info.Path,
 		Exists:      info.Exists,
 		Size:        info.Size,
 		Modified:    info.Modified,
