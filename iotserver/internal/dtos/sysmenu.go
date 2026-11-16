@@ -95,7 +95,11 @@ type SysMenuResponse struct {
 	Status    int    `json:"status"`
 	IsFrame   int    `json:"isFrame"`
 	// TenantId 菜单归属：'' = 平台菜单（只有平台管理员能写），非空 = 该租户的自建菜单
-	TenantId string            `json:"tenantId"`
+	TenantId string `json:"tenantId"`
+	// PlatformOnly 平台级菜单：不下发给租户用户，也不能授权给租户角色
+	PlatformOnly int `json:"platformOnly"`
+	// Public 公共导航菜单：所有登录用户默认可见，无需角色授权
+	Public   int               `json:"public"`
 	Remark   string            `json:"remark"`
 	Created  int64             `json:"created"`
 	Modified int64             `json:"modified"`

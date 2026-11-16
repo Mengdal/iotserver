@@ -1407,7 +1407,7 @@
   "管理端、接口文案与告警通知均支持中文与 English 切换。": "The admin UI, API messages and alarm notifications support Chinese and English.",
   "快速了解": "Quick tour",
   "部署服务": "Deploy",
-  "使用 Docker Compose 一键启动平台、MQTT Broker 与规则引擎。": "Start the platform, MQTT broker and rule engine with Docker Compose.",
+  "支持 Docker Compose 服务器部署与 ARM64 嵌入式部署。": "Supports Docker Compose server deployment and ARM64 embedded deployment.",
   "按业务定义物模型，或直接从内置行业模板生成产品与告警。": "Define a thing model for your business, or generate products and alarms from built-in industry templates.",
   "接入设备": "Connect devices",
   "创建设备或工业网关，使用平台分配的 MQTT 凭据连接并上报数据。": "Create a device or industrial gateway and connect with the MQTT credentials issued by the platform.",

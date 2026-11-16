@@ -47,6 +47,10 @@ func (uapp *userApp) SysUserAdd(ctx context.Context, req dtos.SysUserAddRequest)
 	if err := uapp.validatePassword(req.Password); err != nil {
 		return err
 	}
+	// 角色必填：没有角色的账号登录后拿不到任何业务菜单，等于不可用账号。
+	if len(req.RoleIds) == 0 {
+		return errort.NewCommonErr(errort.DefaultReqParamsError, fmt.Errorf("role is required"))
+	}
 	target := targetTenant(ctx)
 	userDB := uapp.dbClient.WithCtx(tenantContext(ctx, target))
 	// 账号名登录时全局唯一，查重不受租户过滤影响。
@@ -82,13 +86,11 @@ func (uapp *userApp) SysUserAdd(ctx context.Context, req dtos.SysUserAddRequest)
 	if err != nil {
 		return err
 	}
-	if len(req.RoleIds) > 0 {
-		if err = uapp.checkRolesAssignable(ctx, target, req.RoleIds); err != nil {
-			return err
-		}
-		if err = uapp.platformDB(ctx).SetUserRoles(created.Id, req.RoleIds); err != nil {
-			return err
-		}
+	if err = uapp.checkRolesAssignable(ctx, target, req.RoleIds); err != nil {
+		return err
+	}
+	if err = uapp.platformDB(ctx).SetUserRoles(created.Id, req.RoleIds); err != nil {
+		return err
 	}
 	return nil
 }
@@ -110,10 +112,12 @@ func (uapp *userApp) SysUserUpdate(ctx context.Context, req dtos.SysUserUpdateRe
 			return err
 		}
 	}
-	if len(req.RoleIds) > 0 {
-		if err = uapp.checkRolesAssignable(ctx, user.TenantId, req.RoleIds); err != nil {
-			return err
-		}
+	// 角色必填：编辑时也不能把用户改成无角色账号。
+	if len(req.RoleIds) == 0 {
+		return errort.NewCommonErr(errort.DefaultReqParamsError, fmt.Errorf("role is required"))
+	}
+	if err = uapp.checkRolesAssignable(ctx, user.TenantId, req.RoleIds); err != nil {
+		return err
 	}
 	user.Nickname = req.Nickname
 	user.Email = req.Email
@@ -251,15 +255,18 @@ func (uapp *userApp) SysRoleAdd(ctx context.Context, req dtos.SysRoleAddRequest)
 	if role.DataScope == "" {
 		role.DataScope = models.DataScopeAll
 	}
+	// 先校验菜单再落库：授权菜单不合法时不要留下一个没有权限的空角色
+	if len(req.MenuIds) > 0 {
+		if err := uapp.checkMenusExistInTenant(ctx, target, req.MenuIds, target != ""); err != nil {
+			return err
+		}
+	}
 	db := uapp.platformDB(ctx)
 	created, err := db.AddSysRole(role)
 	if err != nil {
 		return err
 	}
 	if len(req.MenuIds) > 0 {
-		if err = uapp.checkMenusExistInTenant(ctx, target, req.MenuIds); err != nil {
-			return err
-		}
 		return db.SetRoleMenus(created.Id, req.MenuIds)
 	}
 	return nil
@@ -294,7 +301,8 @@ func (uapp *userApp) SysRoleUpdate(ctx context.Context, req dtos.SysRoleUpdateRe
 	}
 
 	if len(req.MenuIds) > 0 {
-		if err = uapp.checkMenusExistInTenant(ctx, role.TenantId, req.MenuIds); err != nil {
+		if err = uapp.checkMenusExistInTenant(ctx, role.TenantId, req.MenuIds,
+			role.TenantId != "" || isTenantBuiltin(role.BuiltinKey)); err != nil {
 			return err
 		}
 	}
@@ -389,7 +397,8 @@ func (uapp *userApp) SysRoleSetMenus(ctx context.Context, req dtos.SysRoleMenuRe
 		return err
 	}
 	if len(req.MenuIds) > 0 {
-		if err = uapp.checkMenusExistInTenant(ctx, role.TenantId, req.MenuIds); err != nil {
+		if err = uapp.checkMenusExistInTenant(ctx, role.TenantId, req.MenuIds,
+			role.TenantId != "" || isTenantBuiltin(role.BuiltinKey)); err != nil {
 			return err
 		}
 	}
@@ -588,38 +597,19 @@ func (uapp *userApp) MenuRoutesByUsername(username string) ([]dtos.SysMenuRespon
 	}
 	// 与 buildLoginUser 用同一套判定：租户内的 admin 角色同样是该租户的管理员
 	admin := uapp.hasAdminRole(user)
-	menus, err := uapp.menusOfUser(user.Id, user.TenantId, admin)
+	// 菜单可见性规则与登录响应完全一致（公共导航、平台级过滤、祖先补全、展示层覆盖）
+	_, menus, err := uapp.userMenus(user, admin)
 	if err != nil {
-		return nil, err
-	}
-	// 平台级菜单（platform_only=1，如「租户管理」「系统配置」）只下发给平台管理员：
-	// 与 buildLoginUser / PermissionsByUsername 保持一致，否则租户侧菜单树会多出
-	// 自己无权限访问（或不该看到）的平台菜单。
-	// 注意必须在 completeMenuAncestors 之后过滤：补全祖先时可能把平台级父菜单加回来。
-	if !admin {
-		// 角色授权时可能只勾了子菜单没勾父目录，这里补全祖先目录，否则子菜单挂不到树上
-		if menus, err = uapp.completeMenuAncestors(menus, user.TenantId); err != nil {
-			return nil, err
-		}
-	}
-	if platformAdmin := admin && user.TenantId == ""; !platformAdmin {
-		menus = filterPlatformOnlyMenus(menus)
-	}
-	if menus, err = uapp.applyMenuPrefs(user.TenantId, menus); err != nil {
 		return nil, err
 	}
 	return buildMenuTree(menus), nil
 }
 
-// completeMenuAncestors 补全缺失的祖先目录（仅补状态正常的），保证下发的菜单树是连通的
-func (uapp *userApp) completeMenuAncestors(menus []models.Menu, tenantId string) ([]models.Menu, error) {
+// completeMenuAncestors 用已加载的全部菜单补全缺失的祖先目录（仅补状态正常的），
+// 保证下发的菜单树是连通的。
+func completeMenuAncestors(all, menus []models.Menu) []models.Menu {
 	if len(menus) == 0 {
-		return menus, nil
-	}
-	db := uapp.dbClient.WithCtx(tenant.Platform(context.Background()))
-	all, err := db.SysMenuAll(tenantId)
-	if err != nil {
-		return nil, err
+		return menus
 	}
 	byId := make(map[string]models.Menu, len(all))
 	for _, m := range all {
@@ -646,7 +636,7 @@ func (uapp *userApp) completeMenuAncestors(menus []models.Menu, tenantId string)
 			parentId = parent.ParentId
 		}
 	}
-	return result, nil
+	return result
 }
 
 // resolveMenuTarget 归一化菜单目标；链接类型额外保证「不能把已有子级的节点改为链接」。
@@ -727,13 +717,17 @@ func (uapp *userApp) menuDescendants(rootId, tenantId string) ([]string, error) 
 // checkMenusExist 校验角色要授权的菜单都在当前作用域内：
 // 可以是平台菜单或本租户自建菜单，但不能是其他租户的菜单。
 func (uapp *userApp) checkMenusExist(ctx context.Context, menuIds []string) error {
-	return uapp.checkMenusExistInTenant(ctx, targetTenant(ctx), menuIds)
+	target := targetTenant(ctx)
+	return uapp.checkMenusExistInTenant(ctx, target, menuIds, target != "")
 }
 
 // checkMenusExistInTenant 按指定租户校验菜单作用域。
 // 编辑角色时用角色自身的 tenant_id：平台管理员在平台视图编辑租户角色时，
 // ctx 的目标租户是空串，不能拿它来判断菜单是否属于该租户。
-func (uapp *userApp) checkMenusExistInTenant(ctx context.Context, tenantId string, menuIds []string) error {
+//
+// rejectPlatformOnly：租户角色（含租户内置角色模板）不能授权平台级菜单，
+// 否则会在登录时拿到 platform:tenant:* / system:config:* 这类平台权限码。
+func (uapp *userApp) checkMenusExistInTenant(ctx context.Context, tenantId string, menuIds []string, rejectPlatformOnly bool) error {
 	menus, err := uapp.dbClient.WithCtx(ctx).SysMenusByIds(menuIds)
 	if err != nil {
 		return err
@@ -745,6 +739,10 @@ func (uapp *userApp) checkMenusExistInTenant(ctx context.Context, tenantId strin
 		if !menuInScope(m, tenantId) {
 			return errort.NewCommonErr(errort.AppPermissionDenied,
 				errort.NewMessageErr("菜单 {{.p1}} 不属于当前作用域，不能授权", map[string]interface{}{"p1": m.Id}))
+		}
+		if rejectPlatformOnly && m.PlatformOnly == 1 {
+			return errort.NewCommonErr(errort.AppPermissionDenied,
+				errort.NewMessageErr("菜单 {{.p1}} 是平台级菜单，不能授权给租户角色", map[string]interface{}{"p1": m.Id}))
 		}
 	}
 	return nil

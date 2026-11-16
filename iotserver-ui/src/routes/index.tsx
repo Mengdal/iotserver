@@ -38,9 +38,18 @@ import VizView from '@/pages/viz/View'
 
 import { Empty } from 'antd'
 import { t } from '@/i18n'
+import { isPlatformAdmin } from '@/utils/auth'
 
-// 看板编辑器用到 gridstack（体积较大），按需加载
+/** 看板编辑器用到 gridstack（体积较大），按需加载 */
 const BoardEdit = React.lazy(() => import('@/pages/viz/BoardEdit'))
+
+/**
+ * 平台管理页（租户管理 / 系统配置 / 系统监控）只对平台管理员开放。
+ * 菜单本来就不会下发给租户用户，这里再挡一次直接输入地址的情况。
+ */
+const PlatformAdminRoute: React.FC<{ children: React.ReactElement }> = ({ children }) => (
+  isPlatformAdmin() ? children : <Navigate to="/home/dashboard" replace />
+)
 
 /** 旧地址 /viz/boards/:id/canvas → /viz/boards/:id/edit */
 const LegacyCanvasRedirect: React.FC = () => {
@@ -117,7 +126,7 @@ const router = createBrowserRouter([
       },
       {
         path: '/monitor/systemMonitor',
-        element: <SystemMonitor />,
+        element: <PlatformAdminRoute><SystemMonitor /></PlatformAdminRoute>,
       },
       {
         path: '/monitor/alarmCenter/detail/:id',
@@ -176,7 +185,7 @@ const router = createBrowserRouter([
       },
       {
         path: '/platform/sysSet',
-        element: <SysSet />,
+        element: <PlatformAdminRoute><SysSet /></PlatformAdminRoute>,
       },
       {
         path: '/common/userProfile',
@@ -190,7 +199,7 @@ const router = createBrowserRouter([
       // ===== 平台管理（平台管理员专属，入口由后端菜单下发） =====
       {
         path: '/platform/tenant',
-        element: <PlatformTenant />,
+        element: <PlatformAdminRoute><PlatformTenant /></PlatformAdminRoute>,
       },
       // ===== 可视化 =====
       {

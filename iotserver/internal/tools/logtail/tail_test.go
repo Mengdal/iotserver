@@ -86,6 +86,35 @@ func TestResolveGlobPicksNewest(t *testing.T) {
 	}
 }
 
+// TailFile 读取的是调用方指定的文件，不会重新挑「最新」文件：
+// ComponentLogs 先 Stat 拿路径再 TailFile，避免两次解析之间轮转导致元信息与内容不一致。
+func TestTailFileDoesNotResolveGlob(t *testing.T) {
+	dir := t.TempDir()
+	older := filepath.Join(dir, "iotp.log.2026-11-13")
+	newer := filepath.Join(dir, "iotp.log.2026-11-14")
+	if err := os.WriteFile(older, []byte("old\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(newer, []byte("new\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	now := time.Now()
+	if err := os.Chtimes(older, now.Add(-2*time.Hour), now.Add(-2*time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chtimes(newer, now.Add(-time.Hour), now.Add(-time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+
+	lines, err := TailFile(older, 10)
+	if err != nil {
+		t.Fatalf("tail file: %v", err)
+	}
+	if len(lines) != 1 || lines[0] != "old" {
+		t.Fatalf("TailFile 应读取指定文件而不是最新文件，实际 %#v", lines)
+	}
+}
+
 func TestResolveNoMatch(t *testing.T) {
 	if got := Resolve(filepath.Join(t.TempDir(), "iotp.log.*")); got != "" {
 		t.Fatalf("expect empty, got %q", got)

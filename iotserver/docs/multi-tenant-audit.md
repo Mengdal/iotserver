@@ -31,7 +31,8 @@
 - 「系统配置」菜单加 `PlatformOnly: 1`；
 - 菜单 upsert 的 updates 补 `platform_only` 列（否则存量库不会刷新该标记）；
 - 4 个写接口（`POST/PUT/DELETE system-setup`、`POST system-setup/save`）移入 `PlatformOnly()` 组；
-- **读接口原地保留**（`GET system-setup`、`GET system-setup/:id`），避免内部/页面读配置被拦。
+- 读接口（`GET system-setup`、`GET system-setup/:id`）也移入 `PlatformOnly()` 组：租户页面不读全局配置（品牌走 `/site-info`）；
+- 平台级菜单下的**按钮**继承 `platform_only`（`system:config:*`、`platform:tenant:*`），租户管理员的权限集合不再包含平台权限码；租户角色授权平台级菜单时后端直接拒绝，前端角色授权树也不再展示。
 
 ## 3. 6 条"废弃"写路由 —— 已摘除
 
@@ -64,6 +65,27 @@ POST language-sdk-sync                → 全局 language_sdk
 
 ## 7. 遗留与后续
 
-1. 租户管理员的**权限码集合**里仍有 `system:config:*`（按钮权限行未标 `platform_only`），实际拦截靠路由 `PlatformOnly`，属纵深防御；若要权限集合也干净，需给按钮行也加平台标记；
+1. ~~租户管理员的**权限码集合**里仍有 `system:config:*`（按钮权限行未标 `platform_only`）~~ —— 已修：按钮行继承父菜单的 `platform_only`，并清理了租户内置角色的存量授权；
 2. **驱动资源**（`device_library` / `device_service` / `docker_config`）按用户决定暂不处理 —— 现状是"平台共享、租户可写"，如果将来要按租户隔离，需加 `tenant_id` 或做覆盖层；
 3. 本次所有修复都需要**重启后端**才生效（路由注册 + 菜单 seed + 菜单过滤逻辑均在启动路径）。
+
+## 8. 公共菜单与无用权限码清理
+
+**公共菜单**：首页（`/home/dashboard`）与工具与文档（`/documents/documents`）是静态入口，
+不挂接口权限码，也不再写进角色授权：
+
+- `seed.IsPublicMenu(menuId)` 标记这两个菜单，登录/`getinfo` 时对**所有登录用户**自动补进菜单树；
+- 租户仍可用「菜单管理 → 隐藏/改名」做展示层覆盖；
+- 角色授权树不再展示这两个菜单（勾选没有意义）。
+
+**删除的无用权限码**：
+
+| 权限码 | 原因 |
+|---|---|
+| `home:view` | 后端没有任何路由校验，首页所有用户可见 |
+| `docs:view` | 只有 `GET /language-sdk` 使用且前端从未调用；该接口改为登录即可读 |
+| `collect:config:list` / `collect:config:edit` | 采集配置接口实际校验 `gateway:gateway:list/config`，从未使用 |
+| `platform:tenant:switch` | 切租户是前端写 `x-tenant-id`，没有后端接口 |
+
+按钮菜单 ID 由声明顺序生成，删除按钮时通过 `seed.retiredButtonPerms` **保留占位序号**，
+避免后续按钮 ID 整体位移、导致角色既有授权全部失效；占位的旧按钮行由启动迁移当遗留菜单清理。

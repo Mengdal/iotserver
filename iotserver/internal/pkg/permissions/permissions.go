@@ -68,11 +68,6 @@ const (
 	ConfigRemove = "system:config:remove"
 )
 
-// 首页
-const (
-	HomeView = "home:view"
-)
-
 // 设备接入 - 产品管理
 const (
 	ProductList  = "gateway:product:list"
@@ -123,11 +118,6 @@ const (
 	AlertEdit   = "monitor:alert:edit"
 	AlertRemove = "monitor:alert:remove"
 	AlertHandle = "monitor:alert:handle"
-)
-
-// 工具与文档
-const (
-	DocsView = "docs:view"
 )
 
 // 命名权限，用于导出给前端（保持与常量名一致，便于对照）
@@ -193,7 +183,6 @@ const (
 	PlatformTenantAdd    = "platform:tenant:add"
 	PlatformTenantEdit   = "platform:tenant:edit"
 	PlatformTenantRemove = "platform:tenant:remove"
-	PlatformTenantSwitch = "platform:tenant:switch"
 )
 
 // 网关（第三方工业网关接入）：设备接入下的子模块
@@ -205,12 +194,6 @@ const (
 	GatewayRemove  = "gateway:gateway:remove"
 	GatewayConfig  = "gateway:gateway:config"
 	GatewayCommand = "gateway:gateway:command"
-)
-
-// 采集配置（设备级）
-const (
-	CollectConfigList = "collect:config:list"
-	CollectConfigEdit = "collect:config:edit"
 )
 
 // 方案（行业模板一键应用）：设备接入下的子模块
@@ -229,12 +212,11 @@ func NamedGroups() [][]NamedPerm {
 	return [][]NamedPerm{
 		{{"PlatformTenantList", PlatformTenantList}, {"PlatformTenantQuery", PlatformTenantQuery},
 			{"PlatformTenantAdd", PlatformTenantAdd}, {"PlatformTenantEdit", PlatformTenantEdit},
-			{"PlatformTenantRemove", PlatformTenantRemove}, {"PlatformTenantSwitch", PlatformTenantSwitch}},
+			{"PlatformTenantRemove", PlatformTenantRemove}},
 		{{"UserList", UserList}, {"UserQuery", UserQuery}, {"UserAdd", UserAdd}, {"UserEdit", UserEdit}, {"UserRemove", UserRemove}},
 		{{"GatewayList", GatewayList}, {"GatewayQuery", GatewayQuery}, {"GatewayAdd", GatewayAdd},
 			{"GatewayEdit", GatewayEdit}, {"GatewayRemove", GatewayRemove},
 			{"GatewayConfig", GatewayConfig}, {"GatewayCommand", GatewayCommand}},
-		{{"CollectConfigList", CollectConfigList}, {"CollectConfigEdit", CollectConfigEdit}},
 		{{"SolutionList", SolutionList}, {"SolutionQuery", SolutionQuery},
 			{"SolutionApply", SolutionApply},
 			{"SolutionTslAdd", SolutionTslAdd}, {"SolutionTslEdit", SolutionTslEdit},
@@ -247,7 +229,6 @@ func NamedGroups() [][]NamedPerm {
 		// 兼容别名（旧登入日志权限码，保留一版）
 		{{"LoginLogList", LoginLogList}, {"LoginLogRemove", LoginLogRemove}},
 		{{"ConfigList", ConfigList}, {"ConfigQuery", ConfigQuery}, {"ConfigAdd", ConfigAdd}, {"ConfigEdit", ConfigEdit}, {"ConfigRemove", ConfigRemove}},
-		{{"HomeView", HomeView}},
 		{{"VizBoardList", VizBoardList}, {"VizBoardQuery", VizBoardQuery}, {"VizBoardAdd", VizBoardAdd},
 			{"VizBoardEdit", VizBoardEdit}, {"VizBoardRemove", VizBoardRemove}, {"VizDataQuery", VizDataQuery}},
 		{{"ProductList", ProductList}, {"ProductQuery", ProductQuery}, {"ProductAdd", ProductAdd}, {"ProductEdit", ProductEdit}, {"ProductDel", ProductDel}},
@@ -256,7 +237,6 @@ func NamedGroups() [][]NamedPerm {
 		{{"DriveList", DriveList}, {"DriveQuery", DriveQuery}, {"DriveAdd", DriveAdd}, {"DriveEdit", DriveEdit}, {"DriveRemove", DriveRemove}},
 		{{"MonitorView", MonitorView}},
 		{{"AlertList", AlertList}, {"AlertQuery", AlertQuery}, {"AlertAdd", AlertAdd}, {"AlertEdit", AlertEdit}, {"AlertRemove", AlertRemove}, {"AlertHandle", AlertHandle}},
-		{{"DocsView", DocsView}},
 		{{"AdvancedResourceList", AdvancedResourceList}, {"AdvancedResourceAdd", AdvancedResourceAdd},
 			{"AdvancedResourceEdit", AdvancedResourceEdit}, {"AdvancedResourceRemove", AdvancedResourceRemove},
 			{"AdvancedResourceVerify", AdvancedResourceVerify}},

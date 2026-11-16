@@ -2,6 +2,7 @@ package seed
 
 import (
 	"fmt"
+	"strings"
 
 	"iotserver/internal/models"
 	"iotserver/internal/pkg/permissions"
@@ -42,6 +43,18 @@ const (
 	MenuAlarm            = "9002000000000000003"
 )
 
+// IsPublicMenu 公共导航菜单：首页 / 工具与文档。
+// 这些是静态入口，所有登录用户默认可见，不依赖角色授权，也不带权限码。
+// 租户仍可通过菜单定制隐藏/改名（展示层覆盖）。
+func IsPublicMenu(id string) bool {
+	switch id {
+	case MenuHomeId, MenuDocsId:
+		return true
+	default:
+		return false
+	}
+}
+
 // 内置角色
 const (
 	RoleAdminId = "8000000000000000001"
@@ -78,10 +91,9 @@ const (
 	MenuSolution = "9001000000000000011"
 )
 
-// 设备接入 - 采集配置菜单
-const (
-	MenuCollectConfig = "9001000000000000012"
-)
+// 已废弃的「采集配置」菜单 ID：菜单本体与权限码已移除，
+// 仅保留按钮占位以维持后续按钮菜单 ID 的稳定（见 retiredButtonPerms）。
+const MenuCollectConfig = "9001000000000000012"
 
 // 设备接入 - 驱动管理目录（把驱动相关菜单收进去）
 const (
@@ -181,8 +193,9 @@ func DefaultMenus() []models.Menu {
 	menus := []models.Menu{
 		// ===== 首页 =====
 		{
+			// 公共导航：所有登录用户默认可见，不带权限码（见 IsPublicMenu）。
 			Id: MenuHomeId, ParentId: "0", Name: "首页", Path: "/home/dashboard",
-			Icon: "dashboard", MenuType: models.MenuTypeMenu, Perms: permissions.HomeView,
+			Icon: "dashboard", MenuType: models.MenuTypeMenu,
 			Sort: 1, Visible: 1, Status: 1, IsFrame: 1,
 		},
 		// ===== 平台管理（仅 平台运营账号可见）=====
@@ -231,13 +244,6 @@ func DefaultMenus() []models.Menu {
 			Id: MenuGatewayManage, ParentId: MenuGatewayId, Name: "网关管理", Path: "/gateway/gateway/manage",
 			Icon: "cloud-server", MenuType: models.MenuTypeMenu, Perms: permissions.GatewayList,
 			Sort: 3, Visible: 1, Status: 1, IsFrame: 1,
-		},
-		{
-			// 采集配置入口已收敛到「网关管理 → 采集配置」抽屉，不再出现在侧边栏。
-			// 保留菜单记录（Visible=0）是为了继续承载 collect:config:* 权限码与按钮权限。
-			Id: MenuCollectConfig, ParentId: MenuGatewayId, Name: "采集配置", Path: "/gateway/collect/config",
-			Icon: "setting", MenuType: models.MenuTypeMenu, Perms: permissions.CollectConfigList,
-			Sort: 5, Visible: 0, Status: 1, IsFrame: 1,
 		},
 		{
 			// 方案中心：行业方案（物模型 + 告警预设 + 看板预设）一键生成产品与告警规则
@@ -366,8 +372,9 @@ func DefaultMenus() []models.Menu {
 		// 入口固定在顶栏头像下拉里，页面路由 /common/userProfile 保持不变。
 		// ===== 工具与文档 =====
 		{
+			// 公共导航：静态页面，所有登录用户默认可见，不带权限码（见 IsPublicMenu）。
 			Id: MenuDocsId, ParentId: "0", Name: "工具与文档", Path: "/documents/documents",
-			Icon: "book", MenuType: models.MenuTypeMenu, Perms: permissions.DocsView,
+			Icon: "book", MenuType: models.MenuTypeMenu,
 			Sort: 92, Visible: 1, Status: 1, IsFrame: 1,
 		},
 	}
@@ -375,24 +382,50 @@ func DefaultMenus() []models.Menu {
 	// 生成按钮权限
 	// 注意：Sort 必须按「同一父级内」重新计数，否则按钮的排序值会大于父菜单，
 	// 导致按 sort 排序的树表把子节点排到父菜单前面。
+	// 平台级菜单下的按钮同样是平台级：否则租户管理员会通过按钮权限码
+	// 拿到「租户管理 / 系统配置」的接口权限。
+	platformOnlyParents := make(map[string]int)
+	for _, menu := range menus {
+		if menu.PlatformOnly == 1 {
+			platformOnlyParents[menu.Id] = 1
+		}
+	}
 	seq := 0
 	for _, group := range buttonGroups {
 		for i, action := range group.actions {
 			seq++
+			perm := fmt.Sprintf("%s:%s", group.prefix, action.Suffix)
+			// 已废弃的按钮权限不再生成菜单，但仍占用序号：
+			// 按钮 ID 按声明顺序生成，跳过时若不自增，后续所有按钮 ID 会整体位移，
+			// 启动迁移会把旧 ID 当遗留菜单清掉，租户角色的既有授权会全部失效。
+			if _, retired := retiredButtonPerms[perm]; retired {
+				continue
+			}
 			menus = append(menus, models.Menu{
-				Id:       fmt.Sprintf("9100000000000%05d", seq),
-				ParentId: group.parentId,
-				Name:     fmt.Sprintf("%s%s", group.name, action.Name),
-				MenuType: models.MenuTypeButton,
-				Perms:    fmt.Sprintf("%s:%s", group.prefix, action.Suffix),
-				Sort:     i + 1,
-				Visible:  1,
-				Status:   1,
-				IsFrame:  1,
+				Id:           fmt.Sprintf("9100000000000%05d", seq),
+				ParentId:     group.parentId,
+				Name:         fmt.Sprintf("%s%s", group.name, action.Name),
+				MenuType:     models.MenuTypeButton,
+				Perms:        perm,
+				Sort:         i + 1,
+				Visible:      1,
+				Status:       1,
+				IsFrame:      1,
+				PlatformOnly: platformOnlyParents[group.parentId],
 			})
 		}
 	}
 	return menus
+}
+
+// retiredButtonPerms 已下线的按钮权限：不再生成菜单与权限码，
+// 但 buttonGroups 里的声明要保留，用于维持后续按钮菜单 ID 的稳定。
+var retiredButtonPerms = map[string]struct{}{
+	// 租户切换是前端写 x-tenant-id，没有后端接口，不需要权限码
+	"platform:tenant:switch": {},
+	// 采集配置接口实际校验 gateway:gateway:list/config，collect:config:* 从未被使用
+	"collect:config:list": {},
+	"collect:config:edit": {},
 }
 
 // DefaultDepts 默认部门
@@ -434,7 +467,7 @@ func DefaultRoles() []models.Role {
 			Sort:       2,
 			DataScope:  models.DataScopeAll,
 			Status:     1,
-			Remark:     "全局租户管理员角色：拥有本租户全部权限，可管理本租户用户；所有租户共用",
+			Remark:     "拥有本租户全部权限，可管理本租户用户",
 		},
 		{
 			Id:         RoleTenantUserTemplateId,
@@ -444,19 +477,20 @@ func DefaultRoles() []models.Role {
 			Sort:       3,
 			DataScope:  models.DataScopeAll,
 			Status:     1,
-			Remark:     "全局普通用户角色：可查看首页、设备、数据看板和历史数据；所有租户共用",
+			Remark:     "可查看设备、数据看板和历史数据，并使用高级能力",
 		},
 	}
 }
 
-// TenantUserMenuIds 普通用户的基础菜单与只读按钮权限：
-// 首页、设备查看、历史查询、数据看板、告警中心和文档。
+// TenantUserMenuIds 普通用户的默认菜单与按钮权限：
+// 设备查看、历史查询、数据看板、告警中心，以及高级能力（资源管理 / 规则引擎 / 场景联动）。
+// 首页与工具与文档是公共导航菜单（IsPublicMenu），不需要写进角色授权。
 //
 // 菜单本身只带 list 权限；详情请求还需要各模块的 query 权限，因此这里从默认菜单里
-// 把这些按钮菜单一起挑出来，保证普通用户能打开详情，但不能新增/修改/删除。
+// 把这些按钮菜单一起挑出来，保证普通用户能打开详情。基础业务菜单只授予读取权限
+// （不能新增/修改/删除）；高级能力按产品策略允许普通用户完整操作。
 func TenantUserMenuIds() []string {
 	base := map[string]struct{}{
-		MenuHomeId:        {},
 		MenuGatewayId:     {},
 		MenuProduct:       {},
 		MenuDevice:        {},
@@ -467,7 +501,7 @@ func TenantUserMenuIds() []string {
 		MenuVizId:         {},
 		MenuMonitorId:     {},
 		MenuAlarm:         {},
-		MenuDocsId:        {},
+		MenuAdvancedId:    {},
 	}
 	readPerms := map[string]struct{}{
 		permissions.ProductQuery: {},
@@ -475,26 +509,35 @@ func TenantUserMenuIds() []string {
 		permissions.GatewayQuery: {},
 		permissions.AlertQuery:   {},
 	}
-	ids := make([]string, 0, len(base)+len(readPerms))
-	for _, m := range DefaultMenus() {
+	menus := DefaultMenus()
+	ids := make([]string, 0, len(menus))
+	for _, m := range menus {
 		if _, ok := base[m.Id]; ok {
 			ids = append(ids, m.Id)
 			continue
 		}
 		if _, ok := readPerms[m.Perms]; ok {
 			ids = append(ids, m.Id)
+			continue
+		}
+		// 高级能力（资源管理 / 规则引擎 / 场景联动）允许普通用户操作：
+		// 菜单本体与其下全部按钮权限一并授予。
+		if strings.HasPrefix(m.Perms, "advanced:") {
+			ids = append(ids, m.Id)
 		}
 	}
 	return ids
 }
 
+
 // TenantAdminMenuIds 管理员角色展示用的菜单集合：
 // 租户可见的全部菜单（排除平台专属菜单）。管理员本身有权限直通，这里写入
 // 角色-菜单关联只是为了让「菜单权限」抽屉能正确显示已授权范围。
+// 公共导航菜单（首页 / 工具与文档）对所有用户默认可见，不写进角色授权。
 func TenantAdminMenuIds(menus []models.Menu) []string {
 	ids := make([]string, 0, len(menus))
 	for _, m := range menus {
-		if m.PlatformOnly == 1 {
+		if m.PlatformOnly == 1 || IsPublicMenu(m.Id) {
 			continue
 		}
 		ids = append(ids, m.Id)

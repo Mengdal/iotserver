@@ -4,6 +4,14 @@
 	http://jedwatson.github.io/classnames
 */
 
+/*!
+ * GridStack 14.0.0
+ * https://gridstackjs.com/
+ *
+ * Copyright (c) 2021-2025  Alain Dumesny
+ * see root license https://github.com/gridstack/gridstack.js/tree/master/LICENSE
+ */
+
 /*! @license DOMPurify 2.3.1 | (c) Cure53 and other contributors | Released under the Apache license 2.0 and Mozilla Public License 2.0 | github.com/cure53/DOMPurify/blob/2.3.1/LICENSE */
 
 /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/babel/babel/blob/main/packages/babel-helpers/LICENSE */

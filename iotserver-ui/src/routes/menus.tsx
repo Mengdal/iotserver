@@ -35,10 +35,10 @@ export interface AppMenuItem {
 
 const menus: AppMenuItem[] = [
   {
+    // 公共导航：所有登录用户默认可见，不设权限码（后端会直接下发）
     label: t('首页'),
     key: '/home/dashboard',
     icon: <DashboardOutlined />,
-    perm: P.HomeView,
   },
   {
     // 平台管理员专属（后端菜单整组 platform_only，租户用户收不到这一组）
@@ -103,10 +103,10 @@ const menus: AppMenuItem[] = [
     ],
   },
   {
+    // 公共导航：静态页面，所有登录用户默认可见，不设权限码
     label: t('工具与文档'),
     key: '/documents/documents',
     icon: <BookOutlined />,
-    perm: P.DocsView,
   },
 ]
 

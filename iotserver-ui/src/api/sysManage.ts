@@ -57,6 +57,10 @@ export interface SysMenu {
   remark: string
   /** 菜单归属：'' = 平台原始菜单；非空 = 该租户的自建菜单 */
   tenantId?: string
+  /** 1 = 平台级菜单（租户管理 / 系统配置），租户角色不能授权 */
+  platformOnly?: number
+  /** 1 = 公共导航菜单（首页 / 工具与文档），所有登录用户默认可见，无需授权 */
+  public?: number
   created?: number
   modified?: number
   children?: SysMenu[]

@@ -8,7 +8,6 @@ export const PlatformTenantQuery = 'platform:tenant:query'
 export const PlatformTenantAdd = 'platform:tenant:add'
 export const PlatformTenantEdit = 'platform:tenant:edit'
 export const PlatformTenantRemove = 'platform:tenant:remove'
-export const PlatformTenantSwitch = 'platform:tenant:switch'
 
 export const UserList = 'system:user:list'
 export const UserQuery = 'system:user:query'
@@ -23,9 +22,6 @@ export const GatewayEdit = 'gateway:gateway:edit'
 export const GatewayRemove = 'gateway:gateway:remove'
 export const GatewayConfig = 'gateway:gateway:config'
 export const GatewayCommand = 'gateway:gateway:command'
-
-export const CollectConfigList = 'collect:config:list'
-export const CollectConfigEdit = 'collect:config:edit'
 
 export const SolutionList = 'solution:list'
 export const SolutionQuery = 'solution:query'
@@ -65,8 +61,6 @@ export const ConfigQuery = 'system:config:query'
 export const ConfigAdd = 'system:config:add'
 export const ConfigEdit = 'system:config:edit'
 export const ConfigRemove = 'system:config:remove'
-
-export const HomeView = 'home:view'
 
 export const VizBoardList = 'viz:board:list'
 export const VizBoardQuery = 'viz:board:query'
@@ -109,8 +103,6 @@ export const AlertEdit = 'monitor:alert:edit'
 export const AlertRemove = 'monitor:alert:remove'
 export const AlertHandle = 'monitor:alert:handle'
 
-export const DocsView = 'docs:view'
-
 export const AdvancedResourceList = 'advanced:resource:list'
 export const AdvancedResourceAdd = 'advanced:resource:add'
 export const AdvancedResourceEdit = 'advanced:resource:edit'
@@ -137,10 +129,9 @@ export const AdvancedSceneStop = 'advanced:scene:stop'
 
 /** 全部权限标识（与后端 /api/v1/user/getinfo 返回的子集一致） */
 export const PERMISSIONS: string[] = [
-  PlatformTenantList, PlatformTenantQuery, PlatformTenantAdd, PlatformTenantEdit, PlatformTenantRemove, PlatformTenantSwitch,
+  PlatformTenantList, PlatformTenantQuery, PlatformTenantAdd, PlatformTenantEdit, PlatformTenantRemove,
   UserList, UserQuery, UserAdd, UserEdit, UserRemove,
   GatewayList, GatewayQuery, GatewayAdd, GatewayEdit, GatewayRemove, GatewayConfig, GatewayCommand,
-  CollectConfigList, CollectConfigEdit,
   SolutionList, SolutionQuery, SolutionApply, SolutionTslAdd, SolutionTslEdit, SolutionTslRemove,
   RoleList, RoleQuery, RoleAdd, RoleEdit, RoleRemove,
   MenuList, MenuQuery, MenuAdd, MenuEdit, MenuRemove, MenuCustomPref, MenuCustomReset,
@@ -148,7 +139,6 @@ export const PERMISSIONS: string[] = [
   AuditLogList, AuditLogRemove,
   LoginLogList, LoginLogRemove,
   ConfigList, ConfigQuery, ConfigAdd, ConfigEdit, ConfigRemove,
-  HomeView,
   VizBoardList, VizBoardQuery, VizBoardAdd, VizBoardEdit, VizBoardRemove, VizDataQuery,
   ProductList, ProductQuery, ProductAdd, ProductEdit, ProductDel,
   DeviceList, DeviceQuery, DeviceAdd, DeviceEdit, DeviceDel, DeviceImport, DeviceBind,
@@ -156,7 +146,6 @@ export const PERMISSIONS: string[] = [
   DriveList, DriveQuery, DriveAdd, DriveEdit, DriveRemove,
   MonitorView,
   AlertList, AlertQuery, AlertAdd, AlertEdit, AlertRemove, AlertHandle,
-  DocsView,
   AdvancedResourceList, AdvancedResourceAdd, AdvancedResourceEdit, AdvancedResourceRemove, AdvancedResourceVerify,
   AdvancedRuleList, AdvancedRuleQuery, AdvancedRuleAdd, AdvancedRuleEdit, AdvancedRuleRemove, AdvancedRuleStart, AdvancedRuleStop,
   SystemDebugPprof,

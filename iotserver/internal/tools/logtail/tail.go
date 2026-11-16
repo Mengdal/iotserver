@@ -79,9 +79,17 @@ func Stat(path string) Info {
 	return info
 }
 
-// Tail 返回文件末尾最多 maxLines 行。
+// Tail 返回文件末尾最多 maxLines 行（通配符路径会解析成当前最新的文件）。
 func Tail(path string, maxLines int) ([]string, error) {
-	path = Resolve(path)
+	return TailFile(Resolve(path), maxLines)
+}
+
+// TailFile 返回指定文件末尾最多 maxLines 行，不再解析通配符。
+//
+// 调用方已经用 Stat 解析过路径时应使用本函数：Stat 与 Tail 各自解析一次通配符，
+// 两次调用之间若发生日志轮转，元信息与实际内容会来自不同文件。
+func TailFile(path string, maxLines int) ([]string, error) {
+	path = strings.TrimSpace(path)
 	if path == "" {
 		return nil, ErrNotFound
 	}

@@ -133,7 +133,9 @@ func (app *driverLibApp) ComponentLogs(ctx context.Context, id string, tail int)
 	if !info.Exists {
 		return result, nil
 	}
-	lines, err := logtail.Tail(source.Path, tail)
+	// 用 Stat 已解析出的具体文件，避免再次解析通配符时日志轮转导致
+	// 返回的路径/大小与行内容来自不同文件。
+	lines, err := logtail.TailFile(info.Path, tail)
 	if err != nil {
 		if errors.Is(err, logtail.ErrNotFound) {
 			return result, nil

@@ -76,6 +76,11 @@ func toRoleResponse(r models.Role, menuIds []string) dtos.SysRoleResponse {
 }
 
 func toMenuResponse(m models.Menu) dtos.SysMenuResponse {
+	// 公共导航菜单（首页 / 工具与文档）由 seed 固定 ID 判定，不落库
+	public := 0
+	if seed.IsPublicMenu(m.Id) {
+		public = 1
+	}
 	return dtos.SysMenuResponse{
 		Id:        m.Id,
 		ParentId:  m.ParentId,
@@ -91,10 +96,13 @@ func toMenuResponse(m models.Menu) dtos.SysMenuResponse {
 		Status:    m.Status,
 		IsFrame:   m.IsFrame,
 		TenantId:  m.TenantId,
-		Remark:    m.Remark,
-		Created:   m.Created,
-		Modified:  m.Modified,
-		Children:  []dtos.SysMenuResponse{},
+		// 前端据此在租户视图里隐藏「平台管理」相关菜单的授权项
+		PlatformOnly: m.PlatformOnly,
+		Public:       public,
+		Remark:       m.Remark,
+		Created:      m.Created,
+		Modified:     m.Modified,
+		Children:     []dtos.SysMenuResponse{},
 	}
 }
 

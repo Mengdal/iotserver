@@ -77,9 +77,10 @@ func RegisterGateway(engine *gin.Engine, dic *di.Container) {
 		platform.POST("things/test", ctl.Perm(middleware.PermConfigEdit), ctl.ThingsTestConnection)
 		platform.POST("things/reconcile", ctl.Perm(middleware.PermConfigEdit), ctl.ThingsReconcile)
 
-		// 系统配置是全局唯一一份（sys_config 没有 tenant_id），写接口只允许平台管理员：
-		// 租户管理员天然拥有 system:config:* 权限码，若只校验权限码即可改写全平台配置。
-		// 读接口（GET）保留在 v1Auth，租户侧页面/内部逻辑仍需读取配置。
+		// 系统配置是全局唯一一份（sys_config 没有 tenant_id），读写都只允许平台管理员：
+		// 租户页面不需要读取它（品牌等配置走 /site-info），租户侧能看到/能改都属于越权。
+		platform.GET("system-setup", ctl.Perm(middleware.PermConfigList), ctl.SysConfigSearch)
+		platform.GET("system-setup/:id", ctl.Perm(middleware.PermConfigQuery), ctl.SysConfigById)
 		platform.POST("system-setup", ctl.Perm(middleware.PermConfigAdd), ctl.SysConfigAdd)
 		platform.PUT("system-setup", ctl.Perm(middleware.PermConfigEdit), ctl.SysConfigUpdate)
 		platform.DELETE("system-setup", ctl.Perm(middleware.PermConfigRemove), ctl.SysConfigDelete)
@@ -292,8 +293,8 @@ func RegisterGateway(engine *gin.Engine, dic *di.Container) {
 
 	/*******文档中心（sdk） *******/
 	{
-
-		v1Auth.GET("language-sdk", ctl.Perm(middleware.PermDocsView), ctl.LanguageSdkSearch)
+		// SDK 列表是静态下载信息，登录即可读取，不单独设权限码。
+		v1Auth.GET("language-sdk", ctl.LanguageSdkSearch)
 	}
 
 	/******* 系统管理 ********/
@@ -357,9 +358,7 @@ func RegisterGateway(engine *gin.Engine, dic *di.Container) {
 		v1Auth.DELETE("sys-login-log/clear",
 			ctl.Perm(middleware.PermAuditLogRemove, middleware.PermLoginLogRemove), ctl.SysLoginLogClear)
 
-		// 系统配置：只保留读接口给租户；写接口在「平台管理」组（PlatformOnly）
-		v1Auth.GET("system-setup", ctl.Perm(middleware.PermConfigList), ctl.SysConfigSearch)
-		v1Auth.GET("system-setup/:id", ctl.Perm(middleware.PermConfigQuery), ctl.SysConfigById)
+		// 系统配置的读接口与写接口同在「平台管理」组（PlatformOnly），租户不可见。
 	}
 
 }

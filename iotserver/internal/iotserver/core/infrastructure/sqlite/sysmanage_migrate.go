@@ -414,6 +414,10 @@ func (c *Client) seedSystemData() error {
 			if err := tx.Table("sys_role_menu").Where("menu_id IN ?", staleIds).Delete(&models.RoleMenu{}).Error; err != nil {
 				return err
 			}
+			// 菜单删除后租户侧的展示层覆盖也一并清理，避免留下悬空记录
+			if err := tx.Table(models.TableTenantMenuPref).Where("menu_id IN ?", staleIds).Delete(&models.TenantMenuPref{}).Error; err != nil {
+				return err
+			}
 			if err := tx.Table("sys_menu").Where("id IN ? AND tenant_id = ''", staleIds).Delete(&models.Menu{}).Error; err != nil {
 				return err
 			}
@@ -505,6 +509,25 @@ func (c *Client) seedSystemData() error {
 			}
 			if err := tx.Table("sys_role_menu").
 				Create(&models.RoleMenu{RoleId: seed.RoleAdminId, MenuId: menuId}).Error; err != nil {
+				return err
+			}
+		}
+
+		/******* 平台级菜单与公共导航菜单不能授权给租户内置角色 *******/
+		// 历史版本把「租户管理 / 系统配置」的按钮也当普通菜单写进了租户角色的授权表，
+		// 导致租户管理员拿到 platform:tenant:* / system:config:* 权限码；
+		// 首页 / 工具与文档已改为公共菜单，不再需要角色授权。这里清掉存量数据。
+		unassignableMenuIds := make([]string, 0, 8)
+		for _, menu := range defaultMenus {
+			if menu.PlatformOnly == 1 || seed.IsPublicMenu(menu.Id) {
+				unassignableMenuIds = append(unassignableMenuIds, menu.Id)
+			}
+		}
+		if len(unassignableMenuIds) > 0 {
+			if err := tx.Table("sys_role_menu").
+				Where("role_id IN ?", []string{seed.RoleTenantAdminTemplateId, seed.RoleTenantUserTemplateId}).
+				Where("menu_id IN ?", unassignableMenuIds).
+				Delete(&models.RoleMenu{}).Error; err != nil {
 				return err
 			}
 		}

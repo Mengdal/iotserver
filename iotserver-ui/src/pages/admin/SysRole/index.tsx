@@ -52,6 +52,19 @@ function toTreeData (list: SysMenu[]): MenuTreeNode[] {
   })
 }
 
+/**
+ * 角色授权树里剔除两类不可授权的菜单：
+ * - 公共导航菜单（首页 / 工具与文档）：所有登录用户默认可见，授权与否没有意义；
+ * - 平台级菜单（租户管理 / 系统配置）：只属于平台管理员，租户角色即使勾选了后端也会拒绝。
+ */
+function stripUnassignableMenus (list: SysMenu[], hidePlatformOnly: boolean): SysMenu[] {
+  return list
+    .filter(item => item.public !== 1 && !(hidePlatformOnly && item.platformOnly === 1))
+    .map(item => (item.children && item.children.length > 0
+      ? { ...item, children: stripUnassignableMenus(item.children, hidePlatformOnly) }
+      : item))
+}
+
 function collectKeys (list: SysMenu[]): string[] {
   const keys: string[] = []
   const loop = (items: SysMenu[]) => {
@@ -119,14 +132,18 @@ const SysRolePage: React.FC = () => {
     }
   }, [form, pagination.current, pagination.pageSize])
 
-  const loadMenuTree = useCallback(async () => {
+  const loadMenuTree = useCallback(async (): Promise<SysMenu[]> => {
     const resp = await getSysMenuTree({ isAll: true })
     if (resp.success) {
-      setMenuTreeRaw(resp.result || [])
-      setMenuTreeData(toTreeData(resp.result || []))
-      setExpandedKeys(collectKeys(resp.result || []))
+      // 平台级菜单只对平台管理员展示授权项；公共导航菜单对任何人都不需要授权
+      const list = stripUnassignableMenus(resp.result || [], !platformAdmin)
+      setMenuTreeRaw(list)
+      setMenuTreeData(toTreeData(list))
+      setExpandedKeys(collectKeys(list))
+      return list
     }
-  }, [])
+    return []
+  }, [platformAdmin])
 
   useEffect(() => {
     loadData(1, pagination.pageSize)
@@ -141,15 +158,30 @@ const SysRolePage: React.FC = () => {
   }
 
   const openEdit = async (record: SysRole) => {
+    // 菜单树没加载成功时先补一次：提交前必须能过滤掉不可授权（平台级/公共）
+    // 的历史菜单 ID，否则后端会整单拒绝。仍为空说明接口异常，放弃打开，
+    // 避免把授权列表误清空。
+    let tree = menuTreeRaw
+    if (tree.length === 0) {
+      tree = await loadMenuTree()
+    }
+    if (tree.length === 0) {
+      messageApi.open({ type: 'error', content: t('加载失败') })
+      return
+    }
     setEditing(record)
     editForm.resetFields()
+    // 只保留授权树里可见的菜单：平台级菜单/公共导航菜单不能授权，
+    // 若把历史遗留的隐藏 ID 原样提交，后端会整单拒绝。
+    const assignable = new Set(collectKeys(tree))
+    const menuIds = (record.menuIds || []).filter(id => assignable.has(id))
     editForm.setFieldsValue({
       name: record.name,
       sort: record.sort,
       dataScope: record.dataScope,
       status: record.status,
       remark: record.remark,
-      menuIds: record.menuIds || [],
+      menuIds,
     })
     setModalOpen(true)
   }

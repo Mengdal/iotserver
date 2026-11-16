@@ -461,7 +461,11 @@ const SysUserPage: React.FC = () => {
           <Form.Item label={t('部门')} name="deptId">
             <TreeSelect placeholder={t('请选择部门')} allowClear treeData={deptTree} treeDefaultExpandAll />
           </Form.Item>
-          <Form.Item label={t('角色')} name="roleIds">
+          <Form.Item
+            label={t('角色')}
+            name="roleIds"
+            rules={[{ required: true, message: t('请选择角色') }]}
+          >
             <Select mode="multiple" placeholder={t('请选择角色')} allowClear>
               {roles.map(role => (
                 <Select.Option key={role.id} value={role.id}>{tt(role.name)}</Select.Option>

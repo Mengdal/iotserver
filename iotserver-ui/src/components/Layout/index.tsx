@@ -48,7 +48,6 @@ const MainLayout: React.FC = () => {
 
   const user = auth
   const userInfo = user?.user
-  const admin = userInfo?.admin === true || user?.admin === true
   // 平台管理员：显示租户切换器（登录接口返回 platformAdmin）
   const platformAdmin = userInfo?.platformAdmin === true || user?.platformAdmin === true
   const [tenants, setTenants] = useState<Tenant[]>([])
@@ -73,9 +72,10 @@ const MainLayout: React.FC = () => {
   const siderMenus = useMemo(() => {
     const fromBackend = buildMenusFromBackend(backendMenus)
     const menus = hasBackendMenus
-      // 老版本登录态/接口异常时没有 menus 字段，先用前端内置菜单兜底，避免侧边栏空白
+      // 老版本登录态/接口异常时没有 menus 字段，先用前端内置菜单兜底，避免侧边栏空白。
+      // 兜底同样只让平台管理员直通：租户管理员按后端下发的权限集合裁剪。
       ? fromBackend
-      : buildMenus({ admin, permissions })
+      : buildMenus({ admin: platformAdmin, permissions })
     // 系统监控看板只属于平台视图：平台管理员代管某个租户时，该租户下没有这块看板，
     // 直接隐藏菜单（租户用户本身由后端 platform_only 过滤，不会下发这一项）。
     if (!getCurrentTenantId()) return menus
@@ -85,7 +85,7 @@ const MainLayout: React.FC = () => {
         ? { ...item, children: withoutSystemMonitor(item.children) }
         : item))
     return withoutSystemMonitor(menus as any[])
-  }, [backendMenus, hasBackendMenus, admin, permissions])
+  }, [backendMenus, hasBackendMenus, platformAdmin, permissions])
 
   // 每次进入/刷新页面都同步一次「当前用户的菜单与权限」
   // 这样在【角色管理】里改了某个角色的菜单权限、或在【菜单管理】里改了菜单/权限标识后，

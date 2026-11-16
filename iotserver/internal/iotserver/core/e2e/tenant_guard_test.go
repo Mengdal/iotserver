@@ -11,6 +11,7 @@ import (
 	"iotserver/internal/dtos"
 	"iotserver/internal/models"
 	"iotserver/internal/pkg/constants"
+	"iotserver/internal/pkg/seed"
 	"iotserver/internal/pkg/tenant"
 )
 
@@ -195,6 +196,7 @@ func TestTenantUserAndGatewayQuotaEnforced(t *testing.T) {
 	setTenantQuota(t, env, tc.Id, func(x *models.Tenant) { x.MaxUsers = 1 })
 	userBody, _ := json.Marshal(dtos.SysUserAddRequest{
 		Username: "quota_user", Password: "123456", Nickname: "超配额用户", Status: 1,
+		RoleIds: []string{seed.RoleTenantUserTemplateId},
 	})
 	w := doRequest(env.engine, http.MethodPost, "/api/v1/sys-user", token, userBody)
 	resp := parseResponse(t, w)

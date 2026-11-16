@@ -391,12 +391,6 @@ const SysMenuPage: React.FC = () => {
       },
     },
     {
-      title: t('按钮'),
-      key: 'isButton',
-      width: 70,
-      render: (_, record) => (record.menuType === 'F' ? <Tag>{t('是')}</Tag> : <Tag color="blue">{t('否')}</Tag>),
-    },
-    {
       title: t('类型'),
       dataIndex: 'menuType',
       width: 80,

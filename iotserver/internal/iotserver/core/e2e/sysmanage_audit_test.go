@@ -11,6 +11,7 @@ import (
 
 	"iotserver/internal/dtos"
 	"iotserver/internal/models"
+	"iotserver/internal/pkg/seed"
 	"iotserver/internal/pkg/tenant"
 	"iotserver/internal/pkg/utils"
 	tenantplugin "iotserver/internal/tools/sqldb/tenant"
@@ -217,6 +218,7 @@ func TestAuditLogParamsMasked(t *testing.T) {
 
 	body, _ := json.Marshal(map[string]interface{}{
 		"username": "audit_mask_user", "password": plain, "nickname": "打码测试", "status": 1,
+		"roleIds": []string{seed.RoleAdminId},
 	})
 	w := doRequest(env.engine, http.MethodPost, "/api/v1/sys-user", env.token, body)
 	if resp := parseResponse(t, w); !resp.Success {

@@ -89,7 +89,7 @@ const FEATURES: Feature[] = [
 ]
 
 const STEPS = [
-  { title: t('部署服务'), description: t('使用 Docker Compose 一键启动平台、MQTT Broker 与规则引擎。') },
+  { title: t('部署服务'), description: t('支持 Docker Compose 服务器部署与 ARM64 嵌入式部署。') },
   { title: t('创建产品'), description: t('按业务定义物模型，或直接从内置行业模板生成产品与告警。') },
   { title: t('接入设备'), description: t('创建设备或工业网关，使用平台分配的 MQTT 凭据连接并上报数据。') },
   { title: t('配置监控'), description: t('设置告警规则、场景联动与可视化看板，持续观察设备运行情况。') },

@@ -535,9 +535,23 @@ func TestNonAdminMenusIncludeParentDirs(t *testing.T) {
 	if findMenu(menus, "/admin/sysUser") == nil {
 		t.Fatalf("granted child menu missing in tree: %v", menus)
 	}
-	root := menus[0].(map[string]interface{})
-	if root["id"] != parentId {
-		t.Fatalf("expect补全的父目录 %s 作为根节点, got %v", parentId, root["id"])
+	// 公共导航菜单（首页 / 工具与文档）不需要角色授权也应下发
+	for _, path := range []string{"/home/dashboard", "/documents/documents"} {
+		if findMenu(menus, path) == nil {
+			t.Fatalf("public menu %s should be present for any user: %v", path, menus)
+		}
+	}
+	// 父目录应被补全到顶层（公共菜单也在顶层，不能假设 menus[0]）
+	var root map[string]interface{}
+	for _, it := range menus {
+		node, _ := it.(map[string]interface{})
+		if node["id"] == parentId {
+			root = node
+			break
+		}
+	}
+	if root == nil {
+		t.Fatalf("expect补全的父目录 %s 出现在菜单树顶层, got %v", parentId, menus)
 	}
 
 	// 权限集合不应因为补全父目录而变多
@@ -750,15 +764,10 @@ func TestGlobalBuiltinRolesShared(t *testing.T) {
 	if infoResult["admin"] == true {
 		t.Fatal("全局普通用户不应被识别为管理员")
 	}
-	perms, _ := infoResult["permissions"].([]interface{})
-	hasHome := false
-	for _, p := range perms {
-		if p == "home:view" {
-			hasHome = true
-		}
-	}
-	if !hasHome {
-		t.Fatalf("全局普通用户应拥有 home:view 权限，实际 %v", perms)
+	// 该角色的菜单在上面的平台更新中已被改成只有首页，这里验证公共导航菜单仍会下发。
+	tenantMenus, _ := infoResult["menus"].([]interface{})
+	if !menuTreeHasPath(tenantMenus, "/home/dashboard") {
+		t.Fatalf("全局普通用户应拿到首页菜单，实际 %v", infoResult["menus"])
 	}
 	platformUserBody, _ := json.Marshal(dtos.SysUserAddRequest{
 		Username: "global_platform_user", Password: "tenant123", Nickname: "平台用户",

@@ -238,27 +238,12 @@ func (uapp *userApp) buildLoginUser(ctx context.Context, user models.User, lang 
 	// 平台管理员 = 内置超级管理员 且 不属于任何租户（平台运营账号）
 	result.PlatformAdmin = admin && user.TenantId == ""
 
-	assigned, err := uapp.menusOfUser(user.Id, user.TenantId, admin)
+	assigned, treeMenus, err := uapp.userMenus(user, admin)
 	if err != nil {
 		return result, err
 	}
-	// 平台级菜单（如「租户管理」）只下发给平台管理员：租户用户即使被授权也看不到
-	if !result.PlatformAdmin {
-		assigned = filterPlatformOnlyMenus(assigned)
-	}
 	// 权限只按角色实际授权的菜单计算：补全父目录与展示层覆盖（隐藏/改名）都不影响权限集合
 	result.Permissions = collectPerms(assigned)
-	treeMenus := assigned
-	if !admin {
-		// 角色授权时可能只勾了子菜单没勾父目录，补全后菜单树才是连通的
-		if treeMenus, err = uapp.completeMenuAncestors(assigned, user.TenantId); err != nil {
-			return result, err
-		}
-	}
-	// 租户展示层覆盖：隐藏（含其子树）/自定义名称/图标/排序
-	if treeMenus, err = uapp.applyMenuPrefs(user.TenantId, treeMenus); err != nil {
-		return result, err
-	}
 	result.Menus = buildMenuTree(treeMenus)
 
 	if user.TenantId != "" {
@@ -320,6 +305,65 @@ func (uapp *userApp) menusOfUser(userId, tenantId string, admin bool) ([]models.
 		return db.SysMenuAll(tenantId)
 	}
 	return db.RoleMenusByUserId(userId, tenantId)
+}
+
+// userMenus 组装用户的可见菜单，登录与 getinfo 共用同一套规则：
+//   - assigned：角色授权菜单 + 公共导航菜单，并过滤掉平台级菜单（权限集合的来源）；
+//   - tree：assigned 补全祖先目录、应用租户展示层覆盖后的菜单树（侧边栏来源）。
+func (uapp *userApp) userMenus(user models.User, admin bool) (assigned, tree []models.Menu, err error) {
+	assigned, err = uapp.menusOfUser(user.Id, user.TenantId, admin)
+	if err != nil {
+		return nil, nil, err
+	}
+	var all []models.Menu
+	if !admin {
+		all, err = uapp.dbClient.WithCtx(tenant.Platform(context.Background())).SysMenuAll(user.TenantId)
+		if err != nil {
+			return nil, nil, err
+		}
+		// 公共导航菜单（首页 / 工具与文档）不需要角色授权，所有登录用户默认可见
+		assigned = appendPublicMenus(assigned, all)
+	}
+	// 平台级菜单（如「租户管理」）只对平台管理员生效：租户用户即使被授权也看不到
+	platformAdmin := admin && user.TenantId == ""
+	if !platformAdmin {
+		assigned = filterPlatformOnlyMenus(assigned)
+	}
+	tree = assigned
+	if !admin {
+		// 角色授权时可能只勾了子菜单没勾父目录，补全后菜单树才是连通的
+		tree = completeMenuAncestors(all, assigned)
+		// 补全祖先可能把平台级父目录带回来，补全后需要再过滤一次
+		if !platformAdmin {
+			tree = filterPlatformOnlyMenus(tree)
+		}
+	}
+	// 租户展示层覆盖：隐藏（含其子树）/自定义名称/图标/排序
+	if tree, err = uapp.applyMenuPrefs(user.TenantId, tree); err != nil {
+		return nil, nil, err
+	}
+	return assigned, tree, nil
+}
+
+// appendPublicMenus 把公共导航菜单（首页 / 工具与文档）补进用户的可见菜单。
+// 这些页面是静态入口，不需要权限码，也不依赖角色授权；
+// 租户的展示层覆盖（隐藏/改名）仍由 applyMenuPrefs 处理。
+func appendPublicMenus(menus, all []models.Menu) []models.Menu {
+	owned := make(map[string]struct{}, len(menus))
+	for _, m := range menus {
+		owned[m.Id] = struct{}{}
+	}
+	for _, m := range all {
+		// 平台管理员在「菜单管理」里把公共菜单停用/隐藏后，不再强制下发
+		if m.Status != 1 || m.Visible != 1 || !seed.IsPublicMenu(m.Id) {
+			continue
+		}
+		if _, ok := owned[m.Id]; ok {
+			continue
+		}
+		menus = append(menus, m)
+	}
+	return menus
 }
 
 /******************************* 当前登录用户 *******************************/

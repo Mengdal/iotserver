@@ -33,13 +33,6 @@ export const getDeploymentMode = (): string => getUser()?.deploymentMode || 'ser
 /** 是否嵌入式部署：隐藏 Docker 镜像仓库等服务器侧入口 */
 export const isEmbeddedDeployment = (): boolean => getDeploymentMode() === 'embedded'
 
-/** 是否超级管理员 */
-export const isAdmin = (): boolean => {
-  const user = getUser()
-  if (user?.user?.admin === true || user?.admin === true) return true
-  return false
-}
-
 /** 是否平台管理员：只有平台管理员能看「租户管理」和切换租户 */
 export const isPlatformAdmin = (): boolean => {
   const user = getUser()
@@ -75,10 +68,13 @@ export const getPermissions = (): string[] => {
   return Array.isArray(info?.permissions) ? info.permissions : []
 }
 
-/** 权限判断，管理员恒为 true；支持数组或多权限（满足其一） */
+/** 权限判断，平台管理员恒为 true；支持数组或多权限（满足其一） */
 export const hasPermission = (perm?: string | string[]): boolean => {
   if (!perm || (Array.isArray(perm) && perm.length === 0)) return true
-  if (isAdmin()) return true
+  // 只有平台管理员直通：租户内的「管理员」角色只是本租户管理员，
+  // 它的权限来自后端下发的租户级权限集合；若这里也直通，会把
+  // 「平台管理」（租户管理 / 系统配置）的按钮一起放开。
+  if (isPlatformAdmin()) return true
   const owned = getPermissions()
   if (owned.length === 0) return false
   const list = Array.isArray(perm) ? perm : String(perm).split(',').map(item => item.trim())

@@ -7,11 +7,12 @@ import (
 	"testing"
 
 	"iotserver/internal/dtos"
+	"iotserver/internal/pkg/seed"
 )
 
-// P0-1：sys_config 全局唯一一份（无 tenant_id），写接口收口到平台管理员。
-//   - 租户管理员天然拥有 system:config:* 权限码，但写接口被 PlatformOnly 拒绝；
-//   - 读接口保留在 v1Auth，租户仍可读。
+// P0-1：sys_config 全局唯一一份（无 tenant_id），读写接口都收口到平台管理员。
+//   - 租户管理员不应拿到 system:config:* / platform:tenant:* 权限码；
+//   - 租户调读写接口都应被 PlatformOnly 拒绝。
 //
 // P0-2：6 条「废弃」写路由（无权限校验、写全局字典表）已摘除，
 // 调用应落到 NoRoute 返回「url path is invalid」。
@@ -121,22 +122,30 @@ func TestPlatformAdminCanWriteSystemSetup(t *testing.T) {
 	}
 }
 
-// TestTenantCanReadSystemSetup 读接口保留给租户：列表仍可读；
-// 同时验证 seed 收口：租户侧不再下发「系统配置」菜单（PlatformOnly=1）。
-func TestTenantCanReadSystemSetup(t *testing.T) {
+// TestTenantCannotAccessSystemSetup 平台配置的读接口也只属于平台管理员。
+// 同时验证 seed 收口：租户侧不下发「平台管理」目录与「系统配置」菜单（PlatformOnly=1），
+// 且权限集合里没有平台级权限码。
+func TestTenantCannotAccessSystemSetup(t *testing.T) {
 	env := setupTestEnv(t)
 	_, username := seedTenant(t, env, "cfgreader")
 	token := loginAs(t, env, username, tenantTestPassword)
 
-	w := doRequest(env.engine, http.MethodGet, "/api/v1/system-setup?isAll=true", token, nil)
-	resp := parseResponse(t, w)
-	if !resp.Success {
-		t.Fatalf("租户读取系统配置不应被拒绝: %v（code=%d）", resp.ErrorMsg, resp.ErrorCode)
+	// 读接口：租户管理员也不能读平台配置（写接口见 TestTenantAdminCannotWriteSystemSetup）
+	for _, path := range []string{"/api/v1/system-setup?isAll=true", "/api/v1/system-setup/1"} {
+		w := doRequest(env.engine, http.MethodGet, path, token, nil)
+		resp := parseResponse(t, w)
+		if resp.Success {
+			t.Fatalf("租户管理员不应能读取平台配置: GET %s", path)
+		}
+		if resp.ErrorCode != errCodePlatformAdminOnly {
+			t.Fatalf("GET %s 期望平台专属错误 %d，实际 %d（%s）",
+				path, errCodePlatformAdminOnly, resp.ErrorCode, resp.ErrorMsg)
+		}
 	}
 
 	// 菜单收口：租户的菜单树里既不应有「平台管理」目录，也不应有「系统配置」
-	w = doRequest(env.engine, http.MethodGet, "/api/v1/user/getinfo", token, nil)
-	resp = parseResponse(t, w)
+	w := doRequest(env.engine, http.MethodGet, "/api/v1/user/getinfo", token, nil)
+	resp := parseResponse(t, w)
 	if !resp.Success {
 		t.Fatalf("租户 getinfo 失败: %v", resp.ErrorMsg)
 	}
@@ -171,6 +180,95 @@ func TestTenantCanReadSystemSetup(t *testing.T) {
 	}
 	if menuTreeHasPath(platformMenus, "/admin/sysSet") {
 		t.Fatal("「系统配置」已移出「系统管理」，不应再挂在 /admin 下")
+	}
+}
+
+// TestTenantAdminHasNoPlatformPermissions 租户管理员可以拥有本租户全部权限，
+// 但不能拿到平台级菜单/按钮的权限码，否则前端会把「平台管理」的按钮放开。
+func TestTenantAdminHasNoPlatformPermissions(t *testing.T) {
+	env := setupTestEnv(t)
+	_, username := seedTenant(t, env, "permtenant")
+	token := loginAs(t, env, username, tenantTestPassword)
+
+	w := doRequest(env.engine, http.MethodGet, "/api/v1/user/getinfo", token, nil)
+	resp := parseResponse(t, w)
+	if !resp.Success {
+		t.Fatalf("租户 getinfo 失败: %v", resp.ErrorMsg)
+	}
+	perms, _ := resp.Result.(map[string]interface{})["permissions"].([]interface{})
+	owned := make(map[string]bool, len(perms))
+	for _, p := range perms {
+		if s, ok := p.(string); ok {
+			owned[s] = true
+		}
+	}
+
+	for _, banned := range []string{
+		"platform:tenant:list", "platform:tenant:add", "platform:tenant:edit", "platform:tenant:remove",
+		"system:config:list", "system:config:query", "system:config:add",
+		"system:config:edit", "system:config:remove",
+	} {
+		if owned[banned] {
+			t.Fatalf("租户管理员不应拿到平台级权限码 %s", banned)
+		}
+	}
+	for _, need := range []string{
+		"system:user:list", "system:role:list", "system:menu:list", "gateway:product:list",
+	} {
+		if !owned[need] {
+			t.Fatalf("租户管理员应拥有本租户权限码 %s", need)
+		}
+	}
+}
+
+// TestTenantRoleCannotGrantPlatformMenus 租户角色不能授权平台级菜单（含其按钮）
+func TestTenantRoleCannotGrantPlatformMenus(t *testing.T) {
+	env := setupTestEnv(t)
+	_, username := seedTenant(t, env, "granttenant")
+	token := loginAs(t, env, username, tenantTestPassword)
+
+	// 建一个租户角色
+	body, _ := json.Marshal(dtos.SysRoleAddRequest{Name: "租户自定义角色", Status: intPtr(1), DataScope: "1"})
+	w := doRequest(env.engine, http.MethodPost, "/api/v1/role", token, body)
+	if resp := parseResponse(t, w); !resp.Success {
+		t.Fatalf("租户管理员建角色失败: %v", resp.ErrorMsg)
+	}
+
+	w = doRequest(env.engine, http.MethodGet, "/api/v1/role?page=1&pageSize=50", token, nil)
+	resp := parseResponse(t, w)
+	if !resp.Success {
+		t.Fatalf("查询角色失败: %v", resp.ErrorMsg)
+	}
+	page, _ := resp.Result.(map[string]interface{})
+	list, _ := page["list"].([]interface{})
+	var roleId string
+	for _, item := range list {
+		m, _ := item.(map[string]interface{})
+		if m["name"] == "租户自定义角色" {
+			roleId, _ = m["id"].(string)
+			break
+		}
+	}
+	if roleId == "" {
+		t.Fatal("未找到新建的租户角色")
+	}
+
+	// 平台级菜单：拒绝
+	badBody, _ := json.Marshal(dtos.SysRoleMenuRequest{RoleId: roleId, MenuIds: []string{seed.MenuAdminConfig}})
+	w = doRequest(env.engine, http.MethodPost, "/api/v1/menurole", token, badBody)
+	badResp := parseResponse(t, w)
+	if badResp.Success {
+		t.Fatal("租户角色不应能授权平台级菜单「系统配置」")
+	}
+	if badResp.ErrorCode != errCodePlatformAdminOnly {
+		t.Fatalf("期望权限拒绝 %d，实际 %d（%s）", errCodePlatformAdminOnly, badResp.ErrorCode, badResp.ErrorMsg)
+	}
+
+	// 租户级菜单：允许
+	okBody, _ := json.Marshal(dtos.SysRoleMenuRequest{RoleId: roleId, MenuIds: []string{seed.MenuProduct}})
+	w = doRequest(env.engine, http.MethodPost, "/api/v1/menurole", token, okBody)
+	if resp := parseResponse(t, w); !resp.Success {
+		t.Fatalf("租户角色授权租户级菜单应成功: %v", resp.ErrorMsg)
 	}
 }
 

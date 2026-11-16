@@ -32,8 +32,6 @@ import (
 // 权限标识统一来自 internal/pkg/permissions（单一来源），
 // 这里保留常量别名，便于路由侧书写。
 const (
-	PermHomeView = permissions.HomeView
-
 	PermUserList   = permissions.UserList
 	PermUserQuery  = permissions.UserQuery
 	PermUserAdd    = permissions.UserAdd
@@ -109,8 +107,6 @@ const (
 	PermAlertRemove = permissions.AlertRemove
 	PermAlertHandle = permissions.AlertHandle
 
-	PermDocsView = permissions.DocsView
-
 	// 系统调试
 	PermDebugPprof = permissions.SystemDebugPprof
 
@@ -153,7 +149,6 @@ const (
 	PermPlatformTenantAdd    = permissions.PlatformTenantAdd
 	PermPlatformTenantEdit   = permissions.PlatformTenantEdit
 	PermPlatformTenantRemove = permissions.PlatformTenantRemove
-	PermPlatformTenantSwitch = permissions.PlatformTenantSwitch
 
 	// 网关（第三方工业网关接入）
 	PermGatewayList    = permissions.GatewayList
@@ -163,10 +158,6 @@ const (
 	PermGatewayRemove  = permissions.GatewayRemove
 	PermGatewayConfig  = permissions.GatewayConfig
 	PermGatewayCommand = permissions.GatewayCommand
-
-	// 采集配置（设备级）
-	PermCollectConfigList = permissions.CollectConfigList
-	PermCollectConfigEdit = permissions.CollectConfigEdit
 
 	// 方案（行业模板一键应用）
 	PermSolutionList  = permissions.SolutionList
