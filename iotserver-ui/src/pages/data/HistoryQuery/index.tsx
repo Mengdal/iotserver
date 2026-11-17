@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Button,
   Card,
@@ -102,6 +102,7 @@ const newRow = (): QueryRow => ({ key: `row-${++rowSeq}` })
 const HistoryQueryPage: React.FC = () => {
   const [messageApi, contextHolder] = useMessage()
   const [form] = Form.useForm()
+  const range = Form.useWatch('range', form)
 
   const [rows, setRows] = useState<QueryRow[]>([newRow()])
   const [deviceOptions, setDeviceOptions] = useState<Record<string, DevicesType[]>>({})
@@ -114,6 +115,8 @@ const HistoryQueryPage: React.FC = () => {
   const [chartData, setChartData] = useState<ChartPoint[]>([])
   const [tableData, setTableData] = useState<HistoryRow[]>([])
   const [searched, setSearched] = useState(false)
+  // 查询序号：只允许最后一次发起的查询写回结果
+  const searchSeqRef = useRef(0)
 
   const { data: productList } = useGetProductList({})
   const canQuery = useAuth([P.DeviceQuery])
@@ -228,6 +231,8 @@ const HistoryQueryPage: React.FC = () => {
       return
     }
 
+    // 参数变化会触发新的自动查询；旧请求晚返回时不能覆盖新结果。
+    const seq = ++searchSeqRef.current
     try {
       setLoading(true)
       setSearched(true)
@@ -235,6 +240,7 @@ const HistoryQueryPage: React.FC = () => {
       const tableRows: HistoryRow[] = []
 
       for (const row of validRows) {
+        if (seq !== searchSeqRef.current) return
         const device = deviceListOf(row).find(item => item.id === row.deviceId)
         const property = (propertyOptions[row.deviceId!] || []).find(item => item.code === row.code)
         const deviceName = device?.name || row.deviceId!
@@ -250,6 +256,7 @@ const HistoryQueryPage: React.FC = () => {
           aggInterval: currentAgg?.seconds,
           aggMethod: currentAgg?.method,
         })
+        if (seq !== searchSeqRef.current) return
         if (!resp.success) {
           messageApi.open({ type: 'error', content: resp.errorMsg || t('查询失败') })
           continue
@@ -272,6 +279,8 @@ const HistoryQueryPage: React.FC = () => {
         })
       }
 
+      if (seq !== searchSeqRef.current) return
+
       // 折线图按时间正序
       points.sort((a, b) => (a.time < b.time ? -1 : 1))
       // 表格按时间倒序（最新在前）
@@ -283,9 +292,36 @@ const HistoryQueryPage: React.FC = () => {
         messageApi.open({ type: 'info', content: t('所选时间范围内没有数据') })
       }
     } finally {
-      setLoading(false)
+      // 已有更新的查询接管 loading，旧查询不能把它关掉
+      if (seq === searchSeqRef.current) setLoading(false)
     }
   }
+
+  // 选完「设备 + 参数」后自动查询，不需要再点「查询」按钮。
+  // 用查询条件的签名去重，避免查询结果刷新或其它重渲染导致重复请求。
+  const searchRef = useRef(handleSearch)
+  searchRef.current = handleSearch
+
+  const autoSearchKey = useMemo(() => {
+    if (!canQuery) return ''
+    const validRows = rows.filter(row => row.deviceId && row.code)
+    const [start, end] = range || []
+    if (validRows.length === 0 || !start || !end) return ''
+    return JSON.stringify({
+      rows: validRows.map(row => `${row.deviceId}:${row.code}`),
+      start: start.valueOf(),
+      end: end.valueOf(),
+      aggTime,
+      aggMethod,
+    })
+  }, [canQuery, rows, range, aggTime, aggMethod])
+
+  useEffect(() => {
+    if (!autoSearchKey) return undefined
+    // 连续选择设备/参数/时间时只发最后一次，避免中间态触发多次请求
+    const timer = window.setTimeout(() => { searchRef.current().catch(() => {}) }, 400)
+    return () => window.clearTimeout(timer)
+  }, [autoSearchKey])
 
   /** 导出 CSV（带 BOM，Excel 直接打开不乱码） */
   const handleExport = () => {

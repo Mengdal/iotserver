@@ -16,6 +16,12 @@
     overflow: hidden;
     z-index: 999;
 
+    /* 窄屏：缩小左右留白，给顶栏内容腾空间 */
+    &.main-header--compact {
+      padding-left: 12px;
+      padding-right: 12px;
+    }
+
     .ant-space {
       width: 100%;
       height: 100%;
@@ -60,6 +66,8 @@
     top: 50px;
     left: 0;
     bottom: 0;
+    // 窄屏下侧边栏是覆盖在内容上的抽屉，必须压在内容区之上（低于顶栏的 999）
+    z-index: 100;
     box-shadow: 2px 0 4px 0 rgb(34 34 34 / 10%);
   }
 

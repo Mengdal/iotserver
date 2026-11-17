@@ -411,7 +411,7 @@ const MyDrive: React.FC = () => {
                 <DownOutlined className="ml5" style={{ fontSize: 9 }} />
               </Typography.Link>
             </Dropdown>
-            <Typography.Link onClick={() => logModalRef.current?.open(docker.id)}>{t('日志')}</Typography.Link>
+            <Typography.Link onClick={() => logModalRef.current?.open(docker.id, docker.name)}>{t('日志')}</Typography.Link>
             <Popconfirm
               title={t('此操作将永久删除关联的产品以及设备, 是否继续?')}
               okText={t('确定')}

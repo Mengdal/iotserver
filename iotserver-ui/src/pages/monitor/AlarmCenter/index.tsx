@@ -1,5 +1,6 @@
-import React, { useMemo } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Tabs, Card } from 'antd'
+import { useLocation } from 'react-router-dom'
 import AlarmList from './AlarmList'
 import AlarmRules from './AlarmRules'
 import './style.less'
@@ -11,13 +12,15 @@ export interface AlarmCenterProps {
 }
 
 const AlarmCenterList: React.FC<AlarmCenterProps> = () => {
-  const activeKey = useMemo(() => {
-    const hash = window.location.hash
-    if (hash) {
-      return hash.slice(1, 2)
-    }
-    return '1'
-  }, [])
+  const location = useLocation()
+  const [activeKey, setActiveKey] = useState(() => window.location.hash.slice(1, 2) || '1')
+
+  // 顶栏角标跳到本页时带 ?status=未处理；如果用户正停在「告警规则」tab，
+  // 需要切回「告警列表」，否则列表组件未挂载、点击看起来没有反应。
+  useEffect(() => {
+    if (!new URLSearchParams(location.search).get('status')) return
+    setActiveKey('1')
+  }, [location.key, location.search])
 
   return (
     <>
@@ -25,7 +28,7 @@ const AlarmCenterList: React.FC<AlarmCenterProps> = () => {
         <Tabs
           className="drive-image mt20"
           type="card"
-          defaultActiveKey={activeKey}
+          activeKey={activeKey}
           // tabBarExtraContent={<Button className="ml10"
           //   onClick={() => {
           //     window.location.reload()
@@ -44,6 +47,7 @@ const AlarmCenterList: React.FC<AlarmCenterProps> = () => {
             },
           ]}
           onTabClick={(key) => {
+            setActiveKey(key)
             window.location.hash = key
           }}
         />

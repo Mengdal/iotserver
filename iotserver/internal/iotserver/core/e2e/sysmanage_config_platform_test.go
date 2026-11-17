@@ -157,6 +157,17 @@ func TestTenantCannotAccessSystemSetup(t *testing.T) {
 		t.Fatal("租户侧不应下发「平台管理」目录（整组 PlatformOnly=1）")
 	}
 
+	// 菜单管理的树也不应出现平台级菜单：租户既看不到、也没法给它们做显示定制。
+	w = doRequest(env.engine, http.MethodGet, "/api/v1/menu/tree", token, nil)
+	resp = parseResponse(t, w)
+	if !resp.Success {
+		t.Fatalf("租户读取菜单管理树失败: %v", resp.ErrorMsg)
+	}
+	managementMenus, _ := resp.Result.([]interface{})
+	if menuTreeHasPath(managementMenus, "/platform") || menuTreeHasPath(managementMenus, "/platform/sysSet") {
+		t.Fatal("租户的菜单管理树不应包含平台级菜单")
+	}
+
 	// 平台管理员：仍可读配置，且菜单仍在
 	w = doRequest(env.engine, http.MethodGet, "/api/v1/system-setup?isAll=true", env.token, nil)
 	if resp = parseResponse(t, w); !resp.Success {

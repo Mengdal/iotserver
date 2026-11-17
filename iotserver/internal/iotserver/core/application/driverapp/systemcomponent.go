@@ -2,11 +2,16 @@ package driverapp
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
+	"net/http"
 	"net/url"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -16,6 +21,7 @@ import (
 	"iotserver/internal/models"
 	"iotserver/internal/pkg/errort"
 	"iotserver/internal/pkg/seed"
+	"iotserver/internal/tools/iotp"
 	"iotserver/internal/tools/logtail"
 )
 
@@ -49,6 +55,25 @@ func (app *driverLibApp) SystemComponents(ctx context.Context) ([]dtos.SystemCom
 				logPath = logSource.Path
 			}
 		}
+		// IotEdgeDB 是远程服务，没有本机日志文件；配置了 BaseURL 时
+		// 通过它的「变更记录」接口提供日志查看。管理员在 ComponentLogs
+		// 里显式配置（或显式置空禁用）时以配置为准。
+		if library.Id == seed.SystemComponentIotEdgeDBId {
+			if _, explicit := explicitComponentLogSource(cfg, library.Id); !explicit {
+				if base := iotEdgeDBBaseURL(cfg); base != "" {
+					hasLog = true
+					logPath = base + "/api/v1/meta/auth/audit"
+				}
+			}
+		}
+		// iotpGW 是 HTTP 采集引擎，直接请求 URL 比只看端口更准确；
+		// 其余组件仍用 TCP 探活。只探测一次，避免先 TCP 再 HTTP 白等一轮超时。
+		var status string
+		if library.Id == seed.SystemComponentIotpGWId {
+			status = probeHTTPEndpoint(endpoint)
+		} else {
+			status = probeComponentEndpoint(endpoint)
+		}
 		result = append(result, dtos.SystemComponentDTO{
 			Id:            library.Id,
 			Name:          library.Name,
@@ -57,7 +82,7 @@ func (app *driverLibApp) SystemComponents(ctx context.Context) ([]dtos.SystemCom
 			Runtime:       library.Runtime,
 			Essential:     library.Essential,
 			Endpoint:      endpoint,
-			Status:        probeComponentEndpoint(endpoint),
+			Status:        status,
 			LogConfigured: hasLog,
 			LogPath:       logPath,
 			Updated:       library.Modified,
@@ -74,6 +99,20 @@ func (app *driverLibApp) SystemComponents(ctx context.Context) ([]dtos.SystemCom
 
 // componentLogSources 返回系统组件日志源：内置默认路径 + 配置覆盖。
 // 配置里 Path 为空表示禁用该组件的日志入口。
+// explicitComponentLogSource 返回管理员在 [ComponentLogs].Sources 里显式配置的日志源。
+// 需要区分「没配置」和「显式置空禁用」时用它，componentLogSources 会丢掉空路径项。
+func explicitComponentLogSource(cfg *config.ConfigurationStruct, id string) (config.ComponentLogSource, bool) {
+	if cfg == nil {
+		return config.ComponentLogSource{}, false
+	}
+	for _, item := range cfg.ComponentLogs.Sources {
+		if strings.TrimSpace(item.Id) == id {
+			return item, true
+		}
+	}
+	return config.ComponentLogSource{}, false
+}
+
 func componentLogSources(cfg *config.ConfigurationStruct) map[string]config.ComponentLogSource {
 	sources := map[string]config.ComponentLogSource{
 		seed.SystemComponentMosquittoId: {
@@ -116,6 +155,13 @@ func componentLogSources(cfg *config.ConfigurationStruct) map[string]config.Comp
 // 文件不存在时返回 Exists=false，由前端提示配置路径；不把路径是否存在当成接口错误。
 func (app *driverLibApp) ComponentLogs(ctx context.Context, id string, tail int) (dtos.SystemComponentLogsDTO, error) {
 	cfg := container.ConfigurationFrom(app.dic.Get)
+	// IotEdgeDB 默认走远程审计接口；显式配置了日志源时按配置读文件
+	// （空 Path 表示管理员主动禁用日志入口）。
+	if id == seed.SystemComponentIotEdgeDBId {
+		if _, explicit := explicitComponentLogSource(cfg, id); !explicit {
+			return app.iotEdgeDBAuditLogs(ctx, cfg, tail)
+		}
+	}
 	source, ok := componentLogSources(cfg)[id]
 	if !ok {
 		return dtos.SystemComponentLogsDTO{}, errort.NewCommonEdgeX(
@@ -144,6 +190,93 @@ func (app *driverLibApp) ComponentLogs(ctx context.Context, id string, tail int)
 	}
 	result.Lines = lines
 	return result, nil
+}
+
+// iotEdgeDBAuditLogs 读取远程 IotEdgeDB 的「变更记录」作为组件日志。
+// 该服务没有本机日志文件，控制台 #audit 页与 /api/v1/meta/auth/audit 同源。
+func (app *driverLibApp) iotEdgeDBAuditLogs(ctx context.Context, cfg *config.ConfigurationStruct, tail int) (dtos.SystemComponentLogsDTO, error) {
+	result := dtos.SystemComponentLogsDTO{
+		ComponentId: seed.SystemComponentIotEdgeDBId,
+		Lines:       []string{},
+	}
+	if cfg == nil {
+		return result, errort.NewCommonEdgeX(errort.DefaultResourcesNotFound, "配置未加载", nil)
+	}
+	db := cfg.GetDataDatabaseInfo()
+	base := iotEdgeDBBaseURL(cfg)
+	if base == "" {
+		return result, errort.NewCommonEdgeX(errort.DefaultResourcesNotFound,
+			"IotEdgeDB 未配置 [Databases.Data].BaseURL", nil)
+	}
+	result.Path = base + "/api/v1/meta/auth/audit"
+	client := iotp.New(base, db.Token, db.IotpDatabaseName(), db.IotpTimeout())
+	entries, err := client.AuditLogs(ctx, tail)
+	if err != nil {
+		return result, errort.NewCommonEdgeX(errort.DefaultSystemError, "读取 IotEdgeDB 变更记录失败", err)
+	}
+	result.Exists = true
+	// 接口按最新在前返回；日志窗口按时间顺序追加，所以反转。
+	for i := len(entries) - 1; i >= 0; i-- {
+		result.Lines = append(result.Lines, formatAuditEntry(entries[i]))
+	}
+	return result, nil
+}
+
+func iotEdgeDBBaseURL(cfg *config.ConfigurationStruct) string {
+	return strings.TrimRight(strings.TrimSpace(componentEndpoint(cfg, seed.SystemComponentIotEdgeDBId)), "/")
+}
+
+// formatAuditEntry 把一条审计记录压成一行文本。
+// 字段名在不同 iotp 版本间略有差异，这里按常见别名取值；全都不认识时退回 JSON。
+func formatAuditEntry(entry map[string]any) string {
+	parts := make([]string, 0, 5)
+	for _, keys := range [][]string{
+		{"timestamp", "time", "ts", "at", "created_at", "created"},
+		{"actor", "user", "subject", "principal", "operator"},
+		{"event", "event_type", "action", "type", "eventType"},
+		{"target", "resource", "object", "path"},
+		{"detail", "message", "msg", "description"},
+	} {
+		if value := firstAuditValue(entry, keys...); value != "" {
+			parts = append(parts, value)
+		}
+	}
+	if len(parts) == 0 {
+		if raw, err := json.Marshal(entry); err == nil {
+			return string(raw)
+		}
+		return fmt.Sprint(entry)
+	}
+	return strings.Join(parts, "  ")
+}
+
+func firstAuditValue(entry map[string]any, keys ...string) string {
+	for _, key := range keys {
+		value, ok := entry[key]
+		if !ok || value == nil {
+			continue
+		}
+		if text := auditValueString(value); text != "" {
+			return text
+		}
+	}
+	return ""
+}
+
+func auditValueString(value any) string {
+	switch v := value.(type) {
+	case string:
+		return strings.TrimSpace(v)
+	case float64:
+		return strconv.FormatFloat(v, 'f', -1, 64)
+	case bool:
+		return strconv.FormatBool(v)
+	default:
+		if raw, err := json.Marshal(v); err == nil {
+			return string(raw)
+		}
+		return fmt.Sprint(v)
+	}
 }
 
 // componentEndpoint 从平台配置读取组件实际监听地址。
@@ -211,5 +344,40 @@ func probeComponentEndpoint(endpoint string) string {
 		return "stopped"
 	}
 	_ = conn.Close()
+	return "running"
+}
+
+// probeHTTPEndpoint 对 HTTP 服务做一次短超时请求。
+// 有响应（任意状态码，含 404）=running，连接失败/超时=stopped，
+// 地址为空或无法解析=unknown。
+func probeHTTPEndpoint(endpoint string) string {
+	endpoint = strings.TrimSpace(endpoint)
+	if endpoint == "" {
+		return "unknown"
+	}
+	target := endpoint
+	if !strings.Contains(target, "://") {
+		target = "http://" + target
+	}
+	parsed, err := url.Parse(target)
+	if err != nil || parsed.Host == "" {
+		return "unknown"
+	}
+	client := &http.Client{Timeout: time.Second}
+	resp, err := client.Get(target)
+	if err != nil {
+		// 证书不被信任时连接本身可能是通的（内部 CA / 自签证书），
+		// 不能等同于服务已停止；交给运维确认，状态先显示 unknown。
+		var unknownAuthority x509.UnknownAuthorityError
+		var hostnameErr x509.HostnameError
+		var invalidErr x509.CertificateInvalidError
+		var verifyErr *tls.CertificateVerificationError
+		if errors.As(err, &unknownAuthority) || errors.As(err, &hostnameErr) ||
+			errors.As(err, &invalidErr) || errors.As(err, &verifyErr) {
+			return "unknown"
+		}
+		return "stopped"
+	}
+	_ = resp.Body.Close()
 	return "running"
 }

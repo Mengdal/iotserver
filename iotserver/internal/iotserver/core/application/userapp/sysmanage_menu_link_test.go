@@ -26,6 +26,8 @@ func TestNormalizeMenuTarget(t *testing.T) {
 		wantErr  bool
 	}{
 		{"菜单保留内链并标记非外链", models.MenuTypeMenu, "/home/dashboard", 0, "/home/dashboard", 1, false},
+		{"菜单必须有路由地址", models.MenuTypeMenu, "  ", 1, "", 0, true},
+		{"目录可以没有路由地址", models.MenuTypeDir, "", 1, "", 1, false},
 		{"普通菜单忽略外部 isFrame", models.MenuTypeMenu, "https://example.com", 0, "https://example.com", 1, false},
 		{"内链站内路径", models.MenuTypeLink, " /home/dashboard ", 1, "/home/dashboard", 1, false},
 		{"内链外部地址也允许嵌入", models.MenuTypeLink, "https://github.com/unclebob/ub-mode", 1, "https://github.com/unclebob/ub-mode", 1, false},

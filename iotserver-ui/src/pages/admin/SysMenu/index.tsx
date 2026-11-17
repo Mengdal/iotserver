@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Alert,
   Button,
@@ -13,8 +13,8 @@ import {
   Select,
   Space,
   Table,
-  Tabs,
   Tag,
+  TreeSelect,
   message,
 } from 'antd'
 import { PlusOutlined, ReloadOutlined, SearchOutlined, MinusSquareOutlined, PlusSquareOutlined } from '@ant-design/icons'
@@ -43,8 +43,6 @@ const { useMessage } = message
 
 type FlatMenu = SysMenu & FlatMeta
 
-type TabKey = 'tenant' | 'platform'
-
 const menuTypeOptions = [
   { label: t('目录'), value: 'M' },
   { label: t('菜单'), value: 'C' },
@@ -66,47 +64,43 @@ function menuDisplayName (item: SysMenu, customName?: string): string {
   return item.name
 }
 
-interface ParentOption {
+interface ParentTreeNode {
   value: string
   title: string
-  children?: ParentOption[]
+  /** 保留为层级容器但当前类型不能选它（如按钮只能挂在菜单下时的目录节点）。 */
+  disabled?: boolean
+  children?: ParentTreeNode[]
 }
 
-function toParentOptions (list: SysMenu[]): ParentOption[] {
-  const result: ParentOption[] = []
+function toParentTree (list: SysMenu[], allowed: string[]): ParentTreeNode[] {
+  const result: ParentTreeNode[] = []
   list.forEach(item => {
     // 按钮、链接都是叶子，不能作为父级
     if (item.menuType === 'F' || item.menuType === 'L') return
-    const option: ParentOption = { value: item.id, title: menuDisplayName(item) }
-    if (item.children && item.children.length > 0) {
-      const children = toParentOptions(item.children)
-      if (children.length > 0) option.children = children
+    const children = item.children && item.children.length > 0
+      ? toParentTree(item.children, allowed)
+      : []
+    if (!allowed.includes(item.menuType) && children.length === 0) return
+    const node: ParentTreeNode = {
+      value: item.id,
+      title: menuDisplayName(item),
+      disabled: !allowed.includes(item.menuType),
     }
-    result.push(option)
+    if (children.length > 0) node.children = children
+    result.push(node)
   })
   return result
 }
 
-/**
- * 按条件从菜单树中筛出节点并重建父子层级：
- * 父节点被过滤掉时，该节点提升为顶级，避免整棵子树丢失。
- */
-function pickMenuTree (tree: SysMenu[], keep: (item: SysMenu) => boolean): SysMenu[] {
-  const flat = collectNested<SysMenu>(tree, item => item.id).filter(keep)
-  const nodeMap = new Map<string, SysMenu>()
-  flat.forEach(item => {
-    nodeMap.set(item.id, { ...item, children: [] })
-  })
-  const roots: SysMenu[] = []
-  nodeMap.forEach(item => {
-    const parent = item.parentId && item.parentId !== '0' ? nodeMap.get(item.parentId) : undefined
-    if (parent) {
-      parent.children = [...(parent.children || []), item]
-    } else {
-      roots.push(item)
-    }
-  })
-  return roots
+/** 同一父级下可排序的菜单（排除按钮），顺序沿用后端返回的 sort/created 顺序。 */
+function siblingsOf (flat: SysMenu[], parentId: string): SysMenu[] {
+  return flat.filter(item => (item.parentId || '0') === parentId && item.menuType !== 'F')
+}
+
+/** 新菜单默认追加到同级末尾：取最后一个同级菜单的 sort + 1。 */
+function appendSortForParent (flat: SysMenu[], parentId: string): number {
+  const siblings = siblingsOf(flat, parentId)
+  return siblings.length === 0 ? 0 : siblings[siblings.length - 1].sort + 1
 }
 
 const SysMenuPage: React.FC = () => {
@@ -123,13 +117,13 @@ const SysMenuPage: React.FC = () => {
   /** 租户视图：平台管理员已切换租户，或普通租户用户 */
   const tenantView = !platformAdmin || Boolean(tenantId)
 
-  const [activeTab, setActiveTab] = useState<TabKey>(tenantView ? 'tenant' : 'platform')
   const [loading, setLoading] = useState(false)
   const [treeData, setTreeData] = useState<SysMenu[]>([])
   const [prefMap, setPrefMap] = useState<Record<string, TenantMenuPref>>({})
   const [filters, setFilters] = useState<{ name?: string, status?: string }>({})
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<SysMenu | null>(null)
+  const prevMenuTypeRef = useRef<string | undefined>()
   const [renameTarget, setRenameTarget] = useState<SysMenu | null>(null)
 
   const canAdd = useAuth(MenuAdd)
@@ -138,29 +132,47 @@ const SysMenuPage: React.FC = () => {
   const canCustomPref = useAuth(MenuCustomPref)
   const canCustomReset = useAuth(MenuCustomReset)
 
+  // 租户自建菜单不能设置权限码，按钮类型没有意义。
+  const menuTypeChoices = useMemo(
+    () => (tenantView ? menuTypeOptions.filter(option => option.value !== 'F') : menuTypeOptions),
+    [tenantView],
+  )
+
   const loadData = useCallback(async () => {
     try {
       setLoading(true)
-      const menuResp = await getSysMenuTree({ isAll: true })
-      if (menuResp.success) {
-        setTreeData(menuResp.result || [])
+      // 菜单树与展示定制互相独立，并发拉取；allSettled 避免可选的展示配置
+      // 请求失败时把已经取回的菜单树一起丢掉。
+      const [menuResult, prefResult] = await Promise.allSettled([
+        getSysMenuTree({ isAll: true }),
+        tenantView ? getSysMenuPrefs() : Promise.resolve(null),
+      ])
+      if (menuResult.status === 'fulfilled') {
+        const menuResp = menuResult.value
+        if (menuResp.success) {
+          setTreeData(menuResp.result || [])
+        } else {
+          messageApi.open({ type: 'error', content: menuResp.errorMsg })
+        }
       } else {
-        messageApi.open({ type: 'error', content: menuResp.errorMsg })
+        messageApi.open({ type: 'error', content: t('加载失败') })
       }
       if (!tenantView) {
         setPrefMap({})
         return
       }
-      const prefResp = await getSysMenuPrefs()
-      if (prefResp.success) {
-        const list = prefResp.result || []
-        const map: Record<string, TenantMenuPref> = {}
-        list.forEach(item => {
-          map[item.menuId] = item
-        })
-        setPrefMap(map)
+      if (prefResult.status === 'fulfilled') {
+        const prefResp = prefResult.value
+        if (!prefResp) {
+          setPrefMap({})
+        } else if (prefResp.success) {
+          setPrefMap(Object.fromEntries((prefResp.result || []).map(item => [item.menuId, item])))
+        } else {
+          messageApi.open({ type: 'error', content: prefResp.errorMsg })
+        }
       } else {
-        messageApi.open({ type: 'error', content: prefResp.errorMsg })
+        // 展示定制失败不影响菜单树展示，只提示并保留已加载的树
+        messageApi.open({ type: 'error', content: t('加载失败') })
       }
     } finally {
       setLoading(false)
@@ -171,29 +183,21 @@ const SysMenuPage: React.FC = () => {
     loadData()
   }, [loadData])
 
-  // 平台视图：接口本身只返回平台菜单；租户视图：按归属拆成两个页签的数据
-  const platformTree = useMemo(
-    () => (tenantView ? pickMenuTree(treeData, item => !item.tenantId) : treeData),
-    [treeData, tenantView],
-  )
-  const tenantTree = useMemo(
-    () => (tenantView ? pickMenuTree(treeData, item => Boolean(item.tenantId)) : []),
-    [treeData, tenantView],
-  )
+  // 整棵树只拍平一次，下面按 id / 父级查找都复用这份数据。
+  const menuFlat = useMemo(() => collectNested<SysMenu>(treeData, item => item.id), [treeData])
+  const menuById = useMemo(() => new Map(menuFlat.map(item => [item.id, item])), [menuFlat])
 
-  /** 「平台菜单」页签在租户视图下为只读（只做隐藏/改名定制） */
-  const readonlyTab = tenantView && activeTab === 'platform'
-  const activeTree = activeTab === 'tenant' && tenantView ? tenantTree : platformTree
-
+  // 平台视图只返回平台菜单；租户视图返回平台菜单 + 本租户自定义菜单，同树展示。
   const filterKey = useMemo(
-    () => ({ ...filters, activeTab, tenantView }),
-    [filters, activeTab, tenantView],
+    () => ({ ...filters, tenantView }),
+    [filters, tenantView],
   )
 
   // 拍平 + 默认全部收起 + 整棵子树折叠
   const flatTable = useTreeTable<SysMenu>({
-    tree: activeTree,
-    filtered: Boolean(filters.name || filters.status),
+    tree: treeData,
+    // 租户视图默认展开：自定义菜单可能挂在平台菜单下，收起时容易被误认为没生效。
+    filtered: Boolean(filters.name || filters.status) || tenantView,
     filterKey,
     getId: item => item.id,
     getParentId: item => item.parentId || '0',
@@ -209,29 +213,33 @@ const SysMenuPage: React.FC = () => {
   })
   const rows = flatTable.rows as unknown as FlatMenu[]
 
-  const parentOptions = useMemo(() => [{ value: '0', title: t('顶级菜单') }, ...toParentOptions(treeData)], [treeData])
+  const parentTreeData = useMemo(() => {
+    // 目录只做顶级分组；菜单/链接可以挂在目录或菜单下；按钮只能挂在菜单下。
+    if (watchedMenuType === 'M') return []
+    const allowed = watchedMenuType === 'F' ? ['C'] : ['M', 'C']
+    const nodes = toParentTree(treeData, allowed)
+    // 按钮必须有归属菜单，不能是顶级。
+    return watchedMenuType === 'F' ? nodes : [{ value: '0', title: t('顶级菜单') }, ...nodes]
+  }, [treeData, watchedMenuType])
 
+  // 只有平台管理员需要作用域提示；租户用户本来就只能编辑本租户内容。
   const scopeText = useMemo(() => {
-    if (!platformAdmin) return t('当前编辑：本租户的自定义菜单与显示定制 —— 仅本租户可见')
     if (tenantId) return t('当前编辑：该租户的自定义菜单与显示定制 —— 仅该租户可见，不影响平台菜单')
     return t('当前编辑：平台原始菜单 —— 改动对所有租户生效')
-  }, [platformAdmin, tenantId])
-
-  const tabItems = useMemo(() => {
-    if (!tenantView) return [{ key: 'platform', label: t('平台菜单') }]
-    return [
-      { key: 'tenant', label: t('本租户自定义菜单') },
-      { key: 'platform', label: t('平台菜单') },
-    ]
-  }, [tenantView])
+  }, [tenantId])
 
   const openAdd = (parentId?: string) => {
     setEditing(null)
+    prevMenuTypeRef.current = undefined
     editForm.resetFields()
+    const targetParent = parentId || '0'
+    // 在菜单下新增下级时：平台默认按钮，租户默认链接（租户不能给按钮配权限码）。
+    const parentMenu = targetParent !== '0' ? menuById.get(targetParent) : undefined
     editForm.setFieldsValue({
-      parentId: parentId || '0',
-      menuType: 'C',
-      sort: 0,
+      parentId: targetParent,
+      menuType: parentMenu?.menuType === 'C' ? (tenantView ? 'L' : 'F') : 'C',
+      // 默认追加到同级末尾，避免新菜单都挤在 sort=0。
+      sort: appendSortForParent(menuFlat, targetParent),
       visible: 1,
       status: 1,
       isFrame: 1,
@@ -241,6 +249,7 @@ const SysMenuPage: React.FC = () => {
 
   const openEdit = (record: SysMenu) => {
     setEditing(record)
+    prevMenuTypeRef.current = undefined
     editForm.resetFields()
     editForm.setFieldsValue({
       parentId: record.parentId === '0' ? '0' : record.parentId,
@@ -261,16 +270,40 @@ const SysMenuPage: React.FC = () => {
     setModalOpen(true)
   }
 
+  // 用户主动切换菜单类型时，把不再合法的上级菜单重置掉：
+  // 目录→顶级；菜单→目录/顶级；链接→目录/菜单/顶级；按钮→必须挂在菜单下。
+  useEffect(() => {
+    const prev = prevMenuTypeRef.current
+    prevMenuTypeRef.current = watchedMenuType
+    if (!modalOpen || prev === undefined || prev === watchedMenuType) return
+    const type = watchedMenuType || 'C'
+    const current = (editForm.getFieldValue('parentId') as string | undefined) || '0'
+    let next = current
+    if (type === 'M') {
+      next = '0'
+    } else if (type === 'F') {
+      if (current === '0' || menuById.get(current)?.menuType !== 'C') next = ''
+    } else {
+      // 菜单/链接可以挂在目录或菜单下；只有挂在按钮/链接（叶子）下时才重置。
+      const currentType = current === '0' ? '' : menuById.get(current)?.menuType || ''
+      if (current !== '0' && !['M', 'C'].includes(currentType)) next = '0'
+    }
+    if (next === current) return
+    editForm.setFieldsValue({
+      parentId: next,
+      ...(editing ? {} : { sort: next ? appendSortForParent(menuFlat, next) : 0 }),
+    })
+  }, [watchedMenuType, modalOpen, menuById, menuFlat, editing, editForm])
+
   const handleSubmit = async () => {
     const values = await editForm.validateFields()
     const payload: Record<string, any> = { ...values }
-    if (tenantView) {
-      // 租户自建菜单不得携带权限标识（后端对非空 perms 直接报参数错误）
-      delete payload.perms
-    }
     if (payload.menuType === 'L') {
       // 链接是纯导航项，不绑定组件与权限标识
       payload.component = ''
+    }
+    // 租户自建菜单不得携带权限标识（后端对非空 perms 直接报参数错误）
+    if (tenantView || payload.menuType === 'L') {
       payload.perms = ''
     }
     const resp = editing
@@ -384,6 +417,9 @@ const SysMenuPage: React.FC = () => {
             }}
           >
             {menuDisplayName(record, customName)}
+            {tenantView && record.tenantId
+              ? <Tag color="blue" style={{ marginLeft: 6 }}>{t('自定义')}</Tag>
+              : null}
             {customName ? <Tag color="blue" style={{ marginLeft: 6 }}>{t('已改名')}</Tag> : null}
             {hidden ? <Tag style={{ marginLeft: 6 }}>{t('已隐藏')}</Tag> : null}
           </span>
@@ -438,41 +474,45 @@ const SysMenuPage: React.FC = () => {
     },
   ]
 
-  const actionColumn: ColumnsType<FlatMenu>[number] = readonlyTab
-    ? {
-      title: t('操作（仅本租户显示定制）'),
-      key: 'action',
-      width: 260,
-      fixed: 'right',
-      render: (_, record) => (canCustomPref
-        ? (
+  const actionColumn: ColumnsType<FlatMenu>[number] = {
+    title: t('操作'),
+    key: 'action',
+    width: 300,
+    fixed: 'right',
+    render: (_, record) => {
+      const addChild = canAdd && record.menuType !== 'F' && record.menuType !== 'L'
+        ? <Button type="link" size="small" onClick={() => openAdd(record.id)}>{t('新增下级')}</Button>
+        : null
+      // 租户视图里的平台菜单：结构只读，只能做显示定制，以及在其下新增自定义菜单。
+      if (tenantView && !record.tenantId) {
+        return (
           <Space size={4} wrap={false} style={{ whiteSpace: 'nowrap' }}>
-            <Button type="link" size="small" onClick={() => handleToggleHidden(record)}>
-              {prefMap[record.id]?.hidden === 1 ? t('显示') : t('隐藏')}
-            </Button>
-            <Button type="link" size="small" onClick={() => openRename(record)}>{t('改名')}</Button>
-            <Button
-              type="link"
-              size="small"
-              disabled={!prefMap[record.id]}
-              onClick={() => handleRestoreDefault(record)}
-            >
-              {t('恢复默认')}
-            </Button>
+            {addChild}
+            {canCustomPref
+              ? (
+                <>
+                  <Button type="link" size="small" onClick={() => handleToggleHidden(record)}>
+                    {prefMap[record.id]?.hidden === 1 ? t('显示') : t('隐藏')}
+                  </Button>
+                  <Button type="link" size="small" onClick={() => openRename(record)}>{t('改名')}</Button>
+                  <Button
+                    type="link"
+                    size="small"
+                    disabled={!prefMap[record.id]}
+                    onClick={() => handleRestoreDefault(record)}
+                  >
+                    {t('恢复默认')}
+                  </Button>
+                </>
+              )
+              : <span style={{ color: 'rgba(0, 0, 0, 0.45)' }}>{t('无定制权限')}</span>}
           </Space>
         )
-        : <span style={{ color: 'rgba(0, 0, 0, 0.45)' }}>{t('无定制权限')}</span>),
-    }
-    : {
-      title: t('操作'),
-      key: 'action',
-      width: 240,
-      fixed: 'right',
-      render: (_, record) => (
+      }
+      // 平台视图的平台菜单，或租户视图里的自定义菜单：结构可编辑。
+      return (
         <Space size={4} wrap={false} style={{ whiteSpace: 'nowrap' }}>
-          {canAdd && record.menuType !== 'F' && record.menuType !== 'L' && (
-            <Button type="link" size="small" onClick={() => openAdd(record.id)}>{t('新增下级')}</Button>
-          )}
+          {addChild}
           {canEdit && <Button type="link" size="small" onClick={() => openEdit(record)}>{t('编辑')}</Button>}
           {canRemove && (
             <Popconfirm title={t('确认删除该菜单？')} onConfirm={() => handleDelete(record.id)} okText={t('确定')} cancelText={t('取消')}>
@@ -480,29 +520,21 @@ const SysMenuPage: React.FC = () => {
             </Popconfirm>
           )}
         </Space>
-      ),
-    }
+      )
+    },
+  }
 
   const columns: ColumnsType<FlatMenu> = [...baseColumns, actionColumn]
 
   return (
     <Card className="admin-page">
       {contextHolder}
-      <Alert
-        type={tenantView ? 'warning' : 'info'}
-        showIcon
-        style={{ marginBottom: 12 }}
-        message={scopeText}
-      />
-
-      {/* 平台视图只有平台菜单一个作用域，不需要页签；租户视图才需要在
-          「本租户自定义菜单」和「平台菜单」之间切换。 */}
-      {tenantView && (
-        <Tabs
-          activeKey={activeTab}
-          onChange={key => setActiveTab(key as TabKey)}
-          items={tabItems}
-          style={{ marginBottom: 8 }}
+      {platformAdmin && (
+        <Alert
+          type={tenantId ? 'warning' : 'info'}
+          showIcon
+          style={{ marginBottom: 12 }}
+          message={scopeText}
         />
       )}
 
@@ -538,7 +570,7 @@ const SysMenuPage: React.FC = () => {
       </Form>
 
       <Space style={{ marginBottom: 12 }}>
-        {!readonlyTab && canAdd && (
+        {canAdd && (
           <Button type="primary" icon={<PlusOutlined />} onClick={() => openAdd()}>{t('新增菜单')}</Button>
         )}
         <Button icon={<ReloadOutlined />} onClick={loadData}>{t('刷新')}</Button>
@@ -581,16 +613,36 @@ const SysMenuPage: React.FC = () => {
         }
       >
         <Form form={editForm} layout="vertical">
-          <Form.Item label={t('上级菜单')} name="parentId">
-            <Select
-              options={parentOptions}
-              placeholder={t('请选择上级菜单')}
-              showSearch
-              optionFilterProp="title"
-            />
-          </Form.Item>
-          <Form.Item label={t('菜单类型')} name="menuType" rules={[{ required: true, message: t('请选择菜单类型') }]}>
-            <Radio.Group options={menuTypeOptions} optionType="button" buttonStyle="solid" />
+          {watchedMenuType !== 'M' && (
+            <Form.Item
+              label={watchedMenuType === 'F' ? t('所属菜单') : t('上级菜单')}
+              name="parentId"
+              rules={watchedMenuType === 'F' ? [{ required: true, message: t('请选择所属菜单') }] : undefined}
+            >
+              <TreeSelect
+                treeData={parentTreeData}
+                placeholder={watchedMenuType === 'F' ? t('请选择所属菜单') : t('请选择上级菜单')}
+                showSearch
+                treeNodeFilterProp="title"
+                treeDefaultExpandAll
+                allowClear
+                onChange={(value: string) => {
+                  if (editing) return
+                  // 换上级后自动排到新同级末尾；需要精确位置时再改下面的「显示排序」。
+                  editForm.setFieldsValue({ sort: appendSortForParent(menuFlat, value || '0') })
+                }}
+              />
+            </Form.Item>
+          )}
+          <Form.Item
+            label={t('菜单类型')}
+            name="menuType"
+            rules={[{ required: true, message: t('请选择菜单类型') }]}
+            extra={watchedMenuType === 'M'
+              ? t('目录只作为分组，空目录不会显示在侧边栏；请在其下添加菜单或链接')
+              : undefined}
+          >
+            <Radio.Group options={menuTypeChoices} optionType="button" buttonStyle="solid" />
           </Form.Item>
           <Form.Item label={t('菜单名称')} name="name" rules={[{ required: true, message: t('请输入菜单名称') }]}>
             <Input placeholder={t('请输入菜单名称')} />
@@ -638,7 +690,9 @@ const SysMenuPage: React.FC = () => {
                       },
                     },
                   ]
-                  : []}
+                  : watchedMenuType === 'C'
+                    ? [{ required: true, message: t('请输入路由地址') }]
+                    : []}
               >
                 <Input
                   placeholder={watchedMenuType === 'L'

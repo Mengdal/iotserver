@@ -2,8 +2,11 @@ package driverapp
 
 import (
 	"context"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"iotserver/internal/iotserver/core/config"
@@ -65,6 +68,19 @@ func TestComponentLogSources(t *testing.T) {
 	if got := sources["custom"].Path; got != "/tmp/custom.log" {
 		t.Fatalf("custom log = %q", got)
 	}
+
+	// 显式配置（包括空 Path 禁用）要能和「没配置」区分开，供 IotEdgeDB
+	// 决定是否回落到远程审计日志。
+	if _, ok := explicitComponentLogSource(cfg, seed.SystemComponentIotEdgeDBId); ok {
+		t.Fatal("未配置 iotedgedb 时不应返回显式日志源")
+	}
+	iotEdgeCfg := &config.ConfigurationStruct{ComponentLogs: config.ComponentLogsInfo{Sources: []config.ComponentLogSource{
+		{Id: seed.SystemComponentIotEdgeDBId, Path: ""},
+	}}}
+	source, ok := explicitComponentLogSource(iotEdgeCfg, seed.SystemComponentIotEdgeDBId)
+	if !ok || source.Path != "" {
+		t.Fatalf("空 Path 也应识别为显式禁用，ok=%v path=%q", ok, source.Path)
+	}
 }
 
 func TestComponentLogsTail(t *testing.T) {
@@ -98,6 +114,61 @@ func TestComponentLogsTail(t *testing.T) {
 	}
 	if result.Exists || len(result.Lines) != 0 {
 		t.Fatalf("missing log result: %+v", result)
+	}
+}
+
+// iotpGW 用 HTTP 探活：任意 HTTP 响应（含 404）都算 running，
+// 连不上算 stopped，空地址算 unknown。
+func TestProbeHTTPEndpoint(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	if got := probeHTTPEndpoint(srv.URL); got != "running" {
+		t.Fatalf("响应 404 也应视为 running，实际 %q", got)
+	}
+	if got := probeHTTPEndpoint(strings.TrimPrefix(srv.URL, "http://")); got != "running" {
+		t.Fatalf("无协议前缀时应补 http://，实际 %q", got)
+	}
+	srv.Close()
+
+	dead := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	deadURL := dead.URL
+	dead.Close()
+	if got := probeHTTPEndpoint(deadURL); got != "stopped" {
+		t.Fatalf("端口关闭应为 stopped，实际 %q", got)
+	}
+	if got := probeHTTPEndpoint(""); got != "unknown" {
+		t.Fatalf("空地址应为 unknown，实际 %q", got)
+	}
+	if got := probeHTTPEndpoint("http://"); got != "unknown" {
+		t.Fatalf("非法地址应为 unknown，实际 %q", got)
+	}
+
+	// 自签证书（内部 CA）说明端口是通的，不能报 stopped
+	tlsSrv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	defer tlsSrv.Close()
+	if got := probeHTTPEndpoint(tlsSrv.URL); got != "unknown" {
+		t.Fatalf("证书不受信任应为 unknown，实际 %q", got)
+	}
+}
+
+func TestFormatAuditEntry(t *testing.T) {
+	line := formatAuditEntry(map[string]any{
+		"timestamp": "2026-11-16T10:00:00Z",
+		"actor":     "admin",
+		"event":     "device_added",
+		"target":    "db.table.device",
+		"detail":    "批量注册 3 台",
+	})
+	for _, want := range []string{"2026-11-16T10:00:00Z", "admin", "device_added", "db.table.device", "批量注册 3 台"} {
+		if !strings.Contains(line, want) {
+			t.Fatalf("审计行缺少 %q: %s", want, line)
+		}
+	}
+	// 字段完全未知时退回 JSON，不能丢内容。
+	raw := formatAuditEntry(map[string]any{"foo": "bar"})
+	if !strings.Contains(raw, `"foo":"bar"`) {
+		t.Fatalf("未知字段应退回 JSON: %s", raw)
 	}
 }
 

@@ -63,7 +63,10 @@
 
 // 标题条右侧插槽：页面可把自己的搜索框等放上来（垂直居中）
 .advance-breadcrumb-extra {
-  &:empty {
+  // 布局总是传一个空的挂载点，实际没有页面往里 portal 内容时不应占位，
+  // 否则窄屏下 260px 的最小宽度会把标题文案挤成一条竖线。
+  &:empty,
+  &:has(> #page-banner-extra:empty) {
     display: none;
   }
 

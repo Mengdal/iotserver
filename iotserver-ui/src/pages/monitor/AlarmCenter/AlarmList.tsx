@@ -1,12 +1,12 @@
 import dayjs from 'dayjs'
-import React, { useCallback, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { Button, Card, Popconfirm, Space, Table, Typography, message, Form, Input, Row, Col, Select, Badge, Modal, DatePicker, Tooltip } from 'antd'
 import { getAlertPlate, getAlarmList, AlertList, alertIgnore, alertTreated } from '@/api'
 import { useTableRequest } from '@/hooks'
 import { Pie } from '@ant-design/plots'
 import { AlertPlate } from './types'
 import { ArrowsAltOutlined } from '@ant-design/icons'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { t, tt } from '@/i18n'
 import { safeJsonParse } from '@/utils/json'
 
@@ -46,6 +46,13 @@ const colorMap = {
 const AlarmList: React.FC<AlarmListProps> = ({
 }) => {
   const navigate = useNavigate()
+  const location = useLocation()
+  const [searchParams] = useSearchParams()
+  // 右上角告警角标点进来时带 ?status=未处理，列表默认就筛选未处理。
+  const initialStatus = searchParams.get('status') || undefined
+  // 处理弹窗单独用一个 form：和筛选表单共用同一个实例会让弹窗的必填字段
+  // 留在查询校验里，关闭弹窗后查询/翻页会静默失败。
+  const [actionForm] = Form.useForm()
   const [messageApi, contextHolder] = useMessage()
   const [data, setData] = useState<AlertPlate[]>()
   const [alertLevel, setAlertLevel] = useState({
@@ -135,12 +142,24 @@ const AlarmList: React.FC<AlarmListProps> = ({
 
   const showModal = (record: DataType) => {
     setCurrentRecord(record)
+    actionForm.resetFields()
     setOpen(true)
   }
 
+  // 已经在告警列表页时再点顶栏角标，组件不会重新挂载，initialValues 不再生效；
+  // 监听 location.key（重复点同一 URL 也会产生新的 key）主动应用筛选并回到第一页。
+  const appliedLocationKeyRef = useRef(location.key)
+  useEffect(() => {
+    if (!initialStatus || location.key === appliedLocationKeyRef.current) return
+    appliedLocationKeyRef.current = location.key
+    form.setFieldValue('status', initialStatus)
+    search()
+  }, [initialStatus, location.key, form, search])
+
   const handleOk = async () => {
     // 处理逻辑
-    const text = await form.validateFields()
+    const text = await actionForm.validateFields().catch(() => null)
+    if (!text) return
     const { message } = text
     const vaules = {
       id: currentRecord?.id,
@@ -160,7 +179,7 @@ const AlarmList: React.FC<AlarmListProps> = ({
 
   const handleCancel = () => {
     setOpen(false)
-    form.resetFields()
+    actionForm.resetFields()
   }
 
   const selectColor = useCallback((d:any) => colorMap[d.alert_level as keyof typeof colorMap], [])
@@ -211,7 +230,12 @@ const AlarmList: React.FC<AlarmListProps> = ({
         </Col>
       </Row>
       {contextHolder}
-      <Form layout="inline" className="ml20 mt20" form={form}>
+      <Form
+        layout="inline"
+        className="ml20 mt20"
+        form={form}
+        initialValues={initialStatus ? { status: initialStatus } : undefined}
+      >
         <Form.Item key="alert_level" name="alert_level">
           <Select
             placeholder={t('告警级别')}
@@ -397,7 +421,7 @@ const AlarmList: React.FC<AlarmListProps> = ({
         cancelText={t('取消')}
         maskClosable={false}
       >
-        <Form form={form} layout="vertical">
+        <Form form={actionForm} layout="vertical">
           <Form.Item
             label={t('处理意见')}
             name="message"

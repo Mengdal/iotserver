@@ -425,9 +425,16 @@ func (uapp *userApp) SysMenuSearch(ctx context.Context, req dtos.SysMenuSearchRe
 }
 
 func (uapp *userApp) SysMenuTree(ctx context.Context, req dtos.SysMenuSearchRequest) ([]dtos.SysMenuResponse, error) {
-	list, err := uapp.dbClient.WithCtx(ctx).SysMenuAll(targetTenant(ctx))
+	target := targetTenant(ctx)
+	list, err := uapp.dbClient.WithCtx(ctx).SysMenuAll(target)
 	if err != nil {
 		return nil, err
+	}
+	// 租户视图不展示平台级菜单（租户管理 / 系统配置）：它们本来就不下发给租户，
+	// 菜单管理里也不应该出现这些配置项。历史数据里如果租户自建菜单挂在被隐藏的
+	// 平台菜单下，把它提升到根节点，否则整棵子树会从管理树里消失、无法清理。
+	if target != "" {
+		list = reRootOrphanTenantMenus(filterPlatformOnlyMenus(list), target)
 	}
 	result := make([]dtos.SysMenuResponse, 0, len(list))
 	for _, item := range list {
@@ -1184,6 +1191,10 @@ func isExternalMenuPath(path string) bool {
 // 链接类型由用户选择，不再从地址形态反推：外部 URL 同样可以作为「内链」嵌入。
 func normalizeMenuTarget(menuType, path string, isFrame int) (string, int, error) {
 	path = strings.TrimSpace(path)
+	// 菜单是实际页面入口，没有路由地址就无法导航，侧边栏也会直接丢弃。
+	if menuType == models.MenuTypeMenu && path == "" {
+		return "", 0, fmt.Errorf("菜单必须填写路由地址")
+	}
 	if menuType != models.MenuTypeLink {
 		return path, 1, nil
 	}

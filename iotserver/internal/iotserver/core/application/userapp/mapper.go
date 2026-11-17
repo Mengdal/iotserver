@@ -182,6 +182,35 @@ func buildMenuTree(menus []models.Menu) []dtos.SysMenuResponse {
 	return buildMenuChildren(list, "0")
 }
 
+// reRootOrphanTenantMenus 把父节点已不在列表里的租户自建菜单提升为根节点。
+//
+// 场景：租户视图会过滤掉 platform_only 菜单，但历史数据里可能存在用户自建的
+// 子菜单挂在平台专属菜单下。buildMenuChildren 只从 "0" 开始挂树，父节点被过滤后
+// 子菜单就彻底不可见，租户既不能编辑也不能删除。这里只调整响应用的父节点，
+// 不修改数据库里的真实层级，后续编辑/移动仍按原 id 操作。
+func reRootOrphanTenantMenus(list []models.Menu, tenantId string) []models.Menu {
+	if tenantId == "" {
+		return list
+	}
+	ids := make(map[string]struct{}, len(list))
+	for _, item := range list {
+		ids[item.Id] = struct{}{}
+	}
+	for i := range list {
+		if list[i].TenantId != tenantId {
+			continue
+		}
+		parentId := list[i].ParentId
+		if parentId == "" || parentId == "0" {
+			continue
+		}
+		if _, ok := ids[parentId]; !ok {
+			list[i].ParentId = "0"
+		}
+	}
+	return list
+}
+
 func buildMenuChildren(list []dtos.SysMenuResponse, parentId string) []dtos.SysMenuResponse {
 	result := make([]dtos.SysMenuResponse, 0)
 	for _, item := range list {

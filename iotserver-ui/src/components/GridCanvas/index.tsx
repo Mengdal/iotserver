@@ -32,6 +32,8 @@ export interface GridCanvasProps {
   readOnly?: boolean
   /** 窄屏自适应列数（只在只读态生效，避免把移动端排布写回库） */
   responsive?: boolean
+  /** 子网格（容器里的网格）用窗口宽度判断断点，而不是容器自身宽度 */
+  responsiveWindow?: boolean
   /** 变化时重挂网格：gridstack 的 init 只在挂载时执行一次 */
   boardKey?: string
   /** 拖拽把手选择器，默认卡片标题栏 */
@@ -66,20 +68,27 @@ const DEFAULT_DRAG_HANDLE = '.ant-card-head'
 const DEFAULT_DRAG_CANCEL = '.ant-btn,.ant-dropdown-trigger,.ant-select,.ant-segmented'
 const DEFAULT_ACCEPT_WIDGETS = () => true
 
+/** gridstack 内部方法：按当前宽度重新计算动态列数（类型声明里是 protected） */
+type GridWithDynamicColumn = GridStackInstance & { checkDynamicColumn: () => boolean }
+
 /**
  * 窄屏断点：只在只读展示态用。
- * 注意 gridstack 要求 breakpoints 从大到小排列；不传 columnOpts 时完全不响应式（= 现在的固定列行为）。
+ * 注意 gridstack 要求 breakpoints 从大到小排列，匹配规则是「宽度 <= 断点.w 时用该断点的列数」，
+ * 所以最小断点必须是正数（w:0 永远匹配不到，窄屏会一直停在上一档列数）。
+ * 不传 columnOpts 时完全不响应式（= 固定列行为）。
  */
-function buildResponsive (cols: number): Responsive {
+function buildResponsive (cols: number, forWindow: boolean): Responsive {
   const clamp = (c: number) => Math.max(1, Math.min(Math.round(c), cols))
   return {
     columnMax: cols,
     layout: 'moveScale',
+    // 嵌套在容器里的子网格：用窗口宽度判断，避免桌面端容器本身较窄时被误降列
+    ...(forWindow ? { breakpointForWindow: true } : {}),
     breakpoints: [
       { w: 1280, c: clamp(cols) },
       { w: 900, c: clamp(8) },
       { w: 600, c: clamp(4) },
-      { w: 0, c: 1 },
+      { w: 520, c: 1 },
     ],
   }
 }
@@ -125,6 +134,7 @@ const GridCanvas: React.FC<GridCanvasProps> = ({
   margin = DEFAULT_MARGIN,
   readOnly,
   responsive,
+  responsiveWindow,
   boardKey,
   dragHandle = DEFAULT_DRAG_HANDLE,
   dragCancel = DEFAULT_DRAG_CANCEL,
@@ -179,9 +189,9 @@ const GridCanvas: React.FC<GridCanvasProps> = ({
       resizable: { handles: 'se', autoHide: true },
     }
     // 窄屏断点只在**只读展示态**启用：编辑态派生列数会让拖拽结果按窄屏坐标写回库里
-    if (responsive && readOnly) next.columnOpts = buildResponsive(baseCols)
+    if (responsive && readOnly) next.columnOpts = buildResponsive(baseCols, !!responsiveWindow)
     return next
-  }, [baseCols, baseRowHeight, gap, halfGap, contentRows, extraRow, readOnly, responsive, acceptWidgets, dragHandle, dragCancel])
+  }, [baseCols, baseRowHeight, gap, halfGap, contentRows, extraRow, readOnly, responsive, responsiveWindow, acceptWidgets, dragHandle, dragCancel])
 
   /** 读全量位置回报给调用方（只在拖动 / 缩放**结束**时调） */
   const syncLayout = useCallback(() => {
@@ -216,6 +226,25 @@ const GridCanvas: React.FC<GridCanvasProps> = ({
     const grid = gridRef.current?.getGrid()
     if (grid) latest.current.onReady?.(grid)
   }, [boardKey])
+
+  // 容器子网格按窗口宽度计算断点：gridstack 只为顶层网格挂 ResizeObserver（见 _updateResizeEvent），
+  // 嵌套网格解除父子关联后不会自己响应窗口变化，这里补一个窗口 resize 监听。
+  useEffect(() => {
+    if (!(responsive && readOnly && responsiveWindow)) return undefined
+    let frame = 0
+    const sync = () => {
+      window.cancelAnimationFrame(frame)
+      frame = window.requestAnimationFrame(() => {
+        const grid = gridRef.current?.getGrid() as GridWithDynamicColumn | undefined
+        if (grid) grid.checkDynamicColumn()
+      })
+    }
+    window.addEventListener('resize', sync)
+    return () => {
+      window.removeEventListener('resize', sync)
+      window.cancelAnimationFrame(frame)
+    }
+  }, [boardKey, responsive, readOnly, responsiveWindow])
 
   /**
    * 组件从 items 里消失时，必须由我们显式把 DOM 也摘掉：

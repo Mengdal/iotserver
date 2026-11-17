@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { UserOutlined } from '@ant-design/icons'
-import { Layout, Space, Menu, Avatar, Dropdown, Modal, Form, Input, Select, MenuProps, message } from 'antd'
+import { AlertOutlined, UserOutlined } from '@ant-design/icons'
+import { Layout, Space, Menu, Avatar, Badge, Button, Dropdown, Modal, Form, Input, Select, Tooltip, MenuProps, message } from 'antd'
 import { buildEmbedMenuKey, buildMenus, buildMenusFromBackend, isExternalLink, parseEmbedMenuKey } from '@/routes/menus'
 import { resolveMenuPath, resolvePageMeta, resolvePageTitle } from '@/routes/pageMeta'
 import { AdvanceBreadcrumb } from '@/components/Breadcrumb'
@@ -9,8 +9,9 @@ import { useBrand } from '@/components/Brand'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
 import type { BackendMenuItem, SubMenuType } from '@/routes/menus'
 import './style.less'
-import { clearUser, getCurrentTenantId, getUser, setCurrentTenantId, setUser } from '@/utils/auth'
-import { changePassword, getTenants, getUserGetInfo, updateUserProfile, Tenant } from '@/api'
+import { clearUser, getCurrentTenantId, getUser, hasPermission, setCurrentTenantId, setUser } from '@/utils/auth'
+import { changePassword, getAlarmList, getTenants, getUserGetInfo, updateUserProfile, Tenant } from '@/api'
+import { AlertList } from '@/routes/permissions'
 import { currentLocale, t, tt } from '@/i18n'
 
 const { Header, Content, Sider } = Layout
@@ -20,6 +21,8 @@ const { Header, Content, Sider } = Layout
 const SIDER_WIDTH = currentLocale() === 'en-US' ? 260 : 200
 const { useForm } = Form
 const { useMessage } = message
+
+const mediaMatch = (query: string) => typeof window !== 'undefined' && window.matchMedia(query).matches
 
 export interface LyaoutProps {
 
@@ -31,7 +34,10 @@ function getDisplayName (): string {
 }
 
 const MainLayout: React.FC = () => {
-  const [collapsed, setCollapsed] = useState(false)
+  // 窄屏：侧边栏自动收起（<=992 收成图标栏，<=600 完全收起留给内容），顶栏同步精简
+  const [collapsed, setCollapsed] = useState(() => mediaMatch('(max-width: 992px)'))
+  const [isCompact, setIsCompact] = useState(() => mediaMatch('(max-width: 768px)'))
+  const [isMobile, setIsMobile] = useState(() => mediaMatch('(max-width: 600px)'))
   const [messageApi, contextHolder] = useMessage()
   const [form] = useForm()
   const [profileForm] = useForm()
@@ -57,6 +63,50 @@ const MainLayout: React.FC = () => {
     if (Array.isArray(direct) && direct.length > 0) return direct
     return Array.isArray(userInfo?.permissions) ? userInfo.permissions : []
   }, [user])
+
+  // 右上角未处理告警角标：有告警查看权限才显示，30 秒刷新一次。
+  const canViewAlerts = hasPermission(AlertList)
+  const [unhandledAlerts, setUnhandledAlerts] = useState(0)
+  useEffect(() => {
+    if (!canViewAlerts) {
+      setUnhandledAlerts(0)
+      return undefined
+    }
+    let alive = true
+    const load = () => {
+      getAlarmList<{ total: number }>({ status: '未处理', page: 1, pageSize: 1 })
+        .then(resp => {
+          if (alive && resp.success) {
+            setUnhandledAlerts(Number(resp.result?.total) || 0)
+          }
+        })
+        .catch(() => { /* 角标刷新失败不影响主流程 */ })
+    }
+    load()
+    const timer = window.setInterval(load, 30000)
+    return () => {
+      alive = false
+      window.clearInterval(timer)
+    }
+  }, [canViewAlerts, location.pathname])
+
+  // 窗口跨断点时自动调整：窄屏收起侧边栏，宽屏恢复
+  useEffect(() => {
+    const narrow = window.matchMedia('(max-width: 992px)')
+    const compact = window.matchMedia('(max-width: 768px)')
+    const mobile = window.matchMedia('(max-width: 600px)')
+    const onNarrow = (event: MediaQueryListEvent) => setCollapsed(event.matches)
+    const onCompact = (event: MediaQueryListEvent) => setIsCompact(event.matches)
+    const onMobile = (event: MediaQueryListEvent) => setIsMobile(event.matches)
+    narrow.addEventListener('change', onNarrow)
+    compact.addEventListener('change', onCompact)
+    mobile.addEventListener('change', onMobile)
+    return () => {
+      narrow.removeEventListener('change', onNarrow)
+      compact.removeEventListener('change', onCompact)
+      mobile.removeEventListener('change', onMobile)
+    }
+  }, [])
 
   // 侧边栏数据源：后端菜单（登录接口返回的 menus）。层级/顺序/图标/显示隐藏都以「菜单管理」为准
   const backendMenus = useMemo<BackendMenuItem[]>(() => {
@@ -324,8 +374,8 @@ const MainLayout: React.FC = () => {
   return (
     <Layout className="main-layout">
       {contextHolder}
-      <Header className="main-header">
-        <Space size={20}>
+      <Header className={`main-header${isCompact ? ' main-header--compact' : ''}`}>
+        <Space size={isCompact ? 8 : 20}>
           <div
             style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}
             onClick={() => {
@@ -336,19 +386,21 @@ const MainLayout: React.FC = () => {
               alt=""
               style={{ height: 14, maxWidth: 80, objectFit: 'contain' }}
             />
-            <div style={{ fontSize: '14px', fontWeight: 600, lineHeight: '14px' }}>
-              {site.name || 'iotserver'}
-            </div>
+            {!isMobile && (
+              <div style={{ fontSize: '14px', fontWeight: 600, lineHeight: '14px' }}>
+                {site.name || 'iotserver'}
+              </div>
+            )}
           </div>
           <div></div>
           {platformAdmin && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: '13px', color: 'rgba(0, 0, 0, 0.65)' }}>{t('当前租户')}</span>
+              {!isCompact && <span style={{ fontSize: '13px', color: 'rgba(0, 0, 0, 0.65)' }}>{t('当前租户')}</span>}
               <Select
                 size="small"
                 showSearch
                 optionFilterProp="label"
-                style={{ width: 220 }}
+                style={{ width: isMobile ? 120 : isCompact ? 160 : 220 }}
                 value={currentTenantId}
                 placeholder={t('全部租户（平台视图）')}
                 options={tenantOptions}
@@ -356,7 +408,21 @@ const MainLayout: React.FC = () => {
               />
             </div>
           )}
-          <LanguageSwitcher />
+          {canViewAlerts && (
+            <Tooltip title={t('未处理告警')}>
+              <Badge count={unhandledAlerts} size="small" overflowCount={99} offset={[-4, 2]}>
+                <Button
+                  type="text"
+                  size="small"
+                  aria-label={t('未处理告警')}
+                  onClick={() => navigate('/monitor/alarmCenter/list?status=未处理')}
+                >
+                  <AlertOutlined />
+                </Button>
+              </Badge>
+            </Tooltip>
+          )}
+          <LanguageSwitcher showLabel={!isCompact} />
           <Dropdown
             menu={{ items }}
             placement="bottom"
@@ -365,7 +431,7 @@ const MainLayout: React.FC = () => {
           >
             <Space size={6} style={{ cursor: 'pointer' }}>
               <Avatar icon={<UserOutlined />} size="small" />
-              <span style={{ fontSize: '13px' }}>{tt(getDisplayName())}</span>
+              {!isMobile && <span style={{ fontSize: '13px' }}>{tt(getDisplayName())}</span>}
             </Space>
           </Dropdown>
         </Space>
@@ -376,6 +442,7 @@ const MainLayout: React.FC = () => {
           className="main-sider"
           theme="light"
           collapsible
+          collapsedWidth={isMobile ? 0 : 80}
           collapsed={collapsed}
           onCollapse={value => setCollapsed(value)}
         >
@@ -390,23 +457,28 @@ const MainLayout: React.FC = () => {
             selectedKeys={[selectedMenuKey]}
             onClick={({ key }) => {
               const target = String(key)
+              // 手机上侧边栏是覆盖层，点完菜单自动收起，避免挡住内容
+              const closeMobileSider = () => { if (isMobile) setCollapsed(true) }
               // 「嵌入」型链接：在当前内容区用 iframe 打开
               const embed = parseEmbedMenuKey(target)
               if (embed) {
                 const search = new URLSearchParams({ src: embed.src, title: embed.title }).toString()
                 navigate(`/common/embed?${search}`)
+                closeMobileSider()
                 return
               }
               // 菜单管理里配置的外链（http/https）新窗口打开
               if (isExternalLink(target)) {
                 window.open(target, '_blank', 'noopener,noreferrer')
+                closeMobileSider()
                 return
               }
               navigate(target)
+              closeMobileSider()
             }}
           />
         </Sider>
-        <Layout className="main-container" style={{ marginLeft: collapsed ? 80 : SIDER_WIDTH }}>
+        <Layout className="main-container" style={{ marginLeft: isMobile ? 0 : (collapsed ? 80 : SIDER_WIDTH) }}>
           <Content className="main-view">
             {showBanner && (
               <AdvanceBreadcrumb

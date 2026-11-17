@@ -132,6 +132,8 @@ const CanvasBoard: React.FC<CanvasBoardProps> = ({ boardId, board: boardProp, cl
               cols={cols}
               rowHeight={rowHeight}
               readOnly
+              responsive
+              responsiveWindow
               className="canvas-board__subgrid"
               renderItem={renderWidget}
             />
