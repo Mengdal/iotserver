@@ -26,6 +26,13 @@
       width: 100%;
       height: 100%;
 
+      /* Space 默认让子项按行内基线排，图标按钮会因此偏上/偏下；
+         统一改成 flex 居中，保证告警、语言、头像在同一水平线上 */
+      > .ant-space-item {
+        display: flex;
+        align-items: center;
+      }
+
       .ant-space-item:nth-of-type(2) {
         flex: 1;
       }
@@ -57,6 +64,36 @@
       font-size: 18px;
       position: relative;
       top: 2px;
+    }
+
+    /* 顶栏图标（告警、语言、头像）统一点击区域和图符大小，并保持垂直居中 */
+    .ant-btn.ant-btn-text {
+      width: 28px;
+      height: 28px;
+      padding: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+
+      .anticon {
+        font-size: 16px;
+      }
+    }
+
+    .ant-badge {
+      display: inline-flex;
+      align-items: center;
+    }
+
+    .ant-avatar {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+
+      .anticon {
+        font-size: 16px;
+      }
     }
   }
 

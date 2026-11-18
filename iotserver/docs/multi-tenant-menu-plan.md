@@ -261,4 +261,4 @@ sys_menu.tenant_id = 'X'  → 租户 X 的自定义菜单
 1. **重启后端**（迁移 + 新接口 + 中间件生效）；
 2. 浏览器硬刷新（前端已同步到 `cmd/iotserver-ui/build`）；
 3. 观察启动日志确认：`sys_menu.tenant_id` 已加列、`tenant_menu_pref` 已建表、`uk_tenant_menu_pref` 已建索引；
-4. 上线后再把 `[Tenant] Enforce` 切 `true`（见既有待办）。
+4. 启动日志确认多租户隔离策略为 `warn`（未带租户上下文的调用不过滤，仅告警）。

@@ -198,13 +198,14 @@ func DefaultMenus() []models.Menu {
 			Icon: "dashboard", MenuType: models.MenuTypeMenu,
 			Sort: 1, Visible: 1, Status: 1, IsFrame: 1,
 		},
-		// ===== 平台管理（仅 平台运营账号可见）=====
+		// ===== 平台管理（挂在「系统管理」下，仅平台运营账号可见）=====
 		{
 			// 平台管理：平台管理员专属功能的分组（租户管理、系统配置）。
+			// 作为「系统管理」的二级目录，避免在顶级导航里单独占一项。
 			// 整组标记 platform_only：租户用户侧边栏不出现该目录，也不会出现"空目录"。
-			Id: MenuPlatformId, ParentId: "0", Name: "平台管理", Path: "/platform",
+			Id: MenuPlatformId, ParentId: MenuAdminId, Name: "平台管理", Path: "/platform",
 			Icon: "safety", MenuType: models.MenuTypeDir,
-			Sort: 5, Visible: 1, Status: 1, IsFrame: 1, PlatformOnly: 1,
+			Sort: 6, Visible: 1, Status: 1, IsFrame: 1, PlatformOnly: 1,
 		},
 		{
 			Id: MenuPlatformTenant, ParentId: MenuPlatformId, Name: "租户管理", Path: "/platform/tenant",
@@ -528,7 +529,6 @@ func TenantUserMenuIds() []string {
 	}
 	return ids
 }
-
 
 // TenantAdminMenuIds 管理员角色展示用的菜单集合：
 // 租户可见的全部菜单（排除平台专属菜单）。管理员本身有权限直通，这里写入

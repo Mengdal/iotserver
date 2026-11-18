@@ -17,6 +17,9 @@ package driverapp
 import (
 	"context"
 	"fmt"
+	"net/url"
+	"strings"
+
 	"iotserver/internal/dtos"
 	"iotserver/internal/iotserver/core/config"
 	"iotserver/internal/iotserver/core/container"
@@ -61,11 +64,37 @@ func (app *driverLibApp) addOrUpdateSupportVersionConfig(dl models.DeviceLibrary
 	return dl
 }
 
+// iotEdgeDBDocsURL 用配置的 BaseURL 生成 IotEdgeDB 控制台文档地址。
+// BaseURL 是「服务端→数据库」的地址，可能是 Docker 内的单标签主机名或回环地址，
+// 这种地址在用户浏览器里打不开；此时返回空，调用方继续使用 device_library 里的默认手册地址。
+func iotEdgeDBDocsURL(cfg *config.ConfigurationStruct) string {
+	if cfg == nil {
+		return ""
+	}
+	base := strings.TrimRight(strings.TrimSpace(cfg.GetDataDatabaseInfo().BaseURL), "/")
+	if base == "" {
+		return ""
+	}
+	if !strings.Contains(base, "://") {
+		base = "http://" + base
+	}
+	parsed, err := url.Parse(base)
+	if err != nil {
+		return ""
+	}
+	host := strings.ToLower(parsed.Hostname())
+	if host == "" || host == "localhost" || strings.HasPrefix(host, "127.") || host == "::1" || !strings.Contains(host, ".") {
+		return ""
+	}
+	return strings.TrimRight(base, "/") + "/#docs"
+}
+
 func (app *driverLibApp) DeviceLibrariesSearch(ctx context.Context, req dtos.DeviceLibrarySearchQueryRequest) ([]models.DeviceLibrary, uint32, error) {
 	offset, limit := req.BaseSearchConditionQuery.GetPage()
+	cfg := container.ConfigurationFrom(app.dic.Get)
 	// 驱动市场按部署形态隔离运行时：embedded 隐藏 Docker，server 隐藏 iotpGW .so。
 	if req.IsInternal == "true" {
-		if container.ConfigurationFrom(app.dic.Get).DeploymentMode() == config.DeploymentModeEmbedded {
+		if cfg.DeploymentMode() == config.DeploymentModeEmbedded {
 			req.ExcludeRuntime = models.PluginRuntimeDocker
 		} else {
 			req.ExcludeRuntime = models.PluginRuntimeIotpGW
@@ -95,6 +124,14 @@ func (app *driverLibApp) DeviceLibrariesSearch(ctx context.Context, req dtos.Dev
 	deviceLibraries, total, err := app.dbClient.WithCtx(ctx).DeviceLibrariesSearch(offset, limit, req)
 	if err != nil {
 		return deviceLibraries, 0, err
+	}
+	// IotEdgeDB 的文档入口跟随实际 BaseURL，避免写死某个部署地址。
+	if docsURL := iotEdgeDBDocsURL(cfg); docsURL != "" {
+		for i := range deviceLibraries {
+			if deviceLibraries[i].Id == seed.SystemComponentIotEdgeDBId {
+				deviceLibraries[i].Manual = docsURL
+			}
+		}
 	}
 
 	dlIds := make([]string, 0)

@@ -1,12 +1,19 @@
+# ========== 运行日志 ==========
 [Writable]
 LogLevel = 'INFO'
 LogPath = 'iotserver/logs/iotserver-core.log'
 
+# ========== 服务端口 ==========
 [Service]
 Host = '0.0.0.0'
-ServerBindAddr = '' # Leave blank so default to Host value unless different value is needed.
+ServerBindAddr = ''
 Port = 58081
 Timeout = 45000
+
+[WebServer]
+Host = '0.0.0.0'
+Port = 3000
+Timeout = 120
 
 [RpcServer]
 Address = '0.0.0.0:57081'
@@ -14,51 +21,37 @@ UseTLS = false
 CertFile = ''
 KeyFile = ''
 
-[Clients]
-[Clients.Ekuiper]
-Protocol = 'http'
-Host = 'ekuiper'
-Port = 9081
-
-[WebServer]
-Host = '0.0.0.0'
-Port = 3000
-Timeout = 120
-
+# ========== 前端 ==========
 [WebUI]
 BuildPath = './cmd/iotserver-ui/build'
 
+# ========== 数据库 ==========
 [Databases]
 [Databases.Metadata]
 Type = 'sqlite'
 DataSource = 'iotserver/db-data/core-data/core.db?_timeout=5000'
-#Type = 'mysql'
-#Dsn = 'root:123456@tcp(127.0.0.1:3306)/iotserver?charset=utf8mb4&parseTime=True&loc=Local'
-
+# Type = 'mysql'
+# Dsn = 'root:123456@tcp(127.0.0.1:3306)/iotserver?charset=utf8mb4&parseTime=True&loc=Local'
 
 [Databases.Data]
-# 时序数据层：默认 duckdb（单文件列存）。
-# 改为 'iotp' 时数据写入外部 iotp 时序库，连接参数与 DuckDB 同在本段，
-# DataSource 不再使用。iotp 模式暂不支持按设备删数据 / 保留期清理 /
-# 在线导出，消息数按宽表行统计（与 DuckDB 按测点行统计会有差异）。
+# duckdb=单文件列存；iotp=外部时序库（填写下方 BaseURL/Token/Name/Timeout）
 Type = 'duckdb'
 DataSource = 'iotserver/db-data/duckdb/core-data.duckdb'
-# iotp 连接参数（Type='iotp' 时使用；只填 BaseURL 也会启用 iotp 元数据同步/实时值读取）：
+# iotp 连接参数（Type='iotp' 时使用；只填 BaseURL 也会启用元数据同步/实时值读取）
 # BaseURL = 'http://host:8080'
 # Token = ''
-# Name = 'iotserver'   # iotp 库名
-# Timeout = 10000      # 毫秒
-# 令牌权限：设备注册、网关声明与归属同步都走 /api/v1/meta/*，需要 admin 权限；
-# 仅设备数据写入需要 write db:<库>。软网关的设备归属只在 Type='iotp' 时同步。
+# Name = 'iotserver'
+# Timeout = 10000  # 毫秒
 
+# ========== 消息与外部服务 ==========
 [MessageQueue]
 Protocol = 'tcp'
 Host = 'mqtt-broker'
 Port = 58090
 PublishTopicPrefix = 'eventbus/in'
 
-# 多租户隔离（多租户：一个实例服务多个租户，按 tenant_id 行级隔离）
-# Enforce=false（迁移期）：未带租户上下文的调用不过滤，仅打告警日志；
-# Enforce=true（上线）：租户表查询缺少租户上下文时返回空集，写入报错。
-[Tenant]
-Enforce = false
+[Clients]
+[Clients.Ekuiper]
+Protocol = 'http'
+Host = 'ekuiper'
+Port = 9081

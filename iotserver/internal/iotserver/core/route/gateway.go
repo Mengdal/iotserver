@@ -22,15 +22,12 @@ import (
 	"iotserver/internal/tools/jwt"
 
 	"github.com/gin-gonic/gin"
-
-	"github.com/swaggo/files"
-	gs "github.com/swaggo/gin-swagger"
 )
 
 func RegisterGateway(engine *gin.Engine, dic *di.Container) {
 	ctl := gateway.New(dic)
 	v1 := engine.Group("/api/v1")
-	v1.GET("/swagger/*any", gs.WrapHandler(swaggerFiles.Handler))
+	registerSwagger(v1, dic)
 
 	v1.POST("auth/login", ctl.Login)
 	v1.GET("auth/initInfo", ctl.InitInfo)

@@ -43,22 +43,44 @@ func TestComponentEndpoint(t *testing.T) {
 	}
 }
 
-// 日志源默认走部署路径，允许配置覆盖；Path 为空表示禁用。
+// 日志源默认由部署形态决定（embedded 本机路径 / server 容器挂载路径），
+// 允许配置覆盖；Path 为空表示禁用。
 func TestComponentLogSources(t *testing.T) {
-	sources := componentLogSources(&config.ConfigurationStruct{})
+	dockerRoot := "/docker-root"
+	embedded := &config.ConfigurationStruct{Deployment: config.DeploymentInfo{Mode: config.DeploymentModeEmbedded}}
+	sources := componentLogSourcesFor(embedded, dockerRoot)
 	if got := sources[seed.SystemComponentMosquittoId].Path; got != "/var/log/iotserver/mosquitto.log" {
-		t.Fatalf("mosquitto default log = %q", got)
+		t.Fatalf("embedded mosquitto default log = %q", got)
+	}
+	if got := sources[seed.SystemComponentEKuiperId].Path; got != "/opt/iotserver/ekuiper/log/stream.log" {
+		t.Fatalf("embedded ekuiper default log = %q", got)
+	}
+	if got := sources[seed.SystemComponentIotpGWId].Path; got != "/var/log/iotserver/iotpgw.log" {
+		t.Fatalf("embedded iotpgw default log = %q", got)
 	}
 	if _, ok := sources[seed.SystemComponentIotEdgeDBId]; ok {
 		t.Fatal("iotedgedb 是远程时序库，默认不应配置本机日志")
 	}
 
-	cfg := &config.ConfigurationStruct{ComponentLogs: config.ComponentLogsInfo{Sources: []config.ComponentLogSource{
+	server := &config.ConfigurationStruct{Deployment: config.DeploymentInfo{Mode: config.DeploymentModeServer}}
+	sources = componentLogSourcesFor(server, dockerRoot)
+	if got, want := sources[seed.SystemComponentMosquittoId].Path, filepath.Join(dockerRoot, "mqtt-broker", "log", "mqtt-broker.log"); got != want {
+		t.Fatalf("server mosquitto default log = %q, want %q", got, want)
+	}
+	if got, want := sources[seed.SystemComponentEKuiperId].Path, filepath.Join(dockerRoot, "kuiper", "log", "stream.log"); got != want {
+		t.Fatalf("server ekuiper default log = %q, want %q", got, want)
+	}
+	if _, ok := sources[seed.SystemComponentIotpGWId]; ok {
+		t.Fatal("server 模式没有本机 iotpGW 日志，默认不应显示入口")
+	}
+
+	// 配置覆盖：空 Path 禁用（embedded 的 iotpGW 默认存在），自定义源可新增。
+	cfg := &config.ConfigurationStruct{Deployment: config.DeploymentInfo{Mode: config.DeploymentModeEmbedded}, ComponentLogs: config.ComponentLogsInfo{Sources: []config.ComponentLogSource{
 		{Id: seed.SystemComponentMosquittoId, Path: "/tmp/mosquitto.log"},
 		{Id: seed.SystemComponentIotpGWId, Path: ""},
 		{Id: "custom", Name: "Custom", Path: "/tmp/custom.log"},
 	}}}
-	sources = componentLogSources(cfg)
+	sources = componentLogSourcesFor(cfg, dockerRoot)
 	if got := sources[seed.SystemComponentMosquittoId].Path; got != "/tmp/mosquitto.log" {
 		t.Fatalf("mosquitto override = %q", got)
 	}
@@ -67,6 +89,15 @@ func TestComponentLogSources(t *testing.T) {
 	}
 	if got := sources["custom"].Path; got != "/tmp/custom.log" {
 		t.Fatalf("custom log = %q", got)
+	}
+
+	// server 模式下如果 iotpGW 日志确实挂载到了本机，可显式配置恢复入口。
+	serverWithIotpGW := &config.ConfigurationStruct{Deployment: config.DeploymentInfo{Mode: config.DeploymentModeServer}, ComponentLogs: config.ComponentLogsInfo{Sources: []config.ComponentLogSource{
+		{Id: seed.SystemComponentIotpGWId, Path: "/var/log/iotserver/iotpgw.log"},
+	}}}
+	sources = componentLogSourcesFor(serverWithIotpGW, dockerRoot)
+	if got := sources[seed.SystemComponentIotpGWId].Path; got != "/var/log/iotserver/iotpgw.log" {
+		t.Fatalf("server iotpgw override = %q", got)
 	}
 
 	// 显式配置（包括空 Path 禁用）要能和「没配置」区分开，供 IotEdgeDB
@@ -178,5 +209,29 @@ func TestComponentEndpointIotEdgeDBUnset(t *testing.T) {
 
 	if got := componentEndpoint(cfg, seed.SystemComponentIotEdgeDBId); got != "" {
 		t.Fatalf("iotedgedb endpoint = %q", got)
+	}
+}
+
+func TestIotEdgeDBDocsURL(t *testing.T) {
+	docs := func(base string) string {
+		return iotEdgeDBDocsURL(&config.ConfigurationStruct{Databases: map[string]bootstrapConfig.Database{
+			"Data": {BaseURL: base},
+		}})
+	}
+	// 浏览器可达的公网/域名地址才生成手册链接
+	if got := docs("  https://db.example.com:8080/  "); got != "https://db.example.com:8080/#docs" {
+		t.Fatalf("iotEdgeDBDocsURL = %q", got)
+	}
+	// Docker 内主机名、回环地址在浏览器里不可达，回落到默认手册
+	for _, base := range []string{"http://iotp:8080", "http://localhost:8080", "http://127.0.0.1:8080", "http://[::1]:8080"} {
+		if got := docs(base); got != "" {
+			t.Fatalf("unreachable base %q should fall back, got %q", base, got)
+		}
+	}
+	if got := docs(""); got != "" {
+		t.Fatalf("empty base url = %q", got)
+	}
+	if got := iotEdgeDBDocsURL(nil); got != "" {
+		t.Fatalf("nil config = %q", got)
 	}
 }

@@ -136,6 +136,8 @@ type DeviceServiceResponse struct {
 	Id            string                `json:"id"`
 	Name          string                `json:"name"`
 	DeviceLibrary DeviceLibraryResponse `json:"deviceLibrary"`
+	// BaseAddress 平台连接驱动实例的地址，Docker 实例启动后才会确定。
+	BaseAddress string `json:"baseAddress"`
 	//Version       string                `json:"version"`
 	RunStatus          int         `json:"runStatus"`
 	Config             interface{} `json:"config"`
@@ -154,6 +156,7 @@ func DeviceServiceResponseFromModel(ds models.DeviceService, dl models.DeviceLib
 		Name: ds.Name,
 		//Version: DeviceLibraryResponseFromModel(dl).Version,
 		DeviceLibrary:      DeviceLibraryResponseFromModel(dl),
+		BaseAddress:        ds.BaseAddress,
 		RunStatus:          ds.RunStatus,
 		Config:             ds.Config,
 		ExpertMode:         ds.ExpertMode,

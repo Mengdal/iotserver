@@ -43,7 +43,7 @@ import { EditModal, EditModalRef } from './EditModal'
 import { DeviceServers } from '@/api/device-servers'
 import { useAuth } from '@/utils/auth'
 import { RunStatusMap } from '@/utils/statusMap'
-import { t, tt } from '@/i18n'
+import { t } from '@/i18n'
 
 const { Text } = Typography
 
@@ -55,7 +55,6 @@ interface DriverRow {
   name: string
   version: string
   internal?: boolean
-  platform?: string
   status: 'running' | 'stopped' | 'error' | 'unknown'
   pid?: number
   address?: string
@@ -228,7 +227,7 @@ const MyDrive: React.FC = () => {
       name: record.name,
       version: record.deviceLibrary?.version || '',
       internal: record.deviceLibrary?.is_internal,
-      platform: record.platform,
+      address: record.baseAddress,
       status: record.runStatus === 1 ? 'running' as const : 'stopped' as const,
       docker: record,
     })),
@@ -304,9 +303,9 @@ const MyDrive: React.FC = () => {
       title: t('地址 / PID'),
       key: 'address',
       width: 200,
-      render: (_, record) => record.kind === 'native' || record.kind === 'system'
-        ? <span>{record.address || '-'}{record.pid ? ` · PID ${record.pid}` : ''}</span>
-        : <Text type="secondary">{tt(record.platform)}</Text>,
+      render: (_, record) => (
+        <span>{record.address || '-'}{record.pid ? ` · PID ${record.pid}` : ''}</span>
+      ),
     },
     {
       title: t('最近错误'),
@@ -363,9 +362,29 @@ const MyDrive: React.FC = () => {
         }
         if (record.kind === 'system') {
           const item = record.system!
-          if (!item.logConfigured) {
+          // iotpGW 停止时即使日志源存在也没有新日志，直接禁用入口；
+          // unknown 不能当成「未运行」（可能是证书/地址未配置），提示要区分。
+          const iotpGWStopped = item.id === 'sys-iotpgw'
+            && record.status !== 'running' && record.status !== 'unknown'
+          if (!item.logConfigured || iotpGWStopped) {
+            // 不同组件没有日志入口的原因不同，不能一律提示「外部服务/去配置 ComponentLogs」：
+            // - iotpGW 在 Docker 部署下是外部采集引擎；没运行时压根没有日志；
+            // - IotEdgeDB 是外部时序库，未配置日志接口；
+            // - 其它组件只是没有配置日志源。
+            let hint = t('未配置可读取的日志源')
+            if (item.id === 'sys-iotpgw') {
+              if (record.status === 'running') {
+                hint = t('iotpGW 为外部采集引擎，请到其运行环境查看日志')
+              } else if (record.status === 'unknown') {
+                hint = t('iotpGW 状态未知，无法确认日志位置')
+              } else {
+                hint = t('iotpGW 未运行，暂无日志')
+              }
+            } else if (item.id === 'sys-iotedgedb') {
+              hint = t('外部服务，未配置日志接口')
+            }
             return (
-              <Tooltip title={t('外部服务，未配置本机日志文件；可在 [ComponentLogs] 中配置路径')}>
+              <Tooltip title={hint}>
                 <span>
                   <Button type="link" size="small" disabled>{t('日志')}</Button>
                 </span>

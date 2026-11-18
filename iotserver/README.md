@@ -27,7 +27,7 @@ make test
 | `Databases.Data.Name` / `Timeout` | iotp 库名（缺省 `iotserver`）/ 请求超时（毫秒） |
 | `Service.CallbackUrl` | eKuiper 规则动作回调基地址 |
 | `Service.CallbackToken` | 回调共享密钥；非空时回调必须带 `x-callback-token` |
-| `Pprof.Enabled` | 调试端点 `/debug/pprof`，默认关闭 |
+| `Pprof.Enabled` | 调试端点 `/debug/pprof`，默认关闭；同时控制 Swagger UI（开启后 `/api/v1/swagger/index.html` 可访问） |
 
 ### 时序数据后端：DuckDB / iotp
 
@@ -66,6 +66,9 @@ docker compose up -d
 - 首次构建需要访问 GitHub 拉取 eKuiper 源码并下载 Go 依赖；离线部署需提前构建并推送镜像。
 - `docker-compose.yml` 已开启 `KUIPER__BASIC__ENABLEPRIVATENET=true`，允许 HTTP 数据资源推送到内网地址；如只允许公网可改回 `false`。
 - Kafka / InfluxDB 仅安装 sink 插件，实际推送仍需要可访问的 Kafka broker / InfluxDB 服务。
+- 系统组件日志路径按部署形态自动选择：server（Docker）读容器内 `/var/bin/iotserver` 下由 compose 共享的 Mosquitto / eKuiper 日志目录；embedded 读本机 `/var/log/iotserver`、`/opt/iotserver`。默认路径只有文件存在时才显示日志入口；也可用 `[ComponentLogs]` 显式覆盖。
+- iotpGW 不随 Docker 编排部署；如果引擎在宿主机运行并写到 `/var/log/iotserver/iotpgw.log`，compose 已把该目录只读挂载给 core，server 模式会自动出现日志入口。
+- Mosquitto 日志由 `logrotate` 服务按 50MB 轮转、保留 5 份；轮转后会自动重启 `mqtt-broker` 以重新打开日志文件。首次 `docker compose up -d` 会构建该小镜像。
 
 ## 目录
 

@@ -16,62 +16,55 @@ package initialize
 
 import (
 	"context"
-	"encoding/json"
-	"github.com/kirinlabs/HttpRequest"
+	"time"
+
 	"iotserver/internal/iotserver/core/config"
 	pkgContainer "iotserver/internal/pkg/container"
 	"iotserver/internal/pkg/di"
 	"iotserver/internal/pkg/logger"
-	"strings"
-	"time"
+	"iotserver/internal/tools/ekuiperclient"
 )
 
 func initApp(ctx context.Context, configuration *config.ConfigurationStruct, dic *di.Container) bool {
 	lc := pkgContainer.LoggingClientFrom(dic.Get)
-	go initEkuiperStreams(dic, lc, configuration)
+	go initEkuiperStreams(ctx, lc, configuration)
 	return true
 }
 
-func initEkuiperStreams(dic *di.Container, lc logger.LoggingClient, configuration *config.ConfigurationStruct) {
-	// time 10s 以保证ekuiper初始化完成
-	time.Sleep(10 * time.Second)
-	req := HttpRequest.NewRequest()
-	r := make(map[string]string)
-	r["sql"] = "CREATE STREAM mqtt_stream () WITH (DATASOURCE=\"eventbus/in\", FORMAT=\"JSON\",SHARED = \"true\")"
-	b, _ := json.Marshal(r)
-	url := configuration.Clients["Ekuiper"].Address() + "/streams"
-	resp, err := req.Post(url, b)
-	if err != nil {
-		lc.Errorf("init ekuiper stream failed error:%+v", err.Error())
-		return
-	}
-	lc.Infof("init ekuiper stream start")
-	lc.Info("ekuiper stream start resp code", resp.StatusCode())
-
-	if resp.StatusCode() == 201 {
-		body, err := resp.Body()
-		if err != nil {
-			lc.Errorf("init ekuiper stream failed error:%+v", err.Error())
+func initEkuiperStreams(ctx context.Context, lc logger.LoggingClient, configuration *config.ConfigurationStruct) {
+	// eKuiper 可能比平台晚就绪（冷启动、首次拉镜像、崩溃重启）。
+	// 固定只试一次会让 mqtt_stream 永久缺失，后续创建告警规则全部失败；
+	// 这里按退避重试，服务运行期间 eKuiper 恢复后会自动补上。
+	const (
+		initialRetry = 10 * time.Second
+		maxRetry     = time.Minute
+	)
+	baseURL := configuration.Clients["Ekuiper"].Address()
+	delay := initialRetry
+	for {
+		timer := time.NewTimer(delay)
+		select {
+		case <-ctx.Done():
+			timer.Stop()
 			return
-		}
-		if strings.Contains(string(body), "created") {
-			lc.Infof("init ekuiper stream success")
-			return
-		}
-	} else if resp.StatusCode() == 400 {
-		body, err := resp.Body()
-		lc.Infof("init ekuiper stream body", string(body))
-		if err != nil {
-			lc.Errorf("init ekuiper stream failed error:%+v", err.Error())
-			return
+		case <-timer.C:
 		}
 
-		if strings.Contains(string(body), "already exists") {
-			lc.Infof("init ekuiper stream plug success")
+		created, err := ekuiperclient.EnsureStream(ctx, baseURL, lc, ekuiperclient.MQTTStreamName, ekuiperclient.MQTTStreamSQL)
+		if err == nil {
+			if created {
+				lc.Infof("init ekuiper stream success")
+			} else {
+				lc.Infof("ekuiper stream %s already exists, skip", ekuiperclient.MQTTStreamName)
+			}
 			return
 		}
-	} else {
-		lc.Errorf("init ekuiper stream failed resp code:%+v", resp.StatusCode())
+		lc.Warnf("init ekuiper stream failed, retry in %s: %v", delay, err)
+		if delay < maxRetry {
+			delay *= 2
+			if delay > maxRetry {
+				delay = maxRetry
+			}
+		}
 	}
 }
-

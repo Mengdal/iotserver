@@ -1,6 +1,6 @@
 import React from 'react'
 import { Button, Dropdown } from 'antd'
-import { GlobalOutlined } from '@ant-design/icons'
+import { TranslationOutlined } from '@ant-design/icons'
 import { LOCALES, currentLocale, setLocale } from '@/i18n'
 import type { Locale } from '@/i18n'
 import { updateUserLang } from '@/api/sysManage'
@@ -45,8 +45,15 @@ const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({ color, showLabel = 
         onClick: ({ key }) => { change(key as Locale) },
       }}
     >
-      <Button type="text" size="small" style={color ? { color } : undefined}>
-        <GlobalOutlined />
+      <Button
+        type="text"
+        size="small"
+        style={color ? { color } : undefined}
+        title={current?.label}
+        aria-label={current?.label}
+      >
+        {/* 国际化专用图标（文/A），比地球图标语义更准确 */}
+        <TranslationOutlined />
         {showLabel && <span style={{ marginLeft: 6 }}>{current?.label}</span>}
       </Button>
     </Dropdown>

@@ -1,16 +1,23 @@
+# ========== 运行日志 ==========
 [Writable]
 LogLevel = 'INFO'
 LogPath = 'iotserver/logs/iotserver-core.log'
 
+# ========== 服务端口 ==========
 [Service]
 Host = '0.0.0.0'
-ServerBindAddr = '' # Leave blank so default to Host value unless different value is needed.
+ServerBindAddr = ''
 Port = 58081
 Timeout = 45000
-# eKuiper 规则回调平台（告警上报 / 场景触发）使用的基地址。
-# docker-compose 部署用服务名 http://iotserver-core:58081；本地直接跑服务时填容器可达的宿主机地址。
+# eKuiper 回调平台的地址（Docker 填服务名，本机运行填宿主机地址）
 CallbackUrl = 'http://host.docker.internal:58081'
-CallbackToken = ''  # 留空=不校验回调密钥；生产建议设置为随机串
+# 回调密钥，留空不校验；生产建议设置为随机串
+CallbackToken = ''
+
+[WebServer]
+Host = '0.0.0.0'
+Port = 3000
+Timeout = 120
 
 [RpcServer]
 Address = '0.0.0.0:57081'
@@ -18,82 +25,61 @@ UseTLS = false
 CertFile = ''
 KeyFile = ''
 
-[Clients]
-[Clients.Ekuiper]
-Protocol = 'http'
-Host = '127.0.0.1'
-Port = 9081
-
-[WebServer]
-Host = '0.0.0.0'
-Port = 3000
-Timeout = 120
-
-# 前端静态资源目录。本地部署时可指向 /opt/iotserver/ui。
+# ========== 前端 ==========
 [WebUI]
 BuildPath = './cmd/iotserver-ui/build'
 
+# ========== 数据库 ==========
 [Databases]
 [Databases.Metadata]
 Type = 'sqlite'
 DataSource = 'manifest/docker/db-data/core-data/core.db?_timeout=5000'
 
 [Databases.Data]
-# 单文件列存：一个 DuckDB 数据库文件，事务不产生 Parquet 文件，
-# 因此不需要分区 / 合并小文件 / 过期快照那一整套文件生命周期管理。
-# 改为 'iotp' 时数据写入外部 iotp 时序库，连接参数与 DuckDB 同在本段，
-# DataSource 不再使用；iotp 模式不支持按设备删数据 / 保留期清理 / 在线导出，
-# 消息数按宽表行统计。
+# duckdb=单文件列存；iotp=外部时序库（填写下方 BaseURL/Token/Name/Timeout）
 Type = 'duckdb'
 DataSource = 'manifest/docker/db-data/duckdb/core-data.duckdb'
-# iotp 连接参数（Type='iotp' 时使用；只填 BaseURL 也会启用 iotp 元数据同步/实时值读取）：
+# iotp 连接参数（Type='iotp' 时使用；只填 BaseURL 也会启用元数据同步/实时值读取）
 # BaseURL = 'http://host:8080'
 # Token = ''
-# Name = 'iotserver'   # iotp 库名
-# Timeout = 10000      # 毫秒
-# 令牌权限：设备注册、网关声明与归属同步都走 /api/v1/meta/*，需要 admin 权限；
-# 仅设备数据写入需要 write db:<库>。软网关的设备归属只在 Type='iotp' 时同步。
+# Name = 'iotserver'
+# Timeout = 10000  # 毫秒
 
+# ========== 消息与外部服务 ==========
 [MessageQueue]
 Protocol = 'tcp'
 Host = '127.0.0.1'
 Port = 58090
 PublishTopicPrefix = 'eventbus/in'
 
-# 参考系统（iotddc / things）接入所用的 broker。
-#
-# 为什么不复用上面那段：MessageQueue 同时还跑着平台的**内部消息总线**
-# （PublishTopicPrefix = eventbus/in，规则引擎/事件链路都走它），而参考系统的上行
-# 数据在**另一个 broker** 上。把 MessageQueue.Host 直接改过去会连带搬走内部总线。
-#
-# Broker 留空则回落到 MessageQueue 的地址（既有部署行为不变）。
-# 本文件在仓库里：生产地址与凭据请按环境填写，提交前记得清空。
+[Clients]
+[Clients.Ekuiper]
+Protocol = 'http'
+Host = '127.0.0.1'
+Port = 9081
+
 [Integrations]
 [Integrations.EdgeIngest]
+# 参考系统（iotddc/things）上行 broker；留空回落到 MessageQueue
 Broker = ''
-# 控制通道 broker（重启/标签树/属性写）；留空回落到 Broker
+# 控制通道（重启/标签树/属性写）；留空回落到 Broker
 # ControlBroker = 'tcp://host:1883'
 Username = ''
 Password = ''
-# 订阅刷新间隔（秒）：界面上增删网关后自动重订阅，无需重启服务；<=0 用默认值 60
+# 订阅刷新间隔（秒），<=0 用默认值 60
 ResyncIntervalSec = 60
 
-# 部署形态：server 保留 Docker 驱动管理；embedded 以本机进程运行插件并隐藏镜像仓库。
+# ========== 部署与插件 ==========
 [Deployment]
+# server=Docker 驱动；embedded=本机插件
 Mode = 'server'
 
-# 原生插件目录：Root 存放解压后的插件版本，DataDir 存放实例配置/日志/PID。
 [Plugins]
+# 原生插件：Root 为版本目录，DataDir 为实例配置/日志/PID
 Root = 'data/plugins'
 DataDir = 'data/plugin-data'
 
-# 调试端点（/debug/pprof）：默认关闭。
-# 开启后需携带 x-token 且账号具备 system:debug:pprof 权限（超级管理员直通）。
+# ========== 调试 ==========
 [Pprof]
+# 性能诊断端点 /debug/pprof（需 x-token + system:debug:pprof 权限）
 Enabled = false
-
-# 多租户隔离（多租户：一个实例服务多个租户，按 tenant_id 行级隔离）
-# Enforce=false（迁移期）：未带租户上下文的调用不过滤，仅打告警日志；
-# Enforce=true（上线）：租户表查询缺少租户上下文时返回空集，写入报错。
-[Tenant]
-Enforce = false

@@ -9,8 +9,25 @@ services:
     restart: always
     ports:
       - "58090:58090"
+    volumes:
+      # 日志目录与 core 共享：broker 把日志写在容器内 /logs/mqtt-broker，
+      # core 通过下方 ./:/var/bin/iotserver 挂载读取同名宿主机目录。
+      # 镜像默认单文件输出；由 logrotate 服务按大小轮转。
+      - ./mqtt-broker/log:/logs/mqtt-broker
     networks:
       - iotserver
+  logrotate:
+    # broker 不支持重新打开日志文件，轮转后由该服务重启容器。
+    build:
+      context: ./logrotate
+    image: ${LOGROTATE_IMAGE:-iotserver-logrotate:1.0}
+    container_name: iotserver-logrotate
+    restart: always
+    depends_on:
+      - mqtt-broker
+    volumes:
+      - ./mqtt-broker/log:/logs/mqtt-broker
+      - /var/run/docker.sock:/var/run/docker.sock
   ekuiper:
     # 内置 Kafka / InfluxDB sink 插件；修改插件后需重新 build
     build:
@@ -61,6 +78,8 @@ services:
     volumes:
       - ./:/var/bin/iotserver
       - /var/run/docker.sock:/var/run/docker.sock
+      # 宿主机上的 iotpGW（非容器运行时）日志目录，只读挂载给 core 读取
+      - /var/log/iotserver:/var/log/iotserver:ro
       - ./config/configuration.toml:/etc/iotserver-core/configuration.toml
     networks:
       - iotserver

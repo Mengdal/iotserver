@@ -275,6 +275,7 @@ export function buildMenuNameMap (list?: BackendMenuItem[]): Record<string, stri
 
 let cachedUserRaw: string | null = null
 let cachedMenuNames: Record<string, string> = {}
+let cachedMenuTree: BackendMenuItem[] = []
 
 /** 当前登录态里的「path → 后端菜单名」（按 localStorage 原文缓存） */
 export function currentMenuNameMap (): Record<string, string> {
@@ -293,6 +294,7 @@ export function currentMenuNameMap (): Record<string, string> {
     } catch (error) {
       backendMenus = []
     }
+    cachedMenuTree = backendMenus
     cachedMenuNames = buildMenuNameMap(backendMenus)
   }
   return cachedMenuNames
@@ -301,6 +303,37 @@ export function currentMenuNameMap (): Record<string, string> {
 /** 标题/面包屑取名：后端菜单优先，取不到再回落到前端内置映射 */
 export function lookupMenuName (path: string): string | undefined {
   return currentMenuNameMap()[path] || breadcrumbNameMap[path]
+}
+
+export interface MenuCrumb {
+  /** 目录没有可跳转路由时为空串，面包屑只展示文字 */
+  to: string
+  label: string
+}
+
+/**
+ * 按后端菜单树返回某个路由的完整层级（含父菜单），用于面包屑。
+ * 菜单可以有多级（系统管理 > 平台管理 > 租户管理），不能只按 URL 片段拼。
+ */
+export function lookupMenuTrail (path: string): MenuCrumb[] | null {
+  if (!path) return null
+  currentMenuNameMap()
+  const walk = (items: BackendMenuItem[], parents: MenuCrumb[]): MenuCrumb[] | null => {
+    for (const item of items) {
+      if (item.menuType === 'F') continue
+      const crumb: MenuCrumb = {
+        to: item.menuType === 'M' ? '' : (item.path || ''),
+        label: backendMenuLabel(item),
+      }
+      if (item.path === path) return [...parents, crumb]
+      if (Array.isArray(item.children)) {
+        const found = walk(item.children, [...parents, crumb])
+        if (found) return found
+      }
+    }
+    return null
+  }
+  return walk(cachedMenuTree, [])
 }
 
 /** 面包屑与页面标题映射 */

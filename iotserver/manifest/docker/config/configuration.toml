@@ -1,17 +1,23 @@
+# ========== 运行日志 ==========
 [Writable]
 LogLevel = 'INFO'
 LogPath = 'iotserver/logs/iotserver-core.log'
 
+# ========== 服务端口 ==========
 [Service]
 Host = '0.0.0.0'
-ServerBindAddr = '' # Leave blank so default to Host value unless different value is needed.
+ServerBindAddr = ''
 Port = 58081
 Timeout = 45000
-# eKuiper 规则动作回调平台的基地址：容器内用 compose 服务名（默认值即是它，可省略）
+# eKuiper 回调地址（容器内使用 compose 服务名）
 CallbackUrl = 'http://iotserver-core:58081'
-# 回调共享密钥：非空时 eKuiper 回调必须带 X-Callback-Token（规则动作会自动带上）。
-# 生产环境建议设置成随机串，例如 openssl rand -hex 16
+# 回调密钥，留空不校验；生产建议设置为随机串
 CallbackToken = ''
+
+[WebServer]
+Host = '0.0.0.0'
+Port = 3000
+Timeout = 120
 
 [RpcServer]
 Address = '0.0.0.0:57081'
@@ -19,51 +25,41 @@ UseTLS = false
 CertFile = ''
 KeyFile = ''
 
-[Clients]
-[Clients.Ekuiper]
-Protocol = 'http'
-Host = 'ekuiper'
-Port = 9081
-
-[WebServer]
-Host = '0.0.0.0'
-Port = 3000
-Timeout = 120
-
+# ========== 前端 ==========
 [WebUI]
 BuildPath = './cmd/iotserver-ui/build'
 
+# ========== 数据库 ==========
 [Databases]
 [Databases.Metadata]
 Type = 'sqlite'
 DataSource = 'iotserver/db-data/core-data/core.db?_timeout=5000'
 
-
 [Databases.Data]
-# 数据层：DuckDB 单文件列存。
-# 路径相对容器工作目录 /var/bin/，即宿主机 manifest/docker/db-data/（compose 已挂载，重建容器不丢数据）。
+# 路径相对容器工作目录 /var/bin/，即宿主机 manifest/docker/db-data/
+# duckdb=单文件列存；iotp=外部时序库（填写下方 BaseURL/Token/Name/Timeout）
 Type = 'duckdb'
 DataSource = 'iotserver/db-data/duckdb/core-data.duckdb'
-# iotp 连接参数（Type='iotp' 时使用）：
+# iotp 连接参数（Type='iotp' 时使用）
 # BaseURL = 'http://host:8080'
 # Token = ''
 # Name = 'iotserver'
-# Timeout = 10000      # 毫秒
-# 令牌权限：设备注册、网关声明与归属同步都走 /api/v1/meta/*，需要 admin 权限；
-# 仅设备数据写入需要 write db:<库>。软网关的设备归属只在 Type='iotp' 时同步。
+# Timeout = 10000  # 毫秒
 
-# 调试端点 /debug/pprof：默认关闭（暴露协程栈/堆内存）。开启后需 x-token + system:debug:pprof 权限。
-[Pprof]
-Enabled = false
-
+# ========== 消息与外部服务 ==========
 [MessageQueue]
 Protocol = 'tcp'
 Host = 'mqtt-broker'
 Port = 58090
 PublishTopicPrefix = 'eventbus/in'
 
-# 多租户隔离（多租户：一个实例服务多个租户，按 tenant_id 行级隔离）
-# Enforce=false（迁移期）：未带租户上下文的调用不过滤，仅打告警日志；
-# Enforce=true（上线）：租户表查询缺少租户上下文时返回空集，写入报错。
-[Tenant]
-Enforce = false
+[Clients]
+[Clients.Ekuiper]
+Protocol = 'http'
+Host = 'ekuiper'
+Port = 9081
+
+# ========== 调试 ==========
+[Pprof]
+# 性能诊断端点 /debug/pprof（需 x-token + system:debug:pprof 权限）
+Enabled = false

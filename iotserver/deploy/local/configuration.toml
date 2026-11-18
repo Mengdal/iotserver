@@ -1,25 +1,25 @@
-# 本地部署配置模板（ARM64 + Mosquitto）
-#
-# 目录约定：
-#   /opt/iotserver/bin          iotserver-core
-#   /opt/iotserver/ui           前端构建产物
-#   /opt/iotserver/plugins      原生插件版本目录
-#   /var/lib/iotserver          SQLite / DuckDB / 插件实例数据
-#   /var/log/iotserver          日志
-#   /etc/iotserver              配置
+# 嵌入式部署配置模板（ARM64）
+# 目录：/opt/iotserver 程序、/var/lib/iotserver 数据、/var/log/iotserver 日志、/etc/iotserver 配置
 
+# ========== 运行日志 ==========
 [Writable]
 LogLevel = 'INFO'
 LogPath = '/var/log/iotserver/iotserver-core.log'
 
+# ========== 服务端口 ==========
 [Service]
 Host = '0.0.0.0'
 ServerBindAddr = ''
 Port = 58081
 Timeout = 45000
-# 本地部署：eKuiper 就在同一台机器上，直接回调本机。
+# eKuiper 回调地址（本机部署直接回调本机）
 CallbackUrl = 'http://127.0.0.1:58081'
 CallbackToken = ''
+
+[WebServer]
+Host = '0.0.0.0'
+Port = 3000
+Timeout = 120
 
 [RpcServer]
 Address = '0.0.0.0:57081'
@@ -27,95 +27,76 @@ UseTLS = false
 CertFile = ''
 KeyFile = ''
 
-[Clients]
-[Clients.Ekuiper]
-Protocol = 'http'
-Host = '127.0.0.1'
-Port = 9081
-
-[WebServer]
-Host = '0.0.0.0'
-Port = 3000
-Timeout = 120
-
+# ========== 前端 ==========
 [WebUI]
 BuildPath = '/opt/iotserver/ui'
 
+# ========== 数据库 ==========
 [Databases]
 [Databases.Metadata]
 Type = 'sqlite'
 DataSource = '/var/lib/iotserver/core.db?_timeout=5000'
 
 [Databases.Data]
-# 本地部署使用外部 iotp 时序库，不编译 DuckDB（见 make build-iotp-linux）。
-# Token 属于凭据，不写进模板：把本文件复制为 configuration.local.toml
-# （已被 .gitignore 忽略）再填 Token，安装脚本会优先使用 .local 版本。
+# 嵌入式部署使用外部 iotp 时序库
 Type = 'iotp'
 BaseURL = 'http://124.223.204.174:8080'
+# Token 不写入模板；复制本文件为 configuration.local.toml 后填写
 Token = ''
 Name = 'iotserver'
 Timeout = 10000
 
+# ========== 消息与外部服务 ==========
 [MessageQueue]
 Protocol = 'tcp'
 Host = '127.0.0.1'
 Port = 58090
 PublishTopicPrefix = 'eventbus/in'
 
+[Clients]
+[Clients.Ekuiper]
+Protocol = 'http'
+Host = '127.0.0.1'
+Port = 9081
+
+[Integrations]
 [Integrations.EdgeIngest]
+# 参考系统上行 broker；留空回落到 MessageQueue
 Broker = ''
+# 控制通道；留空回落到 Broker
 ControlBroker = ''
 Username = ''
 Password = ''
+# 订阅刷新间隔（秒），<=0 用默认值 60
 ResyncIntervalSec = 60
 
+# ========== 部署与插件 ==========
 [Deployment]
+# server=Docker 驱动；embedded=本机插件
 Mode = 'embedded'
 
 [Plugins]
 Root = '/opt/iotserver/plugins'
 DataDir = '/var/lib/iotserver/plugin-data'
 
-[Pprof]
-Enabled = false
-
-[Tenant]
-Enforce = false
-
 [CollectEngine]
-# 嵌入式部署：iotpGW 的 .so 驱动安装位置。
+# iotpGW .so 驱动安装目录
 DriverDir = '/opt/iotpgw/drivers'
 BackupDir = '/var/lib/iotserver/driver-backups'
-# none=只替换文件；command=执行下面的重启命令；api=预留远程接口。
+# none=只替换文件；command=执行重启命令；api=预留远程接口
 ReloadMode = 'command'
 ReloadCommand = '/etc/init.d/S93iotserver-iotpgw restart'
-# 可选：当前 iotpGW 期望的驱动 ABI，非空时会校验安装包。
+# iotpGW 期望的驱动 ABI，留空不校验
 DriverABI = ''
 
-[ComponentLogs]
-# 系统组件日志文件。不配置时使用内置默认路径：
-#   Mosquitto /var/log/iotserver/mosquitto.log
-#   eKuiper   /opt/iotserver/ekuiper/log/stream.log
-#   iotpGW    /var/log/iotserver/iotpgw.log
-# Path 留空可禁用该组件的日志入口；远程组件的日志文件不在本机，配置了也读不到。
-[[ComponentLogs.Sources]]
-Id = 'sys-mosquitto'
-Name = 'Mosquitto'
-Path = '/var/log/iotserver/mosquitto.log'
-
-[[ComponentLogs.Sources]]
-Id = 'sys-ekuiper'
-Name = 'eKuiper'
-Path = '/opt/iotserver/ekuiper/log/stream.log'
-
-[[ComponentLogs.Sources]]
-Id = 'sys-iotpgw'
-Name = 'iotpGW'
-Path = '/var/log/iotserver/iotpgw.log'
-
-# IotEdgeDB 是外部服务，默认不提供日志入口。
-# 如果 iotp 与 iotserver 同机，或日志目录已挂载到本机，可启用：
+# ========== 系统组件日志 ==========
+# 默认按部署形态自动选择；需要覆盖时取消注释
 # [[ComponentLogs.Sources]]
-# Id = 'sys-iotedgedb'
-# Name = 'IotEdgeDB'
-# Path = '/var/log/iotp/iotp.log'
+# Id = 'sys-mosquitto'
+# Name = 'Mosquitto'
+# Path = '/var/log/iotserver/mosquitto.log'
+
+# ========== 调试 ==========
+[Pprof]
+# 性能诊断端点 /debug/pprof（需 x-token + system:debug:pprof 权限）
+Enabled = false

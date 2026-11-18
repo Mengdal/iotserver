@@ -105,7 +105,7 @@ func tenantWriteCallback(tx *gorm.DB) {
 			// fail-closed：无租户上下文只能看到平台级数据
 			addTenantWhere(tx, table, constants.PlatformTenantId)
 		case PolicyWarn:
-			warnf("租户隔离: 表 %s 的查询缺少租户上下文（策略=warn，本次不过滤；上线前需改为 WithCtx 并切换 enforce）", table)
+			warnf("租户隔离: 表 %s 的查询缺少租户上下文（warn：本次不过滤，可能读到跨租户数据）", table)
 		}
 		return
 	}
@@ -127,7 +127,7 @@ func tenantCreateCallback(tx *gorm.DB) {
 		case PolicyEnforce:
 			_ = tx.AddError(errNoTenant)
 		case PolicyWarn:
-			warnf("租户隔离: 表 %s 的新增缺少租户上下文（策略=warn，tenant_id 将为空）", table)
+			warnf("租户隔离: 表 %s 的新增缺少租户上下文（warn：tenant_id 将为空）", table)
 		}
 		return
 	}

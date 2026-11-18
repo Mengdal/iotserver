@@ -2,7 +2,7 @@ import React, { useMemo } from 'react'
 import { Breadcrumb, Typography } from 'antd'
 import { LeftOutlined } from '@ant-design/icons'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { lookupMenuName } from '@/routes/menus'
+import { lookupMenuName, lookupMenuTrail } from '@/routes/menus'
 import './style.less'
 import { t } from '@/i18n'
 
@@ -36,6 +36,15 @@ const AdvanceBreadcrumb: React.FC<AdvanceBreadcrumbProps> = ({ title, describe, 
   }, [background])
 
   const defaultBreadcrumb = useMemo<BreadcrumbItem[]>(() => {
+    // 菜单可能多级（系统管理 > 平台管理 > 租户管理），优先按菜单树取完整层级；
+    // 详情页等不在菜单里的路径再退回按 URL 片段取名称。
+    const trail = lookupMenuTrail(location.pathname)
+    if (trail) {
+      return trail
+        // 首层面包屑固定是「首页」，首页自身不再重复一次
+        .filter(item => item.label !== t('首页'))
+        .map(item => ({ to: item.to, label: item.label }))
+    }
     const pathSnippets = location.pathname.split('/').filter(i => i)
     return pathSnippets
       .map((_, index) => {
@@ -44,7 +53,6 @@ const AdvanceBreadcrumb: React.FC<AdvanceBreadcrumbProps> = ({ title, describe, 
         return label ? { to, label } : null
       })
       .filter((item): item is BreadcrumbItem => item !== null)
-      // 首层面包屑固定是「首页」，首页自身不再重复一次
       .filter(item => item.label !== t('首页'))
   }, [location])
 

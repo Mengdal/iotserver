@@ -10,6 +10,8 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -19,8 +21,10 @@ import (
 	"iotserver/internal/iotserver/core/config"
 	"iotserver/internal/iotserver/core/container"
 	"iotserver/internal/models"
+	"iotserver/internal/pkg/constants"
 	"iotserver/internal/pkg/errort"
 	"iotserver/internal/pkg/seed"
+	"iotserver/internal/pkg/utils"
 	"iotserver/internal/tools/iotp"
 	"iotserver/internal/tools/logtail"
 )
@@ -43,6 +47,7 @@ func (app *driverLibApp) SystemComponents(ctx context.Context) ([]dtos.SystemCom
 		seed.SystemComponentIotpGWId: app.softGatewayEngineEndpoint(ctx),
 	}
 	logSources := componentLogSources(cfg)
+	versions := detectComponentVersions(ctx, cfg, endpoints)
 	result := make([]dtos.SystemComponentDTO, 0, len(libraries))
 	for _, library := range libraries {
 		endpoint := endpoints[library.Id]
@@ -74,10 +79,16 @@ func (app *driverLibApp) SystemComponents(ctx context.Context) ([]dtos.SystemCom
 		} else {
 			status = probeComponentEndpoint(endpoint)
 		}
+		// 探测到真实版本时覆盖种子里的 builtin/external；探测不到保留原值，
+		// 前端会把它显示成「内置/外部」。
+		version := library.Version
+		if detected := versions[library.Id]; detected != "" {
+			version = detected
+		}
 		result = append(result, dtos.SystemComponentDTO{
 			Id:            library.Id,
 			Name:          library.Name,
-			Version:       library.Version,
+			Version:       version,
 			Description:   library.Description,
 			Runtime:       library.Runtime,
 			Essential:     library.Essential,
@@ -97,8 +108,6 @@ func (app *driverLibApp) SystemComponents(ctx context.Context) ([]dtos.SystemCom
 	return result, nil
 }
 
-// componentLogSources 返回系统组件日志源：内置默认路径 + 配置覆盖。
-// 配置里 Path 为空表示禁用该组件的日志入口。
 // explicitComponentLogSource 返回管理员在 [ComponentLogs].Sources 里显式配置的日志源。
 // 需要区分「没配置」和「显式置空禁用」时用它，componentLogSources 会丢掉空路径项。
 func explicitComponentLogSource(cfg *config.ConfigurationStruct, id string) (config.ComponentLogSource, bool) {
@@ -113,7 +122,61 @@ func explicitComponentLogSource(cfg *config.ConfigurationStruct, id string) (con
 	return config.ComponentLogSource{}, false
 }
 
+// componentLogSources 按部署形态给出默认日志路径，再叠加 [ComponentLogs] 显式覆盖。
+//
+// 部署形态已经能确定日志位置，不需要在配置里重复写：
+//   - embedded：iotserver / Mosquitto / iotpGW 都在本机，用 /var/log/iotserver 和 /opt/iotserver；
+//   - server（Docker）：核心容器把宿主机 compose 目录挂在 /var/bin/iotserver，
+//     broker / eKuiper 的日志目录由 compose 共享到该目录下。
+//
+// 本机进程 + Docker 组件的开发模式没有 /var/bin/iotserver，退回仓库的 manifest/docker。
 func componentLogSources(cfg *config.ConfigurationStruct) map[string]config.ComponentLogSource {
+	dockerRoot := constants.DockerIotServerRootDir
+	if info, err := os.Stat(dockerRoot); err != nil || !info.IsDir() {
+		candidate := filepath.Join(utils.GetPwdDir(), "manifest", "docker")
+		if info, err := os.Stat(candidate); err == nil && info.IsDir() {
+			dockerRoot = candidate
+		} else {
+			// 从仓库外目录本机运行：不要指向一组必然不存在的默认路径。
+			dockerRoot = ""
+		}
+	}
+	sources := componentLogSourcesFor(cfg, dockerRoot)
+	mode := config.DeploymentModeEmbedded
+	if cfg != nil {
+		mode = cfg.DeploymentMode()
+	}
+	// Docker 部署时宿主机可能跑着 iotpGW：compose 已挂载 /var/log/iotserver，
+	// 日志文件存在就提供入口；不存在则保持隐藏，避免点开只看到“文件不存在”。
+	if mode == config.DeploymentModeServer {
+		if _, explicit := explicitComponentLogSource(cfg, seed.SystemComponentIotpGWId); !explicit {
+			if logtail.Stat("/var/log/iotserver/iotpgw.log").Exists {
+				sources[seed.SystemComponentIotpGWId] = config.ComponentLogSource{
+					Id:   seed.SystemComponentIotpGWId,
+					Name: "iotpGW",
+					Path: "/var/log/iotserver/iotpgw.log",
+				}
+			}
+		}
+	}
+	// 默认路径只有真的存在时才展示；显式配置的源保留（管理员可能先配好等文件生成）。
+	for id, source := range sources {
+		if _, explicit := explicitComponentLogSource(cfg, id); explicit {
+			continue
+		}
+		if !logtail.Stat(source.Path).Exists {
+			delete(sources, id)
+		}
+	}
+	return sources
+}
+
+// componentLogSourcesFor 是 componentLogSources 的纯函数版本，便于单测固定 dockerRoot。
+func componentLogSourcesFor(cfg *config.ConfigurationStruct, dockerRoot string) map[string]config.ComponentLogSource {
+	mode := config.DeploymentModeEmbedded
+	if cfg != nil {
+		mode = cfg.DeploymentMode()
+	}
 	sources := map[string]config.ComponentLogSource{
 		seed.SystemComponentMosquittoId: {
 			Id:   seed.SystemComponentMosquittoId,
@@ -130,6 +193,24 @@ func componentLogSources(cfg *config.ConfigurationStruct) map[string]config.Comp
 			Name: "iotpGW",
 			Path: "/var/log/iotserver/iotpgw.log",
 		},
+	}
+	if mode == config.DeploymentModeServer {
+		// Docker 编排只包含 Mosquitto / eKuiper；iotpGW 由 componentLogSources
+		// 在检测到本机日志文件后补充。dockerRoot 为空说明不在 compose 目录运行，
+		// 不生成相对路径的伪日志源。
+		sources = map[string]config.ComponentLogSource{}
+		if strings.TrimSpace(dockerRoot) != "" {
+			sources[seed.SystemComponentMosquittoId] = config.ComponentLogSource{
+				Id:   seed.SystemComponentMosquittoId,
+				Name: "Mosquitto",
+				Path: filepath.Join(dockerRoot, "mqtt-broker", "log", "mqtt-broker.log"),
+			}
+			sources[seed.SystemComponentEKuiperId] = config.ComponentLogSource{
+				Id:   seed.SystemComponentEKuiperId,
+				Name: "eKuiper",
+				Path: filepath.Join(dockerRoot, "kuiper", "log", "stream.log"),
+			}
+		}
 	}
 	if cfg == nil {
 		return sources

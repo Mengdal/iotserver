@@ -43,6 +43,33 @@ func TestPlatformOnlyButtonsInheritParent(t *testing.T) {
 	}
 }
 
+// 平台管理目录挂在系统管理下，租户管理/系统配置仍作为它的子菜单。
+// 移动父级不能改变 platform_only：否则租户侧会看到平台管理分组。
+func TestPlatformMenuNestedUnderSystemManage(t *testing.T) {
+	byId := make(map[string]models.Menu)
+	for _, m := range DefaultMenus() {
+		byId[m.Id] = m
+	}
+	platform, ok := byId[MenuPlatformId]
+	if !ok {
+		t.Fatalf("平台管理菜单 %s 不存在", MenuPlatformId)
+	}
+	if platform.ParentId != MenuAdminId {
+		t.Fatalf("平台管理应挂在系统管理(%s)下，实际父级 %s", MenuAdminId, platform.ParentId)
+	}
+	if platform.PlatformOnly != 1 {
+		t.Fatal("平台管理目录必须保持 platform_only")
+	}
+	for _, child := range []string{MenuPlatformTenant, MenuAdminConfig} {
+		if byId[child].ParentId != MenuPlatformId {
+			t.Fatalf("菜单 %s(%s) 的父级应为平台管理，实际 %s", byId[child].Name, child, byId[child].ParentId)
+		}
+		if byId[child].PlatformOnly != 1 {
+			t.Fatalf("菜单 %s(%s) 必须保持 platform_only", byId[child].Name, child)
+		}
+	}
+}
+
 // 公共导航菜单（首页 / 工具与文档）不带权限码，所有登录用户默认可见。
 func TestPublicMenusHaveNoPerms(t *testing.T) {
 	menus := DefaultMenus()

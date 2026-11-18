@@ -47,7 +47,7 @@
 | 普通用户（token 带 tenantId） | 过滤 `tenant_id = ?` |
 | 平台管理员 + `x-tenant-id` 头 | 过滤为该租户 |
 | 平台管理员（无头） | `Platform=true`，不过滤（跨租户运营） |
-| 无租户上下文的后台调用 | 受 `[Tenant] Enforce` 策略控制：当前 `false`（Warn）= **不过滤仅告警**，`true` = fail-closed |
+| 无租户上下文的后台调用 | 固定 Warn 策略：**不过滤，仅告警** |
 
 > 注意：`Enforce=false` 只影响「完全没有租户上下文」的调用；带租户的请求在任何策略下都会真实过滤。
 

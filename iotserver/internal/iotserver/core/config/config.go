@@ -35,7 +35,6 @@ type ConfigurationStruct struct {
 	WebUI        WebUIInfo
 	DockerManage DockerManage
 	Pprof        PprofInfo
-	Tenant       TenantInfo
 	// Deployment 部署形态：server 支持 Docker 驱动；embedded 以本机进程运行插件。
 	Deployment DeploymentInfo
 	// Plugins 原生插件安装目录与实例数据目录。
@@ -146,15 +145,6 @@ type EdgeIngestInfo struct {
 // 开启后仍需 x-token 鉴权并具备 system:debug:pprof 权限（超级管理员直通）。
 type PprofInfo struct {
 	Enabled bool
-}
-
-// TenantInfo 多租户隔离配置
-type TenantInfo struct {
-	// Enforce 无租户上下文的调用是否 fail-closed。
-	//   false（默认，迁移期）：不打租户条件，仅打告警日志（日志级别可控制）—— 未改造完的调用点仍可工作；
-	//   true（上线/测试）：租户表查询在缺少租户上下文时返回空集，写入直接报错。
-	// 建议在业务接口全部完成 WithCtx 改造、隔离测试跑通后再置 true。
-	Enforce bool
 }
 
 // 部署形态。

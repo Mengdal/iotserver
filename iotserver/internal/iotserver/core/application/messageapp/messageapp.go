@@ -17,8 +17,11 @@ package messageapp
 import (
 	"context"
 	"encoding/json"
+	"strconv"
+	"time"
+
 	"github.com/LMgateways/iotserver-driver-proto/drivercommon"
-	"github.com/kirinlabs/HttpRequest"
+
 	"iotserver/internal/dtos"
 	coreContainer "iotserver/internal/iotserver/core/container"
 	interfaces "iotserver/internal/iotserver/core/interface"
@@ -27,10 +30,6 @@ import (
 	"iotserver/internal/pkg/errort"
 	"iotserver/internal/pkg/logger"
 	"iotserver/internal/pkg/tenant"
-	"strconv"
-	"strings"
-	"time"
-
 	pkgMQTT "iotserver/internal/tools/mqttclient"
 )
 
@@ -39,58 +38,19 @@ type MessageApp struct {
 	lc                logger.LoggingClient
 	dbClient          interfaces.DBClient
 	ekuiperMqttClient pkgMQTT.MQTTClient
-	ekuiperaddr       string
 }
 
-func NewMessageApp(dic *di.Container, ekuiperaddr string) *MessageApp {
+func NewMessageApp(dic *di.Container) *MessageApp {
 	lc := container.LoggingClientFrom(dic.Get)
 	dbClient := coreContainer.DBClientFrom(dic.Get)
 	msgApp := &MessageApp{
-		dic:         dic,
-		dbClient:    dbClient,
-		lc:          lc,
-		ekuiperaddr: ekuiperaddr,
+		dic:      dic,
+		dbClient: dbClient,
+		lc:       lc,
 	}
 	mqttClient := msgApp.connectMQTT()
 	msgApp.ekuiperMqttClient = mqttClient
-	msgApp.initeKuiperStreams()
 	return msgApp
-}
-
-func (tmq *MessageApp) initeKuiperStreams() {
-	req := HttpRequest.NewRequest()
-	r := make(map[string]string)
-	r["sql"] = "CREATE STREAM mqtt_stream () WITH (DATASOURCE=\"eventbus/in\", FORMAT=\"JSON\",SHARED = \"true\")"
-	b, _ := json.Marshal(r)
-	resp, err := req.Post(tmq.ekuiperaddr, b)
-	if err != nil {
-		tmq.lc.Errorf("init ekuiper stream failed error:%+v", err.Error())
-		return
-	}
-
-	if resp.StatusCode() == 201 {
-		body, err := resp.Body()
-		if err != nil {
-			tmq.lc.Errorf("init ekuiper stream failed error:%+v", err.Error())
-			return
-		}
-		if strings.Contains(string(body), "created") {
-			tmq.lc.Infof("init ekuiper stream success")
-			return
-		}
-	} else if resp.StatusCode() == 400 {
-		body, err := resp.Body()
-		tmq.lc.Infof("init ekuiper stream body", string(body))
-		if err != nil {
-			tmq.lc.Errorf("init ekuiper stream failed error:%+v", err.Error())
-			return
-		}
-
-		if strings.Contains(string(body), "already exists") {
-			tmq.lc.Infof("init ekuiper stream plug success")
-			return
-		}
-	}
 }
 
 // tenantIDFor 解析消息所属租户：优先取上下文，上下文没有时按设备归属补查。

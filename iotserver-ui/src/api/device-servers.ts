@@ -32,6 +32,8 @@ export interface DeviceServers {
   id: string
   name: string
   deviceLibrary: DeviceLibrary
+  /** 平台连接驱动实例的地址，Docker 实例启动后才会确定 */
+  baseAddress: string
   runStatus: number
   config: Config
   expertMode: boolean

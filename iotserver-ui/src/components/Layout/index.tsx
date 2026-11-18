@@ -7,7 +7,7 @@ import { resolveMenuPath, resolvePageMeta, resolvePageTitle } from '@/routes/pag
 import { AdvanceBreadcrumb } from '@/components/Breadcrumb'
 import { useBrand } from '@/components/Brand'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
-import type { BackendMenuItem, SubMenuType } from '@/routes/menus'
+import type { BackendMenuItem } from '@/routes/menus'
 import './style.less'
 import { clearUser, getCurrentTenantId, getUser, hasPermission, setCurrentTenantId, setUser } from '@/utils/auth'
 import { changePassword, getAlarmList, getTenants, getUserGetInfo, updateUserProfile, Tenant } from '@/api'
@@ -26,6 +26,18 @@ const mediaMatch = (query: string) => typeof window !== 'undefined' && window.ma
 
 export interface LyaoutProps {
 
+}
+
+/** 在菜单树里找到目标 key 的完整链路（含各级父菜单）；找不到返回 null */
+function findMenuChain (items: any[], key: string): any[] | null {
+  for (const item of items) {
+    if (String(item?.key) === key) return [item]
+    if (Array.isArray(item?.children)) {
+      const chain = findMenuChain(item.children, key)
+      if (chain) return [item, ...chain]
+    }
+  }
+  return null
 }
 
 function getDisplayName (): string {
@@ -233,26 +245,19 @@ const MainLayout: React.FC = () => {
   useEffect(() => {
     const routeChanged = lastPathRef.current !== location.pathname
     lastPathRef.current = location.pathname
-    const { paths, titles } = siderMenus.reduce((r, menu) => {
-      const item = menu as SubMenuType
-      const children = (Array.isArray(item.children) ? item.children : []) as SubMenuType[]
-      const findItem = children.find(child => child.key === location.pathname)
-      if (findItem) {
-        r.paths.push(item.key as string)
-        r.titles.push(String(findItem!.label || item.label))
-        return r
-      }
-      if (item.key === location.pathname) {
-        r.titles.push(String(item.label))
-        return r
-      }
-      // 动态路径（如 /gateway/device/manage/:productId）：只要展开所属菜单，
-      // 浏览器标题仍交给下面的 resolvePageTitle 兜底（详情页要显示「设备详情」而不是列表名）
-      if (children.some(child => child.key === selectedMenuKey)) {
-        r.paths.push(item.key as string)
-      }
-      return r
-    }, { paths: [], titles: [] } as { paths: string[], titles: string[] })
+
+    // 菜单可能有多级（如 系统管理 > 平台管理 > 租户管理）：
+    // 精确命中当前路径时取整条链路，展开所有父级，并用末级菜单名做页面标题。
+    const exactChain = findMenuChain(siderMenus as any[], location.pathname)
+    // 动态路径（如 /gateway/device/manage/:productId）：按 selectedMenuKey 找所属菜单，
+    // 只用于展开父级；标题仍交给 resolvePageTitle 兜底（详情页要显示「设备详情」而不是列表名）。
+    const selectedChain = exactChain || findMenuChain(siderMenus as any[], selectedMenuKey)
+    const paths = selectedChain
+      ? selectedChain.slice(0, -1).map(item => String(item?.key || '')).filter(Boolean)
+      : []
+    const titles = exactChain
+      ? [String(exactChain[exactChain.length - 1]?.label || '')].filter(Boolean)
+      : []
 
     // 未命中菜单时（详情页等）回退到菜单名/页面元数据里的标题
     if (titles.length === 0) {
@@ -422,15 +427,16 @@ const MainLayout: React.FC = () => {
               </Badge>
             </Tooltip>
           )}
-          <LanguageSwitcher showLabel={!isCompact} />
+          {/* 顶栏统一用图标，当前语言在悬浮提示和下拉菜单里体现 */}
+          <LanguageSwitcher showLabel={false} />
           <Dropdown
             menu={{ items }}
             placement="bottom"
             arrow={{ pointAtCenter: true }}
             trigger={['click']}
           >
-            <Space size={6} style={{ cursor: 'pointer' }}>
-              <Avatar icon={<UserOutlined />} size="small" />
+            <Space size={6} align="center" style={{ cursor: 'pointer', lineHeight: 1 }}>
+              <Avatar icon={<UserOutlined />} size={28} />
               {!isMobile && <span style={{ fontSize: '13px' }}>{tt(getDisplayName())}</span>}
             </Space>
           </Dropdown>

@@ -72,8 +72,11 @@ func (b *WebBootstrap) BootstrapHandler(ctx context.Context, wg *sync.WaitGroup,
 	tip()
 	fmt.Println(color.Green("Server run at:"))
 	fmt.Printf("-  Web:   http://localhost:%d/ \r\n", configuration.WebServer.Port)
-	fmt.Println(color.Green("Swagger run at:"))
-	fmt.Printf("-  Local:   http://localhost:%d/api/v1/swagger/index.html \r\n", configuration.Service.Port)
+	// Swagger 只在调试模式（Pprof.Enabled=true）注册，关闭时不再打印地址。
+	if configuration.Pprof.Enabled {
+		fmt.Println(color.Green("Swagger run at:"))
+		fmt.Printf("-  Local:   http://localhost:%d/api/v1/swagger/index.html \r\n", configuration.Service.Port)
+	}
 	fmt.Printf("%s Enter Control + C Shutdown Server \r\n", time.Now().Format("2006-01-02 15:04:05"))
 
 	wg.Add(1)

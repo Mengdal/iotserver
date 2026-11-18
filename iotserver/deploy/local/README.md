@@ -291,8 +291,8 @@ tail -f /var/log/iotserver/mosquitto.log
 tail -f /opt/iotserver/ekuiper/log/stream.log
 ```
 
-平台「驱动管理 → 驱动实例」里的系统组件行有「日志」入口，读取的是
-`configuration.toml` 的 `[ComponentLogs]` 配置路径：
+平台「驱动管理 → 驱动实例」里的系统组件行有「日志」入口。embedded 部署默认读取本机
+`/var/log/iotserver`、`/opt/iotserver` 下的日志；需要覆盖时在 `configuration.toml` 配 `[ComponentLogs]`：
 
 ```toml
 [[ComponentLogs.Sources]]

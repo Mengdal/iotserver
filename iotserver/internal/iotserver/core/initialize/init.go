@@ -93,15 +93,10 @@ func (b *Bootstrap) BootstrapHandler(ctx context.Context, wg *sync.WaitGroup, _ 
 	configuration := container.ConfigurationFrom(dic.Get)
 	lc := pkgContainer.LoggingClientFrom(dic.Get)
 
-	// 多租户隔离策略：Enforce=true 时缺少租户上下文的查询返回空集（fail-closed）。
-	// 必须在任何数据库访问之前设置。
-	if configuration.Tenant.Enforce {
-		tenantplugin.SetPolicy(tenantplugin.PolicyEnforce, lc)
-		lc.Infof("多租户隔离策略: enforce（缺少租户上下文的租户表查询将返回空集）")
-	} else {
-		tenantplugin.SetPolicy(tenantplugin.PolicyWarn, lc)
-		lc.Infof("多租户隔离策略: warn（迁移期：未带租户上下文的调用不过滤，仅告警）")
-	}
+	// 多租户隔离策略固定为 warn：带租户上下文的查询照常按 tenant_id 隔离；
+	// 未带上下文的调用不过滤，仅打告警日志。必须在任何数据库访问之前设置。
+	tenantplugin.SetPolicy(tenantplugin.PolicyWarn, lc)
+	lc.Infof("多租户隔离策略: warn（未带租户上下文的调用不过滤，仅告警）")
 
 	if !b.initClient(ctx, wg, dic, configuration, lc) {
 		return false
@@ -385,7 +380,8 @@ func (b *Bootstrap) initClient(ctx context.Context, wg *sync.WaitGroup, dic *di.
 		},
 	})
 
-	messageItf := messageapp.NewMessageApp(dic, configuration.Clients["Ekuiper"].Address())
+	// eKuiper 流的创建统一由 initApp 的后台重试负责，避免两个入口各试一次。
+	messageItf := messageapp.NewMessageApp(dic)
 	dic.Update(di.ServiceConstructorMap{
 		container.MessageItfName: func(get di.Get) interface{} {
 			return messageItf

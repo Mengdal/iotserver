@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect } from 'react'
 import { Tabs, Card } from 'antd'
-import { useLocation } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import AlarmList from './AlarmList'
 import AlarmRules from './AlarmRules'
 import './style.less'
@@ -11,16 +11,26 @@ export interface AlarmCenterProps {
 
 }
 
+const TAB_LIST = 'list'
+const TAB_RULES = 'rules'
+
 const AlarmCenterList: React.FC<AlarmCenterProps> = () => {
   const location = useLocation()
-  const [activeKey, setActiveKey] = useState(() => window.location.hash.slice(1, 2) || '1')
+  const navigate = useNavigate()
+  const hash = location.hash.slice(1)
+  // 页签直接由路由 hash 推导，不再维护第二份 state：
+  // 顶栏角标跳转（清空 hash）会自动回到列表，点页签也不会和 effect 打架。
+  const activeKey = hash === TAB_RULES || hash === '2' ? TAB_RULES : TAB_LIST
 
-  // 顶栏角标跳到本页时带 ?status=未处理；如果用户正停在「告警规则」tab，
-  // 需要切回「告警列表」，否则列表组件未挂载、点击看起来没有反应。
+  // 旧链接的 #1/#2 归一化为语义化 hash；replace 避免留下额外历史记录。
   useEffect(() => {
-    if (!new URLSearchParams(location.search).get('status')) return
-    setActiveKey('1')
-  }, [location.key, location.search])
+    if (hash !== '1' && hash !== '2') return
+    navigate({
+      pathname: location.pathname,
+      search: location.search,
+      hash: hash === '2' ? TAB_RULES : TAB_LIST,
+    }, { replace: true })
+  }, [hash, location.pathname, location.search, navigate])
 
   return (
     <>
@@ -36,19 +46,23 @@ const AlarmCenterList: React.FC<AlarmCenterProps> = () => {
           // ><ReloadOutlined />刷新</Button>}
           items={[
             {
-              key: '1',
+              key: TAB_LIST,
               label: t('告警列表'),
               children: <AlarmList></AlarmList>,
             },
             {
-              key: '2',
+              key: TAB_RULES,
               label: t('告警规则'),
               children: <AlarmRules></AlarmRules>,
             },
           ]}
           onTabClick={(key) => {
-            setActiveKey(key)
-            window.location.hash = key
+            if (key === activeKey) return
+            navigate({
+              pathname: location.pathname,
+              search: location.search,
+              hash: key,
+            })
           }}
         />
       </Card>
