@@ -45,6 +45,13 @@ type DataDBClient interface {
 	GetDeviceMsgCountByGiveTime(deviceId string, startTime, endTime int64) (int, error)
 }
 
+// LatestPropertyReader 可选能力：一次返回设备全部属性的最新值。
+// iotp 走 GET /api/v1/realtime/{deviceID}；不支持该能力的数据层
+// （如本地 DuckDB）仍由应用层逐属性查询。
+type LatestPropertyReader interface {
+	GetDeviceLatestProperties(ctx context.Context, req dtos.ThingModelPropertyDataRequest, device models.Device) (map[string]dtos.ReportData, error)
+}
+
 // MsgCounter 可选能力：数据层能用**一条 SQL** 统计时间段内的消息总数。
 //
 // 时间序列消息量按设备数线性增长，按设备逐台汇总会退化成 N+1 查询，

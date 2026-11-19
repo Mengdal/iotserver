@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
@@ -18,6 +19,44 @@ import (
 )
 
 /* ------------------------------ 属性 ------------------------------ */
+
+// GetDeviceLatestProperties 一次取回设备所有属性的最新值。
+//
+// iotp 的 /api/v1/realtime/{deviceID} 就是为「最后值」设计的：
+// 返回所有已上报字段及其时间，不受查询时间窗限制；按属性逐条查 SQL
+// 既慢（每个属性两条 /api/v1/query），设备停止上报超过 30 分钟还会查不到。
+func (c *Client) GetDeviceLatestProperties(ctx context.Context, req dtos.ThingModelPropertyDataRequest, device models.Device) (map[string]dtos.ReportData, error) {
+	values := map[string]dtos.ReportData{}
+	if device.Id == "" {
+		return values, fmt.Errorf("iotp: deviceId 为空")
+	}
+	c.flushBeforeRead()
+	target, err := c.resolve(ctx, device.Id)
+	if err != nil {
+		return nil, err
+	}
+	realtime, err := c.api.Realtime(ctx, target.iotpID)
+	if err != nil {
+		var apiErr *iotp.APIError
+		// 设备还没在 iotp 注册过：按「没有数据」处理。
+		if errors.As(err, &apiErr) && apiErr.Status == http.StatusNotFound {
+			return values, nil
+		}
+		return nil, err
+	}
+	updatedAt := int64(0)
+	if realtime.UpdatedAt != nil {
+		updatedAt = *realtime.UpdatedAt
+	}
+	for _, field := range realtime.Fields {
+		ts := field.Time
+		if ts == 0 {
+			ts = updatedAt
+		}
+		values[field.Name] = dtos.ReportData{Value: field.Value, Time: ts}
+	}
+	return values, nil
+}
 
 // GetDeviceProperty 查询属性历史/最新值（支持按时间分桶聚合）。
 func (c *Client) GetDeviceProperty(req dtos.ThingModelPropertyDataRequest, device models.Device) ([]dtos.ReportData, int, error) {

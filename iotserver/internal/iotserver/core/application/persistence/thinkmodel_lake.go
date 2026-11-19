@@ -14,6 +14,7 @@ import (
 	"iotserver/internal/models"
 	"iotserver/internal/pkg/constants"
 	"iotserver/internal/pkg/tenant"
+	"iotserver/internal/tools/iotp"
 )
 
 // 本文件是时序数据层的编排逻辑：写入按「设备 -> 行」展开，查询复用统一的物模型/产品
@@ -172,7 +173,9 @@ func (pst *persistApp) searchDeviceHistoryPropertyData(ctx context.Context, req 
 	return response, count, nil
 }
 
-// searchDeviceLatestPropertyData 查询属性最新值
+// searchDeviceLatestPropertyData 查询属性最新值。
+// iotp 实现 LatestPropertyReader 时走一次 realtime 接口，不再逐属性查 SQL；
+// 其它数据层（本地 DuckDB）仍按属性查询本地表。
 func (pst *persistApp) searchDeviceLatestPropertyData(ctx context.Context, req dtos.ThingModelPropertyDataRequest) (interface{}, error) {
 	deviceInfo, err := pst.dbClient.WithCtx(ctx).DeviceById(req.DeviceId)
 	if err != nil {
@@ -182,22 +185,37 @@ func (pst *persistApp) searchDeviceLatestPropertyData(ctx context.Context, req d
 	if err != nil {
 		return nil, err
 	}
+
+	var latest map[string]dtos.ReportData
+	latestReader, realtimeSupported := pst.dataDbClient.(interfaces.LatestPropertyReader)
+	if realtimeSupported {
+		latest, err = latestReader.GetDeviceLatestProperties(ctx, req, deviceInfo)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	response := make([]dtos.ThingModelDataResponse, 0, len(defs))
 	for _, def := range defs {
 		if req.Code != "" && def.Code != req.Code {
 			continue
 		}
-		latestReq := req
-		latestReq.Code = def.Code
-		latestReq.Last = true
-		ksv, _, err := pst.dataDbClient.GetDeviceProperty(latestReq, deviceInfo)
-		if err != nil {
-			pst.lc.Errorf("GetDeviceProperty error %+v", err)
-			continue
-		}
 		var reportData dtos.ReportData
-		if len(ksv) > 0 {
-			reportData = ksv[0]
+		if realtimeSupported {
+			// 实时接口的字段名是 iotp 规范化后的名字，需要按同一规则映射。
+			reportData = latest[iotp.FieldName(def.Code)]
+		} else {
+			latestReq := req
+			latestReq.Code = def.Code
+			latestReq.Last = true
+			ksv, _, err := pst.dataDbClient.GetDeviceProperty(latestReq, deviceInfo)
+			if err != nil {
+				pst.lc.Errorf("GetDeviceProperty error %+v", err)
+				continue
+			}
+			if len(ksv) > 0 {
+				reportData = ksv[0]
+			}
 		}
 		response = append(response, dtos.ThingModelDataResponse{
 			ReportData: reportData,
