@@ -145,7 +145,8 @@ const CollectConfigPage: React.FC<CollectConfigPageProps> = ({ embedded = false 
   })
   const [channels, setChannels] = useState<CollectChannel[]>([])
   const [selectedChannel, setSelectedChannel] = useState<CollectChannel | null>(null)
-  const [overviewSelected, setOverviewSelected] = useState(false)
+  // 打开采集配置时默认展示总览，不再自动进入第一个通道。
+  const [overviewSelected, setOverviewSelected] = useState(true)
   const [overview, setOverview] = useState<CollectOverview | null>(null)
   const [overviewLoading, setOverviewLoading] = useState(false)
   const [realtimeValues, setRealtimeValues] = useState<CollectRealtimeValue[]>([])
@@ -311,6 +312,13 @@ const CollectConfigPage: React.FC<CollectConfigPageProps> = ({ embedded = false 
     }
   }, [messageApi])
 
+  // 初始状态就是总览：首次挂载时主动拉一次概览数据。
+  useEffect(() => {
+    if (!overviewSelected) return
+    loadOverview().catch(() => undefined)
+    // 只在挂载时预加载；后续点击根节点由 requestOverviewSelect 负责刷新
+  }, [])
+
   /** 切换设备/通道前，有未保存修改时先确认。 */
   const confirmDiscard = (onOk: () => void) => {
     if (!dirty) {
@@ -370,18 +378,23 @@ const CollectConfigPage: React.FC<CollectConfigPageProps> = ({ embedded = false 
     })
   }
 
+  /** 打开「数据采集」总览。 */
+  const requestOverviewSelect = () => {
+    confirmDiscard(() => {
+      setOverviewSelected(true)
+      setSelectedChannel(null)
+      setSelectedDevice(null)
+      setConfig(null)
+      setDirty(false)
+      setShowErrors(false)
+      loadOverview().catch(() => undefined)
+    })
+  }
+
   const handleTreeSelect = (keys: React.Key[]) => {
     const key = String(keys[0] || '')
     if (key === 'root') {
-      confirmDiscard(() => {
-        setOverviewSelected(true)
-        setSelectedChannel(null)
-        setSelectedDevice(null)
-        setConfig(null)
-        setDirty(false)
-        setShowErrors(false)
-        loadOverview().catch(() => undefined)
-      })
+      requestOverviewSelect()
       return
     }
     if (key.startsWith('device:')) {
@@ -931,7 +944,15 @@ const CollectConfigPage: React.FC<CollectConfigPageProps> = ({ embedded = false 
       selectable: true,
       title: (
         <Dropdown menu={rootMenu} trigger={['contextMenu']}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%' }}>
+          <span
+            style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%', cursor: 'pointer' }}
+            onClick={event => {
+              // 根节点本身不在 select 分支里处理：显式点击直接打开总览，
+              // 避免点击事件被 Dropdown/树节点包装层吞掉。
+              event.stopPropagation()
+              requestOverviewSelect()
+            }}
+          >
             <ApiOutlined />
             <span>{t('数据采集')}</span>
           </span>
@@ -1610,7 +1631,7 @@ const CollectConfigPage: React.FC<CollectConfigPageProps> = ({ embedded = false 
                   dataSource={realtimeValues}
                   pagination={{
                     current: realtimePage,
-                    pageSize: 10,
+                    pageSize: 5,
                     showSizeChanger: false,
                     showTotal: count => t('共 {{count}} 条', { count }),
                     onChange: page => setRealtimePage(page),
