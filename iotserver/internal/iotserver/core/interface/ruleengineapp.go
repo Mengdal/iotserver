@@ -2,6 +2,7 @@ package interfaces
 
 import (
 	"context"
+	"io"
 
 	"iotserver/internal/dtos"
 )
@@ -16,4 +17,13 @@ type RuleEngineItf interface {
 	RuleEngineDelete(ctx context.Context, id string) error
 	RuleEngineStart(ctx context.Context, id string) error
 	RuleEngineStop(ctx context.Context, id string) error
+	RuleEngineBatchStart(ctx context.Context, ids []string) dtos.RuleEngineBatchResult
+	RuleEngineBatchStop(ctx context.Context, ids []string) dtos.RuleEngineBatchResult
+	RuleEngineValidate(ctx context.Context, sql string) (dtos.RuleEngineValidateResponse, error)
+	RuleEngineDebugStart(ctx context.Context, req dtos.RuleEngineDebugRequest) (string, error)
+	RuleEngineDebugStream(ctx context.Context, id string) (io.ReadCloser, error)
+	RuleEngineDebugStop(ctx context.Context, id string) error
+	RuleEngineDebugDeliver(ctx context.Context, id, payload string) []dtos.RuleEngineDebugActionResult
+	RuleEngineExport(ctx context.Context, ids []string) (dtos.RuleEngineExportFile, error)
+	RuleEngineImport(ctx context.Context, req dtos.RuleEngineImportRequest) dtos.RuleEngineImportResult
 }

@@ -17,6 +17,7 @@ package dtos
 import (
 	"strings"
 
+	"iotserver/internal/models"
 	"iotserver/internal/pkg/config"
 )
 
@@ -37,11 +38,37 @@ type GetRuleStatusResponse struct {
 }
 
 type CreateRule struct {
-	Triggered bool      `json:"triggered"`
-	Id        string    `json:"id"`
-	Name      string    `json:"name"`
-	Sql       string    `json:"sql"`
-	Actions   []Actions `json:"actions"`
+	Triggered bool                      `json:"triggered"`
+	Id        string                    `json:"id"`
+	Name      string                    `json:"name"`
+	Sql       string                    `json:"sql"`
+	Actions   []Actions                 `json:"actions"`
+	Options   *models.RuleEngineOptions `json:"options,omitempty"`
+	Tags      []string                  `json:"tags,omitempty"`
+}
+
+// EkuiperRule eKuiper 规则完整定义（SQL 规则），供客户端统一下发。
+type EkuiperRule struct {
+	Id      string
+	Name    string
+	Sql     string
+	Actions []Actions
+	Options *models.RuleEngineOptions
+	Tags    []string
+}
+
+// RuleTestRequest eKuiper 规则试运行请求
+type RuleTestRequest struct {
+	Id         string                            `json:"id"`
+	Sql        string                            `json:"sql"`
+	MockSource map[string]map[string]interface{} `json:"mockSource,omitempty"`
+	SinkProps  map[string]interface{}            `json:"sinkProps,omitempty"`
+}
+
+// RuleTestResponse eKuiper 规则试运行创建结果
+type RuleTestResponse struct {
+	Id   string `json:"id"`
+	Port int    `json:"port"`
 }
 
 type Actions struct {

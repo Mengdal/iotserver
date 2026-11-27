@@ -120,6 +120,9 @@ func (app *sceneApp) SceneLog(ctx context.Context, sceneId string, req dtos.Scen
 
 // SceneAdd 新建场景：只落库（前端建完再编辑配置条件与动作）
 func (app *sceneApp) SceneAdd(ctx context.Context, req dtos.SceneAddRequest) error {
+	if strings.TrimSpace(req.Name) == "" {
+		return errort.NewCommonErr(errort.DefaultReqParamsError, fmt.Errorf("场景名称不能为空"))
+	}
 	if !valid.Name(req.Name) {
 		return errort.NewCommonErr(errort.DefaultNameSpecialCharacters, fmt.Errorf("%s", valid.NameRuleMsg))
 	}
@@ -148,6 +151,9 @@ func (app *sceneApp) SceneUpdate(ctx context.Context, req dtos.SceneUpdateReques
 	// 运行中的场景先停止再修改
 	if old.Status == string(constants.SceneStart) {
 		return errort.NewCommonErr(errort.SceneTimerIsStartingNotAllowUpdate, nil)
+	}
+	if strings.TrimSpace(req.Name) == "" {
+		return errort.NewCommonErr(errort.DefaultReqParamsError, fmt.Errorf("场景名称不能为空"))
 	}
 	if !valid.Name(req.Name) {
 		return errort.NewCommonErr(errort.DefaultNameSpecialCharacters, fmt.Errorf("%s", valid.NameRuleMsg))

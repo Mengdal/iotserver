@@ -18,6 +18,7 @@ import RuleDetail from '@/pages/monitor/AlarmCenter/Detail'
 import Login from '@/pages/auth/login/index'
 import ResourceManage from '@/pages/advanced/ResourceManage'
 import RuleEngine from '@/pages/advanced/RuleEngine'
+import FlowStudio from '@/pages/advanced/FlowStudio'
 import SceneLinkage from '@/pages/advanced/SceneLinkage'
 import LinkageLog from '@/pages/advanced/SceneLinkage/LinkageLog'
 import Documents from '@/pages/documents/Documents'
@@ -42,6 +43,10 @@ import { isPlatformAdmin } from '@/utils/auth'
 
 /** 看板编辑器用到 gridstack（体积较大），按需加载 */
 const BoardEdit = React.lazy(() => import('@/pages/viz/BoardEdit'))
+/** 规则编辑器用到 Monaco，按需加载 */
+const RuleEditor = React.lazy(() => import('@/pages/advanced/RuleEngine/Editor'))
+/** 流程编排编辑器用到 React Flow，按需加载 */
+const FlowStudioEditor = React.lazy(() => import('@/pages/advanced/FlowStudio/Editor'))
 
 /**
  * 平台管理页（租户管理 / 系统配置 / 系统监控）只对平台管理员开放。
@@ -139,6 +144,34 @@ const router = createBrowserRouter([
       {
         path: '/advanced/rule/engine',
         element: <RuleEngine />,
+      },
+      {
+        path: '/advanced/rule/engine/new',
+        element: (
+          <React.Suspense fallback={<div style={{ padding: 48, textAlign: 'center' }}>{t('加载编辑器…')}</div>}>
+            <RuleEditor />
+          </React.Suspense>
+        ),
+      },
+      {
+        path: '/advanced/rule/engine/:id/edit',
+        element: (
+          <React.Suspense fallback={<div style={{ padding: 48, textAlign: 'center' }}>{t('加载编辑器…')}</div>}>
+            <RuleEditor />
+          </React.Suspense>
+        ),
+      },
+      {
+        path: '/advanced/rule/flow',
+        element: <FlowStudio />,
+      },
+      {
+        path: '/advanced/rule/flow/:id',
+        element: (
+          <React.Suspense fallback={<div style={{ padding: 48, textAlign: 'center' }}>{t('加载编辑器…')}</div>}>
+            <FlowStudioEditor />
+          </React.Suspense>
+        ),
       },
       {
         path: '/advanced/scene/linkage',

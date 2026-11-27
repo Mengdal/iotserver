@@ -10,6 +10,7 @@ import (
 	"iotserver/internal/models"
 	"iotserver/internal/pkg/constants"
 	"iotserver/internal/pkg/errort"
+	tenant "iotserver/internal/pkg/tenant"
 	"iotserver/internal/pkg/utils"
 )
 
@@ -20,7 +21,11 @@ func addRuleEngine(c *Client, r models.RuleEngine) (models.RuleEngine, error) {
 		r.Id = utils.RandomNum()
 	}
 	var count int64
-	if err := c.Pool.Table(models.TableRuleEngine).Where("name = ?", r.Name).Count(&count).Error; err != nil {
+	// 重名校验只在本租户内进行：平台视图下 GORM 租户插件不过滤，
+	// 若只按 name 查询会把其他租户的同名规则也计入。
+	if err := c.Pool.Table(models.TableRuleEngine).
+		Where("tenant_id = ? AND name = ?", ruleEffectiveTenantID(c, r.TenantId), r.Name).
+		Count(&count).Error; err != nil {
 		return r, errort.NewCommonEdgeX(errort.DefaultSystemError, "rule engine query failed", err)
 	}
 	if count > 0 {
@@ -63,6 +68,10 @@ func ruleEngineSearch(c *Client, offset, limit int, req dtos.RuleEngineSearchQue
 	} else if req.Name != "" {
 		query = query.Where("name LIKE ?", "%"+escapeLike(req.Name)+"%")
 	}
+	if req.Keyword != "" {
+		like := "%" + escapeLike(req.Keyword) + "%"
+		query = query.Where("id LIKE ? OR name LIKE ? OR tags LIKE ?", like, like, like)
+	}
 	if req.Id != "" {
 		query = query.Where("id = ?", req.Id)
 	}
@@ -78,7 +87,8 @@ func ruleEngineSearch(c *Client, offset, limit int, req dtos.RuleEngineSearchQue
 func updateRuleEngine(c *Client, r models.RuleEngine) error {
 	var count int64
 	if err := c.Pool.Table(models.TableRuleEngine).
-		Where("name = ? AND id <> ?", r.Name, r.Id).Count(&count).Error; err != nil {
+		Where("tenant_id = ? AND name = ? AND id <> ?", ruleEffectiveTenantID(c, r.TenantId), r.Name, r.Id).
+		Count(&count).Error; err != nil {
 		return errort.NewCommonEdgeX(errort.DefaultSystemError, "rule engine query failed", err)
 	}
 	if count > 0 {
@@ -87,6 +97,9 @@ func updateRuleEngine(c *Client, r models.RuleEngine) error {
 	return c.Pool.Table(models.TableRuleEngine).Where("id = ?", r.Id).Updates(map[string]interface{}{
 		"name":             r.Name,
 		"description":      r.Describe,
+		"tags":             r.Tags,
+		"actions":          r.Actions,
+		"options":          r.Options,
 		"data_resource_id": r.DataResourceId,
 		"resource_type":    r.ResourceType,
 		"filter":           r.Filter,
@@ -117,6 +130,17 @@ func updateRuleEngineStatus(c *Client, id, status string) error {
 		return errort.NewCommonErr(errort.DefaultResourcesNotFound, fmt.Errorf("rule engine %s not found", id))
 	}
 	return nil
+}
+
+// ruleEffectiveTenantID 规则所属租户；调用方未显式给出时回落到当前请求上下文。
+func ruleEffectiveTenantID(c *Client, explicit string) string {
+	if explicit != "" {
+		return explicit
+	}
+	if c.Pool != nil && c.Pool.Statement != nil {
+		return tenant.FromContext(c.Pool.Statement.Context).TenantID
+	}
+	return ""
 }
 
 func (c *Client) AddRuleEngine(r models.RuleEngine) (models.RuleEngine, error) {

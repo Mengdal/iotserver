@@ -17,7 +17,7 @@ func GetRuleEngineEkuiperActions(resourceType string, option map[string]interfac
 	switch constants.DataResourceType(resourceType) {
 	case constants.HttpResource:
 		if _, ok := props["url"]; !ok {
-			return nil, fmt.Errorf("数据资源缺少 url")
+			return nil, fmt.Errorf("应用缺少 url")
 		}
 		if _, ok := props["method"]; !ok {
 			props["method"] = "POST"
@@ -54,7 +54,7 @@ func GetRuleEngineEkuiperActions(resourceType string, option map[string]interfac
 		delete(props, "tagvalue")
 		return []Actions{{Influx: props}}, nil
 	default:
-		return nil, fmt.Errorf("不支持的数据资源类型: %s", resourceType)
+		return nil, fmt.Errorf("不支持的应用类型: %s", resourceType)
 	}
 }
 

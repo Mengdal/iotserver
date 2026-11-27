@@ -1,6 +1,7 @@
 package i18n
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -89,5 +90,30 @@ func TestI18nHandlerGin(t *testing.T) {
 				t.Errorf("gin.Context 里的语言 = %q, 期望 %q", fromCtx, c.want)
 			}
 		})
+	}
+}
+
+type requestContextKey struct{}
+
+// 语言中间件替换 Request.Context() 时必须保留上游放入的值
+// （例如 httphelper 保存的原始 ResponseWriter，SSE 清写超时依赖它）。
+func TestI18nMiddlewareKeepsRequestContextValues(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+	r.Use(func(c *gin.Context) {
+		ctx := context.WithValue(c.Request.Context(), requestContextKey{}, "kept")
+		c.Request = c.Request.WithContext(ctx)
+	})
+	r.Use(I18nHandlerGin())
+	r.GET("/", func(c *gin.Context) {
+		value, _ := c.Request.Context().Value(requestContextKey{}).(string)
+		c.String(http.StatusOK, value)
+	})
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	r.ServeHTTP(w, req)
+	if w.Body.String() != "kept" {
+		t.Fatalf("请求上下文值丢失: %q", w.Body.String())
 	}
 }

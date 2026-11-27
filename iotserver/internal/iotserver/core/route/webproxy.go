@@ -7,6 +7,7 @@ import (
 	"iotserver/internal/pkg/color"
 	pkgContainer "iotserver/internal/pkg/container"
 	"iotserver/internal/pkg/di"
+	"iotserver/internal/pkg/httphelper"
 	"iotserver/internal/pkg/startup"
 	"net/http"
 	"strconv"
@@ -50,8 +51,9 @@ func (b *WebBootstrap) BootstrapHandler(ctx context.Context, wg *sync.WaitGroup,
 	addr := configuration.WebServer.Host + ":" + port
 	timeout := time.Second * time.Duration(configuration.WebServer.Timeout)
 	server := &http.Server{
-		Addr:         addr,
-		Handler:      b.router,
+		Addr: addr,
+		// SSE 代理需要拿到原始 ResponseWriter 清写超时
+		Handler:      httphelper.WithRawResponseWriter(b.router),
 		WriteTimeout: timeout,
 		ReadTimeout:  timeout,
 	}

@@ -136,6 +136,29 @@ interface CollectConfigPageProps {
   embedded?: boolean
 }
 
+// 名称在树里被 ellipsis 截断时才显示浮动提示；未截断时不打扰。
+const TreeName: React.FC<{ text?: string }> = ({ text }) => {
+  const ref = useRef<HTMLSpanElement>(null)
+  const [open, setOpen] = useState(false)
+  const content = text || ''
+  return (
+    <Tooltip
+      title={content}
+      open={open}
+      onOpenChange={next => {
+        if (!next) {
+          setOpen(false)
+          return
+        }
+        const el = ref.current
+        setOpen(!!el && el.scrollWidth > el.clientWidth)
+      }}
+    >
+      <span ref={ref} className="collect-tree-name">{content}</span>
+    </Tooltip>
+  )
+}
+
 const CollectConfigPage: React.FC<CollectConfigPageProps> = ({ embedded = false }) => {
   const [messageApi, contextHolder] = message.useMessage()
 
@@ -972,8 +995,8 @@ const CollectConfigPage: React.FC<CollectConfigPageProps> = ({ embedded = false 
                 }}
               >
                 <ClusterOutlined />
-                <span>{channel.name}</span>
-                <Tag color="default" style={{ marginInlineEnd: 0 }}>{channelTypeLabel(channel.channelType)}</Tag>
+                <TreeName text={channel.name} />
+                <Tag color="default" style={{ marginInlineEnd: 0, flex: 'none' }}>{channelTypeLabel(channel.channelType)}</Tag>
                 <Dropdown menu={channelMenu(channel)} trigger={['click']} placement="bottomRight">
                   <Button
                     type="text"
@@ -1001,7 +1024,7 @@ const CollectConfigPage: React.FC<CollectConfigPageProps> = ({ embedded = false 
                   }}
                 >
                   <HddOutlined />
-                  <span>{device.deviceName}</span>
+                  <TreeName text={device.deviceName} />
                   <Dropdown menu={deviceMenu(device)} trigger={['click']} placement="bottomRight">
                     <Button
                       type="text"

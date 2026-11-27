@@ -904,7 +904,8 @@ func (c *Client) ensureUniqueIndexes() error {
 		dupKeys string
 	}{
 		{models.TableDataResource, "uk_data_resource_type_name", []string{"type", "name"}, "type, name"},
-		{models.TableRuleEngine, "uk_rule_engine_name", []string{"name"}, "name"},
+		// 规则名只在租户内唯一；历史版本的 uk_rule_engine_name 是全局唯一，会误伤不同租户的同名规则
+		{models.TableRuleEngine, "uk_rule_engine_tenant_name", []string{"tenant_id", "name"}, "tenant_id, name"},
 		{models.TableScene, "uk_scene_name", []string{"name"}, "name"},
 		// 网关 SN 作为 MQTT clientId/username，必须全局唯一（上行报文靠它定位网关与租户）
 		{models.TableGateway, "uk_gateway_sn", []string{"sn"}, "sn"},
@@ -913,8 +914,20 @@ func (c *Client) ensureUniqueIndexes() error {
 		// 断点续传幂等：同一网关同一 seq 只落一条
 		{models.TableGatewayIngestLog, "uk_gateway_ingest_seq", []string{"gateway_id", "seq"}, "gateway_id, seq"},
 	}
+	dropLegacyRuleEngineIndex := func() {
+		if !pool.Migrator().HasIndex(models.TableRuleEngine, "uk_rule_engine_name") {
+			return
+		}
+		if err := pool.Migrator().DropIndex(models.TableRuleEngine, "uk_rule_engine_name"); err != nil {
+			c.loggingClient.Warnf("drop legacy unique index uk_rule_engine_name failed: %v", err)
+		}
+	}
 	for _, idx := range indexes {
 		if pool.Migrator().HasIndex(idx.table, idx.name) {
+			// 新索引已存在，才移除旧的全局名称唯一索引
+			if idx.table == models.TableRuleEngine {
+				dropLegacyRuleEngineIndex()
+			}
 			continue
 		}
 		var dupCount int64
@@ -932,6 +945,12 @@ func (c *Client) ensureUniqueIndexes() error {
 			idx.name, idx.table, strings.Join(idx.columns, ", "))
 		if err := pool.Exec(stmt).Error; err != nil {
 			c.loggingClient.Warnf("create unique index %s on %s failed: %v", idx.name, idx.table, err)
+			continue
+		}
+		// 新索引创建成功后再移除旧的全局名称唯一索引；创建失败/有重复时保留旧索引，
+		// 至少不会出现「旧约束已删、新约束没建」的裸奔状态。
+		if idx.table == models.TableRuleEngine {
+			dropLegacyRuleEngineIndex()
 		}
 	}
 	return nil

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { DrawerForm, ProFormDependency, ProFormInstance, ProFormList, ProFormSelect, ProFormText } from '@ant-design/pro-components'
 import { Col, Form, Row, Spin, message } from 'antd'
-import { SceneData, editScene, getDevice, getProductInfo, getProductList } from '@/api'
+import { SceneData, editScene, getDevice, getProductInfo, getProductList, startScene, stopScene } from '@/api'
 import { ProductInfo } from '@/pages/gateway/ProductManage/types'
 import SelectWeekDays from './SelectWeekDays'
 import { MinusCircleOutlined } from '@ant-design/icons'
@@ -111,39 +111,88 @@ export default function EditScene ({
     }}
     onOpenChange={(v) => v || onClose()}
     onFinish={async (fields) => {
+      // 运行中的场景不能直接更新：保存时先停止，更新后恢复运行。
+      // 不在打开抽屉时停止，避免用户只是查看/跳转就把场景留在停止状态。
+      const wasRunning = record.status === 'running'
+      let stopped = false
       try {
         console.log('onFinish', fields)
-        const decide_condition = fields.decide_condition_1 && fields.decide_condition_2
-          ? `${fields.decide_condition_1} ${fields.decide_condition_2}`
-          : `= ${fields.conditions.option.decide_condition}`
+        const conditionType = fields.conditions?.condition_type
+        const option: Record<string, any> = { ...(fields.conditions?.option || {}) }
+        if (conditionType === 'notify') {
+          // 设备触发才需要拼接判断条件；定时触发不能带这个字段
+          option.decide_condition = fields.decide_condition_1 && fields.decide_condition_2
+            ? `${fields.decide_condition_1} ${fields.decide_condition_2}`
+            : `= ${fields.conditions?.option?.decide_condition ?? ''}`
+          delete option.cron_expression
+        } else {
+          delete option.decide_condition
+          delete option.trigger
+          delete option.product_id
+          delete option.product_name
+          delete option.device_id
+          delete option.device_name
+          delete option.code
+          delete option.type
+          delete option.value_type
+          delete option.value_cycle
+          delete option.status
+        }
         const params = {
           ...fields,
+          // 编辑表单不单独展示名称/描述，必须带回原值，否则后端名称校验会失败
+          name: fields.name || record.name,
+          description: fields.description ?? record.description ?? '',
           id: record.id,
           decide_condition_1: undefined,
           decide_condition_2: undefined,
           conditions: [{
             ...fields.conditions,
-            option: {
-              ...fields.conditions.option,
-              // code_type: undefined,
-              decide_condition,
-            },
+            option,
           }],
-          actions: fields.actions.map((actions: any) => ({ ...actions, type: undefined })),
+          actions: (fields.actions || []).map((actions: any) => ({ ...actions, type: undefined })),
+        }
+        if (wasRunning) {
+          const stopResp = await stopScene(record.id)
+          if (!stopResp.success) {
+            message.error(stopResp.errorMsg || t('停止场景失败'))
+            return false
+          }
+          stopped = true
         }
         const resp = await editScene(params)
         if (resp.success) {
+          if (wasRunning) {
+            const startResp = await startScene(record.id)
+            if (!startResp.success) {
+              // 配置已保存，但场景仍是停止状态，不能报“编辑成功”误导用户
+              message.warning(t('场景已保存，但恢复运行失败'))
+              onFinish()
+              onClose()
+              return true
+            }
+          }
           message.success(t('编辑成功'))
           // handleClose()
           onFinish()
           onClose()
           return true
         }
+        if (stopped) {
+          const startResp = await startScene(record.id)
+          if (!startResp.success) message.error(startResp.errorMsg || t('恢复场景运行失败'))
+        }
         message.error(resp.errorMsg)
         // setSubmitting(false)
         return false
       } catch (error) {
         console.log(error)
+        const editError = error instanceof Error && error.message ? error.message : t('操作失败')
+        if (stopped) {
+          const startResp = await startScene(record.id).catch(() => null)
+          if (!startResp || !startResp.success) message.error(t('恢复场景运行失败'))
+        }
+        message.error(editError)
       }
     }}
     drawerProps={{
@@ -151,6 +200,36 @@ export default function EditScene ({
     }}
   >
     <Spin spinning={initing}>
+      <div
+        className="mb20"
+        style={{ boxShadow: '0 0 6px 1px rgb(0 0 0 / 14%)', padding: '20px', borderRadius: '5px' }}
+      >
+        <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 20 }}>{t('基本信息')}</div>
+        <Row gutter={15}>
+          <Col span={12}>
+            <ProFormText
+              label={t('场景名称')}
+              name="name"
+              placeholder={t('1-32位字符，支持中文、英文、数字及特殊字符_-，必须以英文或中文字符开头')}
+              rules={[
+                { required: true, message: t('请输入场景名称') },
+                {
+                  pattern: /^[a-zA-Z一-龥][a-zA-Z0-9一-龥_-]{0,31}$/,
+                  message: t('1-32位字符，支持中文、英文、数字及特殊字符_-，必须以英文或中文字符开头'),
+                },
+              ]}
+            />
+          </Col>
+          <Col span={12}>
+            <ProFormText
+              label={t('场景描述')}
+              name="description"
+              placeholder={t('请输入')}
+              fieldProps={{ maxLength: 100 }}
+            />
+          </Col>
+        </Row>
+      </div>
       <div
         style={{ boxShadow: '0 0 6px 1px rgb(0 0 0 / 14%)', padding: '20px', borderRadius: '5px' }}
       >

@@ -136,8 +136,12 @@ func TestRuleEngineTenantIsolation(t *testing.T) {
 	}
 	filter := list.Result.List[0]["filter"].(map[string]interface{})
 	sql, _ := filter["sql"].(string)
-	if !strings.Contains(sql, "tenantId = '"+tenantA.Id+"'") {
-		t.Fatalf("规则 SQL 未注入租户过滤: %s", sql)
+	if sql != `SELECT deviceId FROM mqtt_stream` {
+		t.Fatalf("规则列表应返回用户原始 SQL: %s", sql)
+	}
+	compiled, _ := filter["compiled_sql"].(string)
+	if !strings.Contains(compiled, "tenantId = '"+tenantA.Id+"'") {
+		t.Fatalf("编译 SQL 未注入租户过滤: %s", compiled)
 	}
 
 	// 绑定其他租户的资源必须失败

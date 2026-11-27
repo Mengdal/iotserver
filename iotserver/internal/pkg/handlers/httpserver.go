@@ -4,6 +4,7 @@ import (
 	"context"
 	"iotserver/internal/pkg/container"
 	"iotserver/internal/pkg/di"
+	"iotserver/internal/pkg/httphelper"
 	"iotserver/internal/pkg/startup"
 	"net/http"
 	"strconv"
@@ -74,8 +75,9 @@ func (b *HttpServer) BootstrapHandler(
 
 	timeout := time.Millisecond * time.Duration(bootstrapConfig.Service.Timeout)
 	server := &http.Server{
-		Addr:         addr,
-		Handler:      b.router,
+		Addr: addr,
+		// 保留底层 ResponseWriter：SSE 长连接需要清掉全局 WriteTimeout
+		Handler:      httphelper.WithRawResponseWriter(b.router),
 		WriteTimeout: timeout,
 		ReadTimeout:  timeout,
 	}

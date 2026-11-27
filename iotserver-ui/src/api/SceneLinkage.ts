@@ -58,6 +58,9 @@ export function addScene<T> (data: AddScene) {
 }
 export interface SceneData {
   id: string,
+  name?: string,
+  description?: string,
+  status?: string,
   conditions: Conditions[],
   actions: Actions[]
 }

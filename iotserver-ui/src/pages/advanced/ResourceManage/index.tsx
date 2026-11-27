@@ -1,6 +1,7 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { tt } from '@/i18n'
 import { Tabs, Card } from 'antd'
+import { useSearchParams } from 'react-router-dom'
 import HttpPush from './HttpPush1'
 import MessageMQTT from './MessageMQTT'
 import MessageKafka from './MessageKafka'
@@ -29,6 +30,16 @@ const typeComponent = {
 
 const ResourceManage: React.FC<ResourceManageProps> = () => {
   const typeResource = useRequest(getTypeResource)
+  const [searchParams] = useSearchParams()
+  const selectedType = searchParams.get('type')
+  const [activeKey, setActiveKey] = useState<string | undefined>(undefined)
+
+  useEffect(() => {
+    const list = (typeResource.data || []) as typeEnum[]
+    const index = selectedType ? list.indexOf(selectedType as typeEnum) : -1
+    setActiveKey(index >= 0 ? String(index) : undefined)
+  }, [selectedType, typeResource.data])
+
   // console.log('typeResource', typeResource)
   return (
     <>
@@ -36,8 +47,10 @@ const ResourceManage: React.FC<ResourceManageProps> = () => {
         <Tabs
           className="drive-image mt20"
           type="card"
+          activeKey={activeKey}
+          onChange={setActiveKey}
           items={(typeResource.data || []).map((label: typeEnum, key: number) => ({
-            key,
+            key: String(key),
             // 类型来自后端（HTTP推送 / 消息队列Kafka 等），词条里有就翻
             label: tt(label),
             children: typeComponent[label],

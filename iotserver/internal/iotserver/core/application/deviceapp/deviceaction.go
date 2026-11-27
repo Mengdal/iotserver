@@ -27,7 +27,9 @@ import (
 	"iotserver/internal/pkg/di"
 	"iotserver/internal/pkg/errort"
 	"iotserver/internal/pkg/tenant"
+	"iotserver/internal/tools/iotp"
 	"iotserver/internal/tools/rpcclient"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -150,7 +152,11 @@ func (p *deviceApp) SetDeviceProperty(req dtos.OpenApiSetDeviceThingModel) (err 
 			}
 			ctl := container.EdgeCtlFrom(di.GContainer.Get)
 			for code, value := range req.Item {
-				status, msg, setErr := ctl.SetProperty(context.Background(), pk, gw.Sn, dn, code, fmt.Sprint(value))
+				val, valErr := propertyValueString(value)
+				if valErr != nil {
+					return errort.NewCommonErr(errort.DefaultSystemError, fmt.Errorf("%s 值无效: %w", code, valErr))
+				}
+				status, msg, setErr := ctl.SetProperty(context.Background(), pk, gw.Sn, dn, code, val)
 				if setErr != nil {
 					return setErr
 				}
@@ -160,6 +166,12 @@ func (p *deviceApp) SetDeviceProperty(req dtos.OpenApiSetDeviceThingModel) (err 
 			}
 			return nil
 		}
+	}
+
+	// 软网关采集的设备（iotpGW 等）没有驱动实例：下行走 iotp WS 写控制。
+	// iotp 负责按设备路由到网关所在节点，并等待网关 reply。
+	if _, ok := p.softGatewayForDevice(context.Background(), device); ok {
+		return p.writeSoftGatewayProperties(context.Background(), device, req.Item)
 	}
 
 	_, err = p.dbClient.WithCtx(tenant.Platform(context.Background())).ProductById(device.ProductId)
@@ -395,6 +407,76 @@ func (p *deviceApp) DeviceInvokeThingService(ctx context.Context, invokeDeviceSe
 }
 
 // isEdgeGatewayModel 参考系统网关识别：协议优先，历史数据按厂商/型号兜底。
+// softGatewayForDevice 判断设备是否由软网关采集，并返回网关记录。
+// 采集绑定在 collect_device_config 里，device.gateway_id 可能为空。
+func (p *deviceApp) softGatewayForDevice(ctx context.Context, device models.Device) (models.Gateway, bool) {
+	platformCtx := tenant.Platform(ctx)
+	if strings.TrimSpace(device.GatewayId) != "" {
+		if gw, err := p.dbClient.WithCtx(platformCtx).GatewayById(device.GatewayId); err == nil && isSoftGateway(gw) {
+			return gw, true
+		}
+	}
+	iotpKey := strconv.FormatInt(iotp.DeviceID(device.Id), 10)
+	cfg, found, err := p.dbClient.WithCtx(platformCtx).CollectDeviceConfigByDevice(iotpKey)
+	if err != nil || !found || strings.TrimSpace(cfg.GatewayId) == "" {
+		return models.Gateway{}, false
+	}
+	gw, err := p.dbClient.WithCtx(platformCtx).GatewayById(cfg.GatewayId)
+	if err != nil || !isSoftGateway(gw) {
+		return models.Gateway{}, false
+	}
+	return gw, true
+}
+
+func isSoftGateway(gw models.Gateway) bool {
+	return gw.Source == models.GatewaySourceIoserver ||
+		gw.Protocol == models.GatewayProtocolIoserver ||
+		strings.TrimSpace(gw.EngineBaseURL) != ""
+}
+
+// propertyValueString 把属性值转成下发协议需要的字符串：
+// 字符串原样、标量用自然格式、对象/数组用 JSON（避免 fmt.Sprint 产生 map[...] / [1 2]）。
+func propertyValueString(value interface{}) (string, error) {
+	switch v := value.(type) {
+	case nil:
+		return "", fmt.Errorf("值为空")
+	case string:
+		return v, nil
+	case bool, int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64, json.Number:
+		return fmt.Sprint(v), nil
+	default:
+		raw, err := json.Marshal(v)
+		if err != nil {
+			return "", err
+		}
+		return string(raw), nil
+	}
+}
+
+// writeSoftGatewayProperties 通过 iotp WS 写控制下发设备属性。
+// 每个字段一条 write 命令；任一字段失败即返回错误，由场景日志记录。
+func (p *deviceApp) writeSoftGatewayProperties(ctx context.Context, device models.Device, items map[string]interface{}) error {
+	cfg := container.ConfigurationFrom(p.dic.Get)
+	db, ok := cfg.IotpConfig()
+	if !ok {
+		return errort.NewCommonErr(errort.DefaultSystemError, fmt.Errorf("未配置 iotp 数据源，无法通过 WS 下发"))
+	}
+	client := iotp.New(db.BaseURL, db.Token, db.Name, db.IotpTimeout())
+	deviceId := iotp.DeviceID(device.Id)
+	for code, value := range items {
+		val, valErr := propertyValueString(value)
+		if valErr != nil {
+			return errort.NewCommonErr(errort.DefaultSystemError,
+				fmt.Errorf("%s.%s 值无效: %w", device.Name, code, valErr))
+		}
+		if err := client.WriteControl(ctx, deviceId, code, val); err != nil {
+			return errort.NewCommonErr(errort.DefaultSystemError,
+				fmt.Errorf("%s.%s=%v 下发失败: %w", device.Name, code, value, err))
+		}
+	}
+	return nil
+}
+
 func isEdgeGatewayModel(protocol, vendor, model string) bool {
 	if strings.EqualFold(protocol, models.GatewayProtocolEdge) {
 		return true

@@ -173,7 +173,7 @@ var buttonGroups = []buttonGroup{
 		{"tsl:add", "添加物模型"}, {"tsl:edit", "编辑物模型"}, {"tsl:remove", "删除物模型"}}},
 	{MenuAlarm, "告警中心", "monitor:alert", withActions(crudActions, permAction{"handle", "处理"})},
 	// 资源管理没有独立详情接口（列表即用于编辑回填），因此按钮组不含 query
-	{MenuAdvancedResource, "资源管理", "advanced:resource", []permAction{
+	{MenuAdvancedResource, "北向应用", "advanced:resource", []permAction{
 		{"list", "查询"}, {"add", "新增"}, {"edit", "修改"}, {"remove", "删除"}, {"verify", "验证"}}},
 	{MenuAdvancedRule, "规则引擎", "advanced:rule", withActions(crudActions,
 		permAction{"start", "启动"}, permAction{"stop", "停止"})},
@@ -299,7 +299,7 @@ func DefaultMenus() []models.Menu {
 			Sort: 25, Visible: 1, Status: 1, IsFrame: 1,
 		},
 		{
-			Id: MenuAdvancedResource, ParentId: MenuAdvancedId, Name: "资源管理", Path: "/advanced/resource/manage",
+			Id: MenuAdvancedResource, ParentId: MenuAdvancedId, Name: "北向应用", Path: "/advanced/resource/manage",
 			Icon: "api", MenuType: models.MenuTypeMenu, Perms: permissions.AdvancedResourceList,
 			Sort: 1, Visible: 1, Status: 1, IsFrame: 1,
 		},

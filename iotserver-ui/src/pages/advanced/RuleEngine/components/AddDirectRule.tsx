@@ -297,7 +297,7 @@ export const AddDirectRule = forwardRef<AddDirectRuleRef, AddDirectRuleProps>(({
                         onClick={() => {
                           navigate('/advanced/resource/manage')
                         }}
-                      >{t('资源管理')}</span>
+                      >{t('北向应用')}</span>
                       {t('添加新的实例')}
                     </div>}
                 >

@@ -804,6 +804,10 @@ func GetEnMessages() []*i18n.Message {
 			Other: "Data resource {{.p1}} does not exist or has been deleted",
 		},
 		{
+			ID:    "应用 {{.p1}} 不存在或已被删除",
+			Other: "Application {{.p1}} does not exist or has been deleted",
+		},
+		{
 			ID:    "数据资源ID非法",
 			Other: "Invalid data resource ID",
 		},
@@ -1062,6 +1066,10 @@ func GetEnMessages() []*i18n.Message {
 		{
 			ID:    "请选择数据资源",
 			Other: "Select a data resource",
+		},
+		{
+			ID:    "请选择应用",
+			Other: "Select an application",
 		},
 		{
 			ID:    "请配置定时表达式",
@@ -1348,6 +1356,112 @@ func GetEnMessages() []*i18n.Message {
 		{
 			ID:    "统计设备消息量失败：{{.p1}}",
 			Other: "Failed to count device messages: {{.p1}}",
+		},
+
+		// 规则引擎
+		{
+			ID:    "规则 ID 已存在",
+			Other: "Rule ID already exists",
+		},
+		{
+			ID:    "规则 ID 只能是 1-64 位字母、数字、下划线或中划线",
+			Other: "Rule ID must be 1-64 letters, digits, underscores or hyphens",
+		},
+		{
+			ID:    "规则 ID 不能使用保留字 export、debug、batch-start、batch-stop、validate、import",
+			Other: "Rule ID cannot use reserved words: export, debug, batch-start, batch-stop, validate, import",
+		},
+		{
+			ID:    "线程数必须在 0-1024 之间",
+			Other: "Concurrency must be between 0 and 1024",
+		},
+		{
+			ID:    "缓存大小非法",
+			Other: "Invalid buffer size",
+		},
+		{
+			ID:    "QoS 只能是 0/1/2",
+			Other: "QoS must be 0, 1 or 2",
+		},
+		{
+			ID:    "时间参数不能为负数",
+			Other: "Time options cannot be negative",
+		},
+		{
+			ID:    "最大重试次数不能为负数",
+			Other: "Maximum retry attempts cannot be negative",
+		},
+		{
+			ID:    "周期性触发策略/运行持续时间过长",
+			Other: "Cron expression or run duration is too long",
+		},
+		{
+			ID:    "单个标签不能超过 {{.p1}} 个字符",
+			Other: "A single tag cannot exceed {{.p1}} characters",
+		},
+		{
+			ID:    "标签数量不能超过 {{.p1}} 个",
+			Other: "At most {{.p1}} tags are allowed",
+		},
+		{
+			ID:    "动作数量不能超过 {{.p1}} 个",
+			Other: "At most {{.p1}} actions are allowed",
+		},
+		{
+			ID:    "应用数量不能超过 {{.p1}} 个",
+			Other: "At most {{.p1}} applications are allowed",
+		},
+		{
+			ID:    "动作的数据资源不能为空",
+			Other: "The data resource of an action cannot be empty",
+		},
+		{
+			ID:    "应用不能为空",
+			Other: "The application cannot be empty",
+		},
+		{
+			ID:    "同一个数据资源不能重复添加",
+			Other: "The same data resource cannot be added twice",
+		},
+		{
+			ID:    "同一个应用不能重复添加",
+			Other: "The same application cannot be added twice",
+		},
+		{
+			ID:    "批量操作数量超过上限",
+			Other: "Batch operation exceeds the limit",
+		},
+		{
+			ID:    "请填写模拟数据",
+			Other: "Enter mock data",
+		},
+		{
+			ID:    "模拟数据不能超过 {{.p1}} 条",
+			Other: "Mock data cannot exceed {{.p1}} records",
+		},
+		{
+			ID:    "模拟数据格式非法",
+			Other: "Invalid mock data format",
+		},
+		{
+			ID:    "模拟数据过大",
+			Other: "Mock data is too large",
+		},
+		{
+			ID:    "数据模版过长",
+			Other: "Data template is too long",
+		},
+		{
+			ID:    "试运行 ID 非法",
+			Other: "Invalid test rule ID",
+		},
+		{
+			ID:    "当前 eKuiper 客户端不支持规则试运行",
+			Other: "The current eKuiper client does not support rule testing",
+		},
+		{
+			ID:    "规则数量超过导出上限 {{.p1}} 条，请分批导出",
+			Other: "The number of rules exceeds the export limit of {{.p1}}; export in batches",
 		},
 	}
 }

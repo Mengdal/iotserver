@@ -31,6 +31,7 @@ import (
 	"iotserver/internal/pkg/logger"
 	"iotserver/internal/pkg/tenant"
 	"iotserver/internal/pkg/utils"
+	"iotserver/internal/tools/ekuiperclient"
 	"iotserver/internal/tools/notify/email"
 	"iotserver/internal/tools/notify/twilio"
 
@@ -57,7 +58,83 @@ func NewAlertCentreApp(ctx context.Context, dic *di.Container) interfaces.AlertR
 		lc:       lc,
 	}
 	go app.monitor()
+	// 启动后重下发一次告警 SQL：历史规则可能还是旧的 data.<code>.value 形式，
+	// 而消息总线已统一为扁平 data.<code>；同时给非聚合规则补上 report_time。
+	// eKuiper/mqtt_stream 可能比平台晚就绪，先确保 stream 可用再重下发并退避重试。
+	go func() {
+		config := resourceContainer.ConfigurationFrom(dic.Get)
+		baseURL := strings.TrimSpace(config.Clients["Ekuiper"].Address())
+		if baseURL == "" {
+			lc.Warnf("resync alert rules skipped: eKuiper address is empty")
+			return
+		}
+		delay := 2 * time.Second
+		for {
+			time.Sleep(delay)
+			if _, err := ekuiperclient.EnsureStream(context.Background(), baseURL, lc,
+				ekuiperclient.MQTTStreamName, ekuiperclient.MQTTStreamSQL); err != nil {
+				lc.Warnf("resync alert rules: eKuiper stream 未就绪: %v", err)
+				if delay < time.Minute {
+					delay *= 2
+					if delay > time.Minute {
+						delay = time.Minute
+					}
+				}
+				continue
+			}
+			app.resyncAlertRuleSql()
+			return
+		}
+	}()
 	return app
+}
+
+// resyncAlertRuleSql 用库里的规则重新生成并下发 eKuiper SQL（失败只告警，不影响启动）。
+func (p alertApp) resyncAlertRuleSql() {
+	rules, _, err := p.dbClient.WithCtx(tenant.Platform(context.Background())).AlertRuleSearch(
+		0, -1, dtos.AlertRuleSearchQueryRequest{})
+	if err != nil {
+		p.lc.Warnf("resync alert rules: query failed: %v", err)
+		return
+	}
+	for i := range rules {
+		rule := rules[i]
+		if len(rule.SubRule) == 0 {
+			continue
+		}
+		subRules := make([]dtos.SubRule, 0, len(rule.SubRule))
+		for _, sub := range rule.SubRule {
+			subRules = append(subRules, dtos.SubRule{
+				Trigger:   sub.Trigger,
+				ProductId: sub.ProductId,
+				DeviceId:  sub.DeviceId,
+				Option:    sub.Option,
+			})
+		}
+		notifies := make([]dtos.Notify, 0, len(rule.Notify))
+		for _, notify := range rule.Notify {
+			notifies = append(notifies, dtos.Notify{
+				Name:            notify.Name,
+				Option:          notify.Option,
+				StartEffectTime: notify.StartEffectTime,
+				EndEffectTime:   notify.EndEffectTime,
+			})
+		}
+		silence := rule.SilenceTime
+		ruleCtx := tenant.Platform(context.Background())
+		if strings.TrimSpace(rule.TenantId) != "" {
+			ruleCtx = tenant.With(context.Background(), tenant.Context{TenantID: rule.TenantId})
+		}
+		if err := p.UpdateAlertRule(ruleCtx, dtos.RuleUpdateRequest{
+			Id:          rule.Id,
+			Condition:   rule.Condition,
+			SubRule:     subRules,
+			Notify:      notifies,
+			SilenceTime: &silence,
+		}); err != nil {
+			p.lc.Warnf("resync alert rule %s(%s) failed: %v", rule.Name, rule.Id, err)
+		}
+	}
 }
 
 func (p alertApp) AddAlertRule(ctx context.Context, req dtos.RuleAddRequest) (string, error) {

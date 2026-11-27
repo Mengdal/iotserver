@@ -213,6 +213,27 @@ func PermRequired(dic *di.Container, perms ...string) gin.HandlerFunc {
 	}
 }
 
+// HasPermission 判断当前请求用户是否拥有指定权限（超级管理员始终放行）。
+// 用于「同一个接口内按请求内容追加权限要求」的场景，例如保存规则时勾选了立即运行。
+func HasPermission(dic *di.Container, c *gin.Context, perm string) bool {
+	if perm == "" {
+		return true
+	}
+	username, ok := UsernameFromContext(c)
+	if !ok {
+		return false
+	}
+	userItf := container.UserItfFrom(dic.Get)
+	if userItf.IsAdminUsername(username) {
+		return true
+	}
+	owned, err := userItf.PermissionsByUsername(username)
+	if err != nil {
+		return false
+	}
+	return utils.InStringSlice(perm, owned)
+}
+
 // UsernameFromContext 从上下文获取当前登录用户名
 func UsernameFromContext(c *gin.Context) (string, bool) {
 	value, ok := c.Get(constants.JwtParsedInfo)

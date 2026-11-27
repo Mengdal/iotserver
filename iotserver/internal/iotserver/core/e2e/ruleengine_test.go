@@ -23,9 +23,17 @@ type fakeRule struct {
 }
 
 type fakeEkuiper struct {
-	mu    sync.Mutex
-	rules map[string]*fakeRule
-	calls []string
+	mu       sync.Mutex
+	rules    map[string]*fakeRule
+	calls    []string
+	startErr error
+}
+
+// setStartError 让后续 StartRule 调用失败，用于验证保存后启动失败的回滚
+func (f *fakeEkuiper) setStartError(err error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.startErr = err
 }
 
 func newFakeEkuiper() *fakeEkuiper {
@@ -91,6 +99,9 @@ func (f *fakeEkuiper) StartRule(ctx context.Context, ruleId string) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.record("start:%s", ruleId)
+	if f.startErr != nil {
+		return f.startErr
+	}
 	r, ok := f.rules[ruleId]
 	if !ok {
 		return fmt.Errorf("rule not found")
@@ -367,6 +378,79 @@ func TestRuleEngineParamErrors(t *testing.T) {
 	body, _ = json.Marshal(rule)
 	assertSuccess(t, doRequest(env.engine, http.MethodPost, "/api/v1/rule-engine", env.token, body), "首次新增")
 	assertFail(t, doRequest(env.engine, http.MethodPost, "/api/v1/rule-engine", env.token, body), "重名")
+}
+
+// 保存时勾选「立即运行」但启动失败：不能留下已入库/已修改的规则。
+func TestRuleEngineRunImmediatelyRollback(t *testing.T) {
+	env := setupTestEnv(t)
+	fake := env.fakeEkuiper
+
+	target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	defer target.Close()
+	body, _ := json.Marshal(map[string]interface{}{
+		"name": "rollback-target", "type": "HTTP推送",
+		"option": map[string]interface{}{"url": target.URL},
+	})
+	assertSuccess(t, doRequest(env.engine, http.MethodPost, "/api/v1/dataresource", env.token, body), "建资源")
+	var resPage struct {
+		Result struct {
+			List []map[string]interface{} `json:"list"`
+		} `json:"result"`
+	}
+	w := doRequest(env.engine, http.MethodGet, "/api/v1/dataresource?type=HTTP推送", env.token, nil)
+	_ = json.Unmarshal(w.Body.Bytes(), &resPage)
+	resourceID, _ := resPage.Result.List[0]["id"].(string)
+
+	newRule := func(id, name string, run bool) []byte {
+		b, _ := json.Marshal(map[string]interface{}{
+			"id": id, "name": name, "resource_type": "HTTP推送", "data_resource_id": resourceID,
+			"run_immediately": run,
+			"filter":          map[string]interface{}{"sql": `SELECT * FROM mqtt_stream`},
+		})
+		return b
+	}
+
+	// 新增 + 立即运行失败 → 回滚，列表为空，且可以用同一个 ID 重试
+	fake.setStartError(fmt.Errorf("boom"))
+	assertFail(t, doRequest(env.engine, http.MethodPost, "/api/v1/rule-engine", env.token,
+		newRule("rollback-add", "rollback-add-rule", true)), "启动失败应返回错误")
+	w = doRequest(env.engine, http.MethodGet, "/api/v1/rule-engine?page=1&pageSize=10", env.token, nil)
+	var listResp struct {
+		Result struct {
+			List  []map[string]interface{} `json:"list"`
+			Total int                      `json:"total"`
+		} `json:"result"`
+	}
+	_ = json.Unmarshal(w.Body.Bytes(), &listResp)
+	if listResp.Result.Total != 0 {
+		t.Fatalf("启动失败后应回滚新增, total=%d", listResp.Result.Total)
+	}
+	fake.setStartError(nil)
+	assertSuccess(t, doRequest(env.engine, http.MethodPost, "/api/v1/rule-engine", env.token,
+		newRule("rollback-add", "rollback-add-rule", false)), "回滚后可用同一 ID 重试")
+
+	// 修改 + 立即运行失败 → 恢复修改前的名称和 SQL
+	body = newRule("rollback-update", "before-name", false)
+	assertSuccess(t, doRequest(env.engine, http.MethodPost, "/api/v1/rule-engine", env.token, body), "新增待修改规则")
+	fake.setStartError(fmt.Errorf("boom"))
+	update := map[string]interface{}{
+		"id": "rollback-update", "name": "after-name", "resource_type": "HTTP推送",
+		"data_resource_id": resourceID, "run_immediately": true,
+		"filter": map[string]interface{}{"sql": `SELECT deviceId FROM mqtt_stream`},
+	}
+	b, _ := json.Marshal(update)
+	assertFail(t, doRequest(env.engine, http.MethodPut, "/api/v1/rule-engine", env.token, b), "启动失败应返回错误")
+	w = doRequest(env.engine, http.MethodGet, "/api/v1/rule-engine/rollback-update", env.token, nil)
+	var detail struct {
+		Result map[string]interface{} `json:"result"`
+	}
+	_ = json.Unmarshal(w.Body.Bytes(), &detail)
+	if detail.Result["name"] != "before-name" {
+		t.Fatalf("修改失败应回滚名称, got %v", detail.Result["name"])
+	}
+	if filter, _ := detail.Result["filter"].(map[string]interface{}); filter["sql"] != `SELECT * FROM mqtt_stream` {
+		t.Fatalf("修改失败应回滚 SQL, got %v", filter["sql"])
+	}
 }
 
 func assertRuleStatus(t *testing.T, env *testEnv, ruleId, want string) {

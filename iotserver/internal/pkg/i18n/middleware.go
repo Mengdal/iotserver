@@ -74,7 +74,9 @@ func I18nHandlerGin() gin.HandlerFunc {
 		if lang == "" {
 			lang = DefaultLang
 		}
-		c.Request = c.Request.WithContext(context.WithValue(c, AcceptLanguage, lang))
+		// 必须以 Request.Context() 为父 context：gin.Context 的 Value() 默认不向
+		// Request.Context() 回落（ContextWithFallback=false），用它做父会丢掉上游中间件/服务器放入的值
+		c.Request = c.Request.WithContext(context.WithValue(c.Request.Context(), AcceptLanguage, lang))
 		c.Set(AcceptLanguage, lang)
 		c.Next()
 	}

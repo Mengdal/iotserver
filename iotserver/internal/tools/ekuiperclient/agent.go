@@ -16,6 +16,8 @@ package ekuiperclient
 
 import (
 	"context"
+	"io"
+
 	"iotserver/internal/dtos"
 )
 
@@ -28,4 +30,20 @@ type EkuiperClient interface {
 	StopRule(ctx context.Context, ruleId string) error
 	RestartRule(ctx context.Context, ruleId string) error
 	DeleteRule(ctx context.Context, ruleId string) error
+}
+
+// RuleDefinitionClient 可选能力：完整规则定义（SQL + 多动作 + options + tags）。
+// 旧客户端/测试替身可以只实现 EkuiperClient，调用方需回落到基础接口。
+type RuleDefinitionClient interface {
+	CreateRuleDefinition(ctx context.Context, rule dtos.EkuiperRule) error
+	UpdateRuleDefinition(ctx context.Context, rule dtos.EkuiperRule) error
+	ValidateRule(ctx context.Context, sql string) error
+}
+
+// RuleTestClient 可选能力：eKuiper 规则试运行（独立测试端口 + SSE）。
+type RuleTestClient interface {
+	CreateRuleTest(ctx context.Context, req dtos.RuleTestRequest) (string, int, error)
+	StartRuleTest(ctx context.Context, id string) error
+	DeleteRuleTest(ctx context.Context, id string) error
+	OpenRuleTestStream(ctx context.Context, id string, port int) (io.ReadCloser, error)
 }

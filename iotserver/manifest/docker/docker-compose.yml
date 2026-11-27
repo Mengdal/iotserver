@@ -35,6 +35,8 @@ services:
     image: ${EKUIPER_IMAGE:-iotserver-ekuiper:2.4.2}
     ports:
       - "127.0.0.1:9081:9081"
+      # 规则试运行（/ruletest）的 SSE 输出端口；规则编辑器“调试规则”使用
+      - "127.0.0.1:10081:10081"
     container_name: ekuiper
     hostname: ekuiper
     restart: always

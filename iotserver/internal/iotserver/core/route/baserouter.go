@@ -4,16 +4,19 @@ import (
 	"iotserver/internal/iotserver/core/container"
 	pkgContainer "iotserver/internal/pkg/container"
 	"iotserver/internal/pkg/di"
+	"iotserver/internal/pkg/httphelper"
 	"iotserver/internal/pkg/utils"
 	//"iotserver/internal/system/monitor/container"
 
 	//"gitlab.com/tedge/edgex/internal/pkg/constants"
+	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"os"
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gin-contrib/static"
 	"github.com/gin-gonic/gin"
@@ -49,6 +52,14 @@ func ProxyServer(c *gin.Context, dic *di.Container) {
 	if err != nil {
 		lc.Errorf("parse server url err:%v", err)
 		c.Data(502, "", []byte("proxy server error"))
+	}
+	// 规则试运行 SSE 是长连接：清掉 WebProxy 的 WriteTimeout（默认 120s），否则长调试会被截断
+	if strings.Contains(c.Request.URL.Path, "/rule-engine/debug/") && strings.HasSuffix(c.Request.URL.Path, "/stream") {
+		if rw, ok := httphelper.RawResponseWriter(c.Request.Context()); ok {
+			if err := http.NewResponseController(rw).SetWriteDeadline(time.Time{}); err != nil {
+				lc.Warnf("proxy rule debug stream: clear write deadline failed: %v", err)
+			}
+		}
 	}
 	proxy := httputil.NewSingleHostReverseProxy(parseRootUrl)
 	proxy.ServeHTTP(c.Writer, c.Request)

@@ -284,10 +284,11 @@ func (app *machineTemplateApp) SolutionApply(ctx context.Context, key string, re
 				return res, errort.NewCommonEdgeX(errort.AlertRuleParamsError,
 					fmt.Sprintf("模板 %s 的告警规则 %s 创建失败", key, rule.Name), aErr)
 			}
+			silenceTime := rule.SilenceTime
 			uErr := alertApp.UpdateAlertRule(ctx, dtos.RuleUpdateRequest{
 				Id:          ruleId,
 				Condition:   constants.WorkerConditionAnyone,
-				SilenceTime: rule.SilenceTime,
+				SilenceTime: &silenceTime,
 				SubRule: []dtos.SubRule{{
 					Trigger:   constants.DeviceDataTrigger,
 					ProductId: productId,

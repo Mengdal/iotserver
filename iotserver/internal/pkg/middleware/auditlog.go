@@ -70,7 +70,7 @@ var auditModuleByPrefix = map[string]string{
 	"alert-ignore": "告警中心", "alert-treated": "告警中心", "rule-field": "告警中心",
 	"scene":        "场景联动",
 	"rule-engine":  "规则引擎",
-	"dataresource": "资源管理", "typeresource": "资源管理",
+	"dataresource": "北向应用", "typeresource": "北向应用",
 	"viz":              "数据看板",
 	"docker-configs":   "驱动镜像",
 	"device-libraries": "驱动管理", "device-servers": "驱动管理",

@@ -44,6 +44,11 @@ func enforceTenantFilter(sql, tenantID string) (string, error) {
 		return "", errort.NewCommonErr(errort.DefaultReqParamsError,
 			errort.NewMessageErr("租户标识非法", nil))
 	}
+	// 存量规则的 filter.sql 里可能已经带有租户条件（旧版本把编译结果存成了原始 SQL），
+	// 导入/多次保存也可能叠加。这里先剥掉再注入，保证无论调用多少次都只有一个租户条件。
+	if stripped, changed := stripTenantPredicates(sql); changed {
+		sql = stripped
+	}
 
 	clauses, err := scanTopLevel(sql)
 	if err != nil {
@@ -89,6 +94,134 @@ func enforceTenantFilter(sql, tenantID string) (string, error) {
 	return sql[:whereEnd] + " " + filter + " AND (" + cond + ") " + sql[end:], nil
 }
 
+// stripTenantPredicates 移除 enforceTenantFilter 注入过的顶层租户条件。
+//
+// 旧版本把注入后的 SQL 直接存进 filter.sql，启动时又会再注入一次；
+// 导出→导入到其他租户时也会叠加。这里把形如
+//
+//	WHERE tenantId = 't' AND (原条件)
+//	WHERE tenantId = 't'
+//
+// 的前缀逐层剥掉，返回清理后的 SQL 和是否发生修改。
+// 只处理顶层 WHERE，括号/引号内的条件不会被误删。
+func stripTenantPredicates(sql string) (string, bool) {
+	sql = strings.TrimSpace(sql)
+	changed := false
+	// 叠加层数很少；限制循环次数，避免异常输入导致死循环
+	for i := 0; i < 16; i++ {
+		clauses, err := scanTopLevel(sql)
+		if err != nil || clauses.where < 0 {
+			break
+		}
+		whereEnd := clauses.where + len("WHERE")
+		end := len(sql)
+		for _, p := range []int{clauses.group, clauses.having, clauses.order, clauses.limit} {
+			if p > whereEnd && p < end {
+				end = p
+			}
+		}
+		if whereEnd > end {
+			break
+		}
+		rest, ok := stripLeadingTenantPredicate(sql[whereEnd:end])
+		if !ok {
+			break
+		}
+		changed = true
+		if rest == "" {
+			// 整个 WHERE 只剩租户条件：直接去掉 WHERE 子句
+			sql = strings.TrimRight(sql[:clauses.where], " \t\r\n") + " " + strings.TrimLeft(sql[end:], " \t\r\n")
+		} else {
+			sql = strings.TrimRight(sql[:whereEnd], " \t\r\n") + " " + rest + " " + strings.TrimLeft(sql[end:], " \t\r\n")
+		}
+		sql = strings.TrimSpace(sql)
+	}
+	return sql, changed
+}
+
+// stripLeadingTenantPredicate 尝试剥掉 WHERE 条件开头的 tenantId = 'x'。
+// 返回剩余条件；rest 为空表示租户条件是 WHERE 的全部内容。
+func stripLeadingTenantPredicate(cond string) (string, bool) {
+	s := strings.TrimSpace(cond)
+	const keyword = "tenantId"
+	if len(s) < len(keyword) || !strings.EqualFold(s[:len(keyword)], keyword) {
+		return "", false
+	}
+	rest := s[len(keyword):]
+	if rest != "" && isWordPart(rest[0]) {
+		return "", false
+	}
+	rest = strings.TrimLeft(rest, " \t\r\n")
+	if rest == "" || rest[0] != '=' {
+		return "", false
+	}
+	rest = strings.TrimLeft(rest[1:], " \t\r\n")
+	if rest == "" || rest[0] != '\'' {
+		return "", false
+	}
+	endQuote := strings.IndexByte(rest[1:], '\'')
+	if endQuote < 0 {
+		return "", false
+	}
+	if !tenantIDPattern.MatchString(rest[1 : 1+endQuote]) {
+		return "", false
+	}
+	rest = strings.TrimSpace(rest[1+endQuote+1:])
+	if rest == "" {
+		return "", true
+	}
+	if len(rest) < len("AND") || !strings.EqualFold(rest[:len("AND")], "AND") {
+		return "", false
+	}
+	if len(rest) > len("AND") && isWordPart(rest[len("AND")]) {
+		return "", false
+	}
+	rest = strings.TrimSpace(rest[len("AND"):])
+	if rest == "" {
+		return "", false
+	}
+	// 注入时原条件一定被括号包住；能完整匹配就解一层括号
+	if rest[0] == '(' {
+		if inner, ok := unwrapParens(rest); ok {
+			return strings.TrimSpace(inner), true
+		}
+	}
+	return rest, true
+}
+
+// unwrapParens 若 s 恰好是一个括号包裹的表达式，返回括号内的内容。
+func unwrapParens(s string) (string, bool) {
+	depth := 0
+	var quote byte
+	for i := 0; i < len(s); i++ {
+		ch := s[i]
+		if quote != 0 {
+			if ch == quote {
+				quote = 0
+			}
+			continue
+		}
+		switch ch {
+		case '\'', '"', '`':
+			quote = ch
+		case '(':
+			depth++
+		case ')':
+			depth--
+			if depth == 0 {
+				if strings.TrimSpace(s[i+1:]) != "" {
+					return "", false
+				}
+				return s[1:i], true
+			}
+			if depth < 0 {
+				return "", false
+			}
+		}
+	}
+	return "", false
+}
+
 // scanTopLevel 扫描顶层 SQL 结构，忽略引号/括号内的内容。
 func scanTopLevel(sql string) (sqlClauses, error) {
 	c := sqlClauses{from: -1, where: -1, group: -1, having: -1, order: -1, limit: -1}
@@ -128,8 +261,12 @@ func scanTopLevel(sql string) (sqlClauses, error) {
 				errort.NewMessageErr("规则 SQL 不支持注释", nil))
 		}
 		if depth == 0 && ch == ',' && c.from >= 0 {
-			return c, errort.NewCommonErr(errort.DefaultReqParamsError,
-				errort.NewMessageErr("规则 SQL 不支持多数据源", nil))
+			// 只拒绝 FROM 子句里的逗号（多数据源）；GROUP BY / ORDER BY 等
+			// 子句内的逗号是合法表达式分隔符。
+			if c.where < 0 && c.group < 0 && c.having < 0 && c.order < 0 && c.limit < 0 {
+				return c, errort.NewCommonErr(errort.DefaultReqParamsError,
+					errort.NewMessageErr("规则 SQL 不支持多数据源", nil))
+			}
 		}
 		if depth != 0 || !isWordStart(ch) {
 			continue

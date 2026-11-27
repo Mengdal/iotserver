@@ -246,6 +246,15 @@ func RegisterGateway(engine *gin.Engine, dic *di.Container) {
 		v1Auth.DELETE("rule-engine/:ruleEngineId/delete", ctl.Perm(middleware.PermRuleRemove), ctl.RuleEngineDelete)
 		v1Auth.POST("rule-engine/:ruleEngineId/start", ctl.Perm(middleware.PermRuleStart), ctl.RuleEngineStart)
 		v1Auth.POST("rule-engine/:ruleEngineId/stop", ctl.Perm(middleware.PermRuleStop), ctl.RuleEngineStop)
+		v1Auth.POST("rule-engine/batch-start", ctl.Perm(middleware.PermRuleStart), ctl.RuleEngineBatchStart)
+		v1Auth.POST("rule-engine/batch-stop", ctl.Perm(middleware.PermRuleStop), ctl.RuleEngineBatchStop)
+		v1Auth.POST("rule-engine/validate", ctl.Perm(middleware.PermRuleAdd), ctl.RuleEngineValidate)
+		v1Auth.POST("rule-engine/debug", ctl.Perm(middleware.PermRuleAdd), ctl.RuleEngineDebugStart)
+		// 试运行由新增权限发起，订阅/停止也必须使用同一权限，避免 add 无 query 的用户无法调试
+		v1Auth.GET("rule-engine/debug/:testId/stream", ctl.Perm(middleware.PermRuleAdd), ctl.RuleEngineDebugStream)
+		v1Auth.DELETE("rule-engine/debug/:testId", ctl.Perm(middleware.PermRuleAdd), ctl.RuleEngineDebugStop)
+		v1Auth.GET("rule-engine/export", ctl.Perm(middleware.PermRuleQuery), ctl.RuleEngineExport)
+		v1Auth.POST("rule-engine/import", ctl.Perm(middleware.PermRuleAdd), ctl.RuleEngineImport)
 
 		// ===== 高级能力：场景联动 =====
 		v1Auth.GET("scene", ctl.Perm(middleware.PermSceneList), ctl.SceneSearch)

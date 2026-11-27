@@ -1,0 +1,724 @@
+.rule-editor-page {
+  // 内容区（.main-view）高度为 100vh - 50px，编辑器至少铺满一屏，内容超出时由内容区滚动
+  min-height: calc(100vh - 50px);
+  padding: 10px 20px 0;
+  background: #f5f7fa;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+.rule-editor-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+  flex: none;
+}
+
+// Spin 包裹层也是 flex 的一环，让下方卡片能吃掉剩余高度
+.rule-editor-page > .ant-spin-nested-loading {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+
+  > .ant-spin-container {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+.rule-editor-heading {
+  min-width: 0;
+}
+
+.rule-editor-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #172c4d;
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 26px;
+}
+
+.rule-editor-form {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.rule-editor-top {
+  align-items: stretch;
+
+  // 规则卡片和动作卡片等高，正文（.ant-card-body）也一起撑满，
+  // 避免一侧内容变高时另一侧正文底部对不齐
+  .rule-editor-card {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+
+    > .ant-card-body {
+      flex: 1;
+      min-height: 0;
+    }
+  }
+}
+
+.rule-editor-card {
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  margin-bottom: 8px;
+
+  .ant-card-body {
+    padding: 10px 16px;
+  }
+}
+
+.rule-action-card-wrapper {
+  min-height: 300px;
+  margin-bottom: 8px;
+
+  > .ant-card-body {
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+.rule-sql-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 2px 0 6px;
+}
+
+.rule-sql-title {
+  color: #262626;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.rule-sql-form-item {
+  margin-bottom: 0;
+
+  .monaco-editor {
+    border: 1px solid #e5e7eb;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+}
+
+.rule-editor-bottom {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+
+  > .ant-card-body {
+    flex: 1;
+    min-height: 0;
+    padding-top: 6px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .ant-tabs-nav {
+    margin-bottom: 6px;
+  }
+}
+
+
+.rule-editor-tabs {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+
+  > .ant-tabs-nav {
+    flex: none;
+  }
+
+  > .ant-tabs-content-holder {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .ant-tabs-content {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  // 只作用于当前面板，避免把隐藏面板的 display:none 覆盖掉
+  .ant-tabs-tabpane-active {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+.rule-debug-panel {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.rule-action-tabs {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+
+  > .ant-tabs-nav {
+    flex: none;
+  }
+
+  > .ant-tabs-content-holder {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .ant-tabs-content {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .ant-tabs-tabpane-active {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+.rule-action-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.rule-action-count {
+  color: #8c8c8c;
+  font-size: 12px;
+}
+
+.rule-action-list {
+  flex: 1;
+  min-height: 0;
+  max-height: 300px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.rule-action-card {
+  margin-bottom: 8px;
+  border-color: #e5e7eb;
+}
+
+.rule-action-card-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rule-action-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: #f0f5ff;
+  color: #1677ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex: none;
+}
+
+.rule-action-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.rule-action-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+
+  .ant-typography {
+    max-width: 200px;
+    font-weight: 500;
+  }
+
+  .ant-tag {
+    margin-inline-end: 0;
+  }
+}
+
+.rule-action-meta {
+  margin-top: 2px;
+  color: #8c8c8c;
+  font-size: 11px;
+}
+
+.rule-source-sample {
+  flex: 1;
+  min-height: 0;
+  // 限制在动作卡片高度内，避免示例内容把上方两张卡片撑高
+  max-height: 400px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.rule-source-sample-title {
+  margin-bottom: 10px;
+  color: #8c8c8c;
+  font-size: 12px;
+}
+
+.rule-source-collapse {
+  background: transparent;
+
+  .ant-collapse-item {
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    margin-bottom: 8px;
+    overflow: hidden;
+  }
+
+  .ant-collapse-header {
+    padding: 8px 12px !important;
+    align-items: center !important;
+    border-bottom: 1px solid #eef0f3;
+  }
+
+  .ant-collapse-content-box {
+    padding: 10px 12px 12px !important;
+  }
+}
+
+.rule-source-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+
+  .ant-tag {
+    margin-inline-end: 0;
+  }
+}
+
+.rule-source-type {
+  margin-bottom: 12px;
+  color: #595959;
+  font-size: 12px;
+}
+
+.rule-source-section-title {
+  margin-bottom: 6px;
+  color: #262626;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.rule-source-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+
+  .rule-source-section-title {
+    margin-bottom: 0;
+  }
+}
+
+.rule-source-code {
+  position: relative;
+
+  .rule-sql-example-code {
+    padding-right: 36px;
+    max-height: none;
+  }
+}
+
+.rule-source-code-copy {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  color: #8c8c8c;
+}
+
+.rule-sql-example-code {
+  margin: 0;
+  padding: 10px 12px;
+  background: #f7f8fa;
+  border: 1px solid #eef0f3;
+  border-radius: 4px;
+  color: #334155;
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 260px;
+  overflow: auto;
+}
+
+.rule-resource-picker {
+  max-height: 360px;
+  overflow-y: auto;
+  border: 1px solid #eef0f3;
+  border-radius: 6px;
+}
+
+.rule-resource-loading {
+  padding: 24px;
+  text-align: center;
+  color: #8c8c8c;
+}
+
+.rule-resource-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid #f0f0f0;
+  cursor: pointer;
+  transition: background 0.15s;
+
+  &:last-child {
+    border-bottom: 0;
+  }
+
+  &:hover {
+    background: #fafafa;
+  }
+
+  &.is-active {
+    background: #e6f4ff;
+  }
+
+  &.is-disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
+}
+
+.rule-resource-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: #f5f5f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #595959;
+  flex: none;
+}
+
+.rule-resource-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.rule-resource-name {
+  font-weight: 500;
+  color: #262626;
+}
+
+.rule-resource-meta {
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+
+  .ant-tag {
+    margin-inline-end: 0;
+  }
+}
+
+.rule-resource-selected {
+  color: #8c8c8c;
+  font-size: 12px;
+}
+
+.rule-debug-toolbar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.rule-debug-action-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #595959;
+  font-size: 12px;
+  line-height: 24px;
+  white-space: nowrap;
+}
+
+.rule-debug-icon-btn {
+  display: inline-flex;
+}
+
+.rule-debug-action-warning {
+  color: #faad14;
+  font-size: 12px;
+}
+
+.rule-field-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+  color: #262626;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.rule-help-icon {
+  color: #8c8c8c;
+  cursor: help;
+  font-size: 13px;
+}
+
+.rule-mock-status-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: #bfbfbf;
+  vertical-align: middle;
+}
+
+.rule-debug-source-off {
+  color: #8c8c8c !important;
+  border-color: #e5e7eb !important;
+  background: #fafafa !important;
+}
+
+.rule-mock-off-note {
+  margin-bottom: 8px;
+}
+
+.rule-mock-options {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  margin-top: 15px;
+}
+
+.rule-mock-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  line-height: 32px;
+}
+
+.rule-mock-option-label {
+  white-space: nowrap;
+}
+
+.rule-template-editor .monaco-editor {
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+// 配色与日志查看器（LogViewer）保持一致
+.rule-debug-output {
+  flex: none;
+  height: 360px;
+  overflow-y: auto;
+  padding: 10px 14px 6px;
+  background: #fbfcfe;
+  border: 1px solid #eef0f3;
+  border-radius: 6px;
+  color: #2b3245;
+  font-family: 'SFMono-Regular', Menlo, Consolas, 'Liberation Mono', monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+
+  &::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    border-radius: 4px;
+    background: #d9dee8;
+  }
+}
+
+.rule-debug-empty {
+  min-height: 200px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #8c99ad;
+}
+
+.rule-debug-line {
+  display: flex;
+  gap: 10px;
+  padding: 2px 0;
+  border-bottom: 1px solid #f0f2f5;
+
+  .rule-debug-time {
+    color: #98a2b3;
+    flex: none;
+  }
+
+  pre {
+    margin: 0;
+    white-space: pre-wrap;
+    word-break: break-all;
+    font-family: inherit;
+    color: inherit;
+  }
+
+  &.is-action {
+    pre {
+      color: #1677ff;
+    }
+
+    .rule-debug-time {
+      color: #91b7e8;
+    }
+  }
+
+  &.is-action-error {
+    pre {
+      color: #d4380d;
+    }
+
+    .rule-debug-time {
+      color: #e7a69a;
+    }
+  }
+}
+
+.rule-options-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0 28px;
+
+  .ant-form-item {
+    margin-bottom: 20px;
+  }
+
+  .ant-form-item-label {
+    padding-bottom: 2px;
+  }
+}
+
+// 事件时间/重试字段较少，两列更紧凑
+.rule-options-grid-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.rule-options-span-2 {
+  grid-column: 1 / -1;
+}
+
+.rule-options-note {
+  padding-bottom: 8px;
+}
+
+.rule-options-collapse {
+  background: transparent;
+  border: none;
+
+  // 分组之间只用分隔线区分，和调试区共用外层卡片，不再套一层卡片
+  .ant-collapse-item {
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid #eef0f3;
+    border-radius: 0;
+    margin-bottom: 0;
+    overflow: visible;
+  }
+
+  .ant-collapse-item:last-child {
+    border-bottom: 0;
+  }
+
+  .ant-collapse-header {
+    padding: 10px 0 !important;
+    font-weight: 600;
+  }
+
+  .ant-collapse-content-box {
+    padding: 10px 0 18px !important;
+  }
+}
+
+.rule-editor-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  margin: 4px -20px 0;
+  padding: 10px 20px;
+  background: rgba(255, 255, 255, 0.96);
+  border-top: 1px solid #eef0f3;
+  box-shadow: 0 -2px 8px rgba(15, 23, 42, 0.04);
+}
+
+@media (max-width: 1100px) {
+  .rule-options-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1200px) {
+  .rule-action-card-wrapper {
+    min-height: 280px;
+  }
+
+  .rule-action-list {
+    max-height: 260px;
+  }
+}
+
+@media (max-width: 768px) {
+  .rule-editor-page {
+    padding: 12px 12px 0;
+  }
+
+  .rule-editor-footer {
+    margin-inline: -12px;
+    padding-inline: 12px;
+  }
+
+  .rule-options-grid,
+  .rule-options-grid-2 {
+    grid-template-columns: 1fr;
+  }
+
+  .rule-debug-output {
+    height: 280px;
+  }
+}

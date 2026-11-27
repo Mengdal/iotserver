@@ -118,11 +118,16 @@ const pageMetas: Record<string, PageMeta> = {
   // ===== 不在侧边栏、由首页快捷入口等进入的页面 =====
   '/advanced/rule/engine': {
     title: t('规则引擎'),
-    describe: t('对接入平台的设备数据进行过滤、转换，并推送到指定消息目的地；规则需配置消息源、过滤条件和目的地。'),
+    describe: t('对接入平台的设备数据进行过滤、转换，并推送到指定应用；规则需配置消息源、过滤条件和应用。'),
+  },
+  '/advanced/rule/flow': {
+    title: t('流程编排'),
+    banner: 'none',
+    describe: t('用画布编排流处理流程，并编译为 eKuiper 图规则。'),
   },
   '/advanced/resource/manage': {
-    title: t('资源管理'),
-    describe: t('提供消息通信中间件资源，可作为规则引擎的消息目的地，将数据推送到应用平台。'),
+    title: t('北向应用'),
+    describe: t('管理北向应用（HTTP 推送、MQTT、Kafka、InfluxDB），可作为规则引擎的消息目的地。'),
   },
   '/advanced/scene/linkage': {
     title: t('场景联动'),
@@ -144,6 +149,8 @@ const pageRenderedRules: Array<{ test: RegExp, title: string, menuPath?: string 
   { test: /^\/gateway\/device\/detail\//, title: t('设备详情'), menuPath: '/gateway/device/manage' },
   { test: /^\/monitor\/alarmCenter\/detail\//, title: t('规则详情'), menuPath: '/monitor/alarmCenter/list' },
   { test: /^\/advanced\/scene\/log\//, title: t('联动日志'), menuPath: '/advanced/scene/linkage' },
+  { test: /^\/advanced\/rule\/engine\/(new|[^/]+\/edit)$/, title: t('规则编辑'), menuPath: '/advanced/rule/engine' },
+  { test: /^\/advanced\/rule\/flow\/[^/]+$/, title: t('流程编排'), menuPath: '/advanced/rule/flow' },
 ]
 
 /** 带动态段但仍是列表页的路径：按 basePath 取所属菜单的标题条 */
