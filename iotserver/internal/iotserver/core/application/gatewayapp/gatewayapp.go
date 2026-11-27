@@ -93,6 +93,16 @@ func sourceOf(g models.Gateway) string {
 	return g.Source
 }
 
+// refreshCollectorDiscovery 网关 CRUD 后让 iotp 采集器重新发现 broker。
+// 采集器不再定时刷新，拓扑变化靠这里主动触发；多次调用会在采集器内合并。
+func (app *gatewayApp) refreshCollectorDiscovery() {
+	collector := container.IotpCollectorFrom(app.dic.Get)
+	if collector == nil {
+		return
+	}
+	collector.RefreshDiscovery()
+}
+
 // normalizeEngineConfig 校验并规范化软网关的采集引擎配置。
 // 地址必须带 http/https scheme 与主机名；超时缺省 10 秒，夹在 1~300 秒。
 func normalizeEngineConfig(baseURL string, timeoutSec int) (string, int, error) {
@@ -261,6 +271,7 @@ func (app *gatewayApp) GatewayAdd(ctx context.Context, req dtos.GatewayAddReques
 		if syncer := container.IotpSyncFrom(app.dic.Get); syncer != nil {
 			syncer.GatewayCreated(g)
 		}
+		app.refreshCollectorDiscovery()
 	}
 	return res, nil
 }
@@ -416,6 +427,7 @@ func (app *gatewayApp) GatewayUpdate(ctx context.Context, req dtos.GatewayUpdate
 		if err := app.configureEngineMQTT(config); err != nil && app.lc != nil {
 			app.lc.Warnf("软网关 %s 更新采集引擎 MQTT 配置失败: %v", old.Sn, err)
 		}
+		app.refreshCollectorDiscovery()
 	}
 	return nil
 }
@@ -472,6 +484,7 @@ func (app *gatewayApp) GatewayDelete(ctx context.Context, id string) error {
 		if syncer := container.IotpSyncFrom(app.dic.Get); syncer != nil {
 			syncer.GatewayDeleted(g, deviceIDs)
 		}
+		app.refreshCollectorDiscovery()
 	}
 	// things 远端仍是权威：只删本地镜像的话，下一轮对账会把网关重新导入。
 	// 记录删除墓碑，对账时按 SN 跳过，保证「删了就是删了」。

@@ -7,26 +7,49 @@ import (
 	"github.com/LMgateways/iotserver-driver-proto/thingmodel"
 )
 
-// 消息总线负载必须带 tenantId，规则引擎才能按租户过滤共享 stream。
-func TestTransformMessageBusIncludesTenant(t *testing.T) {
+// 驱动/网关的属性报文是 data.<code>={value,time}；总线必须压平成和 iotp 采集链路
+// 一致的 data.<code>=value，否则同一张 mqtt_stream 无法同时服务两种来源。
+func TestTransformMessageBusFlattensPropertyReport(t *testing.T) {
 	msg := ThingModelMessage{
-		Cid:      "device-1",
-		TenantId: "tenant-1",
-		OpType:   int32(thingmodel.OperationType_PROPERTY_REPORT),
-		Data:     `{"data":{"temp":25}}`,
+		Cid:    "device-1",
+		OpType: int32(thingmodel.OperationType_PROPERTY_REPORT),
+		Data:   `{"data":{"temp":{"value":35.5,"time":1795000000000},"switch":{"value":true,"time":1795000000001}}}`,
 	}
-	raw := msg.TransformMessageBus()
-	if len(raw) == 0 {
-		t.Fatal("empty message")
+	var bus MessageBus
+	if err := json.Unmarshal(msg.TransformMessageBus(), &bus); err != nil {
+		t.Fatalf("decode bus: %v", err)
 	}
-	var out MessageBus
-	if err := json.Unmarshal(raw, &out); err != nil {
-		t.Fatalf("unmarshal: %v", err)
+	data, ok := bus.Data.(map[string]interface{})
+	if !ok {
+		t.Fatalf("bus data is not an object: %T", bus.Data)
 	}
-	if out.TenantId != "tenant-1" {
-		t.Fatalf("tenantId = %q, want tenant-1", out.TenantId)
+	if got := data["temp"]; got != 35.5 {
+		t.Fatalf("temp = %v, want 35.5", got)
 	}
-	if out.DeviceId != "device-1" {
-		t.Fatalf("deviceId = %q", out.DeviceId)
+	if got := data["switch"]; got != true {
+		t.Fatalf("switch = %v, want true", got)
+	}
+	if bus.ReportTime != 1795000000001 {
+		t.Fatalf("reportTime = %d", bus.ReportTime)
+	}
+}
+
+// 事件/服务报文不是属性结构，保持原样，不能误压平 eventCode/eventTime。
+func TestTransformMessageBusKeepsEventShape(t *testing.T) {
+	msg := ThingModelMessage{
+		Cid:    "device-1",
+		OpType: int32(thingmodel.OperationType_EVENT_REPORT),
+		Data:   `{"data":{"eventCode":"overheat","eventTime":1795000000000}}`,
+	}
+	var bus MessageBus
+	if err := json.Unmarshal(msg.TransformMessageBus(), &bus); err != nil {
+		t.Fatalf("decode bus: %v", err)
+	}
+	data, ok := bus.Data.(map[string]interface{})
+	if !ok {
+		t.Fatalf("bus data is not an object: %T", bus.Data)
+	}
+	if data["eventCode"] != "overheat" {
+		t.Fatalf("event data was flattened: %v", data)
 	}
 }

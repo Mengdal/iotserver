@@ -116,6 +116,24 @@ func (c ConfigurationStruct) PluginDataDir() string {
 type IntegrationsInfo struct {
 	// EdgeIngest 参考系统（/edge 协议）接入所用的独立 broker 配置
 	EdgeIngest EdgeIngestInfo
+	// IotpCollect iotp 多节点采集：订阅各节点 ingest/#，转成平台 MessageBus 后发到内部总线。
+	IotpCollect IotpCollectInfo
+}
+
+// IotpCollectInfo iotp 多节点采集配置。
+//
+// iotp 集群每个节点有独立的 MQTT broker，平台需要逐节点订阅再把数据汇入
+// MessageQueue.PublishTopicPrefix（默认 eventbus/in），规则引擎才能在一张流里消费。
+// 配置了 [Databases.Data].BaseURL（即接入 iotp）时自动启用，不再需要单独的开关。
+type IotpCollectInfo struct {
+	// Nodes 静态节点列表，格式 "id=tcp://host:port"，例如 "n01=tcp://10.0.0.11:1883"。
+	// 自动发现始终启用；静态节点与发现结果按 broker 地址去重，静态节点优先。
+	Nodes []string
+	// Username / Password 节点 broker 的 MQTT 凭据（允许匿名时留空）。
+	Username string
+	Password string
+	// ResyncIntervalSec 设备映射刷新间隔（秒），<=0 用默认值 60。
+	ResyncIntervalSec int
 }
 
 // EdgeIngestInfo 参考系统（iotddc / things，/edge 协议）接入的 broker 配置。

@@ -34,6 +34,7 @@ import (
 	"iotserver/internal/iotserver/core/application/gatewayapp"
 	"iotserver/internal/iotserver/core/application/gatewayingest"
 	"iotserver/internal/iotserver/core/application/homepageapp"
+	"iotserver/internal/iotserver/core/application/iotpcollectorapp"
 	"iotserver/internal/iotserver/core/application/iotpsync"
 	"iotserver/internal/iotserver/core/application/languagesdkapp"
 	"iotserver/internal/iotserver/core/application/messageapp"
@@ -405,6 +406,16 @@ func (b *Bootstrap) initClient(ctx context.Context, wg *sync.WaitGroup, dic *di.
 	})
 	// 网关/设备归属对账：启动后补一次，之后定期执行（仅 Type=iotp 时真正启用）。
 	iotpSync.Start(ctx)
+
+	// iotp 多节点采集：逐节点订阅 ingest/#，转成 MessageBus 写入内部总线。
+	// 未配置 [Integrations.IotpCollect] 时为 no-op。
+	iotpCollector := iotpcollectorapp.New(dic)
+	dic.Update(di.ServiceConstructorMap{
+		container.IotpCollectorItfName: func(get di.Get) interface{} {
+			return iotpCollector
+		},
+	})
+	iotpCollector.Start(ctx)
 
 	// 设备级采集配置：点位按产品物模型生成；当前只保存到平台。
 	collectApp := collectapp.NewCollectApp(ctx, dic)

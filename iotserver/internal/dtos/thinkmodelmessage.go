@@ -36,10 +36,16 @@ func (m *ThingModelMessage) String() string {
 }
 
 type MessageBus struct {
-	DeviceId    string      `json:"deviceId"`
-	TenantId    string      `json:"tenantId,omitempty"`
-	MessageType string      `json:"messageType"`
-	Data        interface{} `json:"data"`
+	DeviceId    string `json:"deviceId"`
+	DeviceName  string `json:"deviceName,omitempty"`
+	ProductId   string `json:"productId,omitempty"`
+	ProductName string `json:"productName,omitempty"`
+	TenantId    string `json:"tenantId,omitempty"`
+	MessageType string `json:"messageType"`
+	// ReportTime 属性上报时间（毫秒）。属性报文每个测点各带 time，
+	// 取最大值放到消息级字段，供告警/规则在扁平化 data 后仍能拿到上报时间。
+	ReportTime int64       `json:"reportTime,omitempty"`
+	Data       interface{} `json:"data"`
 }
 
 func (m *ThingModelMessage) TransformMessageBus() []byte {
@@ -52,9 +58,43 @@ func (m *ThingModelMessage) TransformMessageBus() []byte {
 	if err != nil {
 		return nil
 	}
-	messageBus.Data = data["data"]
+	// 驱动/网关的属性报文是 data.<code> = {value,time}；iotp 采集链路是扁平
+	// data.<code> = value。消息总线必须只有一种形状，规则 SQL 才能同时覆盖两种来源。
+	if m.GetOpType() == thingmodel.OperationType_PROPERTY_REPORT {
+		messageBus.Data, messageBus.ReportTime = flattenPropertyReport(data["data"])
+	} else {
+		messageBus.Data = data["data"]
+	}
 	b, _ := json.Marshal(messageBus)
 	return b
+}
+
+// flattenPropertyReport 把 {code:{value,time}} 压平成 {code:value}。
+// 已是标量的字段原样保留；没有任何测点时间时 reportTime 为 0。
+func flattenPropertyReport(raw interface{}) (map[string]interface{}, int64) {
+	flat := make(map[string]interface{})
+	report, ok := raw.(map[string]interface{})
+	if !ok {
+		return flat, 0
+	}
+	var reportTime int64
+	for code, value := range report {
+		item, ok := value.(map[string]interface{})
+		if !ok {
+			flat[code] = value
+			continue
+		}
+		fieldValue, ok := item["value"]
+		if !ok {
+			flat[code] = value
+			continue
+		}
+		flat[code] = fieldValue
+		if ts, ok := item["time"].(float64); ok && int64(ts) > reportTime {
+			reportTime = int64(ts)
+		}
+	}
+	return flat, reportTime
 }
 
 func (m *ThingModelMessage) GetOpType() thingmodel.OperationType {
