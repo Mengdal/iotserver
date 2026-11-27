@@ -29,8 +29,8 @@ func TestTransformMessageBusFlattensPropertyReport(t *testing.T) {
 	if got := data["switch"]; got != true {
 		t.Fatalf("switch = %v, want true", got)
 	}
-	if bus.ReportTime != 1795000000001 {
-		t.Fatalf("reportTime = %d", bus.ReportTime)
+	if bus.Time != 1795000000001 {
+		t.Fatalf("time = %d", bus.Time)
 	}
 }
 
@@ -51,5 +51,25 @@ func TestTransformMessageBusKeepsEventShape(t *testing.T) {
 	}
 	if data["eventCode"] != "overheat" {
 		t.Fatalf("event data was flattened: %v", data)
+	}
+	if bus.Time != 1795000000000 {
+		t.Fatalf("事件消息 time 应取 eventTime，实际 %d", bus.Time)
+	}
+}
+
+// 批报消息时间取批次顶层 time，事件消息取 eventTime，
+// 供告警/规则统一按消息级 time 处理。
+func TestTransformMessageBusTimeForBatch(t *testing.T) {
+	batch := ThingModelMessage{
+		Cid:    "device-1",
+		OpType: int32(thingmodel.OperationType_DATA_BATCH_REPORT),
+		Data:   `{"msgId":"m1","time":1795000000003,"data":{"properties":{"temp":{"value":1,"time":1795000000004}}}}`,
+	}
+	var bus MessageBus
+	if err := json.Unmarshal(batch.TransformMessageBus(), &bus); err != nil {
+		t.Fatalf("decode batch bus: %v", err)
+	}
+	if bus.Time != 1795000000003 {
+		t.Fatalf("批报消息 time = %d", bus.Time)
 	}
 }

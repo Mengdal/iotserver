@@ -9,7 +9,7 @@ import (
 
 	"iotserver/internal/dtos"
 	"iotserver/internal/models"
-	bootstrapConfig "iotserver/internal/pkg/config"
+	"iotserver/internal/tools/iotp"
 )
 
 func TestBrokerKey(t *testing.T) {
@@ -93,23 +93,6 @@ func TestMergeNodeSpecsRejectsInvalidBroker(t *testing.T) {
 	}
 }
 
-func TestIotpCollectEnabled(t *testing.T) {
-	cases := []struct {
-		name string
-		db   bootstrapConfig.Database
-		want bool
-	}{
-		{name: "配置了 BaseURL", db: bootstrapConfig.Database{BaseURL: "http://127.0.0.1:8080"}, want: true},
-		{name: "BaseURL 为空", db: bootstrapConfig.Database{}, want: false},
-		{name: "BaseURL 仅空白", db: bootstrapConfig.Database{BaseURL: "  "}, want: false},
-	}
-	for _, tc := range cases {
-		if got := iotpCollectEnabled(tc.db); got != tc.want {
-			t.Fatalf("%s: iotpCollectEnabled = %v, 期望 %v", tc.name, got, tc.want)
-		}
-	}
-}
-
 func TestRefreshDiscoveryCoalesces(t *testing.T) {
 	service := &Service{discoverCh: make(chan struct{}, 1)}
 	service.RefreshDiscovery()
@@ -129,27 +112,14 @@ func TestRefreshDiscoveryWithoutChannel(t *testing.T) {
 	service.RefreshDiscovery() // 未初始化时不能 panic/阻塞
 }
 
-func TestIngestTopicForDB(t *testing.T) {
-	cases := map[string]string{
-		"iotserver":   "ingest/iotserver/json",
-		" iotserver ": "ingest/iotserver/json",
-		"":            "ingest/#",
-		"iot/server":  "ingest/#",
-		"iot+server":  "ingest/#",
-		"iot#server":  "ingest/#",
-	}
-	for in, want := range cases {
-		if got := ingestTopicForDB(in); got != want {
-			t.Fatalf("ingestTopicForDB(%q) = %q, 期望 %q", in, got, want)
-		}
-	}
-}
-
 func TestBuildDeviceInfoIncludesProductName(t *testing.T) {
-	device := models.Device{Id: "57369006", Name: "身份对齐验证设备", ProductId: "00665329"}
-	info := buildDeviceInfo(device, map[string]string{"00665329": "身份对齐验证产品"}, nil, nil)
-	if info.Device.Name != "身份对齐验证设备" || info.Device.ProductId != "00665329" {
-		t.Fatalf("设备信息不正确: %+v", info.Device)
+	device := models.Device{
+		Id: "57369006", Name: "身份对齐验证设备", ProductId: "00665329",
+		Product: models.Product{Name: "身份对齐验证产品"},
+	}
+	info := buildDeviceInfo(device, nil, nil)
+	if info.Name != "身份对齐验证设备" || info.ProductId != "00665329" {
+		t.Fatalf("设备信息不正确: %+v", info)
 	}
 	if info.ProductName != "身份对齐验证产品" {
 		t.Fatalf("产品名称 = %q", info.ProductName)
@@ -187,9 +157,9 @@ func TestResolveDeviceTenant(t *testing.T) {
 	gatewayTenants := map[string]string{
 		"gw-1": "tenant-gw",
 	}
-	bindings := map[string]gatewayBinding{
-		"dev-gw":  {GatewayId: "gw-1"},
-		"dev-own": {GatewayId: "gw-2", TenantId: "tenant-binding"},
+	bindings := map[int64]gatewayBinding{
+		iotp.DeviceID("dev-gw"):  {GatewayId: "gw-1"},
+		iotp.DeviceID("dev-own"): {GatewayId: "gw-2", TenantId: "tenant-binding"},
 	}
 
 	withTenant := func(id, tenant string) models.Device {

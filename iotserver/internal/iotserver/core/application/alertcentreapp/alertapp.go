@@ -188,7 +188,7 @@ func (p alertApp) UpdateAlertRule(ctx context.Context, req dtos.RuleUpdateReques
 		if !find {
 			return errort.NewCommonEdgeX(errort.ProductPropertyCodeNotExist, "product event code exist", nil)
 		}
-		sqlTemp := `SELECT rule_id(),json_path_query(data, "$.eventTime") as report_time,deviceId FROM mqtt_stream where deviceId = "%s" and messageType = "EVENT_REPORT" and  json_path_exists(data, "$.eventCode") = true and json_path_query(data, "$.eventCode") = "%s"`
+		sqlTemp := `SELECT rule_id(),time,deviceId FROM mqtt_stream where deviceId = "%s" and messageType = "EVENT_REPORT" and  json_path_exists(data, "$.eventCode") = true and json_path_query(data, "$.eventCode") = "%s"`
 		sql = fmt.Sprintf(sqlTemp, device.Id, code)
 	case constants.DeviceStatusTrigger:
 		//{"code":"","device_id":"2499708","end_at":null,"start_at":null}
@@ -207,7 +207,7 @@ func (p alertApp) UpdateAlertRule(ctx context.Context, req dtos.RuleUpdateReques
 			err = errort.NewCommonEdgeX(errort.DefaultReqParamsError, "required status parameter missing", nil)
 			return err
 		}
-		sqlTemp := `SELECT rule_id(),json_path_query(data, "$.time") as report_time,deviceId FROM mqtt_stream where deviceId = "%s" and messageType = "DEVICE_STATUS" and  json_path_exists(data, "$.status") = true and json_path_query(data, "$.status") = "%s"`
+		sqlTemp := `SELECT rule_id(),time,deviceId FROM mqtt_stream where deviceId = "%s" and messageType = "DEVICE_STATUS" and  json_path_exists(data, "$.status") = true and json_path_query(data, "$.status") = "%s"`
 		sql = fmt.Sprintf(sqlTemp, device.Id, status)
 	default:
 		return errort.NewCommonEdgeX(errort.DefaultReqParamsError, "update rule trigger is required", nil)
@@ -773,8 +773,8 @@ func (p alertApp) AddAlert(ctx context.Context, req map[string]interface{}) erro
 		p.lc.Info("msg report1:", req["window_start"])
 		alertResult["start_at"] = req["window_start"]
 		alertResult["end_at"] = req["window_end"]
-	} else if req["report_time"] != nil {
-		reportTime := utils.InterfaceToString(req["report_time"])
+	} else if req["time"] != nil {
+		reportTime := utils.InterfaceToString(req["time"])
 		if len(reportTime) > 3 {
 			sa, err := strconv.Atoi(reportTime[0:len(reportTime)-3] + "000")
 			if err == nil {

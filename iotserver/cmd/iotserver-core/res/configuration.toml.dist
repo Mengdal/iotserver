@@ -57,19 +57,19 @@ Host = 'ekuiper'
 Port = 9081
 
 # ========== iotp 多节点采集（可选） ==========
-# iotp 集群每个节点有独立 MQTT broker；启用后平台逐节点订阅 ingest/#，
+# iotp 集群每个节点有独立 MQTT broker；启用后平台逐节点订阅 ingest/<库名>/json，
 # 转成 MessageBus 报文写入上面的 MessageQueue（eventbus/in），
 # 规则引擎即可在一张流里消费全集群数据。
 # [Integrations.IotpCollect]
-# [Databases.Data].BaseURL 非空时自动启用，无需单独开关。
+# 由 Databases.Data 的 BaseURL 非空自动启用，无需单独开关。
 # 自动从受管软网关（source=ioserver）的采集引擎发现 MQTT 目标：
-# 启动时发现一次，网关新增/修改/删除后由平台触发刷新。
+# 启动时发现一次，之后按 ResyncIntervalSec 周期刷新，网关增删改时也会立即刷新。
 # 额外静态节点，与自动发现结果按 broker 地址去重（静态节点优先）。
 # Nodes = [
 #   'n01=tcp://10.0.0.11:1883',
 #   'n02=tcp://10.0.0.12:1883',
 # ]
-# 订阅主题固定为 ingest/<Databases.Data.Name>/json，不需要配置。
+# 订阅主题由 Databases.Data.Name 推导，库名缺省为 iotserver。
 # 消息类型固定为 PROPERTY_REPORT。
 # 租户按「设备自身 → 采集网关」自动解析，不再使用全局兜底租户。
 # 未匹配到平台设备时按原始数字 ID 转发（无租户）。

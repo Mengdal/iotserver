@@ -25,12 +25,21 @@ import (
 
 func (p alertApp) monitor() {
 	tickTime := time.Second * 5
-	timeTickerChan := time.Tick(tickTime)
-	for {
-		select {
-		case <-timeTickerChan:
-			p.checkRuleStatus()
+	ticker := time.NewTicker(tickTime)
+	defer ticker.Stop()
+
+	// 首次在 5s 后执行，避免和初始化阶段的 eKuiper 客户端注册竞争；
+	// eKuiper 未就绪时每分钟重试，成功后不再重复下发。
+	migrated := false
+	var nextMigrate time.Time
+	for now := range ticker.C {
+		if !migrated && !now.Before(nextMigrate) {
+			migrated = p.resyncAlertRuleSql()
+			if !migrated {
+				nextMigrate = now.Add(time.Minute)
+			}
 		}
+		p.checkRuleStatus()
 	}
 }
 

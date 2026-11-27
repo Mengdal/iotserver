@@ -120,7 +120,7 @@ func (app *ruleEngineApp) RuleEngineAdd(ctx context.Context, req dtos.RuleEngine
 	if err := checkTextLen(req.Description, req.Filter.Sql); err != nil {
 		return err
 	}
-	resource, err := app.checkParam(ctx, req.Name, req.DataResourceId, req.ResourceTypeValue())
+	resource, err := app.checkParam(ctx, req.Name, req.DataResourceId, req.ResourceType)
 	if err != nil {
 		return err
 	}
@@ -190,7 +190,7 @@ func (app *ruleEngineApp) RuleEngineUpdate(ctx context.Context, req dtos.RuleEng
 	if old.Status == string(constants.RuleEngineStart) {
 		return errort.NewCommonErr(errort.RuleEngineIsStartingNotAllowUpdate, nil)
 	}
-	resource, err := app.checkParam(ctx, req.Name, req.DataResourceId, req.ResourceTypeValue())
+	resource, err := app.checkParam(ctx, req.Name, req.DataResourceId, req.ResourceType)
 	if err != nil {
 		return err
 	}

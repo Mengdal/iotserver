@@ -75,8 +75,8 @@ var auditModuleByPrefix = map[string]string{
 	"docker-configs":   "驱动镜像",
 	"device-libraries": "驱动管理", "device-servers": "驱动管理",
 	"device-classify": "驱动管理", "driver-classify": "驱动管理",
-	"sys-audit-log": "审查日志", "sys-login-log": "审查日志",
-	"auth": "认证",
+	"sys-audit-log": "审查日志",
+	"auth":          "认证",
 }
 
 // AuditLog 审查日志（操作日志）中间件：挂在 JWT + 租户上下文之后。

@@ -4,12 +4,13 @@ import (
 	"testing"
 
 	"iotserver/internal/models"
+	"iotserver/internal/tools/iotp"
 )
 
 // 平台设备 ID 可能带前导零，采集配置里的 iotp 数字键不带；查绑定必须归一化。
 func TestResolveDeviceTenantNormalizesDeviceID(t *testing.T) {
-	bindings := map[string]gatewayBinding{
-		"1234567": {GatewayId: "gw-1", TenantId: "binding-tenant"},
+	bindings := map[int64]gatewayBinding{
+		iotp.DeviceID("1234567"): {GatewayId: "gw-1", TenantId: "binding-tenant"},
 	}
 
 	got := resolveDeviceTenant(models.Device{Id: "01234567"}, bindings, nil)

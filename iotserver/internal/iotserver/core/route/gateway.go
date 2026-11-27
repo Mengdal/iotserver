@@ -347,14 +347,6 @@ func RegisterGateway(engine *gin.Engine, dic *di.Container) {
 		v1Auth.DELETE("sys-audit-log", ctl.Perm(middleware.PermAuditLogRemove), ctl.SysAuditLogDelete)
 		v1Auth.DELETE("sys-audit-log/clear", ctl.Perm(middleware.PermAuditLogRemove), ctl.SysAuditLogClear)
 
-		// 兼容别名：旧「登入日志」接口与权限码保留一版，行为等价 type=login（下版本删除）
-		v1Auth.GET("sys-login-log",
-			ctl.Perm(middleware.PermAuditLogList, middleware.PermLoginLogList), ctl.SysLoginLogSearch)
-		v1Auth.DELETE("sys-login-log",
-			ctl.Perm(middleware.PermAuditLogRemove, middleware.PermLoginLogRemove), ctl.SysLoginLogDelete)
-		v1Auth.DELETE("sys-login-log/clear",
-			ctl.Perm(middleware.PermAuditLogRemove, middleware.PermLoginLogRemove), ctl.SysLoginLogClear)
-
 		// 系统配置的读接口与写接口同在「平台管理」组（PlatformOnly），租户不可见。
 	}
 

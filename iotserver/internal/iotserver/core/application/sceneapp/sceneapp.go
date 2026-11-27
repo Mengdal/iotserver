@@ -637,14 +637,14 @@ func (app *sceneApp) buildSql(conditions []models.SceneCondition) string {
 		}
 		return req.BuildEkuiperSql(option["device_id"], specsType)
 	case constants.DeviceEventTrigger:
-		return fmt.Sprintf(`SELECT rule_id(),json_path_query(data, "$.eventTime") as report_time,deviceId FROM mqtt_stream where deviceId = "%s" and messageType = "EVENT_REPORT" and json_path_exists(data, "$.eventCode") = true and json_path_query(data, "$.eventCode") = "%s"`,
+		return fmt.Sprintf(`SELECT rule_id(),time,deviceId FROM mqtt_stream where deviceId = "%s" and messageType = "EVENT_REPORT" and json_path_exists(data, "$.eventCode") = true and json_path_query(data, "$.eventCode") = "%s"`,
 			option["device_id"], option["code"])
 	case constants.DeviceStatusTrigger:
 		status := constants.DeviceOnline
 		if option["status"] == "离线" {
 			status = constants.DeviceOffline
 		}
-		return fmt.Sprintf(`SELECT rule_id(),json_path_query(data, "$.time") as report_time,deviceId FROM mqtt_stream where deviceId = "%s" and messageType = "DEVICE_STATUS" and json_path_exists(data, "$.status") = true and json_path_query(data, "$.status") = "%s"`,
+		return fmt.Sprintf(`SELECT rule_id(),time,deviceId FROM mqtt_stream where deviceId = "%s" and messageType = "DEVICE_STATUS" and json_path_exists(data, "$.status") = true and json_path_query(data, "$.status") = "%s"`,
 			option["device_id"], status)
 	default:
 		return ""

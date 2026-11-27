@@ -273,10 +273,6 @@ func (c *Client) DeleteDevice(ctx context.Context, deviceID int64) error {
 	return err
 }
 
-// DeviceID 把平台设备 ID 转成 iotp 的正整数 device_id。
-//
-// 平台 ID 默认是 8 位数字（utils.RandomNum），直接解析即可；
-// 非数字 ID 退化为 53 位 FNV 哈希，保证在 JS 安全整数范围内。
 // DeviceID 把平台设备 ID 映射成 iotp 的 device_id。
 //
 // 纯数字 ID 直接使用；其它形态用 FNV-64a 派生，但必须落在 2^40 以下——

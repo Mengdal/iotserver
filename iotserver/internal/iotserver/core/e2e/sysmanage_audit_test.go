@@ -370,35 +370,3 @@ func TestAuditLogWhitelistPaths(t *testing.T) {
 		}
 	}
 }
-
-/******************************* 用例 8：旧接口兼容别名 *******************************/
-
-func TestAuditLogLegacyLoginLogRoute(t *testing.T) {
-	env := setupTestEnv(t)
-
-	// 造一条操作记录，旧接口不应返回它
-	body, _ := json.Marshal(map[string]interface{}{
-		"name": "audit-product-legacy", "category_template_id": "1",
-		"protocol": "MQTT", "node_type": "1", "net_type": "1", "data_format": "1",
-	})
-	if resp := parseResponse(t, doRequest(env.engine, http.MethodPost, "/api/v1/product", env.token, body)); !resp.Success {
-		t.Fatalf("新增产品失败: %v", resp.ErrorMsg)
-	}
-	env.auditApp.Flush()
-
-	w := doRequest(env.engine, http.MethodGet, "/api/v1/sys-login-log?isAll=true", env.token, nil)
-	resp := parseResponse(t, w)
-	if !resp.Success {
-		t.Fatalf("旧登入日志接口应保持可用: %v", resp.ErrorMsg)
-	}
-	list, _ := resp.Result.(map[string]interface{})["list"].([]interface{})
-	if len(list) == 0 {
-		t.Fatal("旧登入日志接口应返回登录记录")
-	}
-	for _, item := range list {
-		r, _ := item.(map[string]interface{})
-		if r["type"] != models.AuditTypeLogin {
-			t.Fatalf("旧接口应等价 type=login，实际返回: %+v", r)
-		}
-	}
-}

@@ -51,7 +51,7 @@
 
 - `GET /api/v1/sys-audit-log`（筛选：username / type / module / status / 时间范围 / 分页）
 - `DELETE /api/v1/sys-audit-log`（按 id 批量删）、`DELETE /api/v1/sys-audit-log/clear`（按当前租户范围清空）
-- 权限码：`system:auditlog:list`、`system:auditlog:remove`；旧 `system:loginlog:*` 保留一版做兼容别名
+- 权限码：`system:auditlog:list`、`system:auditlog:remove`；旧 `system:loginlog:*` 别名已移除
 - 菜单：`MenuAdminLoginLog` → 名称**「审查日志」**，路径 `/admin/sysLoginLog` → **`/admin/sysAuditLog`**，仍在「系统管理」下 Sort 5
 
 ## 5. 前端

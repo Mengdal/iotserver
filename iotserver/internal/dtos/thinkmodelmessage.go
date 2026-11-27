@@ -42,10 +42,10 @@ type MessageBus struct {
 	ProductName string `json:"productName,omitempty"`
 	TenantId    string `json:"tenantId,omitempty"`
 	MessageType string `json:"messageType"`
-	// ReportTime 属性上报时间（毫秒）。属性报文每个测点各带 time，
-	// 取最大值放到消息级字段，供告警/规则在扁平化 data 后仍能拿到上报时间。
-	ReportTime int64       `json:"reportTime,omitempty"`
-	Data       interface{} `json:"data"`
+	// Time 消息时间（毫秒）：属性上报取所有测点时间的最大值，事件取 eventTime，
+	// 设备状态取状态时间，批报取批次时间。告警/规则直接用它作为上报时间。
+	Time int64       `json:"time,omitempty"`
+	Data interface{} `json:"data"`
 }
 
 func (m *ThingModelMessage) TransformMessageBus() []byte {
@@ -60,41 +60,64 @@ func (m *ThingModelMessage) TransformMessageBus() []byte {
 	}
 	// 驱动/网关的属性报文是 data.<code> = {value,time}；iotp 采集链路是扁平
 	// data.<code> = value。消息总线必须只有一种形状，规则 SQL 才能同时覆盖两种来源。
-	if m.GetOpType() == thingmodel.OperationType_PROPERTY_REPORT {
-		messageBus.Data, messageBus.ReportTime = flattenPropertyReport(data["data"])
-	} else {
+	switch m.GetOpType() {
+	case thingmodel.OperationType_PROPERTY_REPORT:
+		messageBus.Data, messageBus.Time = flattenPropertyReport(data["data"])
+	case thingmodel.OperationType_EVENT_REPORT:
+		messageBus.Data = data["data"]
+		messageBus.Time = nestedMillis(data["data"], "eventTime")
+	case thingmodel.OperationType_DATA_BATCH_REPORT:
+		// 批报的属性/事件仍在 data 里，消息时间取批次时间。
+		messageBus.Data = data["data"]
+		messageBus.Time = millis(data["time"])
+	default:
 		messageBus.Data = data["data"]
 	}
 	b, _ := json.Marshal(messageBus)
 	return b
 }
 
+// millis 把 JSON 数字转成毫秒时间戳；缺失或非法时返回 0。
+func millis(v interface{}) int64 {
+	if f, ok := v.(float64); ok && f > 0 {
+		return int64(f)
+	}
+	return 0
+}
+
+// nestedMillis 读取对象字段里的毫秒时间。
+func nestedMillis(raw interface{}, field string) int64 {
+	m, ok := raw.(map[string]interface{})
+	if !ok {
+		return 0
+	}
+	return millis(m[field])
+}
+
 // flattenPropertyReport 把 {code:{value,time}} 压平成 {code:value}。
-// 已是标量的字段原样保留；没有任何测点时间时 reportTime 为 0。
+// 已是标量的字段原样保留；没有任何测点时间时返回 0。
 func flattenPropertyReport(raw interface{}) (map[string]interface{}, int64) {
-	flat := make(map[string]interface{})
 	report, ok := raw.(map[string]interface{})
 	if !ok {
-		return flat, 0
+		return map[string]interface{}{}, 0
 	}
 	var reportTime int64
+	// 原地压平：report 是本次 json.Unmarshal 新建的 map，不会被调用方复用。
 	for code, value := range report {
 		item, ok := value.(map[string]interface{})
 		if !ok {
-			flat[code] = value
 			continue
 		}
 		fieldValue, ok := item["value"]
 		if !ok {
-			flat[code] = value
 			continue
 		}
-		flat[code] = fieldValue
+		report[code] = fieldValue
 		if ts, ok := item["time"].(float64); ok && int64(ts) > reportTime {
 			reportTime = int64(ts)
 		}
 	}
-	return flat, reportTime
+	return report, reportTime
 }
 
 func (m *ThingModelMessage) GetOpType() thingmodel.OperationType {

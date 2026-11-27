@@ -407,8 +407,8 @@ func (b *Bootstrap) initClient(ctx context.Context, wg *sync.WaitGroup, dic *di.
 	// 网关/设备归属对账：启动后补一次，之后定期执行（仅 Type=iotp 时真正启用）。
 	iotpSync.Start(ctx)
 
-	// iotp 多节点采集：逐节点订阅 ingest/#，转成 MessageBus 写入内部总线。
-	// 未配置 [Integrations.IotpCollect] 时为 no-op。
+	// iotp 多节点采集：逐节点订阅 ingest/<db>/json，转成 MessageBus 写入内部总线。
+	// [Databases.Data].BaseURL 为空时为 no-op。
 	iotpCollector := iotpcollectorapp.New(dic)
 	dic.Update(di.ServiceConstructorMap{
 		container.IotpCollectorItfName: func(get di.Get) interface{} {

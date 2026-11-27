@@ -6,7 +6,6 @@ import "iotserver/internal/models"
 //
 // 实现必须是异步、失败隔离的：iotp 不可用不能阻塞产品/设备创建。
 type IotpSyncItf interface {
-	Enabled() bool
 	// ProductCreated 产品创建/发布：建库建表、同步基础标签与物模型字段。
 	ProductCreated(product models.Product, tenantID string)
 	// ProductUpdated 产品资料更新：刷新表字段元数据（product_id 字段的 product_name）。
@@ -35,6 +34,4 @@ type IotpSyncItf interface {
 	DeviceGatewayBound(device models.Device, gatewaySn string)
 	// DeviceGatewayUnbound 设备从软网关解绑：清除 iotp 设备归属。
 	DeviceGatewayUnbound(iotpDeviceID int64)
-	// ReconcileGateways 启动/定期对账：补齐缺失的网关声明与设备归属。
-	ReconcileGateways()
 }

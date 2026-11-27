@@ -1,8 +1,6 @@
 package dtos
 
 import (
-	"strings"
-
 	"iotserver/internal/models"
 )
 
@@ -20,20 +18,10 @@ type RuleEngineAddRequest struct {
 	Name           string `json:"name"`
 	Description    string `json:"description"`
 	DataResourceId string `json:"data_resource_id"`
-	// Method 前端 Radio 的资源类型字段名
-	Method string `json:"method"`
-	// ResourceType 编辑回填时也会带上
+	// ResourceType 资源类型（前端 Radio 提交）
 	ResourceType string                  `json:"resource_type"`
 	Status       string                  `json:"status"`
 	Filter       models.RuleEngineFilter `json:"filter"`
-}
-
-// ResourceTypeValue 资源类型取值：优先 resource_type，兼容早期前端使用的 method 字段
-func (r RuleEngineAddRequest) ResourceTypeValue() string {
-	if strings.TrimSpace(r.ResourceType) != "" {
-		return r.ResourceType
-	}
-	return r.Method
 }
 
 // RuleEngineUpdateRequest 修改规则
