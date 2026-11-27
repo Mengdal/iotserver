@@ -73,9 +73,10 @@ func (tmq *MessageApp) DeviceStatusToMessageBus(ctx context.Context, deviceId, d
 	messageBus.DeviceId = deviceId
 	messageBus.TenantId = tmq.tenantIDFor(ctx, deviceId)
 	messageBus.MessageType = "DEVICE_STATUS"
+	messageBus.Time = time.Now().UnixMilli()
 	messageBus.Data = map[string]interface{}{
 		"status": deviceStatus,
-		"time":   time.Now().UnixMilli(),
+		"time":   messageBus.Time,
 	}
 	b, _ := json.Marshal(messageBus)
 	tmq.pushMsgToMessageBus(b)

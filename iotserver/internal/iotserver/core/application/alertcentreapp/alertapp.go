@@ -89,54 +89,6 @@ func NewAlertCentreApp(ctx context.Context, dic *di.Container) interfaces.AlertR
 	return app
 }
 
-// resyncAlertRuleSql 用库里的规则重新生成并下发 eKuiper SQL（失败只告警，不影响启动）。
-func (p alertApp) resyncAlertRuleSql() {
-	rules, _, err := p.dbClient.WithCtx(tenant.Platform(context.Background())).AlertRuleSearch(
-		0, -1, dtos.AlertRuleSearchQueryRequest{})
-	if err != nil {
-		p.lc.Warnf("resync alert rules: query failed: %v", err)
-		return
-	}
-	for i := range rules {
-		rule := rules[i]
-		if len(rule.SubRule) == 0 {
-			continue
-		}
-		subRules := make([]dtos.SubRule, 0, len(rule.SubRule))
-		for _, sub := range rule.SubRule {
-			subRules = append(subRules, dtos.SubRule{
-				Trigger:   sub.Trigger,
-				ProductId: sub.ProductId,
-				DeviceId:  sub.DeviceId,
-				Option:    sub.Option,
-			})
-		}
-		notifies := make([]dtos.Notify, 0, len(rule.Notify))
-		for _, notify := range rule.Notify {
-			notifies = append(notifies, dtos.Notify{
-				Name:            notify.Name,
-				Option:          notify.Option,
-				StartEffectTime: notify.StartEffectTime,
-				EndEffectTime:   notify.EndEffectTime,
-			})
-		}
-		silence := rule.SilenceTime
-		ruleCtx := tenant.Platform(context.Background())
-		if strings.TrimSpace(rule.TenantId) != "" {
-			ruleCtx = tenant.With(context.Background(), tenant.Context{TenantID: rule.TenantId})
-		}
-		if err := p.UpdateAlertRule(ruleCtx, dtos.RuleUpdateRequest{
-			Id:          rule.Id,
-			Condition:   rule.Condition,
-			SubRule:     subRules,
-			Notify:      notifies,
-			SilenceTime: &silence,
-		}); err != nil {
-			p.lc.Warnf("resync alert rule %s(%s) failed: %v", rule.Name, rule.Id, err)
-		}
-	}
-}
-
 func (p alertApp) AddAlertRule(ctx context.Context, req dtos.RuleAddRequest) (string, error) {
 	var insertAlertRule models.AlertRule
 	insertAlertRule.Id = utils.RandomNum()
@@ -265,7 +217,7 @@ func (p alertApp) UpdateAlertRule(ctx context.Context, req dtos.RuleUpdateReques
 		if !find {
 			return errort.NewCommonEdgeX(errort.ProductPropertyCodeNotExist, "product event code exist", nil)
 		}
-		sqlTemp := `SELECT rule_id(),json_path_query(data, "$.eventTime") as report_time,deviceId FROM mqtt_stream where deviceId = "%s" and messageType = "EVENT_REPORT" and  json_path_exists(data, "$.eventCode") = true and json_path_query(data, "$.eventCode") = "%s"`
+		sqlTemp := `SELECT rule_id(),time,deviceId FROM mqtt_stream where deviceId = "%s" and messageType = "EVENT_REPORT" and  json_path_exists(data, "$.eventCode") = true and json_path_query(data, "$.eventCode") = "%s"`
 		sql = fmt.Sprintf(sqlTemp, device.Id, code)
 	case constants.DeviceStatusTrigger:
 		//{"code":"","device_id":"2499708","end_at":null,"start_at":null}
@@ -284,7 +236,7 @@ func (p alertApp) UpdateAlertRule(ctx context.Context, req dtos.RuleUpdateReques
 			err = errort.NewCommonEdgeX(errort.DefaultReqParamsError, "required status parameter missing", nil)
 			return err
 		}
-		sqlTemp := `SELECT rule_id(),json_path_query(data, "$.time") as report_time,deviceId FROM mqtt_stream where deviceId = "%s" and messageType = "DEVICE_STATUS" and  json_path_exists(data, "$.status") = true and json_path_query(data, "$.status") = "%s"`
+		sqlTemp := `SELECT rule_id(),time,deviceId FROM mqtt_stream where deviceId = "%s" and messageType = "DEVICE_STATUS" and  json_path_exists(data, "$.status") = true and json_path_query(data, "$.status") = "%s"`
 		sql = fmt.Sprintf(sqlTemp, device.Id, status)
 	default:
 		return errort.NewCommonEdgeX(errort.DefaultReqParamsError, "update rule trigger is required", nil)
@@ -850,8 +802,8 @@ func (p alertApp) AddAlert(ctx context.Context, req map[string]interface{}) erro
 		p.lc.Info("msg report1:", req["window_start"])
 		alertResult["start_at"] = req["window_start"]
 		alertResult["end_at"] = req["window_end"]
-	} else if req["report_time"] != nil {
-		reportTime := utils.InterfaceToString(req["report_time"])
+	} else if req["time"] != nil {
+		reportTime := utils.InterfaceToString(req["time"])
 		if len(reportTime) > 3 {
 			sa, err := strconv.Atoi(reportTime[0:len(reportTime)-3] + "000")
 			if err == nil {

@@ -63,10 +63,6 @@ const (
 	PermAuditLogList   = permissions.AuditLogList
 	PermAuditLogRemove = permissions.AuditLogRemove
 
-	// 兼容别名：旧权限码保留一版，下版本删除
-	PermLoginLogList   = permissions.LoginLogList
-	PermLoginLogRemove = permissions.LoginLogRemove
-
 	PermConfigList   = permissions.ConfigList
 	PermConfigQuery  = permissions.ConfigQuery
 	PermConfigAdd    = permissions.ConfigAdd

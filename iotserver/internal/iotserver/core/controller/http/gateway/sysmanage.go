@@ -19,7 +19,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"iotserver/internal/dtos"
-	"iotserver/internal/models"
 	"iotserver/internal/pkg/constants"
 	"iotserver/internal/pkg/errort"
 	"iotserver/internal/pkg/httphelper"
@@ -723,7 +722,7 @@ func (ctl *controller) SysDeptDelete(c *gin.Context) {
 // @Success 200 {object} httphelper.CommonResponse
 // @Router  /api/v1/sys-audit-log [get]
 func (ctl *controller) SysAuditLogSearch(c *gin.Context) {
-	ctl.auditLogSearch(c, "")
+	ctl.auditLogSearch(c)
 }
 
 // @Tags    系统管理-审查日志
@@ -744,30 +743,12 @@ func (ctl *controller) SysAuditLogClear(c *gin.Context) {
 	ctl.auditLogClear(c)
 }
 
-/******* 兼容别名：旧 /sys-login-log 路由，行为等价 type=login（下版本删除） *******/
-
-func (ctl *controller) SysLoginLogSearch(c *gin.Context) {
-	ctl.auditLogSearch(c, models.AuditTypeLogin)
-}
-
-func (ctl *controller) SysLoginLogDelete(c *gin.Context) {
-	ctl.auditLogDelete(c)
-}
-
-func (ctl *controller) SysLoginLogClear(c *gin.Context) {
-	ctl.auditLogClear(c)
-}
-
-// auditLogSearch forceType 非空时强制按该类型过滤（旧接口只查登录记录）
-func (ctl *controller) auditLogSearch(c *gin.Context, forceType string) {
+func (ctl *controller) auditLogSearch(c *gin.Context) {
 	lc := ctl.lc
 	var req dtos.SysAuditLogSearchRequest
 	if err := c.ShouldBind(&req); err != nil {
 		httphelper.RenderFail(c, errort.NewCommonErr(errort.DefaultReqParamsError, err), c.Writer, lc)
 		return
-	}
-	if forceType != "" {
-		req.Type = forceType
 	}
 	list, total, err := ctl.getUserApp().SysAuditLogSearch(c, req)
 	if err != nil {

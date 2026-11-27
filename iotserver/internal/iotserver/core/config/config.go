@@ -116,7 +116,7 @@ func (c ConfigurationStruct) PluginDataDir() string {
 type IntegrationsInfo struct {
 	// EdgeIngest 参考系统（/edge 协议）接入所用的独立 broker 配置
 	EdgeIngest EdgeIngestInfo
-	// IotpCollect iotp 多节点采集：订阅各节点 ingest/#，转成平台 MessageBus 后发到内部总线。
+	// IotpCollect iotp 多节点采集：订阅各节点 ingest/<db>/json，转成平台 MessageBus 后发到内部总线。
 	IotpCollect IotpCollectInfo
 }
 
@@ -132,7 +132,7 @@ type IotpCollectInfo struct {
 	// Username / Password 节点 broker 的 MQTT 凭据（允许匿名时留空）。
 	Username string
 	Password string
-	// ResyncIntervalSec 设备映射刷新间隔（秒），<=0 用默认值 60。
+	// ResyncIntervalSec 设备映射与自动发现拓扑的刷新间隔（秒），<=0 用默认值 60。
 	ResyncIntervalSec int
 }
 
@@ -215,10 +215,6 @@ type MessageQueueInfo struct {
 	// Typically the key is the name of the configuration property and the value is a string representation of the
 	// desired value for the configuration property.
 	Optional map[string]string
-}
-
-func (m MessageQueueInfo) Enable() bool {
-	return !(m.Host == "" || m.Port <= 0)
 }
 
 // URL constructs a URL from the protocol, host and port and returns that as a string.

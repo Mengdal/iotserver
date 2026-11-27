@@ -3,7 +3,6 @@ package dtos
 import (
 	"bytes"
 	"encoding/json"
-	"strings"
 
 	"iotserver/internal/models"
 )
@@ -35,23 +34,13 @@ type RuleEngineAddRequest struct {
 	// Actions 动作列表；为空时回落到 data_resource_id（兼容旧接口）
 	Actions        []RuleEngineActionRequest `json:"actions"`
 	DataResourceId string                    `json:"data_resource_id"`
-	// Method 前端 Radio 的资源类型字段名
-	Method string `json:"method"`
-	// ResourceType 编辑回填时也会带上
+	// ResourceType 资源类型（前端 Radio 提交）
 	ResourceType string                   `json:"resource_type"`
 	Status       string                   `json:"status"`
 	Filter       models.RuleEngineFilter  `json:"filter"`
 	Options      models.RuleEngineOptions `json:"options"`
 	// RunImmediately 保存后立即启动
 	RunImmediately bool `json:"run_immediately"`
-}
-
-// ResourceTypeValue 资源类型取值：优先 resource_type，兼容早期前端使用的 method 字段
-func (r RuleEngineAddRequest) ResourceTypeValue() string {
-	if strings.TrimSpace(r.ResourceType) != "" {
-		return r.ResourceType
-	}
-	return r.Method
 }
 
 // RuleEngineUpdateRequest 修改规则

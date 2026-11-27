@@ -72,7 +72,6 @@ func (c *Client) MigrateSystemTables() error {
 		&models.ServiceStats{},
 		&models.AlertRule{},
 		&models.AlertList{},
-		&models.AlertContent{},
 		// ===== 工具与文档 / 首页 =====
 		&models.QuickNavigation{},
 		&models.Doc{},

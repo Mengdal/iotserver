@@ -53,12 +53,6 @@ const (
 	AuditLogRemove = "system:auditlog:remove"
 )
 
-// 系统管理 - 登入日志（已并入审查日志）：兼容别名，保留一版，下版本删除
-const (
-	LoginLogList   = "system:loginlog:list"
-	LoginLogRemove = "system:loginlog:remove"
-)
-
 // 系统管理 - 系统配置
 const (
 	ConfigList   = "system:config:list"
@@ -226,8 +220,6 @@ func NamedGroups() [][]NamedPerm {
 			{"MenuCustomPref", MenuCustomPref}, {"MenuCustomReset", MenuCustomReset}},
 		{{"DeptList", DeptList}, {"DeptQuery", DeptQuery}, {"DeptAdd", DeptAdd}, {"DeptEdit", DeptEdit}, {"DeptRemove", DeptRemove}},
 		{{"AuditLogList", AuditLogList}, {"AuditLogRemove", AuditLogRemove}},
-		// 兼容别名（旧登入日志权限码，保留一版）
-		{{"LoginLogList", LoginLogList}, {"LoginLogRemove", LoginLogRemove}},
 		{{"ConfigList", ConfigList}, {"ConfigQuery", ConfigQuery}, {"ConfigAdd", ConfigAdd}, {"ConfigEdit", ConfigEdit}, {"ConfigRemove", ConfigRemove}},
 		{{"VizBoardList", VizBoardList}, {"VizBoardQuery", VizBoardQuery}, {"VizBoardAdd", VizBoardAdd},
 			{"VizBoardEdit", VizBoardEdit}, {"VizBoardRemove", VizBoardRemove}, {"VizDataQuery", VizDataQuery}},

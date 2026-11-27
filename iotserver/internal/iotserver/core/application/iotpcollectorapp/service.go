@@ -1,4 +1,4 @@
-// Package iotpcollectorapp 订阅 iotp 集群各节点的 ingest/#，
+// Package iotpcollectorapp 订阅 iotp 集群各节点的 ingest/<库名>/json，
 // 把消息转换成平台的 MessageBus 报文后写入内部消息总线。
 //
 // 背景：iotp 每个节点有独立的 MQTT broker，平台规则引擎只有一条共享流
@@ -28,7 +28,6 @@ import (
 	"iotserver/internal/iotserver/core/container"
 	interfaces "iotserver/internal/iotserver/core/interface"
 	"iotserver/internal/models"
-	bootstrapConfig "iotserver/internal/pkg/config"
 	pkgContainer "iotserver/internal/pkg/container"
 	"iotserver/internal/pkg/di"
 	"iotserver/internal/pkg/logger"
@@ -39,7 +38,6 @@ import (
 )
 
 const (
-	defaultSubscribeTopic   = "ingest/#"
 	defaultMessageType      = "PROPERTY_REPORT"
 	defaultResyncSeconds    = 60
 	defaultEngineTimeoutSec = 10
@@ -64,12 +62,14 @@ type gatewayBroker struct {
 	Label  string
 }
 
-// deviceInfo iotp 设备 ID 对应的平台设备及其生效租户。
-// 租户优先取设备自身，设备没归属时取采集它的软网关。
+// deviceInfo iotp 设备 ID 对应的平台设备摘要及生效租户。
+// 只保留转发消息需要的字段，租户优先取设备自身，设备没归属时取采集它的软网关。
 type deviceInfo struct {
-	Device      models.Device
-	TenantId    string
+	Id          string
+	Name        string
+	ProductId   string
 	ProductName string
+	TenantId    string
 }
 
 // gatewayBinding 平台里的设备 → 采集网关绑定。
@@ -80,7 +80,6 @@ type gatewayBinding struct {
 
 // Service iotp 多节点采集服务。
 type Service struct {
-	dic      *di.Container
 	lc       logger.LoggingClient
 	dbClient interfaces.DBClient
 
@@ -88,12 +87,12 @@ type Service struct {
 	mqCfg      config.MessageQueueInfo
 	// enabled 由 [Databases.Data].BaseURL 决定：接入 iotp 即启用。
 	enabled bool
+	// staticNodes 启动时解析一次静态节点配置，刷新拓扑时复用。
+	staticNodes []nodeSpec
 
-	ctx    context.Context
-	cancel context.CancelFunc
+	ctx context.Context
 
 	mu       sync.RWMutex
-	closed   bool
 	out      mqtt.Client
 	nodes    map[string]*nodeConn // key: 规范化 broker 地址
 	devices  map[int64]deviceInfo // iotp device id -> 平台设备
@@ -107,7 +106,6 @@ type Service struct {
 // New 创建服务；未启用时 Start 为 no-op。
 func New(dic *di.Container) *Service {
 	s := &Service{
-		dic:        dic,
 		lc:         pkgContainer.LoggingClientFrom(dic.Get),
 		nodes:      map[string]*nodeConn{},
 		devices:    map[int64]deviceInfo{},
@@ -119,12 +117,18 @@ func New(dic *di.Container) *Service {
 	}
 	s.collectCfg = cfg.Integrations.IotpCollect
 	s.mqCfg = cfg.MessageQueue
-	s.enabled = iotpCollectEnabled(cfg.GetDataDatabaseInfo())
+	db, enabled := cfg.IotpConfig()
+	s.enabled = enabled
+	if name := db.IotpDatabaseName(); !strings.ContainsAny(name, "/+#") {
+		s.subscribeTopic = "ingest/" + name + "/json"
+	} else {
+		s.lc.Errorf("iotp 采集未启用：[Databases.Data].Name 非法: %q", name)
+		s.enabled = false
+	}
 	s.outTopic = strings.TrimSpace(s.mqCfg.PublishTopicPrefix)
 	if s.outTopic == "" {
 		s.outTopic = "eventbus/in"
 	}
-	s.subscribeTopic = ingestTopicForDB(cfg.GetDataDatabaseInfo().Name)
 	if s.collectCfg.ResyncIntervalSec <= 0 {
 		s.collectCfg.ResyncIntervalSec = defaultResyncSeconds
 	}
@@ -138,23 +142,24 @@ func New(dic *di.Container) *Service {
 //
 // 节点来源有两种，按 broker 地址去重：
 //   - Nodes 里的静态节点（优先级高，clientId 沿用 id）；
-//   - 受管软网关的采集引擎：启动时发现一次，之后由网关 CRUD 事件触发刷新。
+//   - 受管软网关的采集引擎：启动时发现一次，之后由网关 CRUD 事件触发刷新，
+//     并按 ResyncIntervalSec 周期性重试，覆盖引擎晚启动或短暂不可达。
 func (s *Service) Start(ctx context.Context) {
 	if !s.enabled {
 		s.lc.Infof("iotp 多节点采集未启用：[Databases.Data].BaseURL 为空")
 		return
 	}
-	static := s.staticNodeSpecs()
+	s.staticNodes = s.loadStaticNodes()
+	s.ctx = ctx
 
-	s.ctx, s.cancel = context.WithCancel(ctx)
 	go s.syncDevices()
 	go s.connectOutput()
-	for _, spec := range static {
+	for _, spec := range s.staticNodes {
 		s.ensureNode(spec.Id, spec.Broker)
 	}
 	go s.discoverLoop()
 	s.lc.Infof("iotp 多节点采集已启动：静态节点=%d 自动发现=受管网关 topic=%s -> %s",
-		len(static), s.subscribeTopic, s.outTopic)
+		len(s.staticNodes), s.subscribeTopic, s.outTopic)
 }
 
 // RefreshDiscovery 网关增删改后触发一次拓扑刷新；信号容量 1，多次调用会合并。
@@ -165,29 +170,6 @@ func (s *Service) RefreshDiscovery() {
 	select {
 	case s.discoverCh <- struct{}{}:
 	default:
-	}
-}
-
-// Stop 断开所有连接。
-func (s *Service) Stop() {
-	if s.cancel != nil {
-		s.cancel()
-	}
-	s.mu.Lock()
-	s.closed = true
-	out := s.out
-	nodes := make([]*nodeConn, 0, len(s.nodes))
-	for key, conn := range s.nodes {
-		nodes = append(nodes, conn)
-		delete(s.nodes, key)
-	}
-	s.mu.Unlock()
-
-	if out != nil {
-		out.Disconnect(250)
-	}
-	for _, conn := range nodes {
-		conn.client.Disconnect(250)
 	}
 }
 
@@ -215,17 +197,12 @@ func (s *Service) connectOutput() {
 		s.lc.Errorf("iotp 采集输出连接失败: %v", tok.Error())
 	}
 	s.mu.Lock()
-	if s.closed {
-		s.mu.Unlock()
-		client.Disconnect(250)
-		return
-	}
 	s.out = client
 	s.mu.Unlock()
 }
 
-// staticNodeSpecs 解析 Nodes 配置，按 broker 去重。
-func (s *Service) staticNodeSpecs() []nodeSpec {
+// loadStaticNodes 解析 Nodes 配置，按 broker 去重；启动时调用一次。
+func (s *Service) loadStaticNodes() []nodeSpec {
 	specs, invalid := parseStaticNodes(s.collectCfg.Nodes)
 	for _, entry := range invalid {
 		s.lc.Warnf("iotp 采集节点配置非法，已跳过: %q", entry)
@@ -267,15 +244,7 @@ func (s *Service) ensureNode(id, broker string) {
 		s.lc.Warnf("iotp 采集节点地址非法，已跳过 %s: %v", broker, err)
 		return
 	}
-	if strings.TrimSpace(id) == "" {
-		id = "node-" + shortHash(key)
-	}
-
 	s.mu.Lock()
-	if s.closed {
-		s.mu.Unlock()
-		return
-	}
 	if _, ok := s.nodes[key]; ok {
 		s.mu.Unlock()
 		return
@@ -333,12 +302,6 @@ func (s *Service) currentNode(key string, client mqtt.Client) bool {
 
 // reconcileNodes 让实际连接与期望节点集合一致：新增缺失的，断开多余的。
 func (s *Service) reconcileNodes(desired map[string]nodeSpec) {
-	s.mu.RLock()
-	closed := s.closed
-	s.mu.RUnlock()
-	if closed {
-		return
-	}
 	for _, spec := range desired {
 		s.ensureNode(spec.Id, spec.Broker)
 	}
@@ -366,11 +329,7 @@ func (s *Service) discoverLoop() {
 	known := map[string]gatewayBroker{}
 	s.refreshDiscovered(known)
 
-	interval := time.Duration(s.collectCfg.ResyncIntervalSec) * time.Second
-	if interval <= 0 {
-		interval = defaultResyncSeconds * time.Second
-	}
-	ticker := time.NewTicker(interval)
+	ticker := time.NewTicker(time.Duration(s.collectCfg.ResyncIntervalSec) * time.Second)
 	defer ticker.Stop()
 
 	for {
@@ -432,7 +391,7 @@ func (s *Service) refreshDiscovered(known map[string]gatewayBroker) {
 		known[id] = info
 	}
 
-	s.reconcileNodes(mergeNodeSpecs(s.staticNodeSpecs(), known))
+	s.reconcileNodes(mergeNodeSpecs(s.staticNodes, known))
 	s.lc.Debugf("iotp 自动发现刷新完成：受管网关=%d", len(known))
 }
 
@@ -457,11 +416,7 @@ func mergeNodeSpecs(static []nodeSpec, discovered map[string]gatewayBroker) map[
 		if _, ok := desired[key]; ok {
 			continue
 		}
-		label := info.Label
-		if label == "" {
-			label = "gw-" + id
-		}
-		desired[key] = nodeSpec{Id: label, Broker: key}
+		desired[key] = nodeSpec{Id: info.Label, Broker: key}
 	}
 	return desired
 }
@@ -533,47 +488,28 @@ func sanitizeClientID(id string) string {
 	return builder.String()
 }
 
-// shortHash 给空标识生成稳定的短后缀。
-func shortHash(value string) string {
-	var hash uint32 = 2166136261
-	for i := 0; i < len(value); i++ {
-		hash ^= uint32(value[i])
-		hash *= 16777619
-	}
-	return fmt.Sprintf("%08x", hash)
-}
-
-type ingestEnvelope struct {
-	Measurement string         `json:"measurement"`
-	Tags        map[string]any `json:"tags"`
-	Fields      map[string]any `json:"fields"`
-}
-
 // parseIngestEnvelopes iotp 的 JSON ingest 既支持单个信封，也支持顶层数组批量。
-func parseIngestEnvelopes(payload []byte) ([]ingestEnvelope, error) {
+// 复用 iotp.WriteRow，保证字段与写入接口保持一致（含可选的 timestamp）。
+func parseIngestEnvelopes(payload []byte) ([]iotp.WriteRow, error) {
 	trimmed := bytes.TrimSpace(payload)
 	if len(trimmed) == 0 {
 		return nil, fmt.Errorf("空消息")
 	}
 	if trimmed[0] == '[' {
-		var batch []ingestEnvelope
+		var batch []iotp.WriteRow
 		if err := json.Unmarshal(trimmed, &batch); err != nil {
 			return nil, err
 		}
 		return batch, nil
 	}
-	var env ingestEnvelope
-	if err := json.Unmarshal(trimmed, &env); err != nil {
+	var row iotp.WriteRow
+	if err := json.Unmarshal(trimmed, &row); err != nil {
 		return nil, err
 	}
-	return []ingestEnvelope{env}, nil
+	return []iotp.WriteRow{row}, nil
 }
 
 func (s *Service) handle(nodeID string, msg mqtt.Message) {
-	parts := strings.Split(msg.Topic(), "/")
-	if len(parts) != 3 || parts[0] != "ingest" || parts[2] != "json" {
-		return // 只处理 ingest/<db>/json；LP 不解析
-	}
 	envelopes, err := parseIngestEnvelopes(msg.Payload())
 	if err != nil {
 		s.lc.Warnf("iotp 节点 %s 消息解析失败: %v", nodeID, err)
@@ -584,14 +520,11 @@ func (s *Service) handle(nodeID string, msg mqtt.Message) {
 	}
 }
 
-func (s *Service) forwardEnvelope(nodeID string, env ingestEnvelope) {
+func (s *Service) forwardEnvelope(nodeID string, env iotp.WriteRow) {
 	iotpID := int64(0)
 	if v, ok := env.Tags["device_id"]; ok {
-		switch n := v.(type) {
-		case float64:
+		if n, ok := v.(float64); ok {
 			iotpID = int64(n)
-		case json.Number:
-			iotpID, _ = n.Int64()
 		}
 	}
 
@@ -609,9 +542,9 @@ func (s *Service) forwardEnvelope(nodeID string, env ingestEnvelope) {
 
 	s.mu.RLock()
 	if d, ok := s.devices[iotpID]; ok {
-		deviceID = d.Device.Id
-		deviceName = d.Device.Name
-		productID = d.Device.ProductId
+		deviceID = d.Id
+		deviceName = d.Name
+		productID = d.ProductId
 		productName = d.ProductName
 		tenantID = d.TenantId
 		matched = true
@@ -622,6 +555,12 @@ func (s *Service) forwardEnvelope(nodeID string, env ingestEnvelope) {
 		s.lc.Debugf("iotp 设备 %d 未匹配到平台设备，按原始 ID 转发", iotpID)
 	}
 
+	// iotp ingest 信封可能带 timestamp；缺省时按采集器收到并转发的时刻补齐，
+	// 让告警 result 能带 start_at/end_at 跳转历史。
+	reportTime := env.Timestamp
+	if reportTime <= 0 {
+		reportTime = time.Now().UnixMilli()
+	}
 	bus := dtos.MessageBus{
 		DeviceId:    deviceID,
 		DeviceName:  deviceName,
@@ -629,10 +568,8 @@ func (s *Service) forwardEnvelope(nodeID string, env ingestEnvelope) {
 		ProductName: productName,
 		TenantId:    tenantID,
 		MessageType: defaultMessageType,
-		// iotp ingest 信封没有逐点时间，按采集器收到并转发的时刻补齐，
-		// 让告警 result 能带 start_at/end_at 跳转历史。
-		ReportTime: time.Now().UnixMilli(),
-		Data:       env.Fields,
+		Time:        reportTime,
+		Data:        env.Fields,
 	}
 	payload, _ := json.Marshal(bus)
 	if out == nil || !out.IsConnected() {
@@ -642,14 +579,12 @@ func (s *Service) forwardEnvelope(nodeID string, env ingestEnvelope) {
 	tok := out.Publish(s.outTopic, 1, false, payload)
 	// 不无限等待：回调运行在 paho 单线程 dispatch 上，输出 broker 长时间不回 PUBACK
 	// 会阻塞该节点后续 ingest 消息的处理和确认。
-	select {
-	case <-tok.Done():
-		if tok.Error() != nil {
-			s.lc.Warnf("iotp 采集转发失败（节点 %s）: %v", nodeID, tok.Error())
-			return
-		}
-	case <-time.After(5 * time.Second):
+	if !tok.WaitTimeout(5 * time.Second) {
 		s.lc.Warnf("iotp 采集转发超时（节点 %s），输出 broker 未确认", nodeID)
+		return
+	}
+	if tok.Error() != nil {
+		s.lc.Warnf("iotp 采集转发失败（节点 %s）: %v", nodeID, tok.Error())
 		return
 	}
 	s.lc.Debugf("iotp 采集转发（节点 %s）: %s", nodeID, payload)
@@ -682,46 +617,29 @@ func (s *Service) refreshDevices() {
 		return
 	}
 	bindings, gatewayTenants := s.tenantMaps(db)
-	productNames := s.productNames(db)
 	next := make(map[int64]deviceInfo, len(devices))
 	for _, d := range devices {
-		next[iotp.DeviceID(d.Id)] = buildDeviceInfo(d, productNames, bindings, gatewayTenants)
+		next[iotp.DeviceID(d.Id)] = buildDeviceInfo(d, bindings, gatewayTenants)
 	}
 	s.mu.Lock()
 	s.devices = next
 	s.mu.Unlock()
 }
 
-// productNames 读取产品 ID → 产品名称，供消息里附带 productName。
-func (s *Service) productNames(db interfaces.DBClient) map[string]string {
-	products, _, err := db.ProductsSearch(0, -1, false, dtos.ProductSearchQueryRequest{
-		BaseSearchConditionQuery: dtos.BaseSearchConditionQuery{IsAll: true},
-	})
-	if err != nil {
-		s.lc.Warnf("iotp 采集读取产品名称失败: %v", err)
-		return map[string]string{}
-	}
-	names := make(map[string]string, len(products))
-	for _, product := range products {
-		if product.Id != "" {
-			names[product.Id] = product.Name
-		}
-	}
-	return names
-}
-
-func buildDeviceInfo(device models.Device, productNames map[string]string, bindings map[string]gatewayBinding, gatewayTenants map[string]string) deviceInfo {
+func buildDeviceInfo(device models.Device, bindings map[int64]gatewayBinding, gatewayTenants map[string]string) deviceInfo {
 	return deviceInfo{
-		Device:      device,
+		Id:          device.Id,
+		Name:        device.Name,
+		ProductId:   device.ProductId,
+		ProductName: device.Product.Name,
 		TenantId:    resolveDeviceTenant(device, bindings, gatewayTenants),
-		ProductName: productNames[device.ProductId],
 	}
 }
 
 // tenantMaps 读取设备→采集网关绑定和网关→租户映射。
 // 辅助查询失败只告警，不影响设备映射本身。
-func (s *Service) tenantMaps(db interfaces.DBClient) (map[string]gatewayBinding, map[string]string) {
-	bindings := map[string]gatewayBinding{}
+func (s *Service) tenantMaps(db interfaces.DBClient) (map[int64]gatewayBinding, map[string]string) {
+	bindings := map[int64]gatewayBinding{}
 	if configs, err := db.CollectDeviceConfigs(); err != nil {
 		s.lc.Warnf("iotp 采集读取设备网关绑定失败: %v", err)
 	} else {
@@ -729,10 +647,8 @@ func (s *Service) tenantMaps(db interfaces.DBClient) (map[string]gatewayBinding,
 			if strings.TrimSpace(cfg.DeviceId) == "" {
 				continue
 			}
-			// 采集配置里的 device_id 是 iotp 数字键（前导零已去掉），
-			// 平台设备 ID 可能保留前导零；两边统一成去前导零的数字字符串。
-			key := normalizeDeviceTenantKey(cfg.DeviceId)
-			bindings[key] = gatewayBinding{
+			// 统一用 iotp.DeviceID 建立键，自动处理前导零与非数字 ID。
+			bindings[iotp.DeviceID(cfg.DeviceId)] = gatewayBinding{
 				GatewayId: strings.TrimSpace(cfg.GatewayId),
 				TenantId:  strings.TrimSpace(cfg.TenantId),
 			}
@@ -755,39 +671,15 @@ func (s *Service) tenantMaps(db interfaces.DBClient) (map[string]gatewayBinding,
 
 // resolveDeviceTenant 设备自身租户优先；设备没租户时用采集网关的租户，
 // 最后才用绑定记录上的租户。都没有则返回空（fail-closed，不猜测租户）。
-// normalizeDeviceTenantKey 统一数字 ID 的前导零；非数字 ID 原样保留。
-func normalizeDeviceTenantKey(id string) string {
-	trimmed := strings.TrimSpace(id)
-	if n, err := strconv.ParseInt(trimmed, 10, 64); err == nil && n > 0 {
-		return strconv.FormatInt(n, 10)
-	}
-	return trimmed
-}
-
-func resolveDeviceTenant(device models.Device, bindings map[string]gatewayBinding, gatewayTenants map[string]string) string {
+func resolveDeviceTenant(device models.Device, bindings map[int64]gatewayBinding, gatewayTenants map[string]string) string {
 	if t := strings.TrimSpace(device.TenantId); t != "" {
 		return t
 	}
-	binding := bindings[normalizeDeviceTenantKey(device.Id)]
+	binding := bindings[iotp.DeviceID(device.Id)]
 	if gatewayID := binding.GatewayId; gatewayID != "" {
 		if t := gatewayTenants[gatewayID]; t != "" {
 			return t
 		}
 	}
 	return binding.TenantId
-}
-
-// iotpCollectEnabled 只要配置了 [Databases.Data].BaseURL 就认为接入了 iotp。
-func iotpCollectEnabled(db bootstrapConfig.Database) bool {
-	return strings.TrimSpace(db.BaseURL) != ""
-}
-
-// ingestTopicForDB 订阅平台自己的 iotp 库，避免把同实例其他库的数据也转进总线。
-// 库名非法或缺失时回落到 ingest/#。
-func ingestTopicForDB(dbName string) string {
-	dbName = strings.TrimSpace(dbName)
-	if dbName == "" || strings.ContainsAny(dbName, "/+#") {
-		return defaultSubscribeTopic
-	}
-	return "ingest/" + dbName + "/json"
 }

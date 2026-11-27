@@ -58,11 +58,18 @@ type Notify struct {
 }
 
 func (b *RuleUpdateRequest) BuildEkuiperSql(deviceId string, specsType constants.SpecsType) string {
+	if len(b.SubRule) == 0 {
+		return ""
+	}
+	option := b.SubRule[0].Option
+	code := option["code"]
+	decideCondition := option["decide_condition"]
+
 	var sql string
 	switch specsType {
 	case constants.SpecsTypeInt, constants.SpecsTypeFloat:
 		var s int
-		switch b.SubRule[0].Option["value_cycle"] {
+		switch option["value_cycle"] {
 		case "1分钟周期":
 			s = 60
 		case "5分钟周期":
@@ -74,73 +81,57 @@ func (b *RuleUpdateRequest) BuildEkuiperSql(deviceId string, specsType constants
 		case "60分钟周期":
 			s = 60 * 60
 		default:
-			if b.SubRule[0].Option["value_type"] != constants.Original {
+			if option["value_type"] != constants.Original {
 				return ""
 			}
 		}
-		switch b.SubRule[0].Option["value_type"] {
+		switch option["value_type"] {
 		case constants.Original:
-			code := b.SubRule[0].Option["code"]
-			decideCondition := b.SubRule[0].Option["decide_condition"]
-			originalTemp := `SELECT rule_id(),deviceId,reportTime as report_time FROM mqtt_stream where deviceId = "%s" and messageType = "PROPERTY_REPORT" and json_path_exists(data, "$.%s") = true and json_path_query(data, "$.%s") %s`
+			// 属性报文在总线上已压平为 data.<code>=value，上报时间在消息级 time。
+			originalTemp := `SELECT rule_id(),time,deviceId FROM mqtt_stream where deviceId = "%s" and messageType = "PROPERTY_REPORT" and json_path_exists(data, "$.%s") = true and json_path_query(data, "$.%s") %s`
 			sql = fmt.Sprintf(originalTemp, deviceId, code, code, decideCondition)
 
 		case constants.Avg:
-			code := b.SubRule[0].Option["code"]
-			decideCondition := b.SubRule[0].Option["decide_condition"]
-			sqlTemp := `SELECT window_start(),window_end(),rule_id(),deviceId,avg(json_path_query(data, "$.%s")) as avg_%s FROM mqtt_stream where deviceId = "%s" and messageType = "PROPERTY_REPORT" and json_path_exists(data, "$.%s") = true GROUP BY %s HAVING avg_%s %s`
-			sql = fmt.Sprintf(sqlTemp, code, code, deviceId, code, fmt.Sprintf("TUMBLINGWINDOW(ss, %d)", s), code, decideCondition)
+			sql = buildAggregateEkuiperSql("avg", deviceId, code, s, decideCondition)
 		case constants.Max:
-			code := b.SubRule[0].Option["code"]
-			decideCondition := b.SubRule[0].Option["decide_condition"]
-			sqlTemp := `SELECT window_start(),window_end(),rule_id(),deviceId,max(json_path_query(data, "$.%s")) as max_%s FROM mqtt_stream where deviceId = "%s" and messageType = "PROPERTY_REPORT" and json_path_exists(data, "$.%s") = true GROUP BY %s HAVING max_%s %s`
-			sql = fmt.Sprintf(sqlTemp, code, code, deviceId, code, fmt.Sprintf("TUMBLINGWINDOW(ss, %d)", s), code, decideCondition)
+			sql = buildAggregateEkuiperSql("max", deviceId, code, s, decideCondition)
 		case constants.Min:
-			code := b.SubRule[0].Option["code"]
-			decideCondition := b.SubRule[0].Option["decide_condition"]
-			sqlTemp := `SELECT window_start(),window_end(),rule_id(),deviceId,min(json_path_query(data, "$.%s")) as min_%s FROM mqtt_stream where deviceId = "%s" and messageType = "PROPERTY_REPORT" and json_path_exists(data, "$.%s") = true GROUP BY %s HAVING min_%s %s`
-			sql = fmt.Sprintf(sqlTemp, code, code, deviceId, code, fmt.Sprintf("TUMBLINGWINDOW(ss, %d)", s), code, decideCondition)
+			sql = buildAggregateEkuiperSql("min", deviceId, code, s, decideCondition)
 		case constants.Sum:
-			code := b.SubRule[0].Option["code"]
-			decideCondition := b.SubRule[0].Option["decide_condition"]
-			sqlTemp := `SELECT window_start(),window_end(),rule_id(),deviceId,sum(json_path_query(data, "$.%s")) as sum_%s FROM mqtt_stream where deviceId = "%s" and messageType = "PROPERTY_REPORT" and json_path_exists(data, "$.%s") = true GROUP BY %s HAVING sum_%s %s`
-			sql = fmt.Sprintf(sqlTemp, code, code, deviceId, code, fmt.Sprintf("TUMBLINGWINDOW(ss, %d)", s), code, decideCondition)
+			sql = buildAggregateEkuiperSql("sum", deviceId, code, s, decideCondition)
 		}
 		return sql
 	case constants.SpecsTypeText:
-		code := b.SubRule[0].Option["code"]
-		decideCondition := b.SubRule[0].Option["decide_condition"]
 		st := strings.Split(decideCondition, " ")
 		if len(st) != 2 {
 			return ""
 		}
-		sqlTemp := `SELECT rule_id(),deviceId,reportTime as report_time FROM mqtt_stream where deviceId = "%s" and messageType = "PROPERTY_REPORT" and json_path_exists(data, "$.%s") = true and json_path_query(data, "$.%s") = "%s"`
+		sqlTemp := `SELECT rule_id(),time,deviceId FROM mqtt_stream where deviceId = "%s" and messageType = "PROPERTY_REPORT" and json_path_exists(data, "$.%s") = true and json_path_query(data, "$.%s") = "%s"`
 		sql = fmt.Sprintf(sqlTemp, deviceId, code, code, st[1])
 	case constants.SpecsTypeEnum:
-		code := b.SubRule[0].Option["code"]
-		decideCondition := b.SubRule[0].Option["decide_condition"]
 		st := strings.Split(decideCondition, " ")
 		if len(st) != 2 {
 			return ""
 		}
-		sqlTemp := `SELECT rule_id(),deviceId,reportTime as report_time FROM mqtt_stream where deviceId = "%s" and messageType = "PROPERTY_REPORT" and json_path_exists(data, "$.%s") = true and json_path_query(data, "$.%s") = %s`
+		sqlTemp := `SELECT rule_id(),time,deviceId FROM mqtt_stream where deviceId = "%s" and messageType = "PROPERTY_REPORT" and json_path_exists(data, "$.%s") = true and json_path_query(data, "$.%s") = %s`
 		sql = fmt.Sprintf(sqlTemp, deviceId, code, code, st[1])
 	case constants.SpecsTypeBool:
-		code := b.SubRule[0].Option["code"]
-		decideCondition := b.SubRule[0].Option["decide_condition"]
 		st := strings.Split(decideCondition, " ")
-		if len(st) != 2 {
+		if len(st) != 2 || (st[1] != "true" && st[1] != "false") {
 			return ""
 		}
-		sqlTemp := `SELECT rule_id(),deviceId,reportTime as report_time FROM mqtt_stream where deviceId = "%s" and messageType = "PROPERTY_REPORT" and json_path_exists(data, "$.%s") = true and json_path_query(data, "$.%s") = %s`
-		if st[1] == "true" {
-			sql = fmt.Sprintf(sqlTemp, deviceId, code, code, "true")
-		} else if st[1] == "false" {
-			sql = fmt.Sprintf(sqlTemp, deviceId, code, code, "false")
-		}
+		// 总线上的布尔测点就是 JSON true/false，不能和旧的嵌套结构一样比较 1/0。
+		sqlTemp := `SELECT rule_id(),time,deviceId FROM mqtt_stream where deviceId = "%s" and messageType = "PROPERTY_REPORT" and json_path_exists(data, "$.%s") = true and json_path_query(data, "$.%s") = %s`
+		sql = fmt.Sprintf(sqlTemp, deviceId, code, code, st[1])
 
 	}
 	return sql
+}
+
+// buildAggregateEkuiperSql 生成周期聚合告警 SQL；属性数据在总线上已是标量。
+func buildAggregateEkuiperSql(aggregate, deviceId, code string, seconds int, decideCondition string) string {
+	sqlTemp := `SELECT window_start(),window_end(),rule_id(),deviceId,%s(json_path_query(data, "$.%s")) as %s_%s FROM mqtt_stream where deviceId = "%s" and messageType = "PROPERTY_REPORT" and json_path_exists(data, "$.%s") = true GROUP BY TUMBLINGWINDOW(ss, %d) HAVING %s_%s %s`
+	return fmt.Sprintf(sqlTemp, aggregate, code, aggregate, code, deviceId, code, seconds, aggregate, code, decideCondition)
 }
 
 func ReplaceRuleFields(ds *models.AlertRule, patch RuleFieldUpdate) {

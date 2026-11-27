@@ -425,7 +425,7 @@ func TestSysDeptMenuConfigFlow(t *testing.T) {
 	}
 
 	// 登入日志应有记录
-	w = doRequest(env.engine, http.MethodGet, "/api/v1/sys-login-log?page=1&pageSize=10", env.token, nil)
+	w = doRequest(env.engine, http.MethodGet, "/api/v1/sys-audit-log?page=1&pageSize=10&type=login", env.token, nil)
 	resp = parseResponse(t, w)
 	if !resp.Success {
 		t.Fatalf("login log failed: %v", resp.ErrorMsg)

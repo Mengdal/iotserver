@@ -64,7 +64,6 @@ var tenantScopedModels = []tableNamer{
 	&Device{},
 	&AlertRule{},
 	&AlertList{},
-	&AlertContent{},
 	&RuleEngine{},
 	&Scene{},
 	&SceneLog{},
